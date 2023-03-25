@@ -1,0 +1,5 @@
+# xAA dup x55 dup x00 x0F lds xDD xor pop iif sti hlt
+
+# start: xAA dup x55 dup :start :stop lds xDD xor pop iif sti stop: hlt
+
+95 AA 92 95 55 92 00 0F 9A 95 DD A8 94 90 97 81
