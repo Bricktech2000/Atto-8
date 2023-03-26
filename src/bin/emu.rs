@@ -7,9 +7,9 @@ fn main() {
 
   println!("Emulating CPU...");
 
-  let memory: Vec<u8> = std::fs::read(&args[1]).expect("Unable to read file.");
+  let memory: Vec<u8> = std::fs::read(&args[1]).expect("Unable to read file");
   emulate(
-    memory.try_into().expect("Slice with incorrect length."),
+    memory.try_into().expect("Slice with incorrect length"),
     1000,
   );
 

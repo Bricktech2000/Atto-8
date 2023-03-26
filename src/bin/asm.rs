@@ -7,11 +7,11 @@ fn main() {
     std::process::exit(1);
   }
 
-  let source: String = std::fs::read_to_string(&args[1]).expect("Unable to read file.");
+  let source: String = std::fs::read_to_string(&args[1]).expect("Unable to read file");
   let instructions: Vec<Instruction> = parse(&source);
   let mut bytes: Vec<u8> = assemble(&instructions);
   bytes.extend(vec![0; 0x100 - bytes.len()]);
-  std::fs::write(format!("{}.bin", &args[1]), bytes).expect("Unable to write file.");
+  std::fs::write(format!("{}.bin", &args[1]), bytes).expect("Unable to write file");
 
   println!("");
   println!("Done.");
@@ -144,38 +144,75 @@ fn parse(source: &String) -> Vec<Instruction> {
     })
     .collect();
 
-  let mut labels: HashMap<&str, u8> = HashMap::new();
-  let mut macros: HashMap<&str, u8> = HashMap::new();
-  let mut current_address: u8 = 0;
+  let mut macros: HashMap<&str, Vec<Mnemonic>> = HashMap::new();
+  let mut current_macro_name = "".to_string();
 
-  for (index, mnemonic) in mnemonics.iter().enumerate() {
+  for mnemonic in &mnemonics {
     match mnemonic {
-      Mnemonic::LabelDef(label) => {
-        labels.insert(label, current_address);
-      }
       Mnemonic::MacroDef(name) => {
-        match mnemonics[index + 1] {
-          Mnemonic::DDD(value) => {
-            macros.insert(name, value);
-          }
-          _ => panic!("Macro definition must be followed by exactly one raw data instruction."),
-        };
-      }
-      Mnemonic::XXX(immediate) if *immediate & 0b11000000 == 0b00000000 => {
-        // push positive
-        current_address += 1;
-      }
-      Mnemonic::XXX(immediate) if *immediate & 0b11000000 == 0b11000000 => {
-        // push negative
-        current_address += 1;
-      }
-      Mnemonic::MacroRef(_) | Mnemonic::LabelRef(_) | Mnemonic::XXX(_) => {
-        // push next
-        current_address += 2;
+        current_macro_name = name.clone();
+        macros.entry(name.as_str()).or_insert(vec![]);
       }
       _ => {
-        current_address += 1;
+        macros
+          .get_mut(current_macro_name.as_str())
+          .expect("Orphan instructions found")
+          .push(mnemonic.clone());
       }
+    }
+  }
+
+  let mnemonics: Vec<Mnemonic> =
+    expand_macros(&macros, &vec![Mnemonic::MacroRef("main".to_string())]);
+
+  let mut labels: HashMap<&str, u8> = HashMap::new();
+  let mut current_address: u8 = 0;
+
+  for mnemonic in &mnemonics {
+    current_address += match mnemonic {
+      Mnemonic::Nop => 1,
+      Mnemonic::Hlt => 1,
+      Mnemonic::Dbg => 1,
+      Mnemonic::Clc => 1,
+      Mnemonic::Sec => 1,
+      Mnemonic::Flc => 1,
+      Mnemonic::Inc => 1,
+      Mnemonic::Dec => 1,
+      Mnemonic::Add => 1,
+      Mnemonic::Sub => 1,
+      Mnemonic::Rol => 1,
+      Mnemonic::Ror => 1,
+      Mnemonic::Oor => 1,
+      Mnemonic::And => 1,
+      Mnemonic::Xor => 1,
+      Mnemonic::Xnd => 1,
+      Mnemonic::Not => 1,
+      Mnemonic::Iif => 1,
+      Mnemonic::Swp => 1,
+      Mnemonic::Dup => 1,
+      Mnemonic::Str => 1,
+      Mnemonic::Pop => 1,
+      Mnemonic::XXX(immediate) => match immediate {
+        _ if immediate & 0b11000000 == 0b00000000 => 1,
+        _ if immediate & 0b11000000 == 0b11000000 => 1,
+        _ => 2,
+      },
+      Mnemonic::AWW(_) => 1,
+      Mnemonic::DDD(_) => 1,
+      Mnemonic::Ldi => 1,
+      Mnemonic::Sti => 1,
+      Mnemonic::Ldw => 1,
+      Mnemonic::Stw => 1,
+      Mnemonic::Lds => 1,
+      Mnemonic::Sts => 1,
+      Mnemonic::LabelDef(_) => 0,
+      Mnemonic::LabelRef(_) => 2,
+      Mnemonic::MacroDef(_) => 0,
+      Mnemonic::MacroRef(_) => 2,
+    };
+
+    if let Mnemonic::LabelDef(label) = mnemonic {
+      labels.insert(label, current_address);
     }
   }
 
@@ -221,23 +258,38 @@ fn parse(source: &String) -> Vec<Instruction> {
         vec![Instruction::PushNext(
           *labels
             .get(label.as_str())
-            .expect(format!("Unknown label: {}", label).as_str()),
+            .expect(format!("Could not find label: {}", label).as_str()) as u8,
         )]
       }
-      Mnemonic::MacroRef(name) => vec![Instruction::PushNext(
-        *macros
-          .get(name.as_str())
-          .expect(format!("Unknown macro: {:?}", name).as_str()),
-      )],
-      Mnemonic::LabelDef(_) | Mnemonic::MacroDef(_) => vec![],
+      Mnemonic::MacroRef(_) => panic!("Macro reference found in final pass"),
+      Mnemonic::LabelDef(_) => vec![],
+      Mnemonic::MacroDef(_) => vec![],
     })
     .collect();
 
   instructions
 }
 
+fn expand_macros(
+  macros: &HashMap<&str, Vec<Mnemonic>>,
+  mnemonics: &Vec<Mnemonic>,
+) -> Vec<Mnemonic> {
+  mnemonics
+    .iter()
+    .flat_map(|mnemonic| match mnemonic {
+      Mnemonic::MacroRef(name) => {
+        let mnemonics = macros
+          .get(name.as_str())
+          .expect(format!("Could not find macro: {}", name).as_str())
+          .clone();
+        expand_macros(&macros, &mnemonics)
+      }
+      _ => vec![mnemonic.clone()],
+    })
+    .collect()
+}
+
 fn assemble(instructions: &Vec<Instruction>) -> Vec<u8> {
-  // flat_map
   instructions
     .iter()
     .flat_map(|instruction| match instruction {
