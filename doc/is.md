@@ -3,6 +3,7 @@
 ## Flags
 
 - `CF` &mdsh; Carry Flag
+- `DF` &mdsh; Debug Flag
 
 ## Registers
 
@@ -10,13 +11,24 @@
 - `WP` &mdash; Work Pointer
 - `IP` &mdash; Instruction Pointer
 
-##
+## Defaults
+
+| Item   | State |
+| ------ | ----- |
+| `CF`   | `0`   |
+| `DF`   | `0`   |
+| `SP`   | `0`   |
+| `WP`   | `0`   |
+| `IP`   | `0`   |
+| memory | `0`   |
+
+## Instructions
 
 | Mnemonic | Description               | Operation                                             | Flags                                  | Opcode              |
 | -------- | ------------------------- | ----------------------------------------------------- | -------------------------------------- | ------------------- |
 | nop      | No Operation              | `;`                                                   |                                        | `0b10000000` `0x80` |
 | hlt      | Halt                      | `while(true);`                                        |                                        | `0b10000001` `0x81` |
-| dbg      | Debug                     | Implementation-defined                                |                                        | `0b10001000` `0x88` |
+| dbg      | Debug                     | `1 -> DF;`                                            | Set debug.                             | `0b10001000` `0x88` |
 | clc      | Clear Carry               | `0 -> CF;`                                            | Clear carry.                           | `0b10001001` `0x82` |
 | sec      | Set Carry                 | `1 -> CF;`                                            | Set carry.                             | `0b10001010` `0x83` |
 | flc      | Flip Carry                | `!CF -> CF;`                                          | Flip carry.                            | `0b10001011` `0x84` |

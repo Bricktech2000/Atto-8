@@ -8,7 +8,7 @@ fn main() {
   }
 
   let source: String = std::fs::read_to_string(&args[1]).expect("Unable to read file");
-  let instructions: Vec<Instruction> = parse(&source);
+  let instructions: Vec<Instruction> = parse(&source, "main");
   let mut bytes: Vec<u8> = assemble(&instructions);
   bytes.extend(vec![0; 0x100 - bytes.len()]);
   std::fs::write(format!("{}.bin", &args[1]), bytes).expect("Unable to write file");
@@ -93,7 +93,7 @@ enum Instruction {
   Sts,
 }
 
-fn parse(source: &String) -> Vec<Instruction> {
+fn parse(source: &str, entry_point: &str) -> Vec<Instruction> {
   let source = source
     .lines()
     .map(|line| line.split("#").next().unwrap())
@@ -163,7 +163,7 @@ fn parse(source: &String) -> Vec<Instruction> {
   }
 
   let mnemonics: Vec<Mnemonic> =
-    expand_macros(&macros, &vec![Mnemonic::MacroRef("main".to_string())]);
+    expand_macros(&macros, &vec![Mnemonic::MacroRef(entry_point.to_string())]);
 
   let mut labels: HashMap<&str, u8> = HashMap::new();
   let mut current_address: u8 = 0;
@@ -212,6 +212,9 @@ fn parse(source: &String) -> Vec<Instruction> {
     };
 
     if let Mnemonic::LabelDef(label) = mnemonic {
+      if labels.contains_key(label.as_str()) {
+        panic!("Label already defined: {}", label);
+      }
       labels.insert(label, current_address);
     }
   }

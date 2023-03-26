@@ -292,8 +292,8 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
 }
 
 fn print_display(display_buffer: &[u8; 0x20]) {
-  let mut display_buffer_string: String = String::new();
-  let line: String = std::iter::repeat("-").take(0x10).collect::<String>();
+  let mut display_buffer_string: String = "".to_string();
+  let line: String = std::iter::repeat("-").take(0x10).collect();
   let line_top: String = ".-".to_owned() + &line + "-.\n";
   let line_bottom: String = "'-".to_owned() + &line + "-'\n";
   let col_left: String = "| ".to_string();
@@ -326,7 +326,7 @@ fn print_display(display_buffer: &[u8; 0x20]) {
 }
 
 fn print_memory(memory: &[u8; 0x100]) {
-  let mut memory_string: String = String::new();
+  let mut memory_string: String = "".to_string();
 
   for y in 0..0x10 {
     for x in 0..0x10 {
