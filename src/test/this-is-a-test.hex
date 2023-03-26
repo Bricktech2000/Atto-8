@@ -3,11 +3,11 @@
 # memcpy: x00 loop: dup dup :dst :src @01 add add
 # stw dup @00 swp str @00
 # inc
-# dup :len xor pop :stop :loop iif sti
+# dup :len xor pop :loop :stop iif sti
 # stop: pop x00 hlt
 
-# dst: (display buffer, DF)
-# len: (length of :src, 0x18)
+# dst$ DF # display buffer
+# len$ # length of :src
 # src:
 # dEA dE6 d4E d44 d4A dEC d00 d00
 # dE6 d0E d44 d0E dEC d0A d00 d00

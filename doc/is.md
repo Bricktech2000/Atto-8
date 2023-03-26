@@ -45,6 +45,5 @@
 | sti      | Store Instruction Pointer | `*(SP--) -> IP;`                                      |                                        | `0b10010111` `0x97` |
 | ldw      | Load Work Pointer         | `*WP -> *(++SP);`                                     |                                        | `0b10011000` `0x98` |
 | stw      | Store Work Pointer        | `*(SP--) -> *WP;`                                     |                                        | `0b10011001` `0x99` |
-| oor      | Bitwise OR                | `*(SP--) \| *WP -> *WP;`                              | Set carry if zero.                     | `0b10100110` `0xA6` |
 | lds      | Load Stack Pointer        | `SP -> *(++SP);`                                      |                                        | `0b10011010` `0x9A` |
 | sts      | Store Stack Pointer       | `*(SP--) -> SP;`                                      |                                        | `0b10011011` `0x9B` |

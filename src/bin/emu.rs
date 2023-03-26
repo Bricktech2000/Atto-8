@@ -7,29 +7,23 @@ fn main() {
 
   println!("Emulating CPU...");
 
-  let in_bytes: Vec<u8> = std::fs::read(&args[1]).expect("Unable to read file.");
-  let exit_code = emulate(in_bytes, 1000);
+  let memory: Vec<u8> = std::fs::read(&args[1]).expect("Unable to read file.");
+  emulate(
+    memory.try_into().expect("Slice with incorrect length."),
+    1000,
+  );
 
   println!("");
   println!("CPU halted.");
-  println!(
-    "Exit code: {:#04x}, {:#010b} ({}u8, {}i8)",
-    exit_code, exit_code, exit_code, exit_code as i8
-  );
 }
 
-fn emulate(memory: Vec<u8>, clock: u64) -> u8 {
+fn emulate(memory: [u8; 0x100], clock: u64) {
   let mut memory = memory.clone();
   let mut stack_pointer: u8 = 0x00; // CPU stack pointer
   let mut work_pointer: u8 = 0x00; // CPU work pointer
   let mut instruction_pointer: u8 = 0x00; // CPU instruction pointer
   let mut carry_flag: bool = false; // CPU carry flag
   let mut debug_flag: bool = false; // CPU debug flag
-
-  memory.extend(vec![0x00; 0x100 - memory.len()]);
-  // use rand::Rng;
-  // let mut rng = rand::thread_rng();
-  // memory.extend((0..(0x100 - memory.len())).map(|_| rng.gen_range(0x00..0xFF)));
 
   // clear screen
   print!("\x1B[2J");
@@ -295,8 +289,6 @@ fn emulate(memory: Vec<u8>, clock: u64) -> u8 {
       }
     }
   }
-
-  memory[0xDF]
 }
 
 fn print_display(display_buffer: &[u8; 0x20]) {
