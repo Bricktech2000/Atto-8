@@ -38,12 +38,12 @@
 | sub      | Subtract                  | `*(SP--) - *WP -> *WP;`                               | Carry to carry in, underflow to carry. | `0b10100011` `0xA3` |
 | rol      | Rotate Left               | `*WP << 1 -> *WP;`                                    | Carry to LSB, MSB to carry.            | `0b10100100` `0xA4` |
 | ror      | Rotate Right              | `*WP >> 1 -> *WP;`                                    | Carry to MSB, LSB to carry.            | `0b10100101` `0xA5` |
-| oor      | Bitwise OR                | `*(SP--) \| *WP -> *WP;`                              | Set carry if zero.                     | `0b10100110` `0xA6` |
-| and      | Bitwise AND               | `*(SP--) & *WP -> *WP;`                               | Set carry if zero.                     | `0b10100111` `0xA7` |
-| xor      | Bitwise XOR               | `*(SP--) ^ *WP -> *WP;`                               | Set carry if zero.                     | `0b10101000` `0xA8` |
-| xnd      | Bitwise XAND              | `*(SP--) & 0 -> *WP;`                                 | Set carry if zero.                     | `0b10101001` `0xA9` |
-| not      | Bitwise NOT               | `~*WP -> *WP;`                                        | Set carry if zero.                     | `0b10101010` `0xAA` |
-| iif      | If-Then-Else              | `CF ? *((SP--)--) : *((--SP)--) -> *(++SP); 0 -> CF;` | Carry as condition. Clears carry.      | `0b10010000` `0x90` |
+| oor      | Bitwise OR                | `*(SP--) \| *WP -> *WP;`                              | Set carry if zero. Clear otherwise.    | `0b10100110` `0xA6` |
+| and      | Bitwise AND               | `*(SP--) & *WP -> *WP;`                               | Set carry if zero. Clear otherwise.    | `0b10100111` `0xA7` |
+| xor      | Bitwise XOR               | `*(SP--) ^ *WP -> *WP;`                               | Set carry if zero. Clear otherwise.    | `0b10101000` `0xA8` |
+| xnd      | Bitwise XAND              | `*(SP--) & 0 -> *WP;`                                 | Set carry if zero. Clear otherwise.    | `0b10101001` `0xA9` |
+| not      | Bitwise NOT               | `~*WP -> *WP;`                                        | Set carry if zero. Clear otherwise.    | `0b10101010` `0xAA` |
+| iif      | If-Then-Else              | `CF ? *((SP--)--) : *((--SP)--) -> *(++SP); 0 -> CF;` | Carry as condition. Clear carry.       | `0b10010000` `0x90` |
 | swp      | Swap                      | `*(SP--) -> *WP -> *(++SP);`                          |                                        | `0b10010001` `0x91` |
 | dup      | Duplicate                 | `*WP -> *(++SP);`                                     |                                        | `0b10010010` `0x92` |
 | str      | Store                     | `*(SP--) -> *WP;`                                     |                                        | `0b10010011` `0x93` |

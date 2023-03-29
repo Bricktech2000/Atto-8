@@ -10,7 +10,7 @@ fn main() {
   let memory: Vec<u8> = std::fs::read(&args[1]).expect("Unable to read file");
   emulate(
     memory.try_into().expect("Slice with incorrect length"),
-    1000,
+    1000000,
   );
 
   println!("");
@@ -73,25 +73,27 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
         // dbg
         debug_flag = true;
       }
-      0x83 => {
+      0x82 => {
         // clc
         carry_flag = false;
       }
-      0x84 => {
+      0x83 => {
         // sec
         carry_flag = true;
       }
-      0x85 => {
+      0x84 => {
         // flc
         carry_flag = !carry_flag;
       }
       0xA0 => {
         // inc
+        // TODO: use carry
         let a = memory[work_pointer as usize];
         memory[work_pointer as usize] = a.wrapping_add(1);
       }
       0xA1 => {
         // dec
+        // TODO: use carry
         let a = memory[work_pointer as usize];
         memory[work_pointer as usize] = a.wrapping_sub(1);
       }

@@ -1,7 +1,7 @@
 main%
-main: x00 x00
-lds xDD xor pop :main :memcpy iif sti
-memcpy: x00 loop: dup dup %display_buffer :display_data @01 add add
+init: x00 x00
+lds xDD xor pop :init :main iif sti
+main: x00 loop: dup dup %display_buffer :display_data @01 add add
 stw dup @00 swp inc stw str @00
 inc
 dup %display_data_len xor pop :loop :exit iif sti
