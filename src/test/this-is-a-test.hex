@@ -1,25 +1,30 @@
-# start: x00 x00
-# lds xDD xor pop :start :memcpy iif sti
-# memcpy: x00 loop: dup dup :dst :src @01 add add
-# stw dup @00 swp str @00
-# inc
-# dup :len xor pop :loop :stop iif sti
-# stop: pop x00 hlt
-
-# dst$ DF # display buffer
-# len$ # length of :src
-# src:
+# main%
+# %display_buffer sts xFF x00 sta
+# %display_data_len for_i: dec
+# ld0 %display_buffer add
+# ld1 :display_data add
+# lda sta
+# buf :for_i :for_i_end iff sti
+# for_i_end: pop
+# hlt
+# 
+# display_data:
 # dEA dE6 d4E d44 d4A dEC d00 d00
 # dE6 d0E d44 d0E dEC d0A d00 d00
 # dEE d6E d4C d44 d4E dC4 d00 d00
+# display_data_end:
+# 
+# display_buffer% xE0
+# display_data_len% :display_data_end :display_data sub
 
-00 00
-9A 95 DD A8 94 00 0B 90 97
-00 92 92 DF 26 41 A2 A2
-99 92 40 91 99 93 40
-A0
-92 18 A8 94 0C 24 90 97
-94 00 81
+E0 BD FF 00 B9
+18 41
+80 E0 42
+81 16 42
+B8 B9
+4D 06 14 4E BB
+B1
+AF
 
 EA E6 4E 44 4A EC 00 00
 E6 0E 44 0E EC 0A 00 00

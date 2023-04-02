@@ -1,11 +1,13 @@
 # start:
 # xAA dup x55 dup
-# lds inc %display_buffer xor pop :start :stop iff sti
+# lds %display_buffer sub pop :start :stop iff sti
 # stop: hlt
 # display_buffer% xE0
 
 # xAA dup x55 dup
-# lds inc x0E xor pop x00 x0E iff sti
+# lds x0E sub pop x00 x0E iff sti
 # hlt
 
-B2 AA 80 B2 55 80 BC 40 E0 4A B1 00 0F 4D BB AF
+B2 AA 80 B2 55 80
+BC E0 44 B1 00 0E 4E BB
+AF

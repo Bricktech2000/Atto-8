@@ -8,7 +8,10 @@ fn main() {
   println!("Emulating CPU...");
 
   let memory: Vec<u8> = std::fs::read(&args[1]).expect("Unable to read file");
-  emulate(memory.try_into().expect("Slice with incorrect length"), 100);
+  emulate(
+    memory.try_into().expect("Slice with incorrect length"),
+    1000,
+  );
 
   println!("");
   println!("CPU halted.");
@@ -107,7 +110,7 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
             let b = memory[offset_pointer as usize];
 
             memory[offset_pointer as usize] = (b as i16 - a as i16 - carry_flag as i16) as u8;
-            carry_flag = (b as i16 - a as i16 - carry_flag as i16) > 0xFF;
+            carry_flag = (b as i16 - a as i16 - carry_flag as i16) < 0x00;
           }
           0x06 => {
             // shf
@@ -174,12 +177,19 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
           }
           0x0C if offset == 0x01 => {
             // not
-            let a = memory[offset_pointer as usize];
+            let a = memory[stack_pointer as usize];
 
-            memory[offset_pointer as usize] = !a;
-            carry_flag = memory[offset_pointer as usize] == 0x00;
+            memory[stack_pointer as usize] = !a;
+            carry_flag = memory[stack_pointer as usize] == 0x00;
           }
-          0x0D => {
+          0x0D if offset == 0x01 => {
+            // buf
+            let a = memory[stack_pointer as usize];
+
+            memory[stack_pointer as usize] = a;
+            carry_flag = memory[stack_pointer as usize] == 0x00;
+          }
+          0x0E => {
             // iff
             let a = memory[stack_pointer as usize];
             memory[stack_pointer as usize] = 0x00;
@@ -275,11 +285,20 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
               }
               0x08 => {
                 // lda
-                todo!();
+                let a = memory[stack_pointer as usize];
+
+                memory[stack_pointer as usize] = memory[a as usize];
               }
               0x09 => {
                 // sta
-                todo!();
+                let a = memory[stack_pointer as usize];
+                memory[stack_pointer as usize] = 0x00;
+                stack_pointer = stack_pointer.wrapping_add(1);
+                let b = memory[stack_pointer as usize];
+                memory[stack_pointer as usize] = 0x00;
+                stack_pointer = stack_pointer.wrapping_add(1);
+
+                memory[b as usize] = a;
               }
               0x0A => {
                 // ldi
@@ -299,9 +318,10 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
               }
               0x0D => {
                 // sts
-                stack_pointer = memory[stack_pointer as usize];
+                let a = memory[stack_pointer as usize];
                 memory[stack_pointer as usize] = 0x00;
-                // stack_pointer = stack_pointer.wrapping_add(1);
+
+                stack_pointer = a;
               }
               _ => panic!("Unknown instruction: {:#04x}", instruction),
             }

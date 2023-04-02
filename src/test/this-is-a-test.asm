@@ -1,11 +1,12 @@
 main%
-init: x00 x00
-lds xDD xor pop :init :main iif sti
-main: x00 loop: dup dup %display_buffer :display_data @01 add add
-stw dup @00 swp inc stw str @00
-inc
-dup %display_data_len xor pop :loop :exit iif sti
-exit: pop x00 hlt
+%display_buffer sts xFF x00 sta
+%display_data_len for_i: dec
+ld0 %display_buffer add
+ld1 :display_data add
+lda sta
+buf :for_i :for_i_end iff sti
+for_i_end: pop
+hlt
 
 display_data:
 dEA dE6 d4E d44 d4A dEC d00 d00
