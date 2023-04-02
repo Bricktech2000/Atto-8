@@ -8,10 +8,7 @@ fn main() {
   println!("Emulating CPU...");
 
   let memory: Vec<u8> = std::fs::read(&args[1]).expect("Unable to read file");
-  emulate(
-    memory.try_into().expect("Slice with incorrect length"),
-    1000000,
-  );
+  emulate(memory.try_into().expect("Slice with incorrect length"), 100);
 
   println!("");
   println!("CPU halted.");
@@ -20,7 +17,6 @@ fn main() {
 fn emulate(memory: [u8; 0x100], clock: u64) {
   let mut memory = memory.clone();
   let mut stack_pointer: u8 = 0x00; // CPU stack pointer
-  let mut work_pointer: u8 = 0x00; // CPU work pointer
   let mut instruction_pointer: u8 = 0x00; // CPU instruction pointer
   let mut carry_flag: bool = false; // CPU carry flag
   let mut debug_flag: bool = false; // CPU debug flag
@@ -52,8 +48,8 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
         .expect("Slice with incorrect length"),
     );
     println!(
-      "IP  {:#04x}\nSP  {:#04x}\nWP  {:#04x}\nCF  {}",
-      instruction_pointer, stack_pointer, work_pointer, carry_flag
+      "IP  {:#04x}\nSP  {:#04x}\nCF  {}",
+      instruction_pointer, stack_pointer, carry_flag
     );
 
     if debug_flag {
@@ -61,234 +57,259 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
       stdin().read(&mut [0]).unwrap();
     }
 
-    match instruction {
-      0x80 => {
-        // nop
-      }
-      0x81 => {
-        // hlt
-        break;
-      }
-      0x88 => {
-        // dbg
-        debug_flag = true;
-      }
-      0x82 => {
-        // clc
-        carry_flag = false;
-      }
-      0x83 => {
-        // sec
-        carry_flag = true;
-      }
-      0x84 => {
-        // flc
-        carry_flag = !carry_flag;
-      }
-      0xA0 => {
-        // inc
-        // TODO: use carry
-        let a = memory[work_pointer as usize];
-        memory[work_pointer as usize] = a.wrapping_add(1);
-      }
-      0xA1 => {
-        // dec
-        // TODO: use carry
-        let a = memory[work_pointer as usize];
-        memory[work_pointer as usize] = a.wrapping_sub(1);
-      }
-      0xA2 => {
-        // add
-        let a = memory[stack_pointer as usize];
-        memory[stack_pointer as usize] = 0x00;
-        stack_pointer = stack_pointer.wrapping_add(1);
-        work_pointer = work_pointer.wrapping_add(1);
-        let b = memory[work_pointer as usize];
-
-        memory[work_pointer as usize] = (b as u16 + a as u16 + carry_flag as u16) as u8;
-        carry_flag = (b as u16 + a as u16 + carry_flag as u16) > 0xFF;
-      }
-      0xA3 => {
-        // sub
-        let a = memory[stack_pointer as usize];
-        memory[stack_pointer as usize] = 0x00;
-        stack_pointer = stack_pointer.wrapping_add(1);
-        work_pointer = work_pointer.wrapping_add(1);
-        let b = memory[work_pointer as usize];
-
-        memory[work_pointer as usize] = (b as i16 - a as i16 - carry_flag as i16) as u8;
-        carry_flag = (b as i16 - a as i16 - carry_flag as i16) > 0xFF;
-      }
-      0xA4 => {
-        // rol
-        let a = memory[work_pointer as usize];
-        memory[work_pointer as usize] = a << 1 | carry_flag as u8;
-        carry_flag = a & 0x80 != 0;
-      }
-      0xA5 => {
-        // ror
-        let a = memory[work_pointer as usize];
-        memory[work_pointer as usize] = a >> 1 | carry_flag as u8;
-        carry_flag = a & 0x01 != 0;
-      }
-      0xA6 => {
-        // oor
-        let a = memory[stack_pointer as usize];
-        memory[stack_pointer as usize] = 0x00;
-        stack_pointer = stack_pointer.wrapping_add(1);
-        work_pointer = work_pointer.wrapping_add(1);
-        let b = memory[work_pointer as usize];
-
-        memory[work_pointer as usize] = a | b;
-        carry_flag = memory[work_pointer as usize] == 0x00;
-      }
-      0xA7 => {
-        // and
-        let a = memory[stack_pointer as usize];
-        memory[stack_pointer as usize] = 0x00;
-        stack_pointer = stack_pointer.wrapping_add(1);
-        work_pointer = work_pointer.wrapping_add(1);
-        let b = memory[work_pointer as usize];
-
-        memory[work_pointer as usize] = a & b;
-        carry_flag = memory[work_pointer as usize] == 0x00;
-      }
-      0xA8 => {
-        // xor
-        let a = memory[stack_pointer as usize];
-        memory[stack_pointer as usize] = 0x00;
-        stack_pointer = stack_pointer.wrapping_add(1);
-        work_pointer = work_pointer.wrapping_add(1);
-        let b = memory[work_pointer as usize];
-
-        memory[work_pointer as usize] = a ^ b;
-        carry_flag = memory[work_pointer as usize] == 0x00;
-      }
-      0xA9 => {
-        // xnd
-        memory[stack_pointer as usize] = 0x00;
-        stack_pointer = stack_pointer.wrapping_add(1);
-        work_pointer = work_pointer.wrapping_add(1);
-
-        memory[work_pointer as usize] = 0;
-        carry_flag = memory[work_pointer as usize] == 0x00;
-      }
-      0xAA => {
-        // not
-        let a = memory[work_pointer as usize];
-
-        memory[work_pointer as usize] = !a;
-        carry_flag = memory[work_pointer as usize] == 0x00;
-      }
-      0x90 => {
-        // iif
-        let a = memory[stack_pointer as usize];
-        memory[stack_pointer as usize] = 0x00;
-        stack_pointer = stack_pointer.wrapping_add(1);
-        work_pointer = work_pointer.wrapping_add(1);
-        let b = memory[stack_pointer as usize];
-
-        memory[stack_pointer as usize] = if carry_flag { a } else { b };
-        carry_flag = false;
-      }
-      0x91 => {
-        // swp
-        let a = memory[stack_pointer as usize];
-        stack_pointer = stack_pointer.wrapping_add(1);
-        work_pointer = work_pointer.wrapping_add(1);
-        let b = memory[work_pointer as usize];
-
-        memory[work_pointer as usize] = a;
-        stack_pointer = stack_pointer.wrapping_sub(1);
-        work_pointer = work_pointer.wrapping_sub(1);
-        memory[work_pointer as usize] = b;
-      }
-      0x92 => {
-        // dup
-        let a = memory[work_pointer as usize];
-        stack_pointer = stack_pointer.wrapping_sub(1);
-        work_pointer = work_pointer.wrapping_sub(1);
-
-        memory[stack_pointer as usize] = a;
-      }
-      0x93 => {
-        // str
-        let a = memory[stack_pointer as usize];
-        memory[stack_pointer as usize] = 0x00;
-        stack_pointer = stack_pointer.wrapping_add(1);
-        work_pointer = work_pointer.wrapping_add(1);
-
-        memory[work_pointer as usize] = a;
-      }
-      0x94 => {
-        // pop
-        memory[stack_pointer as usize] = 0x00;
-        stack_pointer = stack_pointer.wrapping_add(1);
-        work_pointer = work_pointer.wrapping_add(1);
-      }
-      _ if instruction & 0b11000000 == 0b00000000 || instruction & 0b11000000 == 0b11000000 => {
-        // xXX
+    match instruction & 0b11000000 {
+      0b11000000 | 0b00000000 => {
+        // xXX (Push Posibive, Push Negative)
         let a = instruction;
         stack_pointer = stack_pointer.wrapping_sub(1);
-        work_pointer = work_pointer.wrapping_sub(1);
         memory[stack_pointer as usize] = a;
       }
-      0x95 => {
-        // xXX
-        let a = memory[instruction_pointer as usize];
-        instruction_pointer = instruction_pointer.wrapping_add(1);
-        stack_pointer = stack_pointer.wrapping_sub(1);
-        work_pointer = work_pointer.wrapping_sub(1);
 
-        memory[stack_pointer as usize] = a;
+      0b01000000 => {
+        // (arithmetic and logic)
+        let offset = 2_u8.pow(((instruction & 0b00110000) >> 4).into());
+        let offset_pointer = stack_pointer.wrapping_add(offset);
+
+        match instruction & 0b00001111 {
+          0x00 if offset == 0x01 => {
+            // inc
+            let a = memory[stack_pointer as usize];
+            memory[stack_pointer as usize] = a.wrapping_add(1);
+          }
+          0x01 if offset == 0x01 => {
+            // dec
+            let a = memory[stack_pointer as usize];
+            memory[stack_pointer as usize] = a.wrapping_sub(1);
+          }
+          0x02 | 0x03 => {
+            // add, adc
+            if instruction & 0b00001111 == 0x02 {
+              carry_flag = false;
+            }
+
+            let a = memory[stack_pointer as usize];
+            memory[stack_pointer as usize] = 0x00;
+            stack_pointer = stack_pointer.wrapping_add(1);
+            let b = memory[offset_pointer as usize];
+
+            memory[offset_pointer as usize] = (b as u16 + a as u16 + carry_flag as u16) as u8;
+            carry_flag = (b as u16 + a as u16 + carry_flag as u16) > 0xFF;
+          }
+          0x04 | 0x05 => {
+            // sub, sbc
+            if instruction & 0b00001111 == 0x04 {
+              carry_flag = false;
+            }
+
+            let a = memory[stack_pointer as usize];
+            memory[stack_pointer as usize] = 0x00;
+            stack_pointer = stack_pointer.wrapping_add(1);
+            let b = memory[offset_pointer as usize];
+
+            memory[offset_pointer as usize] = (b as i16 - a as i16 - carry_flag as i16) as u8;
+            carry_flag = (b as i16 - a as i16 - carry_flag as i16) > 0xFF;
+          }
+          0x06 => {
+            // shf
+            let a = memory[stack_pointer as usize];
+            memory[stack_pointer as usize] = 0x00;
+            stack_pointer = stack_pointer.wrapping_add(1);
+            let b = memory[offset_pointer as usize];
+
+            // TODO: negative shifts
+            let shifted = (b as u16) << a as u16;
+            memory[offset_pointer as usize] = shifted as u8;
+            // TODO: set carry flag
+          }
+          0x07 => {
+            // rot
+            let a = memory[stack_pointer as usize];
+            memory[stack_pointer as usize] = 0x00;
+            stack_pointer = stack_pointer.wrapping_add(1);
+            let b = memory[offset_pointer as usize];
+
+            // TODO: negative rotations
+            // TODO: use carry flag
+            let shifted = (b as u16) << a as u16;
+            memory[offset_pointer as usize] = (shifted & 0xFF) as u8 | (shifted >> 8) as u8;
+            // TODO: set carry flag
+          }
+          0x08 => {
+            // orr
+            let a = memory[stack_pointer as usize];
+            memory[stack_pointer as usize] = 0x00;
+            stack_pointer = stack_pointer.wrapping_add(1);
+            let b = memory[offset_pointer as usize];
+
+            memory[offset_pointer as usize] = a | b;
+            carry_flag = memory[offset_pointer as usize] == 0x00;
+          }
+          0x09 => {
+            // and
+            let a = memory[stack_pointer as usize];
+            memory[stack_pointer as usize] = 0x00;
+            stack_pointer = stack_pointer.wrapping_add(1);
+            let b = memory[offset_pointer as usize];
+
+            memory[offset_pointer as usize] = a & b;
+            carry_flag = memory[offset_pointer as usize] == 0x00;
+          }
+          0x0A => {
+            // xor
+            let a = memory[stack_pointer as usize];
+            memory[stack_pointer as usize] = 0x00;
+            stack_pointer = stack_pointer.wrapping_add(1);
+            let b = memory[offset_pointer as usize];
+
+            memory[offset_pointer as usize] = a ^ b;
+            carry_flag = memory[offset_pointer as usize] == 0x00;
+          }
+          0x0B => {
+            // xnd
+            memory[stack_pointer as usize] = 0x00;
+            stack_pointer = stack_pointer.wrapping_add(1);
+
+            memory[offset_pointer as usize] = 0;
+            carry_flag = memory[offset_pointer as usize] == 0x00;
+          }
+          0x0C if offset == 0x01 => {
+            // not
+            let a = memory[offset_pointer as usize];
+
+            memory[offset_pointer as usize] = !a;
+            carry_flag = memory[offset_pointer as usize] == 0x00;
+          }
+          0x0D => {
+            // iff
+            let a = memory[stack_pointer as usize];
+            memory[stack_pointer as usize] = 0x00;
+            stack_pointer = stack_pointer.wrapping_add(1);
+            let b = memory[stack_pointer as usize];
+
+            memory[stack_pointer as usize] = if carry_flag { a } else { b };
+            carry_flag = false;
+          }
+          _ => panic!("Unknown instruction: {:#04x}", instruction),
+        }
       }
-      _ if instruction & 0b11000000 == 0b01000000 => {
-        // @WW
-        let a = instruction & 0b00111111;
-        work_pointer = stack_pointer.wrapping_add(a as u8);
+
+      0b10000000 => {
+        match instruction & 0b00110000 {
+          0b00000000 => {
+            // ldo
+            let offset = instruction & 0b00001111;
+            let offset_pointer = stack_pointer.wrapping_add(offset);
+
+            stack_pointer = stack_pointer.wrapping_sub(1);
+            let a = memory[offset_pointer as usize];
+
+            memory[stack_pointer as usize] = a;
+          }
+
+          0b00010000 => {
+            // sto
+            let offset = instruction & 0b00001111;
+            let offset_pointer = stack_pointer.wrapping_add(offset);
+
+            let a = memory[stack_pointer as usize];
+            stack_pointer = stack_pointer.wrapping_add(1);
+
+            memory[offset_pointer as usize] = a;
+          }
+
+          0b00100000 => {
+            // (clock and flags)
+            match instruction & 0b00001111 {
+              0x00 => {
+                // nop
+              }
+              0x0F => {
+                // hlt
+                break;
+              }
+              0x0A => {
+                // dbg
+                debug_flag = true;
+              }
+              0x01 => {
+                // clc
+                carry_flag = false;
+              }
+              0x02 => {
+                // sec
+                carry_flag = true;
+              }
+              0x03 => {
+                // flc
+                carry_flag = !carry_flag;
+              }
+              _ => panic!("Unknown instruction: {:#04x}", instruction),
+            }
+          }
+
+          0b00110000 => {
+            // (stack and memory)
+            match instruction & 0b00001111 {
+              0x00 => {
+                // swp
+                let a = memory[stack_pointer as usize];
+                stack_pointer = stack_pointer.wrapping_add(1);
+                let b = memory[stack_pointer as usize];
+
+                memory[stack_pointer as usize] = a;
+                stack_pointer = stack_pointer.wrapping_sub(1);
+                memory[stack_pointer as usize] = b;
+              }
+              0x01 => {
+                // pop
+                memory[stack_pointer as usize] = 0x00;
+                stack_pointer = stack_pointer.wrapping_add(1);
+              }
+              0x02 => {
+                // xXX (Push Next)
+                let a = memory[instruction_pointer as usize];
+                instruction_pointer = instruction_pointer.wrapping_add(1);
+                stack_pointer = stack_pointer.wrapping_sub(1);
+
+                memory[stack_pointer as usize] = a;
+              }
+              0x08 => {
+                // lda
+                todo!();
+              }
+              0x09 => {
+                // sta
+                todo!();
+              }
+              0x0A => {
+                // ldi
+                stack_pointer = stack_pointer.wrapping_sub(1);
+                memory[stack_pointer as usize] = instruction_pointer;
+              }
+              0x0B => {
+                // sti
+                instruction_pointer = memory[stack_pointer as usize];
+                memory[stack_pointer as usize] = 0x00;
+                stack_pointer = stack_pointer.wrapping_add(1);
+              }
+              0x0C => {
+                // lds
+                stack_pointer = stack_pointer.wrapping_sub(1);
+                memory[stack_pointer as usize] = stack_pointer;
+              }
+              0x0D => {
+                // sts
+                stack_pointer = memory[stack_pointer as usize];
+                memory[stack_pointer as usize] = 0x00;
+                // stack_pointer = stack_pointer.wrapping_add(1);
+              }
+              _ => panic!("Unknown instruction: {:#04x}", instruction),
+            }
+          }
+          _ => unreachable!(),
+        }
       }
-      0x96 => {
-        // ldi
-        stack_pointer = stack_pointer.wrapping_sub(1);
-        work_pointer = work_pointer.wrapping_sub(1);
-        memory[stack_pointer as usize] = instruction_pointer;
-      }
-      0x97 => {
-        // sti
-        instruction_pointer = memory[stack_pointer as usize];
-        memory[stack_pointer as usize] = 0x00;
-        stack_pointer = stack_pointer.wrapping_add(1);
-        work_pointer = work_pointer.wrapping_add(1);
-      }
-      0x98 => {
-        // ldw
-        stack_pointer = stack_pointer.wrapping_sub(1);
-        work_pointer = work_pointer.wrapping_sub(1);
-        memory[stack_pointer as usize] = work_pointer;
-      }
-      0x99 => {
-        // stw
-        work_pointer = memory[stack_pointer as usize];
-        memory[stack_pointer as usize] = 0x00;
-        stack_pointer = stack_pointer.wrapping_add(1);
-        // work_pointer = work_pointer.wrapping_add(1);
-      }
-      0x9A => {
-        // lds
-        stack_pointer = stack_pointer.wrapping_sub(1);
-        work_pointer = work_pointer.wrapping_sub(1);
-        memory[stack_pointer as usize] = stack_pointer;
-      }
-      0x9B => {
-        // sts
-        stack_pointer = memory[stack_pointer as usize];
-        memory[stack_pointer as usize] = 0x00;
-        // stack_pointer = stack_pointer.wrapping_add(1);
-        // work_pointer = work_pointer.wrapping_add(1);
-      }
-      _ => {
-        panic!("Unknown instruction: {:#04x}", instruction);
-      }
+      _ => unreachable!(),
     }
   }
 }
