@@ -63,23 +63,23 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
     match instruction & 0b11000000 {
       0b11000000 | 0b00000000 => {
         // xXX (Push Posibive, Push Negative)
-        let a = instruction;
+        let immediate = instruction; // decode_immediate
         stack_pointer = stack_pointer.wrapping_sub(1);
-        memory[stack_pointer as usize] = a;
+        memory[stack_pointer as usize] = immediate;
       }
 
-      0b01000000 => {
+      0x40 => {
         // (arithmetic and logic)
-        let offset = 2_u8.pow(((instruction & 0b00110000) >> 4).into());
-        let offset_pointer = stack_pointer.wrapping_add(offset);
+        let size = 1 << ((instruction & 0b00110000) >> 4); // decode_size
+        let size_pointer = stack_pointer.wrapping_add(size);
 
         match instruction & 0b00001111 {
-          0x00 if offset == 0x01 => {
+          0x00 if size == 0x01 => {
             // inc
             let a = memory[stack_pointer as usize];
             memory[stack_pointer as usize] = a.wrapping_add(1);
           }
-          0x01 if offset == 0x01 => {
+          0x01 if size == 0x01 => {
             // dec
             let a = memory[stack_pointer as usize];
             memory[stack_pointer as usize] = a.wrapping_sub(1);
@@ -93,9 +93,9 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
             let a = memory[stack_pointer as usize];
             memory[stack_pointer as usize] = 0x00;
             stack_pointer = stack_pointer.wrapping_add(1);
-            let b = memory[offset_pointer as usize];
+            let b = memory[size_pointer as usize];
 
-            memory[offset_pointer as usize] = (b as u16 + a as u16 + carry_flag as u16) as u8;
+            memory[size_pointer as usize] = (b as u16 + a as u16 + carry_flag as u16) as u8;
             carry_flag = (b as u16 + a as u16 + carry_flag as u16) > 0xFF;
           }
           0x04 | 0x05 => {
@@ -107,9 +107,9 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
             let a = memory[stack_pointer as usize];
             memory[stack_pointer as usize] = 0x00;
             stack_pointer = stack_pointer.wrapping_add(1);
-            let b = memory[offset_pointer as usize];
+            let b = memory[size_pointer as usize];
 
-            memory[offset_pointer as usize] = (b as i16 - a as i16 - carry_flag as i16) as u8;
+            memory[size_pointer as usize] = (b as i16 - a as i16 - carry_flag as i16) as u8;
             carry_flag = (b as i16 - a as i16 - carry_flag as i16) < 0x00;
           }
           0x06 => {
@@ -117,11 +117,11 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
             let a = memory[stack_pointer as usize];
             memory[stack_pointer as usize] = 0x00;
             stack_pointer = stack_pointer.wrapping_add(1);
-            let b = memory[offset_pointer as usize];
+            let b = memory[size_pointer as usize];
 
             // TODO: negative shifts
             let shifted = (b as u16) << a as u16;
-            memory[offset_pointer as usize] = shifted as u8;
+            memory[size_pointer as usize] = shifted as u8;
             // TODO: set carry flag
           }
           0x07 => {
@@ -129,12 +129,12 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
             let a = memory[stack_pointer as usize];
             memory[stack_pointer as usize] = 0x00;
             stack_pointer = stack_pointer.wrapping_add(1);
-            let b = memory[offset_pointer as usize];
+            let b = memory[size_pointer as usize];
 
             // TODO: negative rotations
             // TODO: use carry flag
             let shifted = (b as u16) << a as u16;
-            memory[offset_pointer as usize] = (shifted & 0xFF) as u8 | (shifted >> 8) as u8;
+            memory[size_pointer as usize] = (shifted & 0xFF) as u8 | (shifted >> 8) as u8;
             // TODO: set carry flag
           }
           0x08 => {
@@ -142,47 +142,47 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
             let a = memory[stack_pointer as usize];
             memory[stack_pointer as usize] = 0x00;
             stack_pointer = stack_pointer.wrapping_add(1);
-            let b = memory[offset_pointer as usize];
+            let b = memory[size_pointer as usize];
 
-            memory[offset_pointer as usize] = a | b;
-            carry_flag = memory[offset_pointer as usize] == 0x00;
+            memory[size_pointer as usize] = a | b;
+            carry_flag = memory[size_pointer as usize] == 0x00;
           }
           0x09 => {
             // and
             let a = memory[stack_pointer as usize];
             memory[stack_pointer as usize] = 0x00;
             stack_pointer = stack_pointer.wrapping_add(1);
-            let b = memory[offset_pointer as usize];
+            let b = memory[size_pointer as usize];
 
-            memory[offset_pointer as usize] = a & b;
-            carry_flag = memory[offset_pointer as usize] == 0x00;
+            memory[size_pointer as usize] = a & b;
+            carry_flag = memory[size_pointer as usize] == 0x00;
           }
           0x0A => {
             // xor
             let a = memory[stack_pointer as usize];
             memory[stack_pointer as usize] = 0x00;
             stack_pointer = stack_pointer.wrapping_add(1);
-            let b = memory[offset_pointer as usize];
+            let b = memory[size_pointer as usize];
 
-            memory[offset_pointer as usize] = a ^ b;
-            carry_flag = memory[offset_pointer as usize] == 0x00;
+            memory[size_pointer as usize] = a ^ b;
+            carry_flag = memory[size_pointer as usize] == 0x00;
           }
           0x0B => {
             // xnd
             memory[stack_pointer as usize] = 0x00;
             stack_pointer = stack_pointer.wrapping_add(1);
 
-            memory[offset_pointer as usize] = 0;
-            carry_flag = memory[offset_pointer as usize] == 0x00;
+            memory[size_pointer as usize] = 0;
+            carry_flag = memory[size_pointer as usize] == 0x00;
           }
-          0x0C if offset == 0x01 => {
+          0x0C if size == 0x01 => {
             // not
             let a = memory[stack_pointer as usize];
 
             memory[stack_pointer as usize] = !a;
             carry_flag = memory[stack_pointer as usize] == 0x00;
           }
-          0x0D if offset == 0x01 => {
+          0x0D if size == 0x01 => {
             // buf
             let a = memory[stack_pointer as usize];
 
@@ -203,11 +203,11 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
         }
       }
 
-      0b10000000 => {
+      0x80 => {
         match instruction & 0b00110000 {
           0b00000000 => {
             // ldo
-            let offset = instruction & 0b00001111;
+            let offset = instruction & 0b00001111; // decode_offset
             let offset_pointer = stack_pointer.wrapping_add(offset);
 
             stack_pointer = stack_pointer.wrapping_sub(1);
@@ -218,7 +218,7 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
 
           0b00010000 => {
             // sto
-            let offset = instruction & 0b00001111;
+            let offset = instruction & 0b00001111; // decode_offset
             let offset_pointer = stack_pointer.wrapping_add(offset);
 
             let a = memory[stack_pointer as usize];
