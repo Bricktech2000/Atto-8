@@ -5,11 +5,15 @@ fn main() {
     std::process::exit(1);
   }
 
-  let memory: Vec<u8> = std::fs::read(&args[1]).expect("Unable to read file");
+  let memory: Vec<u8> =
+    std::fs::read(&args[1]).expect(format!("Unable to read file: {}", &args[1]).as_str());
+
   emulate(
     memory.try_into().expect("Slice with incorrect length"),
     1000,
   );
+
+  println!("\nDone.");
 }
 
 fn emulate(memory: [u8; 0x100], clock: u64) {
@@ -379,6 +383,8 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
       _ => unreachable!(),
     }
   }
+
+  println!("");
 }
 
 fn print_display(display_buffer: &[u8; 0x20]) {

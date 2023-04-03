@@ -1,5 +1,7 @@
+# clear; python3 src/enc.py src/test/checkerboard.hex && cargo run --bin emu src/test/checkerboard.bin
+
 # start:
-# xAA dup x55 dup
+# x55 dup dup not dup
 # lds %display_buffer sub pop :start :stop iff sti
 # stop: hlt
 # display_buffer% xE0
@@ -8,6 +10,6 @@
 # lds x0E sub pop x00 x0E iff sti
 # hlt
 
-B2 AA 80 B2 55 80
-BC E0 44 B1 00 0E 4E BB
+55 80 80 CC 80
+BC 1F CC C4 B1 00 0E CE BB
 AF

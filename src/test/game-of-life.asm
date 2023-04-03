@@ -1,3 +1,5 @@
+# clear; cargo run --bin asm src/test/game-of-life.asm && cargo run --bin emu src/test/game-of-life.bin
+
 main%
 # init: x00 x00 lds xBD xor pop :init :main iif sti
 xC0 sts x00 str @00

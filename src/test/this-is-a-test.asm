@@ -1,7 +1,12 @@
+# clear; cargo run --bin asm src/test/this-is-a-test.asm && cargo run --bin emu src/test/this-is-a-test.bin
+
+@core.asm
+@common.asm
+
 main%
-%display_buffer sts xFF x00 sta
+%front_buffer %init_alloc
 %display_data_len for_i: dec
-ld0 %display_buffer add
+ld0 %front_buffer add
 ld1 :display_data add
 lda sta
 buf :for_i :for_i_end iff sti
@@ -14,5 +19,4 @@ dE6 d0E d44 d0E dEC d0A d00 d00
 dEE d6E d4C d44 d4E dC4 d00 d00
 display_data_end:
 
-display_buffer% xE0
 display_data_len% :display_data_end :display_data sub

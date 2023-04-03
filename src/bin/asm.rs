@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::Path;
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
@@ -7,14 +8,15 @@ fn main() {
     std::process::exit(1);
   }
 
-  let source: String = std::fs::read_to_string(&args[1]).expect("Unable to read file");
-  let instructions: Vec<Instruction> = parse(&source, "main");
-  let mut bytes: Vec<u8> = assemble(&instructions);
-  bytes.extend(vec![0; 0x100 - bytes.len()]);
-  std::fs::write(format!("{}.bin", &args[1]), bytes).expect("Unable to write file");
+  let source = preprocess(&args[1]);
+  let tokens: Vec<Token> = parse(&source);
+  let instructions: Vec<Instruction> = compile(tokens, "main");
+  let mut bytes: Vec<u8> = codegen(&instructions);
 
-  println!("");
-  println!("Done.");
+  bytes.extend(vec![0; 0x100 - bytes.len()]);
+  std::fs::write(Path::new(&args[1]).with_extension("bin"), bytes).expect("Unable to write file");
+
+  println!("\nDone.");
 }
 
 #[derive(Clone, Copy)]
@@ -108,13 +110,31 @@ enum Instruction {
   Raw(u8),
 }
 
-fn parse(source: &str, entry_point: &str) -> Vec<Instruction> {
+fn preprocess(filename: &str) -> String {
+  let source: String =
+    std::fs::read_to_string(filename).expect(format!("Unable to read file: {}", filename).as_str());
+
   let source = source
     .lines()
     .map(|line| line.split("#").next().unwrap())
-    .collect::<Vec<&str>>()
+    .map(|line| match line.find('@') {
+      Some(i) => preprocess(
+        Path::new(filename)
+          .parent()
+          .unwrap()
+          .join(line[i..][1..].trim())
+          .to_str()
+          .unwrap(),
+      ),
+      None => line.to_string(),
+    })
+    .collect::<Vec<String>>()
     .join("\n");
 
+  source
+}
+
+fn parse(source: &str) -> Vec<Token> {
   let tokens: Vec<&str> = source.split_whitespace().collect();
 
   let tokens: Vec<Token> = tokens
@@ -174,6 +194,10 @@ fn parse(source: &str, entry_point: &str) -> Vec<Instruction> {
     })
     .collect();
 
+  tokens
+}
+
+fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
   let mut macros: HashMap<&str, Vec<Token>> = HashMap::new();
   let mut current_macro_name = "";
 
@@ -400,7 +424,7 @@ fn parse(source: &str, entry_point: &str) -> Vec<Instruction> {
   instructions
 }
 
-fn assemble(instructions: &Vec<Instruction>) -> Vec<u8> {
+fn codegen(instructions: &Vec<Instruction>) -> Vec<u8> {
   fn encode_immediate(immediate: u8) -> u8 {
     match immediate {
       0b00000000..=0b00111111 => immediate,
