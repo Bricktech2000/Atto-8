@@ -17,12 +17,12 @@ fn main() {
   println!("Done.");
 }
 
-#[derive(Debug, Clone)]
-enum Token {
-  LabelDef(String),
-  LabelRef(String),
-  MacroDef(String),
-  MacroRef(String),
+#[derive(Clone, Copy)]
+enum Token<'a> {
+  LabelDef(&'a str),
+  LabelRef(&'a str),
+  MacroDef(&'a str),
+  MacroRef(&'a str),
   Nop,
   Hlt,
   Dbg,
@@ -71,7 +71,6 @@ enum Token {
   DDD(u8),
 }
 
-#[derive(Debug, Clone)]
 enum Instruction {
   Nop,
   Hlt,
@@ -121,10 +120,10 @@ fn parse(source: &str, entry_point: &str) -> Vec<Instruction> {
   let tokens: Vec<Token> = tokens
     .iter()
     .map(|token| match token {
-      &_ if token.ends_with(":") => Token::LabelDef(token[..token.len() - 1].to_string()),
-      &_ if token.starts_with(":") => Token::LabelRef(token[1..].to_string()),
-      &_ if token.ends_with("%") => Token::MacroDef(token[..token.len() - 1].to_string()),
-      &_ if token.starts_with("%") => Token::MacroRef(token[1..].to_string()),
+      &_ if token.ends_with(":") => Token::LabelDef(&token[..token.len() - 1]),
+      &_ if token.starts_with(":") => Token::LabelRef(&token[1..]),
+      &_ if token.ends_with("%") => Token::MacroDef(&token[..token.len() - 1]),
+      &_ if token.starts_with("%") => Token::MacroRef(&token[1..]),
       &"nop" => Token::Nop,
       &"hlt" => Token::Hlt,
       &"dbg" => Token::Dbg,
@@ -176,37 +175,40 @@ fn parse(source: &str, entry_point: &str) -> Vec<Instruction> {
     .collect();
 
   let mut macros: HashMap<&str, Vec<Token>> = HashMap::new();
-  let mut current_macro_name = "".to_string();
+  let mut current_macro_name = "";
 
   for token in &tokens {
     match token {
       Token::MacroDef(name) => {
-        current_macro_name = name.clone();
-        macros.entry(name.as_str()).or_insert(vec![]);
+        current_macro_name = name;
+        macros.entry(current_macro_name).or_insert(vec![]);
       }
       _ => {
         macros
-          .get_mut(current_macro_name.as_str())
+          .get_mut(current_macro_name)
           .expect("Orphan instructions found")
-          .push(token.clone());
+          .push(*token);
       }
     }
   }
 
-  let tokens: Vec<Token> = expand_macros(&macros, &vec![Token::MacroRef(entry_point.to_string())]);
+  let entry_point = &vec![Token::MacroRef(entry_point)];
+  let tokens: Vec<Token> = expand_macros(&macros, &entry_point);
 
-  fn expand_macros(macros: &HashMap<&str, Vec<Token>>, tokens: &Vec<Token>) -> Vec<Token> {
+  fn expand_macros<'a>(
+    macros: &'a HashMap<&'a str, Vec<Token<'a>>>,
+    tokens: &'a Vec<Token>,
+  ) -> Vec<Token<'a>> {
     tokens
       .iter()
       .flat_map(|token| match token {
         Token::MacroRef(name) => {
           let tokens = macros
-            .get(name.as_str())
-            .expect(format!("Could not find macro: {}", name).as_str())
-            .clone();
+            .get(name)
+            .expect(&format!("Could not find macro: {}", name));
           expand_macros(&macros, &tokens)
         }
-        _ => vec![token.clone()],
+        _ => vec![*token],
       })
       .collect()
   }
@@ -269,7 +271,7 @@ fn parse(source: &str, entry_point: &str) -> Vec<Instruction> {
     };
 
     if let Token::LabelDef(label) = token {
-      if labels.contains_key(label.as_str()) {
+      if labels.contains_key(label) {
         panic!("Label already defined: {}", label);
       }
       labels.insert(label, current_address);
@@ -340,8 +342,8 @@ fn parse(source: &str, entry_point: &str) -> Vec<Instruction> {
       Token::LabelDef(_) => vec![],
       Token::LabelRef(label) => make_push_instruction(
         *labels
-          .get(label.as_str())
-          .expect(format!("Could not find label: {}", label).as_str()) as u8,
+          .get(label)
+          .expect(&format!("Could not find label: {}", label)) as u8,
         true,
       ),
       Token::MacroDef(_) => vec![],

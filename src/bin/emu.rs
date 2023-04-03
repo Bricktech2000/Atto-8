@@ -48,8 +48,11 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
         .expect("Slice with incorrect length"),
     );
     println!(
-      "IP  {:#04x}\nSP  {:#04x}\nCF  {:16}\nDF  {:16}",
-      instruction_pointer, stack_pointer, carry_flag, debug_flag
+      "IP {:16}\nSP {:16}\nCF {:16}\nDF {:16}",
+      format!("{:02x}", instruction_pointer),
+      format!("{:02x}", stack_pointer),
+      carry_flag,
+      debug_flag
     );
 
     print!("\n{:16}", debug_status);
@@ -380,11 +383,11 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
 
 fn print_display(display_buffer: &[u8; 0x20]) {
   let mut display_buffer_string: String = "".to_string();
-  let line: String = std::iter::repeat("-").take(0x10).collect();
-  let line_top: String = ".-".to_owned() + &line + "-.\n";
-  let line_bottom: String = "'-".to_owned() + &line + "-'\n";
-  let col_left: String = "| ".to_string();
-  let col_right: String = " |".to_string();
+  let line: &str = &"-".repeat(0x10);
+  let line_top: &str = &format!(".-{}-.\n", line);
+  let line_bottom: &str = &format!("'-{}-'\n", line);
+  let col_left: &str = "| ";
+  let col_right: &str = " |";
 
   display_buffer_string += &line_top;
   for y in (0..0x10).step_by(2) {
@@ -408,6 +411,7 @@ fn print_display(display_buffer: &[u8; 0x20]) {
     display_buffer_string += &col_right;
     display_buffer_string.push('\n');
   }
+
   display_buffer_string += &line_bottom;
   println!("{}", display_buffer_string);
 }
