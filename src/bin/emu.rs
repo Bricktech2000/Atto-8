@@ -5,24 +5,22 @@ fn main() {
     std::process::exit(1);
   }
 
-  println!("Emulating CPU...");
-
   let memory: Vec<u8> = std::fs::read(&args[1]).expect("Unable to read file");
   emulate(
     memory.try_into().expect("Slice with incorrect length"),
     1000,
   );
-
-  println!("");
-  println!("CPU halted.");
 }
 
 fn emulate(memory: [u8; 0x100], clock: u64) {
   let mut memory = memory.clone();
-  let mut stack_pointer: u8 = 0x00; // CPU stack pointer
-  let mut instruction_pointer: u8 = 0x00; // CPU instruction pointer
-  let mut carry_flag: bool = false; // CPU carry flag
-  let mut debug_flag: bool = false; // CPU debug flag
+  let mut stack_pointer: u8 = 0x00; // SP
+  let mut instruction_pointer: u8 = 0x00; // IP
+  let mut carry_flag: bool = false; // CF
+  let mut debug_flag: bool = false; // DF
+
+  let mut halt_flag: bool = false; // not an actual CPU flag
+  let mut debug_status: &str = "Emulating CPU...";
 
   // clear screen
   print!("\x1B[2J");
@@ -34,10 +32,9 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
     // roughly 4 clock cycles per instruction
     std::thread::sleep(std::time::Duration::from_millis(1000 * 4 / clock));
 
-    if !debug_flag {
-      // move cursor to top left
-      print!("\x1B[1;1H");
-    }
+    // move cursor to top left
+    print!("\x1B[1;1H");
+
     print_display(
       &memory[0xE0..0x100]
         .try_into()
@@ -51,13 +48,30 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
         .expect("Slice with incorrect length"),
     );
     println!(
-      "IP  {:#04x}\nSP  {:#04x}\nCF  {}",
-      instruction_pointer, stack_pointer, carry_flag
+      "IP  {:#04x}\nSP  {:#04x}\nCF  {:16}\nDF  {:16}",
+      instruction_pointer, stack_pointer, carry_flag, debug_flag
     );
 
+    print!("\n{:16}", debug_status);
+    use std::io::{stdout, Write};
+    stdout().flush().unwrap();
+
     if debug_flag {
-      use std::io::{stdin, Read};
-      stdin().read(&mut [0]).unwrap();
+      // use any key to single step
+      // use '\n' to skip to next breakpoint
+      let stdout = console::Term::buffered_stdout();
+      if let Ok(character) = stdout.read_char() {
+        if character == '\n' {
+          debug_flag = false;
+          debug_status = "Continuing...";
+        } else {
+          debug_status = "Single Stepped.";
+        }
+      }
+    }
+
+    if halt_flag {
+      break;
     }
 
     match instruction & 0b11000000 {
@@ -249,12 +263,14 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
 
               0x0F => {
                 // hlt
-                break;
+                halt_flag = true;
+                debug_status = "CPU Halted.";
               }
 
               0x0A => {
                 // dbg
                 debug_flag = true;
+                debug_status = "Breakpoint Hit.";
               }
 
               0x01 => {

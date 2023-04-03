@@ -214,29 +214,6 @@ fn parse(source: &str, entry_point: &str) -> Vec<Instruction> {
   let mut labels: HashMap<&str, u8> = HashMap::new();
   let mut current_address: u8 = 0;
 
-  fn make_push_instruction(immediate: u8, pad: bool) -> Vec<Instruction> {
-    // note: if `pad` is true, all output vectors must be the same length
-    match immediate & 0b11000000 {
-      0b00000000 => vec![Instruction::Phs(immediate & 0b00111111)]
-        .into_iter()
-        .chain(if pad { vec![Instruction::Nop] } else { vec![] })
-        .collect(),
-      0b01000000 => vec![Instruction::Phl(immediate & 0b00111111)]
-        .into_iter()
-        .chain(if pad { vec![Instruction::Nop] } else { vec![] })
-        .collect(),
-      0b10000000 => vec![
-        Instruction::Phl(!immediate & 0b00111111),
-        Instruction::Not(0x01),
-      ],
-      0b11000000 => vec![
-        Instruction::Phs(!immediate & 0b00111111),
-        Instruction::Not(0x01),
-      ],
-      _ => unreachable!(),
-    }
-  }
-
   for token in &tokens {
     current_address += match token {
       Token::LabelDef(_) => 0,
@@ -301,8 +278,7 @@ fn parse(source: &str, entry_point: &str) -> Vec<Instruction> {
 
   fn assert_immediate<T>(immediate: u8, success: T) -> T {
     match immediate {
-      0x00..=0xFF => success,
-      #[allow(unreachable_patterns)]
+      0b00000000..=0b00111111 => success,
       _ => panic!("Invalid immediate: {}", immediate),
     }
   }
@@ -316,8 +292,45 @@ fn parse(source: &str, entry_point: &str) -> Vec<Instruction> {
 
   fn assert_offset<T>(offset: u8, success: T) -> T {
     match offset {
-      0x00..=0x0F => success,
+      0b00000000..=0b00001111 => success,
       _ => panic!("Invalid offset: {}", offset),
+    }
+  }
+
+  fn make_push_instruction(immediate: u8, pad: bool) -> Vec<Instruction> {
+    // note: if `pad` is true, the length of the output of all calls to this function must be the same
+
+    let lower_bits = immediate & 0b00111111;
+    match immediate & 0b11000000 {
+      0b00000000 => assert_immediate(
+        lower_bits,
+        vec![Instruction::Phs(lower_bits)]
+          .into_iter()
+          .chain(if pad { vec![Instruction::Nop] } else { vec![] })
+          .collect(),
+      ),
+      0b01000000 => assert_immediate(
+        lower_bits,
+        vec![Instruction::Phl(lower_bits)]
+          .into_iter()
+          .chain(if pad { vec![Instruction::Nop] } else { vec![] })
+          .collect(),
+      ),
+      0b10000000 => assert_immediate(
+        lower_bits,
+        vec![
+          Instruction::Phl(lower_bits ^ 0b00111111),
+          Instruction::Not(0x01),
+        ],
+      ),
+      0b11000000 => assert_immediate(
+        lower_bits,
+        vec![
+          Instruction::Phs(lower_bits ^ 0b00111111),
+          Instruction::Not(0x01),
+        ],
+      ),
+      _ => unreachable!(),
     }
   }
 
@@ -367,9 +380,7 @@ fn parse(source: &str, entry_point: &str) -> Vec<Instruction> {
       Token::IfS(size) => assert_size(*size, vec![Instruction::Iff(*size)]),
       Token::Swp => vec![Instruction::Swp],
       Token::Pop => vec![Instruction::Pop],
-      Token::XXX(immediate) => {
-        assert_immediate(*immediate, make_push_instruction(*immediate, false))
-      }
+      Token::XXX(immediate) => make_push_instruction(*immediate, false),
       Token::Lda => vec![Instruction::Lda],
       Token::Sta => vec![Instruction::Sta],
       Token::Ldi => vec![Instruction::Ldi],
@@ -391,7 +402,6 @@ fn assemble(instructions: &Vec<Instruction>) -> Vec<u8> {
   fn encode_immediate(immediate: u8) -> u8 {
     match immediate {
       0b00000000..=0b00111111 => immediate,
-      #[allow(unreachable_patterns)]
       _ => unreachable!(),
     }
   }

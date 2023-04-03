@@ -4,10 +4,10 @@
 
 | Item  | Description          | Default         |
 | ----- | -------------------- | --------------- |
+| `IP`  | Instruction Pointer  | `0x00`          |
+| `SP`  | Stack Pointer        | `0x00`          |
 | `CF`  | Carry Flag           | `0x00`          |
 | `DF`  | Debug Flag           | `0x00`          |
-| `SP`  | Stack Pointer        | `0x00`          |
-| `IP`  | Instruction Pointer  | `0x00`          |
 | `RAM` | Random Access Memory | `[0x00; 0x100]` |
 
 ## Instruction Set
