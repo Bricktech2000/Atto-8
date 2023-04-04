@@ -6,10 +6,6 @@
 # stop: hlt
 # display_buffer% xE0
 
-# xAA dup x55 dup
-# lds x0E sub pop x00 x0E iff sti
-# hlt
-
 55 80 80 CC 80
 BC 1F CC C4 B1 00 0E CE BB
 AF

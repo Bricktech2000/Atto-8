@@ -206,7 +206,7 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
             carry_flag = memory[size_pointer as usize] == 0x00;
           }
 
-          0x0C if size == 0x01 => {
+          0x0C if instruction & 0b00110000 == 0b00000000 => {
             // not
             let a = memory[stack_pointer as usize];
 
@@ -214,12 +214,26 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
             carry_flag = memory[stack_pointer as usize] == 0x00;
           }
 
-          0x0D if size == 0x01 => {
+          0x0C if instruction & 0b00110000 == 0b00010000 => {
+            // ntp
+            let a = memory[stack_pointer as usize];
+
+            memory[stack_pointer as usize] = !a;
+          }
+
+          0x0D if instruction & 0b00110000 == 0b00000000 => {
             // buf
             let a = memory[stack_pointer as usize];
 
             memory[stack_pointer as usize] = a;
             carry_flag = memory[stack_pointer as usize] == 0x00;
+          }
+
+          0x0D if instruction & 0b00110000 == 0b00010000 => {
+            // bfp
+            let a = memory[stack_pointer as usize];
+
+            memory[stack_pointer as usize] = a;
           }
 
           0x0E => {

@@ -41,8 +41,10 @@ The `*` operator dereferences values from `RAM`.
 | `and`         | `and` `anS` | Bitwise AND               | `*(SP++) & *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`  |       | `0b11SS1001` `0x?9` |
 | `xor`         | `xor` `xoS` | Bitwise XOR               | `*(SP++) ^ *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`  |       | `0b11SS1010` `0x?A` |
 | `xnd`         | `xnd` `xnS` | Bitwise XAND              | `SP++; 0 -> *(SP + 2 ** S); *SP == 0 -> CF;`                   |       | `0b11SS1011` `0x?B` |
-| `not`         | `not`       | Bitwise NOT               | `!*SP -> *SP; *SP == 0 -> CF;`                                 |       | `0b11??1100` `0x?C` |
-| `buf`         | `buf`       | Buffer                    | `*SP -> *SP; *SP == 0 -> CF;`                                  |       | `0b11??1101` `0x?D` |
+| `not`         | `not`       | Bitwise NOT               | `!*SP -> *SP; *SP == 0 -> CF;`                                 |       | `0b11?01100` `0x?C` |
+| `ntp`         | `ntp`       | Bitwise NOT Pure          | `!*SP -> *SP; CF -> CF;`                                       |       | `0b11?11100` `0x?C` |
+| `buf`         | `buf`       | Buffer                    | `*SP -> *SP; *SP == 0 -> CF;`                                  |       | `0b11?01101` `0x?D` |
+| `bfp`         | `bfp`       | Buffer Pure               | `*SP -> *SP; CF -> CF;`                                        |       | `0b11?11101` `0x?D` |
 | `iff`         | `iff` `ifS` | If-Then-Else              | `CF ? *((SP++)++) : *((++SP)++ + 2 ** S) -> *(--SP); 0 -> CF;` |       | `0b11SS1110` `0x?E` |
 | `swp`         | `swp`       | Swap                      | `*(SP++) -> *SP -> *(--SP);`                                   |       | `0b10110000` `0xB0` |
 | `pop`         | `pop`       | Pop                       | `SP++;`                                                        |       | `0b10110001` `0xB1` |

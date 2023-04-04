@@ -9,7 +9,7 @@ fn main() {
   }
 
   let source = preprocess(&args[1]);
-  let tokens: Vec<Token> = parse(&source);
+  let tokens: Vec<Token> = tokenize(&source);
   let instructions: Vec<Instruction> = compile(tokens, "main");
   let mut bytes: Vec<u8> = codegen(&instructions);
 
@@ -19,7 +19,7 @@ fn main() {
   println!("\nDone.");
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 enum Token<'a> {
   LabelDef(&'a str),
   LabelRef(&'a str),
@@ -54,7 +54,9 @@ enum Token<'a> {
   Xnd,
   XnS(u8),
   Not,
+  Ntp,
   Buf,
+  Bfp,
   Iff,
   IfS(u8),
   Swp,
@@ -66,13 +68,29 @@ enum Token<'a> {
   Sti,
   Lds,
   Sts,
-  Ldo,
   LdO(u8),
-  Sto,
   StO(u8),
   DDD(u8),
 }
 
+#[derive(Debug, Clone)]
+enum Root {
+  Instruction(Instruction),
+  Node(Node),
+  LabelDef(String),
+}
+
+#[derive(Debug, Clone)]
+enum Node {
+  LabelRef(String),
+  Immediate(u8),
+  CurrentAddress,
+  Not(Box<Node>),
+  Add(Box<Node>, Box<Node>),
+  Sub(Box<Node>, Box<Node>),
+}
+
+#[derive(Debug, Clone, Copy)]
 enum Instruction {
   Nop,
   Hlt,
@@ -80,8 +98,8 @@ enum Instruction {
   Clc,
   Sec,
   Flc,
-  Inc(u8),
-  Dec(u8),
+  Inc,
+  Dec,
   Add(u8),
   Adc(u8),
   Sub(u8),
@@ -92,8 +110,10 @@ enum Instruction {
   And(u8),
   Xor(u8),
   Xnd(u8),
-  Not(u8),
-  Buf(u8),
+  Not,
+  Ntp,
+  Buf,
+  Bfp,
   Iff(u8),
   Swp,
   Pop,
@@ -113,6 +133,8 @@ enum Instruction {
 fn preprocess(filename: &str) -> String {
   let source: String =
     std::fs::read_to_string(filename).expect(format!("Unable to read file: {}", filename).as_str());
+
+  // remove comments and resolve includes
 
   let source = source
     .lines()
@@ -134,8 +156,10 @@ fn preprocess(filename: &str) -> String {
   source
 }
 
-fn parse(source: &str) -> Vec<Token> {
+fn tokenize(source: &str) -> Vec<Token> {
   let tokens: Vec<&str> = source.split_whitespace().collect();
+
+  // tokenize to valid tokens that might not be valid instructions
 
   let tokens: Vec<Token> = tokens
     .iter()
@@ -173,7 +197,9 @@ fn parse(source: &str) -> Vec<Token> {
       &"xnd" => Token::Xnd,
       &_ if token.starts_with("xn") => Token::XnS(u8::from_str_radix(&token[2..], 16).unwrap()),
       &"not" => Token::Not,
+      &"ntp" => Token::Ntp,
       &"buf" => Token::Buf,
+      &"bfp" => Token::Bfp,
       &"iff" => Token::Iff,
       &_ if token.starts_with("if") => Token::IfS(u8::from_str_radix(&token[2..], 16).unwrap()),
       &"swp" => Token::Swp,
@@ -185,9 +211,7 @@ fn parse(source: &str) -> Vec<Token> {
       &"sti" => Token::Sti,
       &"lds" => Token::Lds,
       &"sts" => Token::Sts,
-      &"ldo" => Token::Ldo,
       &_ if token.starts_with("ld") => Token::LdO(u8::from_str_radix(&token[2..], 16).unwrap()),
-      &"sto" => Token::Sto,
       &_ if token.starts_with("st") => Token::StO(u8::from_str_radix(&token[2..], 16).unwrap()),
       &_ if token.starts_with("d") => Token::DDD(u8::from_str_radix(&token[1..], 16).unwrap()),
       &_ => panic!("Unknown token: {}", token),
@@ -198,6 +222,8 @@ fn parse(source: &str) -> Vec<Token> {
 }
 
 fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
+  // resolve macros recursively from `entry_point`
+
   let mut macros: HashMap<&str, Vec<Token>> = HashMap::new();
   let mut current_macro_name = "";
 
@@ -237,15 +263,171 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
       .collect()
   }
 
-  let mut labels: HashMap<&str, u8> = HashMap::new();
+  let nodes: Vec<Root> = tokens
+    .iter()
+    .map(|token| match token {
+      Token::LabelDef(label) => Root::LabelDef(label.to_string()),
+      Token::LabelRef(label) => Root::Node(Node::LabelRef(label.to_string())),
+      Token::MacroDef(_) => unreachable!(),
+      Token::MacroRef(_) => unreachable!(),
+      Token::Nop => Root::Instruction(Instruction::Nop),
+      Token::Hlt => Root::Instruction(Instruction::Hlt),
+      Token::Dbg => Root::Instruction(Instruction::Dbg),
+      Token::Clc => Root::Instruction(Instruction::Clc),
+      Token::Sec => Root::Instruction(Instruction::Sec),
+      Token::Flc => Root::Instruction(Instruction::Flc),
+      Token::Inc => Root::Instruction(Instruction::Inc),
+      Token::Dec => Root::Instruction(Instruction::Dec),
+      Token::Add => Root::Instruction(Instruction::Add(0x00)),
+      Token::AdS(size) => Root::Instruction(Instruction::Add(*size)),
+      Token::Adc => Root::Instruction(Instruction::Adc(0x00)),
+      Token::AcS(size) => Root::Instruction(Instruction::Adc(*size)),
+      Token::Sub => Root::Instruction(Instruction::Sub(0x00)),
+      Token::SuS(size) => Root::Instruction(Instruction::Sub(*size)),
+      Token::Sbc => Root::Instruction(Instruction::Sbc(0x00)),
+      Token::ScS(size) => Root::Instruction(Instruction::Sbc(*size)),
+      Token::Shf => Root::Instruction(Instruction::Shf(0x00)),
+      Token::ShS(size) => Root::Instruction(Instruction::Shf(*size)),
+      Token::Rot => Root::Instruction(Instruction::Rot(0x00)),
+      Token::RoS(size) => Root::Instruction(Instruction::Rot(*size)),
+      Token::Orr => Root::Instruction(Instruction::Orr(0x00)),
+      Token::OrS(size) => Root::Instruction(Instruction::Orr(*size)),
+      Token::And => Root::Instruction(Instruction::And(0x00)),
+      Token::AnS(size) => Root::Instruction(Instruction::And(*size)),
+      Token::Xor => Root::Instruction(Instruction::Xor(0x00)),
+      Token::XoS(size) => Root::Instruction(Instruction::Xor(*size)),
+      Token::Xnd => Root::Instruction(Instruction::Xnd(0x00)),
+      Token::XnS(size) => Root::Instruction(Instruction::Xnd(*size)),
+      Token::Not => Root::Instruction(Instruction::Not),
+      Token::Ntp => Root::Instruction(Instruction::Ntp),
+      Token::Buf => Root::Instruction(Instruction::Buf),
+      Token::Bfp => Root::Instruction(Instruction::Bfp),
+      Token::Iff => Root::Instruction(Instruction::Iff(0x00)),
+      Token::IfS(size) => Root::Instruction(Instruction::Iff(*size)),
+      Token::Swp => Root::Instruction(Instruction::Swp),
+      Token::Pop => Root::Instruction(Instruction::Pop),
+      Token::XXX(immediate) => Root::Node(Node::Immediate(*immediate)),
+      Token::Lda => Root::Instruction(Instruction::Lda),
+      Token::Sta => Root::Instruction(Instruction::Sta),
+      Token::Ldi => Root::Instruction(Instruction::Ldi),
+      Token::Sti => Root::Instruction(Instruction::Sti),
+      Token::Lds => Root::Instruction(Instruction::Lds),
+      Token::Sts => Root::Instruction(Instruction::Sts),
+      Token::LdO(offset) => Root::Instruction(Instruction::Ldo(*offset)),
+      Token::StO(offset) => Root::Instruction(Instruction::Ldo(*offset)),
+      Token::DDD(immediate) => Root::Instruction(Instruction::Raw(*immediate)),
+    })
+    .collect();
+
+  fn match_replace<const N: usize>(
+    nodes: &Vec<Root>,
+    func: fn(&[Root; N]) -> Option<Vec<Root>>,
+  ) -> Vec<Root> {
+    let mut output = vec![];
+
+    let mut skip_next = 0;
+    for window in nodes.windows(N) {
+      if skip_next > 0 {
+        skip_next -= 1;
+      } else {
+        match func(window.try_into().unwrap()) {
+          Some(nodes) => {
+            output.extend(nodes);
+            skip_next = N - 1;
+          }
+          None => output.push(window[0].clone()),
+        }
+      }
+    }
+    output.extend(nodes.iter().skip(nodes.len() - N + skip_next + 1).cloned());
+
+    output
+  }
+
+  let mut nodes = nodes;
+  let mut last_len = 0;
+
+  while nodes.len() != last_len {
+    println!("{:?} {}", nodes, nodes.len());
+    last_len = nodes.len();
+
+    nodes = match_replace(&nodes, |window| match window {
+      [Root::Instruction(Instruction::Nop)] => Some(vec![]),
+      // TODO: this will break in a case like `x05 ldi add`, where the `ldi` instruction
+      // is moved somewhere else
+      [Root::Instruction(Instruction::Ldi)] => Some(vec![Root::Node(Node::CurrentAddress)]),
+      _ => None,
+    });
+
+    nodes =
+      match_replace(&nodes, |window| match window {
+        [Root::Node(eval), Root::Instruction(Instruction::Inc)] => Some(vec![Root::Node(
+          Node::Add(Box::new(eval.clone()), Box::new(Node::Immediate(1))),
+        )]),
+        [Root::Node(eval), Root::Instruction(Instruction::Dec)] => Some(vec![Root::Node(
+          Node::Sub(Box::new(eval.clone()), Box::new(Node::Immediate(1))),
+        )]),
+        [Root::Node(eval), Root::Instruction(Instruction::Not)] => {
+          Some(vec![Root::Node(Node::Not(Box::new(eval.clone())))])
+        }
+        [Root::Node(eval), Root::Instruction(Instruction::Ntp)] => Some(vec![Root::Node(
+          Node::Not(Box::new(Node::Not(Box::new(eval.clone())))),
+        )]),
+        [Root::Node(eval), Root::Instruction(Instruction::Buf)] => {
+          Some(vec![Root::Node(eval.clone())])
+        }
+        [Root::Node(eval), Root::Instruction(Instruction::Bfp)] => {
+          Some(vec![Root::Node(eval.clone())])
+        }
+        [Root::Node(_), Root::Instruction(Instruction::Pop)] => Some(vec![]),
+        _ => None,
+      });
+
+    nodes = match_replace(&nodes, |window| match window {
+      [Root::Node(eval1), Root::Node(eval2), Root::Instruction(Instruction::Add(_))] => {
+        Some(vec![Root::Node(Node::Add(
+          Box::new(eval2.clone()),
+          Box::new(eval1.clone()),
+        ))])
+      }
+      [Root::Node(eval1), Root::Node(eval2), Root::Instruction(Instruction::Adc(_))] => {
+        Some(vec![Root::Node(Node::Add(
+          Box::new(eval2.clone()),
+          Box::new(eval1.clone()),
+        ))])
+      }
+      [Root::Node(eval1), Root::Node(eval2), Root::Instruction(Instruction::Sub(_))] => {
+        Some(vec![Root::Node(Node::Sub(
+          Box::new(eval2.clone()),
+          Box::new(eval1.clone()),
+        ))])
+      }
+      [Root::Node(eval1), Root::Node(eval2), Root::Instruction(Instruction::Sbc(_))] => {
+        Some(vec![Root::Node(Node::Sub(
+          Box::new(eval2.clone()),
+          Box::new(eval1.clone()),
+        ))])
+      }
+      [Root::Node(eval1), Root::Node(eval2), Root::Instruction(Instruction::Swp)] => {
+        Some(vec![Root::Node(eval2.clone()), Root::Node(eval1.clone())])
+      }
+      // TODO: Shf, Rot, Orr, And, Xor, Xnd... see IS
+      _ => None,
+    });
+  }
+
+  // estimate address of label definitions
+
+  let mut label_defs: HashMap<&str, u8> = HashMap::new();
+  let mut label_refs: HashMap<u8, &str> = HashMap::new();
   let mut current_address: u8 = 0;
 
   for token in &tokens {
     current_address += match token {
       Token::LabelDef(_) => 0,
-      Token::LabelRef(_) => make_push_instruction(0x00, true).len() as u8,
+      Token::LabelRef(_) => make_push_instruction(0x00).len() as u8,
       Token::MacroDef(_) => 0,
-      Token::MacroRef(_) => make_push_instruction(0x00, true).len() as u8,
+      Token::MacroRef(_) => make_push_instruction(0x00).len() as u8,
       Token::Nop => 1,
       Token::Hlt => 1,
       Token::Dbg => 1,
@@ -275,30 +457,36 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
       Token::Xnd => 1,
       Token::XnS(_) => 1,
       Token::Not => 1,
+      Token::Ntp => 1,
       Token::Buf => 1,
+      Token::Bfp => 1,
       Token::Iff => 1,
       Token::IfS(_) => 1,
       Token::Swp => 1,
       Token::Pop => 1,
-      Token::XXX(immediate) => make_push_instruction(*immediate, false).len() as u8,
+      Token::XXX(immediate) => make_push_instruction(*immediate).len() as u8,
       Token::Lda => 1,
       Token::Sta => 1,
       Token::Ldi => 1,
       Token::Sti => 1,
       Token::Lds => 1,
       Token::Sts => 1,
-      Token::Ldo => 1,
       Token::LdO(_) => 1,
-      Token::Sto => 1,
       Token::StO(_) => 1,
       Token::DDD(_) => 1,
     };
 
     if let Token::LabelDef(label) = token {
-      if labels.contains_key(label) {
+      if label_defs.contains_key(label) {
         panic!("Label already defined: {}", label);
       }
-      labels.insert(label, current_address);
+      label_defs.insert(label, current_address);
+    }
+    if let Token::LabelRef(label) = token {
+      if label_refs.contains_key(&current_address) {
+        panic!("Label already referenced: {}", label);
+      }
+      label_refs.insert(current_address, label);
     }
   }
 
@@ -323,52 +511,42 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
     }
   }
 
-  fn make_push_instruction(immediate: u8, pad: bool) -> Vec<Instruction> {
-    // note: if `pad` is true, the length of the output of all calls to this function must be the same
+  fn make_push_instruction(immediate: u8) -> Vec<Instruction> {
+    // `Phs` and `Phl` instructions allow us to push arbitrary 7-bit immediates onto the stack.
+    // we then optionally use `Bfp` and `Ntp` to get the ability to push arbitrary 8-bit immediates.
 
     let lower_bits = immediate & 0b00111111;
     match immediate & 0b11000000 {
       0b00000000 => assert_immediate(
         lower_bits,
-        vec![Instruction::Phs(lower_bits)]
-          .into_iter()
-          .chain(if pad { vec![Instruction::Nop] } else { vec![] })
-          .collect(),
+        vec![Instruction::Phs(lower_bits), Instruction::Bfp],
       ),
       0b01000000 => assert_immediate(
         lower_bits,
-        vec![Instruction::Phl(lower_bits)]
-          .into_iter()
-          .chain(if pad { vec![Instruction::Nop] } else { vec![] })
-          .collect(),
+        vec![Instruction::Phl(lower_bits), Instruction::Bfp],
       ),
       0b10000000 => assert_immediate(
         lower_bits,
-        vec![
-          Instruction::Phl(lower_bits ^ 0b00111111),
-          Instruction::Not(0x01),
-        ],
+        vec![Instruction::Phl(lower_bits ^ 0b00111111), Instruction::Ntp],
       ),
       0b11000000 => assert_immediate(
         lower_bits,
-        vec![
-          Instruction::Phs(lower_bits ^ 0b00111111),
-          Instruction::Not(0x01),
-        ],
+        vec![Instruction::Phs(lower_bits ^ 0b00111111), Instruction::Ntp],
       ),
       _ => unreachable!(),
     }
   }
+
+  // compile tokens into valid instructions and resolve labels
 
   let instructions: Vec<Instruction> = tokens
     .iter()
     .flat_map(|instruction| match instruction {
       Token::LabelDef(_) => vec![],
       Token::LabelRef(label) => make_push_instruction(
-        *labels
+        *label_defs
           .get(label)
           .expect(&format!("Could not find label: {}", label)) as u8,
-        true,
       ),
       Token::MacroDef(_) => vec![],
       Token::MacroRef(_) => unreachable!(),
@@ -378,8 +556,8 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
       Token::Clc => vec![Instruction::Clc],
       Token::Sec => vec![Instruction::Sec],
       Token::Flc => vec![Instruction::Flc],
-      Token::Inc => vec![Instruction::Inc(0x01)],
-      Token::Dec => vec![Instruction::Dec(0x01)],
+      Token::Inc => vec![Instruction::Inc],
+      Token::Dec => vec![Instruction::Dec],
       Token::Add => vec![Instruction::Add(0x01)],
       Token::AdS(size) => assert_size(*size, vec![Instruction::Add(*size)]),
       Token::Adc => vec![Instruction::Adc(0x01)],
@@ -400,22 +578,22 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
       Token::XoS(size) => assert_size(*size, vec![Instruction::Xor(*size)]),
       Token::Xnd => vec![Instruction::Xnd(0x01)],
       Token::XnS(size) => assert_size(*size, vec![Instruction::Xnd(*size)]),
-      Token::Not => vec![Instruction::Not(0x01)],
-      Token::Buf => vec![Instruction::Buf(0x01)],
+      Token::Not => vec![Instruction::Not],
+      Token::Ntp => vec![Instruction::Ntp],
+      Token::Buf => vec![Instruction::Buf],
+      Token::Bfp => vec![Instruction::Bfp],
       Token::Iff => vec![Instruction::Iff(0x01)],
       Token::IfS(size) => assert_size(*size, vec![Instruction::Iff(*size)]),
       Token::Swp => vec![Instruction::Swp],
       Token::Pop => vec![Instruction::Pop],
-      Token::XXX(immediate) => make_push_instruction(*immediate, false),
+      Token::XXX(immediate) => make_push_instruction(*immediate),
       Token::Lda => vec![Instruction::Lda],
       Token::Sta => vec![Instruction::Sta],
       Token::Ldi => vec![Instruction::Ldi],
       Token::Sti => vec![Instruction::Sti],
       Token::Lds => vec![Instruction::Lds],
       Token::Sts => vec![Instruction::Sts],
-      Token::Ldo => vec![Instruction::Ldo(0)],
       Token::LdO(offset) => assert_offset(*offset, vec![Instruction::Ldo(*offset)]),
-      Token::Sto => vec![Instruction::Sto(0)],
       Token::StO(offset) => assert_offset(*offset, vec![Instruction::Sto(*offset)]),
       Token::DDD(immediate) => vec![Instruction::Raw(*immediate)],
     })
@@ -449,6 +627,8 @@ fn codegen(instructions: &Vec<Instruction>) -> Vec<u8> {
     }
   }
 
+  // codegen instructions into bytes and sanity-check operands
+
   instructions
     .iter()
     .flat_map(|instruction| match instruction {
@@ -458,8 +638,8 @@ fn codegen(instructions: &Vec<Instruction>) -> Vec<u8> {
       Instruction::Clc => vec![0xA1],
       Instruction::Sec => vec![0xA2],
       Instruction::Flc => vec![0xA3],
-      Instruction::Inc(size) => vec![0xC0 | encode_size(*size)],
-      Instruction::Dec(size) => vec![0xC1 | encode_size(*size)],
+      Instruction::Inc => vec![0xC0 | 0b00000000],
+      Instruction::Dec => vec![0xC1 | 0b00000000],
       Instruction::Add(size) => vec![0xC2 | encode_size(*size)],
       Instruction::Adc(size) => vec![0xC3 | encode_size(*size)],
       Instruction::Sub(size) => vec![0xC4 | encode_size(*size)],
@@ -470,8 +650,10 @@ fn codegen(instructions: &Vec<Instruction>) -> Vec<u8> {
       Instruction::And(size) => vec![0xC9 | encode_size(*size)],
       Instruction::Xor(size) => vec![0xCA | encode_size(*size)],
       Instruction::Xnd(size) => vec![0xCB | encode_size(*size)],
-      Instruction::Not(size) => vec![0xCC | encode_size(*size)],
-      Instruction::Buf(size) => vec![0xCD | encode_size(*size)],
+      Instruction::Not => vec![0xCC | 0b00000000],
+      Instruction::Ntp => vec![0xCC | 0b00010000],
+      Instruction::Buf => vec![0xCD | 0b00000000],
+      Instruction::Bfp => vec![0xCD | 0b00010000],
       Instruction::Iff(size) => vec![0xCE | encode_size(*size)],
       Instruction::Swp => vec![0xB0],
       Instruction::Pop => vec![0xB1],
