@@ -35,8 +35,8 @@ The `*` operator dereferences values from `RAM`.
 | `adc`         | `adc` `acS` | Add with Carry            | `*(SP++) + *(SP + 2 ** S) -> *(SP + 2 ** S);`                  | #todo | `0b11SS0011` `0x?3` |
 | `sub`         | `sub` `suS` | Subtract                  | `- *(SP++) + *(SP + 2 ** S) -> *(SP + 2 ** S);`                |       | `0b11SS0100` `0x?4` |
 | `sbc`         | `sbc` `scS` | Subtract with Carry       | `- *(SP++) + *(SP + 2 ** S) -> *(SP + 2 ** S);`                | #todo | `0b11SS0101` `0x?5` |
-| `shf`         | `shf` `shS` | Shift                     | #todo                                                          |       | `0b11SS0110` `0x?6` |
-| `rot`         | `rot` `roS` | Rotate                    | #todo                                                          | #todo | `0b11SS0111` `0x?7` |
+| `shf`         | `shf` `shS` | Shift                     | #todo note: only uses lower nibble                             |       | `0b11SS0110` `0x?6` |
+| `rot`         | `rot` `roS` | Rotate                    | #todo note: only uses lower nibble                             | #todo | `0b11SS0111` `0x?7` |
 | `orr`         | `orr` `orS` | Bitwise OR                | `*(SP++) \| *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;` |       | `0b11SS1000` `0x?8` |
 | `and`         | `and` `anS` | Bitwise AND               | `*(SP++) & *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`  |       | `0b11SS1001` `0x?9` |
 | `xor`         | `xor` `xoS` | Bitwise XOR               | `*(SP++) ^ *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`  |       | `0b11SS1010` `0x?A` |
@@ -56,7 +56,7 @@ The `*` operator dereferences values from `RAM`.
 | `lds`         | `lds`       | Load Stack Pointer        | `SP -> *(--SP);`                                               |       | `0b10111100` `0xBC` |
 | `sts`         | `sts`       | Store Stack Pointer       | `*(SP++) -> SP;`                                               |       | `0b10111101` `0xBD` |
 | `ldo`         | `ldO`       | Load from Offset          | `*(SP + O) -> *(--SP);`                                        |       | `0b1000OOOO` `0x8O` |
-| `sto`         | `stO`       | Store to Offset           | `*(SP + O) -> *(--SP);`                                        |       | `0b1001OOOO` `0x9O` |
+| `sto`         | `stO`       | Store to Offset           | `*SP++ -> *(SP + O);`                                                 | `0b1001OOOO` `0x9O` |
 | `raw`         | `dDD`       | Raw Data                  |                                                                |       | `0bDDDDDDDD` `0xDD` |
 
 ## TODOs

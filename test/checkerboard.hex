@@ -1,4 +1,4 @@
-# clear; python3 src/enc.py src/test/checkerboard.hex && cargo run --bin emu src/test/checkerboard.bin
+# clear; python3 src/enc.py test/checkerboard.hex && cargo run --bin emu test/checkerboard.bin
 
 # start:
 # x55 dup dup not dup

@@ -145,10 +145,10 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
                 stack_pointer = stack_pointer.wrapping_add(1);
                 let b = memory[size_pointer as usize];
 
-                let shifted = if a as i8 > 0 {
-                  (b as u16) << a as u16
+                let shifted = if a & 0b00001000 == 0 {
+                  (b as u16) << (a & 0b00001111) as u16
                 } else {
-                  (b as u16) >> a.wrapping_neg() as u16
+                  (b as u16) >> ((a ^ 0b00001111) + 1) as u16
                 };
 
                 memory[size_pointer as usize] = shifted as u8;
@@ -162,9 +162,13 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
                 stack_pointer = stack_pointer.wrapping_add(1);
                 let b = memory[size_pointer as usize];
 
-                // TODO: negative rotations
+                let shifted = if a & 0b00001000 == 0 {
+                  (b as u16) << (a & 0b00001111) as u16
+                } else {
+                  (b as u16) >> ((a ^ 0b00001111) + 1) as u16
+                };
+
                 // TODO: use carry flag
-                let shifted = (b as u16) << a as u16;
                 memory[size_pointer as usize] = (shifted & 0xFF) as u8 | (shifted >> 8) as u8;
                 // TODO: set carry flag
               }
@@ -271,11 +275,12 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
 
               0b00010000 => {
                 // sto
+                let a = memory[stack_pointer as usize];
+                memory[stack_pointer as usize] = 0x00;
+                stack_pointer = stack_pointer.wrapping_add(1);
+
                 let offset = instruction & 0b00001111; // decode_offset
                 let offset_pointer = stack_pointer.wrapping_add(offset);
-
-                let a = memory[stack_pointer as usize];
-                stack_pointer = stack_pointer.wrapping_add(1);
 
                 memory[offset_pointer as usize] = a;
               }

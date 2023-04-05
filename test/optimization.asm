@@ -1,4 +1,4 @@
-# clear; cargo run --bin asm src/test/optimization.asm && cargo run --bin emu src/test/optimization.bin
+# clear; cargo run --bin asm test/optimization.asm && cargo run --bin emu test/optimization.bin
 
 @core.asm
 
