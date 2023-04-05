@@ -48,8 +48,7 @@ The `*` operator dereferences values from `RAM`.
 | `iff`         | `iff` `ifS` | If-Then-Else              | `CF ? *((SP++)++) : *((++SP)++ + 2 ** S) -> *(--SP); 0 -> CF;` |       | `0b11SS1110` `0x?E` |
 | `swp`         | `swp`       | Swap                      | `*(SP++) -> *SP -> *(--SP);`                                   |       | `0b10110000` `0xB0` |
 | `pop`         | `pop`       | Pop                       | `SP++;`                                                        |       | `0b10110001` `0xB1` |
-| `phs`         |             | Push Small                | `XX & 0b00111111 \| 0b00000000 -> *(--SP);`                    |       | `0b00XXXXXX` `0x?X` |
-| `phl`         |             | Push Large                | `XX & 0b00111111 \| 0b01000000 -> *(--SP);`                    |       | `0b01XXXXXX` `0x?X` |
+| `psh`         |             | Push                      | `XX & 0b01111111 -> *(--SP);`                                  |       | `0b0XXXXXXX` `0x?X` |
 | `lda`         | `lda`       | Load from Address         | `*(*(SP++)) -> *(--SP);`                                       |       | `0b10111000` `0xB8` |
 | `sta`         | `sta`       | Store to Address          | `*(SP++) -> *(*(SP++));`                                       |       | `0b10111001` `0xB9` |
 | `ldi`         | `ldi`       | Load Instruction Pointer  | `IP -> *(--SP);`                                               |       | `0b10111010` `0xBA` |
