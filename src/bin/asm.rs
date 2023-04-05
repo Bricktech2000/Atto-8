@@ -21,7 +21,7 @@ fn main() {
   println!("\nDone.");
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum Token<'a> {
   LabelDef(&'a str),
   LabelRef(&'a str),
@@ -75,7 +75,7 @@ enum Token<'a> {
   DDD(u8),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum Instruction {
   Nop,
   Hlt,
@@ -266,20 +266,27 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
 
   // turn assembly tokens into roots, an intermediate representation. roots correspond to valid instructions
 
-  #[derive(Clone)]
+  #[derive(Debug, Clone, Eq, PartialEq)]
   enum Root {
     Instruction(Instruction),
     Node(Node),
     LabelDef(String),
   }
 
-  #[derive(Clone)]
+  #[derive(Debug, Clone, Eq, PartialEq)]
   enum Node {
+    CurrentAddress,
     LabelRef(String),
     Immediate(u8),
     Not(Box<Node>),
     Add(Box<Node>, Box<Node>),
     Sub(Box<Node>, Box<Node>),
+    Shf(Box<Node>, Box<Node>),
+    Rot(Box<Node>, Box<Node>),
+    Orr(Box<Node>, Box<Node>),
+    And(Box<Node>, Box<Node>),
+    Xor(Box<Node>, Box<Node>),
+    Xnd(Box<Node>, Box<Node>),
   }
 
   let roots: Vec<Root> = tokens
@@ -368,16 +375,15 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
   }
 
   let mut roots = roots;
-  let mut last_root_count = 0;
+  let mut last_roots = vec![];
 
-  while roots.len() != last_root_count {
-    last_root_count = roots.len();
+  while roots != last_roots {
+    last_roots = roots.clone();
+    // println!("roots: {:?}\nlen: {}", roots, roots.len());
 
     roots = match_replace(&roots, |window| match window {
       [Root::Instruction(Instruction::Nop)] => Some(vec![]),
-      // TODO: this will break in a case like `x05 ldi add`, where the `ldi` instruction
-      // is moved somewhere else
-      // [Root::Instruction(Instruction::Ldi)] => Some(vec![Root::Node(Node::CurrentAddress)]),
+      [Root::Instruction(Instruction::Ldi)] => Some(vec![Root::Node(Node::CurrentAddress)]),
       _ => None,
     });
 
@@ -401,31 +407,70 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
         [Root::Node(node), Root::Instruction(Instruction::Bfp)] => {
           Some(vec![Root::Node(node.clone())])
         }
+        [Root::Node(node), Root::Instruction(Instruction::Ldo(0x00))] => {
+          Some(vec![Root::Node(node.clone()), Root::Node(node.clone())])
+        }
         [Root::Node(_), Root::Instruction(Instruction::Pop)] => Some(vec![]),
         _ => None,
       });
 
     roots = match_replace(&roots, |window| match window {
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Add(_))] => {
+      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Add(0x01))] => {
         Some(vec![Root::Node(Node::Add(
           Box::new(node2.clone()),
           Box::new(node1.clone()),
         ))])
       }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Adc(_))] => {
+      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Adc(0x01))] => {
         Some(vec![Root::Node(Node::Add(
           Box::new(node2.clone()),
           Box::new(node1.clone()),
         ))])
       }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Sub(_))] => {
+      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Sub(0x01))] => {
         Some(vec![Root::Node(Node::Sub(
           Box::new(node2.clone()),
           Box::new(node1.clone()),
         ))])
       }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Sbc(_))] => {
+      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Sbc(0x01))] => {
         Some(vec![Root::Node(Node::Sub(
+          Box::new(node2.clone()),
+          Box::new(node1.clone()),
+        ))])
+      }
+      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Shf(0x01))] => {
+        Some(vec![Root::Node(Node::Shf(
+          Box::new(node2.clone()),
+          Box::new(node1.clone()),
+        ))])
+      }
+      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Rot(0x01))] => {
+        Some(vec![Root::Node(Node::Rot(
+          Box::new(node2.clone()),
+          Box::new(node1.clone()),
+        ))])
+      }
+      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Orr(0x01))] => {
+        Some(vec![Root::Node(Node::Orr(
+          Box::new(node2.clone()),
+          Box::new(node1.clone()),
+        ))])
+      }
+      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::And(0x01))] => {
+        Some(vec![Root::Node(Node::And(
+          Box::new(node2.clone()),
+          Box::new(node1.clone()),
+        ))])
+      }
+      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Xor(0x01))] => {
+        Some(vec![Root::Node(Node::Xor(
+          Box::new(node2.clone()),
+          Box::new(node1.clone()),
+        ))])
+      }
+      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Xnd(0x01))] => {
+        Some(vec![Root::Node(Node::Xnd(
           Box::new(node2.clone()),
           Box::new(node1.clone()),
         ))])
@@ -433,10 +478,33 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
       [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Swp)] => {
         Some(vec![Root::Node(node2.clone()), Root::Node(node1.clone())])
       }
-      // TODO: Shf, Rot, Orr, And, Xor, Xnd... see IS
+      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Ldo(0x01))] => {
+        Some(vec![
+          Root::Node(node1.clone()),
+          Root::Node(node2.clone()),
+          Root::Node(node1.clone()),
+        ])
+      }
       _ => None,
     });
   }
+
+  roots = match_replace(&roots, |window| match window {
+    [Root::Node(node1), Root::Node(node2)] if node1 == node2 => Some(vec![
+      Root::Node(node1.clone()),
+      Root::Instruction(Instruction::Ldo(0x00)),
+    ]),
+    _ => None,
+  });
+
+  roots = match_replace(&roots, |window| match window {
+    [Root::Node(node1), Root::Node(node2), Root::Node(node3)] if node1 == node3 => Some(vec![
+      Root::Node(node1.clone()),
+      Root::Node(node2.clone()),
+      Root::Instruction(Instruction::Ldo(0x01)),
+    ]),
+    _ => None,
+  });
 
   // compile roots into instructions by computing the value of every node and resolving labels
 
@@ -447,13 +515,34 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
     }
   }
 
-  fn eval<'a>(node: &'a Node, labels: &HashMap<&str, u8>) -> Result<u8, &'a str> {
+  fn eval<'a>(node: &'a Node, labels: &HashMap<&str, u8>, address: u8) -> Result<u8, &'a str> {
     Ok(match node {
+      Node::CurrentAddress => address,
       Node::LabelRef(label) => *labels.get(label.as_str()).ok_or(label.as_str())?,
-      Node::Immediate(value) => *value,
-      Node::Not(value) => !eval(value, labels)?,
-      Node::Add(value1, value2) => eval(value2, labels)? + eval(value1, labels)?,
-      Node::Sub(value1, value2) => eval(value2, labels)? - eval(value1, labels)?,
+      Node::Immediate(immediate) => *immediate,
+      Node::Not(node) => !eval(node, labels, address)?,
+      Node::Add(node1, node2) => {
+        eval(node2, labels, address)?.wrapping_add(eval(node1, labels, address)?)
+      }
+      Node::Sub(node1, node2) => {
+        eval(node2, labels, address)?.wrapping_sub(eval(node1, labels, address)?)
+      }
+      Node::Shf(node1, node2) => {
+        // TODO: negative shifts
+        let shifted =
+          (eval(node2, labels, address)? as u16) << eval(node1, labels, address)? as u16;
+        shifted as u8
+      }
+      Node::Rot(node1, node2) => {
+        // TODO: negative rotations
+        let shifted =
+          (eval(node2, labels, address)? as u16) << eval(node1, labels, address)? as u16;
+        (shifted & 0xFF) as u8 | (shifted >> 8) as u8
+      }
+      Node::Orr(node1, node2) => eval(node2, labels, address)? | eval(node1, labels, address)?,
+      Node::And(node1, node2) => eval(node2, labels, address)? & eval(node1, labels, address)?,
+      Node::Xor(node1, node2) => eval(node2, labels, address)? ^ eval(node1, labels, address)?,
+      Node::Xnd(_, _) => 0,
     })
   }
 
@@ -478,29 +567,35 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
   let mut labels: HashMap<&str, u8> = HashMap::new();
   let mut nodes: HashMap<u8, Node> = HashMap::new();
 
-  let mut current_address = 0;
+  let mut address = 0;
   let instructions: Vec<Instruction> = roots
     .iter()
     .flat_map(|root| match root {
       Root::Instruction(instruction) => {
-        current_address += 1;
+        address += 1;
         vec![*instruction]
       }
-      Root::Node(node) => match eval(node, &labels) {
+      Root::Node(node) => match eval(node, &labels, address) {
         Ok(value) => {
           let instructions = make_push_instruction(value);
-          current_address += instructions.len() as u8;
+          address += instructions.len() as u8;
           instructions
         }
         Err(_) => {
           let instructions = vec![Instruction::Bfp, Instruction::Bfp];
-          nodes.insert(current_address, node.clone());
-          current_address += instructions.len() as u8;
+          nodes.insert(address, node.clone());
+          address += instructions.len() as u8;
           instructions
         }
       },
       Root::LabelDef(label) => {
-        labels.insert(label, current_address);
+        // empty labels are used as an optimization blocker
+        if label != "" {
+          if labels.contains_key(label.as_str()) {
+            panic!("Duplicate label: {}", label);
+          }
+          labels.insert(label, address);
+        }
         vec![]
       }
     })
@@ -511,7 +606,7 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
   let mut instructions = instructions;
 
   for (address, node) in nodes.iter() {
-    let push_instructions = make_push_instruction(match eval(node, &labels) {
+    let push_instructions = make_push_instruction(match eval(node, &labels, *address) {
       Ok(value) => value,
       Err(label) => panic!("Could not resolve label: {}", label),
     });
