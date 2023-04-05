@@ -10,7 +10,7 @@ fn main() {
 
   emulate(
     memory.try_into().expect("Slice with incorrect length"),
-    1000,
+    1000000,
   );
 
   println!("\nDone.");
@@ -145,8 +145,12 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
                 stack_pointer = stack_pointer.wrapping_add(1);
                 let b = memory[size_pointer as usize];
 
-                // TODO: negative shifts
-                let shifted = (b as u16) << a as u16;
+                let shifted = if a as i8 > 0 {
+                  (b as u16) << a as u16
+                } else {
+                  (b as u16) >> a.wrapping_neg() as u16
+                };
+
                 memory[size_pointer as usize] = shifted as u8;
                 // TODO: set carry flag
               }

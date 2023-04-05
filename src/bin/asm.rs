@@ -275,7 +275,7 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
 
   #[derive(Debug, Clone, Eq, PartialEq)]
   enum Node {
-    CurrentAddress,
+    NextAddress,
     LabelRef(String),
     Immediate(u8),
     Not(Box<Node>),
@@ -383,7 +383,9 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
 
     roots = match_replace(&roots, |window| match window {
       [Root::Instruction(Instruction::Nop)] => Some(vec![]),
-      [Root::Instruction(Instruction::Ldi)] => Some(vec![Root::Node(Node::CurrentAddress)]),
+      // TODO: this is broken. this is another catch-22; `Ldi` pushes the next instruction onto
+      // the stack, but we can't know what the address the next instruction is until we've `eval`ed it
+      // [Root::Instruction(Instruction::Ldi)] => Some(vec![Root::Node(Node::NextAddress)]),
       _ => None,
     });
 
@@ -517,7 +519,7 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
 
   fn eval<'a>(node: &'a Node, labels: &HashMap<&str, u8>, address: u8) -> Result<u8, &'a str> {
     Ok(match node {
-      Node::CurrentAddress => address,
+      Node::NextAddress => address,
       Node::LabelRef(label) => *labels.get(label.as_str()).ok_or(label.as_str())?,
       Node::Immediate(immediate) => *immediate,
       Node::Not(node) => !eval(node, labels, address)?,
@@ -572,8 +574,9 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
     .iter()
     .flat_map(|root| match root {
       Root::Instruction(instruction) => {
-        address += 1;
-        vec![*instruction]
+        let instructions = vec![instruction.clone()];
+        address += instructions.len() as u8;
+        instructions
       }
       Root::Node(node) => match eval(node, &labels, address) {
         Ok(value) => {

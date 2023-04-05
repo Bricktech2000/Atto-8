@@ -1,4 +1,4 @@
-# clear; cargo run --bin asm src/test/this-is-a-test.asm && cargo run --bin emu src/test/this-is-a-test.bin
+# clear; cargo run --bin asm src/test/this\ is\ a\ test.asm && cargo run --bin emu src/test/this\ is\ a\ test.bin
 
 @core.asm
 @common.asm
