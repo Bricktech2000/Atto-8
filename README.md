@@ -11,24 +11,27 @@ potential improvements:
 - [x] merge rol with ror and shl with shr? (replace with `xXX rot` and `xXX shf`)
 - [x] `dup` VS `ld0`, `adc` VS `ad0`, `rot` VS `sh0`
 - [ ] use carry with `inc` and `dec`?
-- [ ] rotate without carry?
+- [x] rotate without carry?
 - [x] add macros and labels to IS?
 - [ ] come up with microcode
 - [ ] handle invalid instructions?
 - [x] fix `adc` in asm
+- [x] add `neg` to asm optimization
+- [x] fix `x80` push instruction and opt with `xFX`
 
 ### doc
 
 #### assembler
 
-### emulator
+#### emulator
 
-recognizes `xAA` as debug request
+recognizes `xBB` as debug request
 
 #### processor
 
 - stack grows to lower addresses
 - starts execution at 0x00
+- uses 2's complement for negatives
 
 conventions:
 

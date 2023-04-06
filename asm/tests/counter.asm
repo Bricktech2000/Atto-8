@@ -9,7 +9,7 @@ main%
 x00 x00 loop:
 x00 ld2 :print_byte %call
 x02 ld1 :print_byte %call
-x00 x01 ac2 ac2 :loop sti
+x00 x01 adc2 adc2 :loop sti
 
 %hlt
 

@@ -1,10 +1,10 @@
-neg% not inc # might set carry
-shr% x0F xor inc shf
+shr% neg shf
+ror% neg rot
 norr% orr not
 nand% and not
 xnorr% xor not
 xnand% xnd not
-abs% ld0 x01 rot x01 and %neg swp ld1 add xor
+abs% ld0 x01 rot x01 and neg swp ld1 add xor
 
 call% .ret swp sti ret.
 ret% sti
@@ -15,4 +15,4 @@ rt3% st2 pop pop %ret
 rt4% st3 pop pop pop %ret
 
 hlt% lbl. .lbl sti
-dbg% dAA
+dbg% dBB

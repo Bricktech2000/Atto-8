@@ -29,86 +29,88 @@ enum Token<'a> {
   LabelRef(Label<'a>),
   MacroDef(&'a str),
   MacroRef(&'a str),
+  XXX(u8),
+  LdO(u8),
+  StO(u8),
+  Add,
+  Adc,
+  AddS(u8),
+  AdcS(u8),
+  Sub,
+  Sbc,
+  SubS(u8),
+  SbcS(u8),
+  Shf,
+  Sfc,
+  ShfS(u8),
+  SfcS(u8),
+  Rot,
+  RotS(u8),
+  Iff,
+  IffS(u8),
+  Orr,
+  OrrS(u8),
+  And,
+  AndS(u8),
+  Xor,
+  XorS(u8),
+  Xnd,
+  XndS(u8),
+  Inc,
+  Dec,
+  Neg,
+  Not,
+  Buf,
   Nop,
   Clc,
   Sec,
   Flc,
-  Inc,
-  Dec,
-  Add,
-  Adc,
-  AdS(u8),
-  AcS(u8),
-  Sub,
-  Sbc,
-  SuS(u8),
-  ScS(u8),
-  Shf,
-  ShS(u8),
-  Rot,
-  RoS(u8),
-  Orr,
-  OrS(u8),
-  And,
-  AnS(u8),
-  Xor,
-  XoS(u8),
-  Xnd,
-  XnS(u8),
-  Not,
-  Ntp,
-  Buf,
-  Bfp,
-  Iff,
-  IfS(u8),
   Swp,
   Pop,
-  XXX(u8),
   Lda,
   Sta,
   Ldi,
   Sti,
   Lds,
   Sts,
-  LdO(u8),
-  StO(u8),
   DDD(u8),
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum Instruction {
-  Nop,
-  Clc,
-  Sec,
-  Flc,
-  Inc,
-  Dec,
+  Psh(u8),
+  Phn(u8),
+  Ldo(u8),
+  Sto(u8),
   Add(u8),
   Adc(u8),
   Sub(u8),
   Sbc(u8),
   Shf(u8),
+  Sfc(u8),
   Rot(u8),
+  Iff(u8),
   Orr(u8),
   And(u8),
   Xor(u8),
   Xnd(u8),
   Not,
-  Ntp,
   Buf,
-  Bfp,
-  Iff(u8),
+  Inc,
+  Dec,
+  Neg,
+  Nop,
+  Clc,
+  Sec,
+  Flc,
   Swp,
   Pop,
-  Psh(u8),
   Lda,
   Sta,
   Ldi,
   Sti,
   Lds,
   Sts,
-  Ldo(u8),
-  Sto(u8),
   Raw(u8),
 }
 
@@ -159,47 +161,48 @@ fn tokenize(source: &str) -> Vec<Token> {
       &_ if token.starts_with(".") => Token::LabelRef((Some(0), &token[1..])),
       &_ if token.ends_with("%") => Token::MacroDef(&token[..token.len() - 1]),
       &_ if token.starts_with("%") => Token::MacroRef(&token[1..]),
+      &"add" => Token::Add,
+      &"adc" => Token::Adc,
+      &_ if token.starts_with("add") => Token::AddS(u8::from_str_radix(&token[3..], 16).unwrap()),
+      &_ if token.starts_with("adc") => Token::AdcS(u8::from_str_radix(&token[3..], 16).unwrap()),
+      &"sub" => Token::Sub,
+      &"sbc" => Token::Sbc,
+      &_ if token.starts_with("sub") => Token::SubS(u8::from_str_radix(&token[3..], 16).unwrap()),
+      &_ if token.starts_with("sbc") => Token::SbcS(u8::from_str_radix(&token[3..], 16).unwrap()),
+      &"shf" => Token::Shf,
+      &_ if token.starts_with("shf") => Token::ShfS(u8::from_str_radix(&token[3..], 16).unwrap()),
+      &"shc" => Token::Sfc,
+      &_ if token.starts_with("sfc") => Token::SfcS(u8::from_str_radix(&token[3..], 16).unwrap()),
+      &"rot" => Token::Rot,
+      &_ if token.starts_with("rot") => Token::RotS(u8::from_str_radix(&token[3..], 16).unwrap()),
+      &"iff" => Token::Iff,
+      &_ if token.starts_with("iff") => Token::IffS(u8::from_str_radix(&token[3..], 16).unwrap()),
+      &"orr" => Token::Orr,
+      &_ if token.starts_with("orr") => Token::OrrS(u8::from_str_radix(&token[3..], 16).unwrap()),
+      &"and" => Token::And,
+      &_ if token.starts_with("and") => Token::AndS(u8::from_str_radix(&token[3..], 16).unwrap()),
+      &"xor" => Token::Xor,
+      &_ if token.starts_with("xor") => Token::XorS(u8::from_str_radix(&token[3..], 16).unwrap()),
+      &"xnd" => Token::Xnd,
+      &_ if token.starts_with("xnd") => Token::XndS(u8::from_str_radix(&token[3..], 16).unwrap()),
+      &"inc" => Token::Inc,
+      &"dec" => Token::Dec,
+      &"neg" => Token::Neg,
+      &"not" => Token::Not,
+      &"buf" => Token::Buf,
       &"nop" => Token::Nop,
       &"clc" => Token::Clc,
       &"sec" => Token::Sec,
       &"flc" => Token::Flc,
-      &"inc" => Token::Inc,
-      &"dec" => Token::Dec,
-      &"add" => Token::Add,
-      &"adc" => Token::Adc,
-      &_ if token.starts_with("ad") => Token::AdS(u8::from_str_radix(&token[2..], 16).unwrap()),
-      &_ if token.starts_with("ac") => Token::AcS(u8::from_str_radix(&token[2..], 16).unwrap()),
-      &"sub" => Token::Sub,
-      &"sbc" => Token::Sbc,
-      &_ if token.starts_with("su") => Token::SuS(u8::from_str_radix(&token[2..], 16).unwrap()),
-      &_ if token.starts_with("sc") => Token::ScS(u8::from_str_radix(&token[2..], 16).unwrap()),
-      &"shf" => Token::Shf,
-      &_ if token.starts_with("sh") => Token::ShS(u8::from_str_radix(&token[2..], 16).unwrap()),
-      &"rot" => Token::Rot,
-      &_ if token.starts_with("ro") => Token::RoS(u8::from_str_radix(&token[2..], 16).unwrap()),
-      &"orr" => Token::Orr,
-      &_ if token.starts_with("or") => Token::OrS(u8::from_str_radix(&token[2..], 16).unwrap()),
-      &"and" => Token::And,
-      &_ if token.starts_with("an") => Token::AnS(u8::from_str_radix(&token[2..], 16).unwrap()),
-      &"xor" => Token::Xor,
-      &_ if token.starts_with("xo") => Token::XoS(u8::from_str_radix(&token[2..], 16).unwrap()),
-      &"xnd" => Token::Xnd,
-      &_ if token.starts_with("xn") => Token::XnS(u8::from_str_radix(&token[2..], 16).unwrap()),
-      &"not" => Token::Not,
-      &"ntp" => Token::Ntp,
-      &"buf" => Token::Buf,
-      &"bfp" => Token::Bfp,
-      &"iff" => Token::Iff,
-      &_ if token.starts_with("if") => Token::IfS(u8::from_str_radix(&token[2..], 16).unwrap()),
       &"swp" => Token::Swp,
       &"pop" => Token::Pop,
-      &_ if token.starts_with("x") => Token::XXX(u8::from_str_radix(&token[1..], 16).unwrap()),
       &"lda" => Token::Lda,
       &"sta" => Token::Sta,
       &"ldi" => Token::Ldi,
       &"sti" => Token::Sti,
       &"lds" => Token::Lds,
       &"sts" => Token::Sts,
+      &_ if token.starts_with("x") => Token::XXX(u8::from_str_radix(&token[1..], 16).unwrap()),
       &_ if token.starts_with("ld") => Token::LdO(u8::from_str_radix(&token[2..], 16).unwrap()),
       &_ if token.starts_with("st") => Token::StO(u8::from_str_radix(&token[2..], 16).unwrap()),
       &_ if token.starts_with("d") => Token::DDD(u8::from_str_radix(&token[1..], 16).unwrap()),
@@ -310,49 +313,50 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
       Token::LabelRef((scope, name)) => Root::Node(Node::LabelRef((*scope, name.to_string()))),
       Token::MacroDef(_) => unreachable!(),
       Token::MacroRef(_) => unreachable!(),
+      Token::XXX(immediate) => Root::Node(Node::Immediate(*immediate)),
+      Token::LdO(offset) => Root::Instruction(Instruction::Ldo(assert_offset(*offset))),
+      Token::StO(offset) => Root::Instruction(Instruction::Sto(assert_offset(*offset))),
+      Token::Add => Root::Instruction(Instruction::Add(assert_size(0x01))),
+      Token::Adc => Root::Instruction(Instruction::Adc(assert_size(0x01))),
+      Token::AddS(size) => Root::Instruction(Instruction::Add(assert_size(*size))),
+      Token::AdcS(size) => Root::Instruction(Instruction::Adc(assert_size(*size))),
+      Token::Sub => Root::Instruction(Instruction::Sub(assert_size(0x01))),
+      Token::Sbc => Root::Instruction(Instruction::Sbc(assert_size(0x01))),
+      Token::SubS(size) => Root::Instruction(Instruction::Sub(assert_size(*size))),
+      Token::SbcS(size) => Root::Instruction(Instruction::Sbc(assert_size(*size))),
+      Token::Shf => Root::Instruction(Instruction::Shf(assert_size(0x01))),
+      Token::Sfc => Root::Instruction(Instruction::Sfc(assert_size(0x01))),
+      Token::ShfS(size) => Root::Instruction(Instruction::Shf(assert_size(*size))),
+      Token::SfcS(size) => Root::Instruction(Instruction::Sfc(assert_size(*size))),
+      Token::Rot => Root::Instruction(Instruction::Rot(assert_size(0x01))),
+      Token::RotS(size) => Root::Instruction(Instruction::Rot(assert_size(*size))),
+      Token::Iff => Root::Instruction(Instruction::Iff(assert_size(0x01))),
+      Token::IffS(size) => Root::Instruction(Instruction::Iff(assert_size(*size))),
+      Token::Orr => Root::Instruction(Instruction::Orr(assert_size(0x01))),
+      Token::OrrS(size) => Root::Instruction(Instruction::Orr(assert_size(*size))),
+      Token::And => Root::Instruction(Instruction::And(assert_size(0x01))),
+      Token::AndS(size) => Root::Instruction(Instruction::And(assert_size(*size))),
+      Token::Xor => Root::Instruction(Instruction::Xor(assert_size(0x01))),
+      Token::XorS(size) => Root::Instruction(Instruction::Xor(assert_size(*size))),
+      Token::Xnd => Root::Instruction(Instruction::Xnd(assert_size(0x01))),
+      Token::XndS(size) => Root::Instruction(Instruction::Xnd(assert_size(*size))),
+      Token::Inc => Root::Instruction(Instruction::Inc),
+      Token::Dec => Root::Instruction(Instruction::Dec),
+      Token::Neg => Root::Instruction(Instruction::Neg),
+      Token::Not => Root::Instruction(Instruction::Not),
+      Token::Buf => Root::Instruction(Instruction::Buf),
       Token::Nop => Root::Instruction(Instruction::Nop),
       Token::Clc => Root::Instruction(Instruction::Clc),
       Token::Sec => Root::Instruction(Instruction::Sec),
       Token::Flc => Root::Instruction(Instruction::Flc),
-      Token::Inc => Root::Instruction(Instruction::Inc),
-      Token::Dec => Root::Instruction(Instruction::Dec),
-      Token::Add => Root::Instruction(Instruction::Add(assert_size(0x01))),
-      Token::AdS(size) => Root::Instruction(Instruction::Add(assert_size(*size))),
-      Token::Adc => Root::Instruction(Instruction::Adc(assert_size(0x01))),
-      Token::AcS(size) => Root::Instruction(Instruction::Adc(assert_size(*size))),
-      Token::Sub => Root::Instruction(Instruction::Sub(assert_size(0x01))),
-      Token::SuS(size) => Root::Instruction(Instruction::Sub(assert_size(*size))),
-      Token::Sbc => Root::Instruction(Instruction::Sbc(assert_size(0x01))),
-      Token::ScS(size) => Root::Instruction(Instruction::Sbc(assert_size(*size))),
-      Token::Shf => Root::Instruction(Instruction::Shf(assert_size(0x01))),
-      Token::ShS(size) => Root::Instruction(Instruction::Shf(assert_size(*size))),
-      Token::Rot => Root::Instruction(Instruction::Rot(assert_size(0x01))),
-      Token::RoS(size) => Root::Instruction(Instruction::Rot(assert_size(*size))),
-      Token::Orr => Root::Instruction(Instruction::Orr(assert_size(0x01))),
-      Token::OrS(size) => Root::Instruction(Instruction::Orr(assert_size(*size))),
-      Token::And => Root::Instruction(Instruction::And(assert_size(0x01))),
-      Token::AnS(size) => Root::Instruction(Instruction::And(assert_size(*size))),
-      Token::Xor => Root::Instruction(Instruction::Xor(assert_size(0x01))),
-      Token::XoS(size) => Root::Instruction(Instruction::Xor(assert_size(*size))),
-      Token::Xnd => Root::Instruction(Instruction::Xnd(assert_size(0x01))),
-      Token::XnS(size) => Root::Instruction(Instruction::Xnd(assert_size(*size))),
-      Token::Not => Root::Instruction(Instruction::Not),
-      Token::Ntp => Root::Instruction(Instruction::Ntp),
-      Token::Buf => Root::Instruction(Instruction::Buf),
-      Token::Bfp => Root::Instruction(Instruction::Bfp),
-      Token::Iff => Root::Instruction(Instruction::Iff(assert_size(0x01))),
-      Token::IfS(size) => Root::Instruction(Instruction::Iff(assert_size(*size))),
       Token::Swp => Root::Instruction(Instruction::Swp),
       Token::Pop => Root::Instruction(Instruction::Pop),
-      Token::XXX(immediate) => Root::Node(Node::Immediate(*immediate)),
       Token::Lda => Root::Instruction(Instruction::Lda),
       Token::Sta => Root::Instruction(Instruction::Sta),
       Token::Ldi => Root::Instruction(Instruction::Ldi),
       Token::Sti => Root::Instruction(Instruction::Sti),
       Token::Lds => Root::Instruction(Instruction::Lds),
       Token::Sts => Root::Instruction(Instruction::Sts),
-      Token::LdO(offset) => Root::Instruction(Instruction::Ldo(assert_offset(*offset))),
-      Token::StO(offset) => Root::Instruction(Instruction::Sto(assert_offset(*offset))),
       Token::DDD(immediate) => Root::Instruction(Instruction::Raw(*immediate)),
     })
     .collect();
@@ -400,35 +404,39 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
 
     roots =
       match_replace(&roots, |window| match window {
-        [Root::Node(node), Root::Instruction(Instruction::Inc)] => Some(vec![Root::Node(
-          Node::Add(Box::new(node.clone()), Box::new(Node::Immediate(1))),
-        )]),
-        [Root::Node(node), Root::Instruction(Instruction::Dec)] => Some(vec![Root::Node(
-          Node::Sub(Box::new(node.clone()), Box::new(Node::Immediate(1))),
-        )]),
-        [Root::Node(node), Root::Instruction(Instruction::Not)] => {
-          Some(vec![Root::Node(Node::Not(Box::new(node.clone())))])
-        }
-        [Root::Node(node), Root::Instruction(Instruction::Ntp)] => Some(vec![Root::Node(
-          Node::Not(Box::new(Node::Not(Box::new(node.clone())))),
-        )]),
-        [Root::Node(node), Root::Instruction(Instruction::Buf)] => {
-          Some(vec![Root::Node(node.clone())])
-        }
-        [Root::Node(node), Root::Instruction(Instruction::Bfp)] => {
-          Some(vec![Root::Node(node.clone())])
-        }
         [Root::Node(node), Root::Instruction(Instruction::Ldo(0x00))] => {
           Some(vec![Root::Node(node.clone()), Root::Node(node.clone())])
         }
         [Root::Instruction(Instruction::Swp), Root::Instruction(Instruction::Pop)] => {
           Some(vec![Root::Instruction(Instruction::Sto(0x00))])
         }
+        [Root::Node(node), Root::Instruction(Instruction::Inc)] => Some(vec![Root::Node(
+          Node::Add(Box::new(node.clone()), Box::new(Node::Immediate(1))),
+        )]),
+        [Root::Node(node), Root::Instruction(Instruction::Dec)] => Some(vec![Root::Node(
+          Node::Sub(Box::new(node.clone()), Box::new(Node::Immediate(1))),
+        )]),
+        [Root::Node(node), Root::Instruction(Instruction::Neg)] => Some(vec![Root::Node(
+          Node::Sub(Box::new(node.clone()), Box::new(Node::Immediate(0))),
+        )]),
+        [Root::Node(node), Root::Instruction(Instruction::Not)] => {
+          Some(vec![Root::Node(Node::Not(Box::new(node.clone())))])
+        }
+        [Root::Node(node), Root::Instruction(Instruction::Buf)] => {
+          Some(vec![Root::Node(node.clone())])
+        }
         [Root::Node(_), Root::Instruction(Instruction::Pop)] => Some(vec![]),
         _ => None,
       });
 
     roots = match_replace(&roots, |window| match window {
+      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Ldo(0x01))] => {
+        Some(vec![
+          Root::Node(node1.clone()),
+          Root::Node(node2.clone()),
+          Root::Node(node1.clone()),
+        ])
+      }
       [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Add(0x01))] => {
         Some(vec![Root::Node(Node::Add(
           Box::new(node2.clone()),
@@ -454,6 +462,12 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
         ))])
       }
       [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Shf(0x01))] => {
+        Some(vec![Root::Node(Node::Shf(
+          Box::new(node2.clone()),
+          Box::new(node1.clone()),
+        ))])
+      }
+      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Sfc(0x01))] => {
         Some(vec![Root::Node(Node::Shf(
           Box::new(node2.clone()),
           Box::new(node1.clone()),
@@ -491,13 +505,6 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
       }
       [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Swp)] => {
         Some(vec![Root::Node(node2.clone()), Root::Node(node1.clone())])
-      }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Ldo(0x01))] => {
-        Some(vec![
-          Root::Node(node1.clone()),
-          Root::Node(node2.clone()),
-          Root::Node(node1.clone()),
-        ])
       }
       _ => None,
     });
@@ -567,16 +574,25 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
 
   fn make_push_instruction(immediate: u8) -> Vec<Instruction> {
     // the `Psh` instruction allows us to push arbitrary 7-bit immediates onto the stack.
-    // we then optionally use `Bfp` and `Ntp` to get the ability to push arbitrary 8-bit immediates.
+    // we then optionally use `Neg` and `Inc` to get the ability to push arbitrary 8-bit
+    // immediates. we also use `Phn` as a shorthand when possible.
 
-    let lower_bits = immediate & 0b01111111;
-    match immediate & 0b10000000 {
-      0b00000000 => vec![Instruction::Psh(assert_immediate(lower_bits))],
-      0b10000000 => vec![
-        Instruction::Psh(assert_immediate(lower_bits ^ 0b01111111)),
-        Instruction::Ntp,
-      ],
-      _ => unreachable!(),
+    if immediate & 0b11110000 == 0b11110000 {
+      vec![Instruction::Phn(assert_offset(immediate & 0b00001111))]
+    } else if immediate == 0b10000000 {
+      vec![
+        Instruction::Psh(assert_immediate(0b01111111)),
+        Instruction::Inc,
+      ]
+    } else {
+      match immediate & 0b10000000 {
+        0b00000000 => vec![Instruction::Psh(assert_immediate(immediate & 0b01111111))],
+        0b10000000 => vec![
+          Instruction::Psh(assert_immediate(immediate.wrapping_neg())),
+          Instruction::Neg,
+        ],
+        _ => unreachable!(),
+      }
     }
   }
 
@@ -602,7 +618,7 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
           instructions
         }
         Err(_) => {
-          let instructions = vec![Instruction::Bfp, Instruction::Bfp];
+          let instructions = vec![Instruction::Nop, Instruction::Nop];
           nodes.insert(address, node.clone());
           address += instructions.len() as u8;
           instructions
@@ -662,13 +678,13 @@ fn codegen(instructions: Vec<Instruction>) -> Vec<u8> {
   }
 
   fn encode_size(size: u8) -> u8 {
-    (match size {
+    match size {
       0x01 => 0x00,
       0x02 => 0x01,
       0x04 => 0x02,
       0x08 => 0x03,
       _ => unreachable!(),
-    }) << 4
+    }
   }
 
   fn encode_offset(offset: u8) -> u8 {
@@ -683,38 +699,39 @@ fn codegen(instructions: Vec<Instruction>) -> Vec<u8> {
   instructions
     .iter()
     .flat_map(|instruction| match instruction {
-      Instruction::Nop => vec![0xA0],
-      Instruction::Clc => vec![0xA1],
-      Instruction::Sec => vec![0xA2],
-      Instruction::Flc => vec![0xA3],
-      Instruction::Inc => vec![0xC0 | 0b00000000],
-      Instruction::Dec => vec![0xC1 | 0b00000000],
-      Instruction::Add(size) => vec![0xC2 | encode_size(*size)],
-      Instruction::Adc(size) => vec![0xC3 | encode_size(*size)],
-      Instruction::Sub(size) => vec![0xC4 | encode_size(*size)],
-      Instruction::Sbc(size) => vec![0xC5 | encode_size(*size)],
-      Instruction::Shf(size) => vec![0xC6 | encode_size(*size)],
-      Instruction::Rot(size) => vec![0xC7 | encode_size(*size)],
-      Instruction::Orr(size) => vec![0xC8 | encode_size(*size)],
-      Instruction::And(size) => vec![0xC9 | encode_size(*size)],
-      Instruction::Xor(size) => vec![0xCA | encode_size(*size)],
-      Instruction::Xnd(size) => vec![0xCB | encode_size(*size)],
-      Instruction::Not => vec![0xCC | 0b00000000],
-      Instruction::Ntp => vec![0xCC | 0b00010000],
-      Instruction::Buf => vec![0xCD | 0b00000000],
-      Instruction::Bfp => vec![0xCD | 0b00010000],
-      Instruction::Iff(size) => vec![0xCE | encode_size(*size)],
-      Instruction::Swp => vec![0xB0],
-      Instruction::Pop => vec![0xB1],
       Instruction::Psh(immediate) => vec![0b00000000 | encode_immediate(*immediate)],
-      Instruction::Lda => vec![0xB8],
-      Instruction::Sta => vec![0xB9],
-      Instruction::Ldi => vec![0xBA],
-      Instruction::Sti => vec![0xBB],
-      Instruction::Lds => vec![0xBC],
-      Instruction::Sts => vec![0xBD],
-      Instruction::Ldo(offset) => vec![0x80 | encode_offset(*offset)],
-      Instruction::Sto(offset) => vec![0x90 | encode_offset(*offset)],
+      Instruction::Phn(immediate) => vec![0b11110000 | encode_offset(*immediate)],
+      Instruction::Ldo(offset) => vec![0b11000000 | encode_offset(*offset)],
+      Instruction::Sto(offset) => vec![0b11010000 | encode_offset(*offset)],
+      Instruction::Add(size) => vec![0b10000000 | encode_size(*size)],
+      Instruction::Adc(size) => vec![0b10000100 | encode_size(*size)],
+      Instruction::Sub(size) => vec![0b10001000 | encode_size(*size)],
+      Instruction::Sbc(size) => vec![0b10001100 | encode_size(*size)],
+      Instruction::Shf(size) => vec![0b10010000 | encode_size(*size)],
+      Instruction::Sfc(size) => vec![0b10010100 | encode_size(*size)],
+      Instruction::Rot(size) => vec![0b10011000 | encode_size(*size)],
+      Instruction::Iff(size) => vec![0b10011100 | encode_size(*size)],
+      Instruction::Orr(size) => vec![0b10100000 | encode_size(*size)],
+      Instruction::And(size) => vec![0b10100100 | encode_size(*size)],
+      Instruction::Xor(size) => vec![0b10101000 | encode_size(*size)],
+      Instruction::Xnd(size) => vec![0b10101100 | encode_size(*size)],
+      Instruction::Inc => vec![0b10110000],
+      Instruction::Dec => vec![0b10110001],
+      Instruction::Neg => vec![0b10110010],
+      Instruction::Not => vec![0b10110100],
+      Instruction::Buf => vec![0b10110101],
+      Instruction::Nop => vec![0xE0],
+      Instruction::Clc => vec![0xE1],
+      Instruction::Sec => vec![0xE2],
+      Instruction::Flc => vec![0xE3],
+      Instruction::Swp => vec![0xE4],
+      Instruction::Pop => vec![0xE5],
+      Instruction::Lda => vec![0xE8],
+      Instruction::Sta => vec![0xE9],
+      Instruction::Ldi => vec![0xEA],
+      Instruction::Sti => vec![0xEB],
+      Instruction::Lds => vec![0xEC],
+      Instruction::Sts => vec![0xED],
       Instruction::Raw(data) => vec![*data],
     })
     .collect()

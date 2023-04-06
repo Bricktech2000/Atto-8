@@ -10,7 +10,7 @@ x50 x05 orr
 
 xF5 x5F and
 
-xAB %neg
+xAB neg
 
 ld0 %abs
 
