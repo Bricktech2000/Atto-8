@@ -1,6 +1,5 @@
-# @core.asm
 # @common.asm
-clear_display%
+# @core_utils.asm
 
 clear_display: # clear_display()
 x20 clear_display_for_j: dec

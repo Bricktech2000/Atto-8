@@ -1,6 +1,6 @@
-# clear; cargo run --bin asm test/optimization.asm && cargo run --bin emu test/optimization.bin
+# clear; cargo run --bin asm tests/optimization.asm && cargo run --bin emu tests/optimization.bin
 
-@core.asm
+@core_utils.asm
 
 main% dbg
 

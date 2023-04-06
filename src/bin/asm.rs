@@ -21,10 +21,12 @@ fn main() {
   println!("\nDone.");
 }
 
+type Label<'a> = (Option<usize>, &'a str);
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum Token<'a> {
-  LabelDef(&'a str),
-  LabelRef(&'a str),
+  LabelDef(Label<'a>),
+  LabelRef(Label<'a>),
   MacroDef(&'a str),
   MacroRef(&'a str),
   Nop,
@@ -126,15 +128,19 @@ fn preprocess(filename: &str, callback: fn(&str)) -> String {
     .lines()
     .map(|line| line.split("#").next().unwrap())
     .map(|line| match line.find('@') {
-      Some(i) => preprocess(
-        Path::new(filename)
-          .parent()
-          .unwrap()
-          .join(line[i..][1..].trim())
-          .to_str()
-          .unwrap(),
-        callback,
-      ),
+      Some(i) => {
+        line[..i].to_owned()
+          + preprocess(
+            Path::new(filename)
+              .parent()
+              .unwrap()
+              .join(&line[i..][1..])
+              .to_str()
+              .unwrap(),
+            callback,
+          )
+          .as_str()
+      }
       None => line.to_string(),
     })
     .collect::<Vec<String>>()
@@ -151,8 +157,10 @@ fn tokenize(source: &str) -> Vec<Token> {
   let tokens: Vec<Token> = tokens
     .iter()
     .map(|token| match token {
-      &_ if token.ends_with(":") => Token::LabelDef(&token[..token.len() - 1]),
-      &_ if token.starts_with(":") => Token::LabelRef(&token[1..]),
+      &_ if token.ends_with(":") => Token::LabelDef((None, &token[..token.len() - 1])),
+      &_ if token.starts_with(":") => Token::LabelRef((None, &token[1..])),
+      &_ if token.ends_with(".") => Token::LabelDef((Some(0), &token[..token.len() - 1])),
+      &_ if token.starts_with(".") => Token::LabelRef((Some(0), &token[1..])),
       &_ if token.ends_with("%") => Token::MacroDef(&token[..token.len() - 1]),
       &_ if token.starts_with("%") => Token::MacroRef(&token[1..]),
       &"nop" => Token::Nop,
@@ -229,12 +237,14 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
     }
   }
 
-  let entry_point = &vec![Token::MacroRef(entry_point)];
-  let tokens: Vec<Token> = expand_macros(&macros, &entry_point);
+  let mut scope: usize = 1;
+  let entry_point = vec![Token::MacroRef(entry_point)];
+  let tokens: Vec<Token> = expand_macros(&macros, entry_point, &mut scope);
 
   fn expand_macros<'a>(
-    macros: &'a HashMap<&'a str, Vec<Token<'a>>>,
-    tokens: &'a Vec<Token>,
+    macros: &HashMap<&'a str, Vec<Token<'a>>>,
+    tokens: Vec<Token<'a>>,
+    scope: &mut usize,
   ) -> Vec<Token<'a>> {
     tokens
       .iter()
@@ -243,7 +253,16 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
           let tokens = macros
             .get(name)
             .expect(&format!("Could not find macro: {}", name));
-          expand_macros(&macros, &tokens)
+          let tokens = tokens
+            .iter()
+            .map(|token| match token {
+              Token::LabelDef((Some(_), name)) => Token::LabelDef((Some(*scope), name)),
+              Token::LabelRef((Some(_), name)) => Token::LabelRef((Some(*scope), name)),
+              _ => token.clone(),
+            })
+            .collect();
+          *scope += 1;
+          expand_macros(macros, tokens, scope)
         }
         _ => vec![*token],
       })
@@ -266,17 +285,18 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
 
   // turn assembly tokens into roots, an intermediate representation. roots correspond to valid instructions
 
+  type RootLabel = (Option<usize>, String);
+
   #[derive(Debug, Clone, Eq, PartialEq)]
   enum Root {
     Instruction(Instruction),
     Node(Node),
-    LabelDef(String),
+    LabelDef(RootLabel),
   }
 
   #[derive(Debug, Clone, Eq, PartialEq)]
   enum Node {
-    NextAddress,
-    LabelRef(String),
+    LabelRef(RootLabel),
     Immediate(u8),
     Not(Box<Node>),
     Add(Box<Node>, Box<Node>),
@@ -292,8 +312,8 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
   let roots: Vec<Root> = tokens
     .iter()
     .map(|token| match token {
-      Token::LabelDef(label) => Root::LabelDef(label.to_string()),
-      Token::LabelRef(label) => Root::Node(Node::LabelRef(label.to_string())),
+      Token::LabelDef((scope, name)) => Root::LabelDef((*scope, name.to_string())),
+      Token::LabelRef((scope, name)) => Root::Node(Node::LabelRef((*scope, name.to_string()))),
       Token::MacroDef(_) => unreachable!(),
       Token::MacroRef(_) => unreachable!(),
       Token::Nop => Root::Instruction(Instruction::Nop),
@@ -383,9 +403,6 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
 
     roots = match_replace(&roots, |window| match window {
       [Root::Instruction(Instruction::Nop)] => Some(vec![]),
-      // TODO: this is broken. this is another catch-22; `Ldi` pushes the next instruction onto
-      // the stack, but we can't know what the address the next instruction is until we've `eval`ed it
-      // [Root::Instruction(Instruction::Ldi)] => Some(vec![Root::Node(Node::NextAddress)]),
       _ => None,
     });
 
@@ -517,10 +534,15 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
     }
   }
 
-  fn eval<'a>(node: &'a Node, labels: &HashMap<&str, u8>, address: u8) -> Result<u8, &'a str> {
+  fn eval<'a>(
+    node: &'a Node,
+    labels: &HashMap<Label<'a>, u8>,
+    address: u8,
+  ) -> Result<u8, Label<'a>> {
     Ok(match node {
-      Node::NextAddress => address,
-      Node::LabelRef(label) => *labels.get(label.as_str()).ok_or(label.as_str())?,
+      Node::LabelRef((scope, name)) => *labels
+        .get(&(*scope, name.as_str()))
+        .ok_or((*scope, name.as_str()))?,
       Node::Immediate(immediate) => *immediate,
       Node::Not(node) => !eval(node, labels, address)?,
       Node::Add(node1, node2) => {
@@ -566,7 +588,7 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
   // if every label a node depends on could be resolved, we can replace it with an immediate.
   // if not, assume the worst case and reserve two bytes for pushing an immediate later
 
-  let mut labels: HashMap<&str, u8> = HashMap::new();
+  let mut labels: HashMap<Label, u8> = HashMap::new();
   let mut nodes: HashMap<u8, Node> = HashMap::new();
 
   let mut address = 0;
@@ -591,13 +613,21 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
           instructions
         }
       },
-      Root::LabelDef(label) => {
+      Root::LabelDef((Some(0), _)) => unreachable!(),
+      Root::LabelDef((scope, name)) => {
         // empty labels are used as an optimization blocker
-        if label != "" {
-          if labels.contains_key(label.as_str()) {
-            panic!("Duplicate label: {}", label);
+        if name != "" {
+          if labels.contains_key(&(*scope, name.as_str())) {
+            panic!(
+              "Duplicate {}label: {}",
+              match scope {
+                Some(_) => "local ",
+                None => "",
+              },
+              name
+            );
           }
-          labels.insert(label, address);
+          labels.insert((*scope, name), address);
         }
         vec![]
       }
@@ -611,7 +641,14 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
   for (address, node) in nodes.iter() {
     let push_instructions = make_push_instruction(match eval(node, &labels, *address) {
       Ok(value) => value,
-      Err(label) => panic!("Could not resolve label: {}", label),
+      Err((scope, name)) => panic!(
+        "Could not resolve {}label: {}",
+        match scope {
+          Some(_) => "local ",
+          None => "",
+        },
+        name
+      ),
     });
     for (i, instruction) in push_instructions.iter().enumerate() {
       instructions[*address as usize + i] = *instruction;

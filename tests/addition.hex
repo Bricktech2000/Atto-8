@@ -1,0 +1,5 @@
+# clear; python3 src/enc.py tests/addition.hex && cargo run --bin emu tests/addition.bin
+
+# x05 x04 add hlt
+
+05 04 C2 AF

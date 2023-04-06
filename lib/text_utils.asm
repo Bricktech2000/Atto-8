@@ -1,6 +1,5 @@
-# @core.asm
 # @common.asm
-print_char%
+# @core_utils.asm
 
 get_addr: # (rot, addr) = get_addr(index, buffer)
 # addr = index // 2 + buffer
@@ -36,8 +35,8 @@ x03 print_char_for_i: dec
 ld0 ld3 ld0 x01 shf add add
 # nibble = get_nibble(src, buffer)
 ld4 swp :get_nibble %call
-# dst = i * 4 + pos
-ld1 x02 shf ld6 add
+# dst = i * 4 + pos // 4 * 8 + pos % 4
+ld1 x02 shf ld6 x02 %shr x04 shf add ld6 x03 and add
 # set_nibble(dst, &FRONT_BUFFER, nibble)
 %front_buffer swp :set_nibble %call
 buf :print_char_for_i :print_char_for_i_end iff sti

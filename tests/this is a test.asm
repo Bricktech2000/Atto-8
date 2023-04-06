@@ -1,7 +1,7 @@
-# clear; cargo run --bin asm test/this\ is\ a\ test.asm && cargo run --bin emu test/this\ is\ a\ test.bin
+# clear; cargo run --bin asm tests/this\ is\ a\ test.asm && cargo run --bin emu tests/this\ is\ a\ test.bin
 
-@lib/core.asm
-@lib/common.asm
+@../lib/common.asm
+@../lib/core_utils.asm
 
 main%
 %front_buffer %init_alloc

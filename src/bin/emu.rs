@@ -10,7 +10,7 @@ fn main() {
 
   emulate(
     memory.try_into().expect("Slice with incorrect length"),
-    1000000,
+    10000,
   );
 
   println!("\nDone.");
@@ -25,6 +25,7 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
 
   let mut halt_flag: bool = false; // not an actual CPU flag
   let mut debug_status: &str = "Emulating CPU...";
+  let mut now = std::time::Instant::now();
 
   // clear screen
   print!("\x1B[2J");
@@ -36,43 +37,48 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
     // roughly 4 clock cycles per instruction
     std::thread::sleep(std::time::Duration::from_millis(1000 * 4 / clock));
 
-    // move cursor to top left
-    print!("\x1B[1;1H");
+    // only print 60 times per second
+    if now.elapsed().as_millis() > 1000 / 60 || debug_flag || halt_flag {
+      now = std::time::Instant::now();
 
-    print_display(
-      &memory[0xE0..0x100]
-        .try_into()
-        .expect("Slice with incorrect length"),
-    );
-    println!("RAM");
-    print_memory(
-      &memory
-        .clone()
-        .try_into()
-        .expect("Slice with incorrect length"),
-    );
-    println!(
-      "IP {:16}\nSP {:16}\nCF {:16}\nDF {:16}",
-      format!("{:02x}", instruction_pointer),
-      format!("{:02x}", stack_pointer),
-      carry_flag,
-      debug_flag
-    );
+      // move cursor to top left
+      print!("\x1B[1;1H");
 
-    print!("\n{:16}", debug_status);
-    use std::io::{stdout, Write};
-    stdout().flush().unwrap();
+      print_display(
+        &memory[0xE0..0x100]
+          .try_into()
+          .expect("Slice with incorrect length"),
+      );
+      println!("RAM");
+      print_memory(
+        &memory
+          .clone()
+          .try_into()
+          .expect("Slice with incorrect length"),
+      );
+      println!(
+        "IP {:16}\nSP {:16}\nCF {:16}\nDF {:16}",
+        format!("{:02x}", instruction_pointer),
+        format!("{:02x}", stack_pointer),
+        carry_flag,
+        debug_flag
+      );
 
-    if debug_flag {
-      // use any key to single step
-      // use '\n' to skip to next breakpoint
-      let stdout = console::Term::buffered_stdout();
-      if let Ok(character) = stdout.read_char() {
-        if character == '\n' {
-          debug_flag = false;
-          debug_status = "Continuing...";
-        } else {
-          debug_status = "Single Stepped.";
+      print!("\n{:16}", debug_status);
+      use std::io::{stdout, Write};
+      stdout().flush().unwrap();
+
+      if debug_flag {
+        // use any key to single step
+        // use '\n' to skip to next breakpoint
+        let stdout = console::Term::buffered_stdout();
+        if let Ok(character) = stdout.read_char() {
+          if character == '\n' {
+            debug_flag = false;
+            debug_status = "Continuing...";
+          } else {
+            debug_status = "Single Stepped.";
+          }
         }
       }
     }

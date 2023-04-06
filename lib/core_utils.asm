@@ -5,6 +5,6 @@ nand% and not
 xnorr% xor not
 xnand% xnd not
 abs% ld0 x01 rot x01 and %neg swp ld1 add xor
-call% ldi x04 add swp sti
+call% .ret swp sti ret.
 ret% sti
 dbg% xCC dbg pop
