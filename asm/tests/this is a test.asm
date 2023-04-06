@@ -1,4 +1,4 @@
-# clear; cargo run --bin asm tests/this\ is\ a\ test.asm && cargo run --bin emu tests/this\ is\ a\ test.bin
+# clear; cargo run --bin asm asm/tests/this\ is\ a\ test.asm && mv asm/tests/*.bin emu/tests/ && cargo run --bin emu emu/tests/this\ is\ a\ test.bin
 
 @../lib/common.asm
 @../lib/core_utils.asm
@@ -11,7 +11,7 @@ ld1 :display_data add
 lda sta
 buf :for_i :for_i_end iff sti
 for_i_end: pop
-hlt
+%hlt
 
 display_data:
 dEA dE6 d4E d44 d4A dEC d00 d00

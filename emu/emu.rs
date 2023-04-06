@@ -12,8 +12,6 @@ fn main() {
     memory.try_into().expect("Slice with incorrect length"),
     10000,
   );
-
-  println!("\nDone.");
 }
 
 fn emulate(memory: [u8; 0x100], clock: u64) {
@@ -21,9 +19,8 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
   let mut stack_pointer: u8 = 0x00; // SP
   let mut instruction_pointer: u8 = 0x00; // IP
   let mut carry_flag: bool = false; // CF
-  let mut debug_flag: bool = false; // DF
 
-  let mut halt_flag: bool = false; // not an actual CPU flag
+  let mut debug_flag: bool = false; // not an actual flag
   let mut debug_status: &str = "Emulating CPU...";
   let mut now = std::time::Instant::now();
 
@@ -38,7 +35,7 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
     std::thread::sleep(std::time::Duration::from_millis(1000 * 4 / clock));
 
     // only print 60 times per second
-    if now.elapsed().as_millis() > 1000 / 60 || debug_flag || halt_flag {
+    if now.elapsed().as_millis() > 1000 / 60 || debug_flag {
       now = std::time::Instant::now();
 
       // move cursor to top left
@@ -77,14 +74,10 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
             debug_flag = false;
             debug_status = "Continuing...";
           } else {
-            debug_status = "Single Stepped.";
+            debug_status = "Single Step.";
           }
         }
       }
-    }
-
-    if halt_flag {
-      break;
     }
 
     match instruction & 0b10000000 {
@@ -298,16 +291,10 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
                     // nop
                   }
 
-                  0x0F => {
-                    // hlt
-                    halt_flag = true;
-                    debug_status = "CPU Halted.";
-                  }
-
                   0x0A => {
                     // dbg
                     debug_flag = true;
-                    debug_status = "Breakpoint Hit.";
+                    debug_status = "Debug Request.";
                   }
 
                   0x01 => {
@@ -416,8 +403,6 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
       _ => unreachable!(),
     }
   }
-
-  println!("");
 }
 
 fn print_display(display_buffer: &[u8; 0x20]) {

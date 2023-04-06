@@ -15,11 +15,15 @@ potential improvements:
 - [x] add macros and labels to IS?
 - [ ] come up with microcode
 - [ ] handle invalid instructions?
-- [ ] fix `adc` in asm
+- [x] fix `adc` in asm
 
 ### doc
 
 #### assembler
+
+### emulator
+
+recognizes `xAA` as debug request
 
 #### processor
 
@@ -34,6 +38,8 @@ conventions:
 #### computer
 
 - display buffer
+- clock frequency
+- ram chip?
 
 conventions:
 

@@ -9,7 +9,6 @@ A minimalist 8-bit microcomputer with stack-based microprocessor
 | `IP`  | Instruction Pointer  | `0x00`          |
 | `SP`  | Stack Pointer        | `0x00`          |
 | `CF`  | Carry Flag           | `0x00`          |
-| `DF`  | Debug Flag           | `0x00`          |
 | `RAM` | Random Access Memory | `[0x00; 0x100]` |
 
 ## Instruction Set
@@ -26,8 +25,6 @@ The `*` operator dereferences values from `RAM`.
 |               | `%MACRO`      | Macro Reference           |                                                                |       |                     |
 |               | `xXX`         | Push Byte                 |                                                                |       |                     |
 | `nop`         | `nop`         | No Operation              | `;`                                                            |       | `0b10100000` `0xA0` |
-| `hlt`         | `hlt`         | Halt                      | `loop {}`                                                      |       | `0b10101111` `0xAF` |
-| `dbg`         | `dbg`         | Debug                     | `1 -> DF;`                                                     |       | `0b10101010` `0xAA` |
 | `clc`         | `clc`         | Clear Carry               | `0 -> CF;`                                                     |       | `0b10100001` `0xA1` |
 | `sec`         | `sec`         | Set Carry                 | `1 -> CF;`                                                     |       | `0b10100010` `0xA2` |
 | `flc`         | `flc`         | Flip Carry                | `!CF -> CF;`                                                   |       | `0b10100011` `0xA3` |
