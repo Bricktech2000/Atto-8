@@ -21,12 +21,6 @@ potential improvements:
 
 ### doc
 
-#### assembler
-
-#### emulator
-
-recognizes `xBB` as debug request
-
 #### processor
 
 - stack grows to lower addresses

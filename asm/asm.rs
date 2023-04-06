@@ -3,20 +3,22 @@ use std::path::Path;
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
-  if args.len() != 2 {
-    println!("Usage: asm <filename>");
+  if args.len() != 3 {
+    println!("Usage: asm <input> <output>");
     std::process::exit(1);
   }
 
-  let filename = &args[1];
-  let translation: String = preprocess(filename, |filename| println!("Reading {}...", filename));
+  let input = &args[1];
+  let translation: String = preprocess(input, |filename| println!("Reading {}...", filename));
   let tokens: Vec<Token> = tokenize(&translation);
-  let instructions: Vec<Instruction> = compile(tokens, "main");
+  let instructions: Vec<Instruction> = assemble(tokens, "main");
   let bytes: Vec<u8> = codegen(instructions);
 
   let mut bytes = bytes;
   bytes.extend(vec![0; 0x100 - bytes.len()]);
-  std::fs::write(Path::new(&args[1]).with_extension("bin"), bytes).expect("Unable to write file");
+
+  let output = &args[2];
+  std::fs::write(output, bytes).expect("Unable to write file");
 
   println!("\nDone.");
 }
@@ -29,6 +31,7 @@ enum Token<'a> {
   LabelRef(Label<'a>),
   MacroDef(&'a str),
   MacroRef(&'a str),
+  DDD(u8),
   XXX(u8),
   LdO(u8),
   StO(u8),
@@ -73,7 +76,6 @@ enum Token<'a> {
   Sti,
   Lds,
   Sts,
-  DDD(u8),
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -202,10 +204,10 @@ fn tokenize(source: &str) -> Vec<Token> {
       &"sti" => Token::Sti,
       &"lds" => Token::Lds,
       &"sts" => Token::Sts,
+      &_ if token.starts_with("d") => Token::DDD(u8::from_str_radix(&token[1..], 16).unwrap()),
       &_ if token.starts_with("x") => Token::XXX(u8::from_str_radix(&token[1..], 16).unwrap()),
       &_ if token.starts_with("ld") => Token::LdO(u8::from_str_radix(&token[2..], 16).unwrap()),
       &_ if token.starts_with("st") => Token::StO(u8::from_str_radix(&token[2..], 16).unwrap()),
-      &_ if token.starts_with("d") => Token::DDD(u8::from_str_radix(&token[1..], 16).unwrap()),
       &_ => panic!("Unknown token: {}", token),
     })
     .collect();
@@ -213,7 +215,7 @@ fn tokenize(source: &str) -> Vec<Token> {
   tokens
 }
 
-fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
+fn assemble(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
   // resolve macros recursively from `entry_point`
 
   let mut macros: HashMap<&str, Vec<Token>> = HashMap::new();
@@ -527,7 +529,7 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
     _ => None,
   });
 
-  // compile roots into instructions by computing the value of every node and resolving labels
+  // assemble roots into instructions by computing the value of every node and resolving labels
 
   fn assert_immediate(immediate: u8) -> u8 {
     match immediate {

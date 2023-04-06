@@ -1,7 +1,7 @@
-# clear; cargo run --bin asm asm/tests/counter.asm && mv asm/tests/*.bin emu/tests/ && cargo run --bin emu emu/tests/counter.bin
+# clear; cargo run --bin asm asm/tests/counter.asm emu/tests/counter.bin && cargo run --bin emu emu/tests/counter.bin
 
-@../lib/common.asm
-@../lib/core_utils.asm
+@../../lib/defs/display.asm
+@../../lib/utils/core.asm
 
 main%
 %front_buffer %init_alloc
@@ -13,4 +13,4 @@ x00 x01 adc2 adc2 :loop sti
 
 %hlt
 
-@../lib/print_byte.asm
+@../../lib/print_byte.asm

@@ -14,5 +14,5 @@ rt2% st1 pop %ret
 rt3% st2 pop pop %ret
 rt4% st3 pop pop pop %ret
 
+dbg% dBB # emulator treats unofficial `BB` as debug request
 hlt% lbl. .lbl sti
-dbg% dBB

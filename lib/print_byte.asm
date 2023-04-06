@@ -1,8 +1,8 @@
 # @common.asm
 # @core_utils.asm
 
-@text_utils.asm
-hex_chars: @hex_chars.asm
+@utils/text.asm
+hex_chars: @defs/hex_chars.asm
 print_byte: # print_byte(byte, pos)
 # LSB
 ld2 inc :hex_chars ld3 x0F and :print_char %call

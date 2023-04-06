@@ -1,8 +1,8 @@
-# clear; cargo run --bin asm tests/optimization.asm && cargo run --bin emu tests/optimization.bin
+# clear; cargo run --bin asm asm/tests/optimization.asm emu/tests/optimization.bin && cargo run --bin emu emu/tests/optimization.bin
 
-@core_utils.asm
+@../../lib/utils/core.asm
 
-main% dbg
+main% %dbg
 
 x4F x06 add
 
@@ -16,11 +16,11 @@ ld0 %abs
 
 xAB %abs
 
-xaa x01 rot
+xAA x01 rot
 
 x54 :function %call
 
-hlt
+%hlt
 
 function:
 swp inc swp %rt0

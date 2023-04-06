@@ -1,5 +1,5 @@
-# @common.asm
-# @core_utils.asm
+# @../defs/display.asm
+# @../utils/core.asm
 
 get_addr: # (rot, addr) = get_addr(index, buffer)
 # addr = index // 2 + buffer
