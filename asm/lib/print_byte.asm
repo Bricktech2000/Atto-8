@@ -9,5 +9,4 @@ ld2 inc :hex_chars ld3 x0F and :print_char %call
 # MSB
 ld2 :hex_chars ld3 x04 %shr :print_char %call
 # return*
-st1 pop
-%ret
+%rt2

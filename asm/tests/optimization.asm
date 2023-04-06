@@ -23,4 +23,4 @@ x54 :function %call
 hlt
 
 function:
-swp inc swp %ret
+swp inc swp %rt0

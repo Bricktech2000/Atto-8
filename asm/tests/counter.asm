@@ -1,4 +1,4 @@
-# clear; cargo run --bin asm tests/count.asm && cargo run --bin emu tests/count.bin
+# clear; cargo run --bin asm asm/tests/counter.asm && mv asm/tests/counter.bin emu/tests/ && cargo run --bin emu emu/tests/counter.bin
 
 @../lib/common.asm
 @../lib/core_utils.asm

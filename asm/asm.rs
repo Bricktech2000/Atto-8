@@ -429,6 +429,9 @@ fn compile(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
         [Root::Node(node), Root::Instruction(Instruction::Ldo(0x00))] => {
           Some(vec![Root::Node(node.clone()), Root::Node(node.clone())])
         }
+        [Root::Instruction(Instruction::Swp), Root::Instruction(Instruction::Pop)] => {
+          Some(vec![Root::Instruction(Instruction::Sto(0x00))])
+        }
         [Root::Node(_), Root::Instruction(Instruction::Pop)] => Some(vec![]),
         _ => None,
       });

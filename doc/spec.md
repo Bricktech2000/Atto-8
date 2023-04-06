@@ -1,4 +1,6 @@
-# Architecture
+# Atto-8
+
+A minimalist 8-bit microcomputer with stack-based microprocessor
 
 ## Hardware
 
@@ -58,15 +60,3 @@ The `*` operator dereferences values from `RAM`.
 | `ldo`         | `ldO`         | Load from Offset          | `*(SP + O) -> *(--SP);`                                        |       | `0b1000OOOO` `0x8O` |
 | `sto`         | `stO`         | Store to Offset           | `*SP++ -> *(SP + O);`                                          |       | `0b1001OOOO` `0x9O` |
 | `raw`         | `dDD`         | Raw Data                  |                                                                |       | `0bDDDDDDDD` `0xDD` |
-
-## TODOs
-
-potential improvements:
-
-- [x] create "carryful" and "carryless" instruction variants (adc, sbc, shl, shr...)
-- [x] add new useful instructions (sta, lda, sto, ldo...)
-- [x] merge rol with ror and shl with shr? (replace with `xXX rot` and `xXX shf`)
-- [x] `dup` VS `ld0`, `adc` VS `ad0`, `rot` VS `sh0`
-- [ ] use carry with `inc` and `dec`?
-- [ ] rotate without carry?
-- [x] add macros and labels to IS?
