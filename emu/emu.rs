@@ -54,11 +54,10 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
           .expect("Slice with incorrect length"),
       );
       println!(
-        "IP {:16}\nSP {:16}\nCF {:16}\nDF {:16}",
+        "IP {:16}\nSP {:16}\nCF {:16}",
         format!("{:02x}", instruction_pointer),
         format!("{:02x}", stack_pointer),
         carry_flag,
-        debug_flag
       );
 
       print!("\n{:16}", debug_status);

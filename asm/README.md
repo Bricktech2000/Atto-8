@@ -6,13 +6,13 @@ Optimizing assembler for Atto-8 microprocessor
 
 Assembly consists of following operations:
 
-1. Preprocess then tokenize source code from file `argv[1]`;
-2. Expand macros recursively from entry point `main`;
-3. Identify expressions that can be evaluated at compile time;
-4. Convert IR to list of instructions by evaluating expressions;
+1. Preprocess then tokenize source code from file `argv[1]`.
+2. Expand macros recursively from entry point `"main"`.
+3. Identify expressions that can be evaluated at compile time.
+4. Convert IR to list of instructions by evaluating expressions.
 5. Generate binary and write to file `argv[2]`.
 
-Code generation adheres to microprocessor specification as defined in [/spec/#todo](../spec/#todo).
+Code generation adheres to microprocessor specification as defined in [/spec/microprocessor.md](../spec/microprocessor.md).
 
 Labels are global by default; local labels are local to a macro. Macros are global. Macro definitions end either at the start of the next macro definition or at the end of the token stream. The token stream must start with a macro definition so every token belongs to a macro. Tokens are to be seperated by whitespace.
 

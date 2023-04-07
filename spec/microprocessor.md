@@ -1,19 +1,36 @@
-# Atto-8
+# Atto-8 Microprocessor
 
-A minimalist 8-bit microcomputer with stack-based microprocessor
+## Overview
+
+The Atto-8 microprocessor is a minimalist stack-based processor with 8-bit data and address buses. It is designed to be simple enough to be realistically built from discrete logic gates, but powerful enough to run useful programs. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex processors.
+
+## Features
+
+- 8-bit data bus
+- 8-bit address bus
+- 8-bit instruction size
+- 8-bit special-purpose registers
+- 0 general-purpose registers
+- 0 internal oscillators
+- 0 hardware timers
+- 0 interrupts
+- 0 I/O ports
 
 ## Hardware
 
-| Item  | Description          | Default         |
-| ----- | -------------------- | --------------- |
-| `IP`  | Instruction Pointer  | `0x00`          |
-| `SP`  | Stack Pointer        | `0x00`          |
-| `CF`  | Carry Flag           | `0x00`          |
-| `RAM` | Random Access Memory | `[0x00; 0x100]` |
+| Item | Description         |
+| ---- | ------------------- |
+| `IP` | Instruction Pointer |
+| `SP` | Stack Pointer       |
+| `CF` | Carry Flag          |
 
 ## Instruction Set
 
-The `*` operator dereferences values from `RAM`.
+All instructions are 8 bits in length and most take no operands.
+
+The processor assumes it can address memory of the shape `[u8; 0x100]`. The `*` operator dereferences values from said memory.
+
+Negative values are represented in two's complement.
 
 | Instruction | Description               | Operation                                                      | Opcode              |
 | ----------- | ------------------------- | -------------------------------------------------------------- | ------------------- |
@@ -50,3 +67,30 @@ The `*` operator dereferences values from `RAM`.
 | `sti`       | Store Instruction Pointer | `*(SP++) -> IP;`                                               | `0b11101011` `0xEB` |
 | `lds`       | Load Stack Pointer        | `SP -> *(--SP);`                                               | `0b11101100` `0xEC` |
 | `sts`       | Store Stack Pointer       | `*(SP++) -> SP;`                                               | `0b11101101` `0xED` |
+
+## Initial State
+
+The Atto-8 is initialized with the following state:
+
+| Item | Value  |
+| ---- | ------ |
+| `IP` | `0x00` |
+| `SP` | `0x00` |
+| `CF` | `0b0`  |
+
+This implies the following:
+
+- Execution starts at address `0x00`.
+- The first item to be pushed onto the stack will located be at address `0xFF`.
+
+## Execution
+
+Program execution is as follows:
+
+1. Fetch the instruction at `IP++`.
+2. Execute the instruction.
+3. Repeat.
+
+## Conventions
+
+The Atto-8 has no inherent endianness. With that said, instructions such as `adS` and `sbS` work best when least significant bytes are at the top of the stack, which grows downward. Consequently, it is recommended that the Atto-8 be assumed to be little-endian.

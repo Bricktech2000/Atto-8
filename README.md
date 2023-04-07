@@ -2,6 +2,10 @@
 
 A minimalist 8-bit microcomputer with stack-based microprocessor
 
+## Work in Progress
+
+This is a work in progress. See [/spec](./spec) for more information.
+
 ## TODOs
 
 potential improvements:
@@ -18,36 +22,13 @@ potential improvements:
 - [x] fix `adc` in asm
 - [x] add `neg` to asm optimization
 - [x] fix `x80` push instruction and opt with `xFX`
+- [ ] add input capabilities to computer
 
-### doc
+constituents:
 
-#### processor
-
-- stack grows to lower addresses
-- starts execution at 0x00
-- uses 2's complement for negatives
-
-conventions:
-
-- calling conventions (clear parameters)
-- little endian (and LSB on top of stack)
-
-#### computer
-
-- display buffer
-- clock frequency
-- ram chip?
-
-conventions:
-
-- use 0xE0.. as general purpose inputs/outputs
-
----
-
-cargo folder structure
-
-software/documentation
-
-processor/computer
-
-assembler/emulator/encoder/microcode/schematics/circuits
+- assembler
+- emulator
+- encoder
+- microcode
+- schematics
+- circuits
