@@ -5,7 +5,7 @@
 #
 # rules used:
 #
-# ``` rust
+# ```rust
 # let next_state = match neighbour_count {
 #   3 => State::Alive,
 #   4 => current_state,
@@ -20,14 +20,14 @@ main%
 %back_buffer %init_alloc
 
 # diehard (advanced 2 generations)
-%back_buffer x09 add xC2 sta
-%back_buffer x0B add xC7 sta
+# %back_buffer x09 add xC2 sta
+# %back_buffer x0B add xC7 sta
 # blinker
 # %back_buffer x0C add x07 sta
 # glider
-# %back_buffer x08 add x07 sta
-# %back_buffer x0A add x01 sta
-# %back_buffer x0C add x02 sta
+%back_buffer x08 add x07 sta
+%back_buffer x0A add x01 sta
+%back_buffer x0C add x02 sta
 # r-pentomino
 # %back_buffer x0B add x06 sta
 # %back_buffer x0D add x0C sta

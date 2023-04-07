@@ -21,7 +21,7 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
   let mut carry_flag: bool = false; // CF
 
   let mut debug_flag: bool = false; // not an actual flag
-  let mut debug_status: &str = "Emulating CPU...";
+  let mut debug_status: &str = "Emulating...";
   let mut now = std::time::Instant::now();
 
   // clear screen
@@ -34,8 +34,8 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
     // roughly 4 clock cycles per instruction
     std::thread::sleep(std::time::Duration::from_millis(1000 * 4 / clock));
 
-    // only print 60 times per second
-    if now.elapsed().as_millis() > 1000 / 60 || debug_flag {
+    // only print 30 times per second
+    if now.elapsed().as_millis() > 1000 / 30 || debug_flag {
       now = std::time::Instant::now();
 
       // move cursor to top left
@@ -54,13 +54,13 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
           .expect("Slice with incorrect length"),
       );
       println!(
-        "IP {:16}\nSP {:16}\nCF {:16}",
+        "IP {:8}\nSP {:8}\nCF {:8}",
         format!("{:02x}", instruction_pointer),
         format!("{:02x}", stack_pointer),
         carry_flag,
       );
 
-      print!("\n{:16}", debug_status);
+      print!("\n{:14}", debug_status);
       use std::io::{stdout, Write};
       stdout().flush().unwrap();
 
