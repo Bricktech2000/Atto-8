@@ -604,25 +604,25 @@ fn assemble(tokens: Vec<Token>, entry_point: &str) -> Vec<Instruction> {
   let mut labels: HashMap<Label, u8> = HashMap::new();
   let mut nodes: HashMap<u8, Node> = HashMap::new();
 
-  let mut address = 0;
+  let mut address: u8 = 0;
   let instructions: Vec<Instruction> = roots
     .iter()
     .flat_map(|root| match root {
       Root::Instruction(instruction) => {
         let instructions = vec![instruction.clone()];
-        address += instructions.len() as u8;
+        address = address.wrapping_add(instructions.len() as u8);
         instructions
       }
       Root::Node(node) => match eval(node, &labels, address) {
         Ok(value) => {
           let instructions = make_push_instruction(value);
-          address += instructions.len() as u8;
+          address = address.wrapping_add(instructions.len() as u8);
           instructions
         }
         Err(_) => {
           let instructions = vec![Instruction::Nop, Instruction::Nop];
           nodes.insert(address, node.clone());
-          address += instructions.len() as u8;
+          address = address.wrapping_add(instructions.len() as u8);
           instructions
         }
       },
