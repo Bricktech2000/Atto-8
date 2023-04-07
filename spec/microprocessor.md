@@ -34,7 +34,7 @@ Negative values are represented in two's complement.
 
 | Instruction | Description               | Operation                                                      | Opcode              |
 | ----------- | ------------------------- | -------------------------------------------------------------- | ------------------- |
-| `psh X`     | Push                      | `XX & 0b01111111 -> *(--SP);`                                  | `0b0XXXXXXX`        |
+| `psh X`     | Push                      | `XX & 0b01111111 -> *(--SP);`                                  | `0b0XXXXXXX` `0xXX` |
 | `phn X`     | Push Negative             | `XX \| 0b11110000 -> *(--SP);`                                 | `0b1111XXXX` `0xFX` |
 | `ldo O`     | Load from Offset          | `*(SP + O) -> *(--SP);`                                        | `0b1100OOOO` `0xCO` |
 | `sto O`     | Store to Offset           | `*SP++ -> *(SP + O);`                                          | `0b1101OOOO` `0xDO` |
@@ -43,7 +43,7 @@ Negative values are represented in two's complement.
 | `sub S`     | Subtract                  | `- *(SP++) + *(SP + 2 ** S) -> *(SP + 2 ** S);`                | `0b100010SS`        |
 | `sbc S`     | Subtract with Carry       | `- *(SP++) + *(SP + 2 ** S) -> *(SP + 2 ** S);` #todo flags    | `0b100011SS`        |
 | `shf S`     | Shift                     | #todo                                                          | `0b100100SS`        |
-| `sfc S`     | Shift with Carry          | #todo                                                          | `0b100101SS`#todo   |
+| `sfc S`     | Shift with Carry          | #todo                                                          | `0b100101SS`        |
 | `rot S`     | Rotate                    | #todo #todo flags                                              | `0b100110SS`        |
 | `iff S`     | If-Then-Else              | `CF ? *((SP++)++) : *((++SP)++ + 2 ** S) -> *(--SP); 0 -> CF;` | `0b100111SS`        |
 | `orr S`     | Bitwise OR                | `*(SP++) \| *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;` | `0b101000SS`        |
