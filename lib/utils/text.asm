@@ -1,6 +1,3 @@
-# @../defs/display.asm
-# @../utils/core.asm
-
 nibble_addr: # (rot, addr) = nibble_addr(index, buffer)
 # addr = index // 2 + buffer
 ld2 ld2 x01 %shr add st2

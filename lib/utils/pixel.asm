@@ -1,6 +1,3 @@
-# @../defs/display.asm
-# @../utils/core.asm
-
 bit_addr: # (rot, addr) = bit_addr(index, buffer)
 # addr = index // 8 + buffer
 ld2 ld2 x03 %shr add st2

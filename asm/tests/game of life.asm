@@ -13,11 +13,11 @@
 # }
 # ```
 
-@../../lib/defs/display.asm
+@../../lib/microcomputer/utils.asm
 @../../lib/utils/core.asm
 
 main%
-%back_buffer %init_alloc
+%back_buffer %alloc_buffer
 
 # diehard (advanced 2 generations)
 # %back_buffer x09 add xC2 sta
@@ -64,8 +64,8 @@ for_xy_end: pop
 
 :loop sti
 
+@../../lib/microcomputer/back_to_front.asm
 @../../lib/utils/pixel.asm
-@../../lib/back_to_front.asm
 
 # not enough space in RAM for this function
 # glider: d00 d01 d02 d12 d21 glider_end:

@@ -10,7 +10,7 @@ fn main() {
 
   emulate(
     memory.try_into().expect("Slice with incorrect length"),
-    10000,
+    1000000000,
   );
 }
 
@@ -20,19 +20,23 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
   let mut instruction_pointer: u8 = 0x00; // IP
   let mut carry_flag: bool = false; // CF
 
-  let mut debug_flag: bool = false; // not an actual flag
+  let mut debug_flag: bool = false; // whether to print debug info
+  let mut input_flag: bool = false; // whether to read input buffer
   let mut debug_status: &str = "Emulating...";
   let mut now = std::time::Instant::now();
 
   // clear screen
   print!("\x1B[2J");
 
+  // this call will switch termital to raw mode
+  let input_channel = spawn_input_channel();
+
   loop {
     let instruction: u8 = memory[instruction_pointer as usize];
     instruction_pointer = instruction_pointer.wrapping_add(1);
 
     // roughly 4 clock cycles per instruction
-    std::thread::sleep(std::time::Duration::from_millis(1000 * 4 / clock));
+    std::thread::sleep(std::time::Duration::from_micros(1000000 * 4 / clock));
 
     // only print 30 times per second
     if now.elapsed().as_millis() > 1000 / 30 || debug_flag {
@@ -46,21 +50,21 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
           .try_into()
           .expect("Slice with incorrect length"),
       );
-      println!("RAM");
+      print!("RAM\r\n");
       print_memory(
         &memory
           .clone()
           .try_into()
           .expect("Slice with incorrect length"),
       );
-      println!(
-        "IP {:8}\nSP {:8}\nCF {:8}",
+      print!(
+        "IP {:8}\r\nSP {:8}\r\nCF {:8}\r\n",
         format!("{:02x}", instruction_pointer),
         format!("{:02x}", stack_pointer),
         carry_flag,
       );
 
-      print!("\n{:14}", debug_status);
+      print!("\r\n{:14}", debug_status);
       use std::io::{stdout, Write};
       stdout().flush().unwrap();
 
@@ -72,10 +76,29 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
           if character == '\n' {
             debug_flag = false;
             debug_status = "Continuing...";
-          } else {
+          }
+          if character == ' ' {
             debug_status = "Single Step.";
           }
         }
+      }
+    }
+
+    if input_flag {
+      use std::sync::mpsc::TryRecvError;
+      match input_channel.try_recv() {
+        Ok(character) => {
+          let bit: u8 = match character {
+            'w' => 0b0001,
+            'd' => 0b0010,
+            's' => 0b0100,
+            'a' => 0b1000,
+            _ => 0b0000,
+          };
+          memory[0x00] |= bit;
+        }
+        Err(TryRecvError::Empty) => {}
+        Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
       }
     }
 
@@ -350,6 +373,10 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
                     stack_pointer = stack_pointer.wrapping_add(1);
 
                     memory[b as usize] = a;
+
+                    if a == 0x00 && b == 0x00 {
+                      input_flag = true;
+                    }
                   }
 
                   0xA => {
@@ -407,8 +434,8 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
 fn print_display(display_buffer: &[u8; 0x20]) {
   let mut display_buffer_string: String = "".to_string();
   let line: &str = &"-".repeat(0x10);
-  let line_top: &str = &format!(".-{}-.\n", line);
-  let line_bottom: &str = &format!("'-{}-'\n", line);
+  let line_top: &str = &format!(".-{}-.\r\n", line);
+  let line_bottom: &str = &format!("'-{}-'\r\n", line);
   let col_left: &str = "| ";
   let col_right: &str = " |";
 
@@ -432,11 +459,11 @@ fn print_display(display_buffer: &[u8; 0x20]) {
       };
     }
     display_buffer_string += &col_right;
-    display_buffer_string.push('\n');
+    display_buffer_string += "\r\n";
   }
 
   display_buffer_string += &line_bottom;
-  println!("{}", display_buffer_string);
+  print!("{}\r\n", display_buffer_string);
 }
 
 fn print_memory(memory: &[u8; 0x100]) {
@@ -446,7 +473,22 @@ fn print_memory(memory: &[u8; 0x100]) {
     for x in 0..0x10 {
       memory_string += &format!("{:02x} ", memory[(y << 0x04 | x) as usize]);
     }
-    memory_string.push('\n');
+    memory_string += "\r\n";
   }
-  println!("{}", memory_string);
+  print!("{}\r\n", memory_string);
+}
+
+use std::sync::mpsc;
+use std::sync::mpsc::Receiver;
+fn spawn_input_channel() -> Receiver<char> {
+  let stdout = console::Term::stdout();
+
+  let (tx, rx) = mpsc::channel::<char>();
+  std::thread::spawn(move || loop {
+    if let Ok(character) = stdout.read_char() {
+      tx.send(character).unwrap();
+    }
+  });
+
+  rx
 }

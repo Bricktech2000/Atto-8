@@ -117,9 +117,13 @@ enum Instruction {
 }
 
 fn preprocess(filename: &str, callback: fn(&str)) -> String {
-  let abs = Path::new(filename).canonicalize().unwrap();
-  let rel = abs.strip_prefix(std::env::current_dir().unwrap()).unwrap();
-  callback(rel.to_str().unwrap());
+  let absolute_path = Path::new(filename)
+    .canonicalize()
+    .expect(format!("Unable to find file: {}", filename).as_str());
+  let relative_path = absolute_path
+    .strip_prefix(std::env::current_dir().unwrap())
+    .unwrap();
+  callback(relative_path.to_str().unwrap());
 
   let source: String =
     std::fs::read_to_string(filename).expect(format!("Unable to read file: {}", filename).as_str());

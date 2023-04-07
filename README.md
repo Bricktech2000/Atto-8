@@ -4,7 +4,7 @@ A minimalist 8-bit microcomputer with stack-based microprocessor
 
 ## Work in Progress
 
-This is a work in progress. See [/spec](./spec) for more information.
+This is a work in progress. See [/spec/](./spec/) for more information.
 
 ## TODOs
 
@@ -32,3 +32,7 @@ constituents:
 - microcode
 - schematics
 - circuits
+
+### doc
+
+computer listens to write to 0x00
