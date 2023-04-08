@@ -9,8 +9,7 @@ main%
 ld0 %front_buffer add
 ld1 :display_data add
 lda sta
-buf :for_i :for_i_end iff sti
-for_i_end: pop
+buf :for_i %bcc pop
 %hlt
 
 display_data:

@@ -67,19 +67,23 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
       print!("\r\n{:14}", debug_status);
       use std::io::{stdout, Write};
       stdout().flush().unwrap();
+    }
 
-      if debug_flag {
-        // use any key to single step
-        // use '\n' to skip to next breakpoint
-        let stdout = console::Term::buffered_stdout();
-        if let Ok(character) = stdout.read_char() {
-          if character == '\n' {
+    if debug_flag {
+      // use any key to single step
+      // use '\n' to skip to next breakpoint
+      loop {
+        match input_channel.recv() {
+          Ok('\n') => {
             debug_flag = false;
             debug_status = "Continuing...";
+            break;
           }
-          if character == ' ' {
+          Ok(' ') => {
             debug_status = "Single Step.";
+            break;
           }
+          _ => {}
         }
       }
     }
@@ -88,14 +92,21 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
       use std::sync::mpsc::TryRecvError;
       match input_channel.try_recv() {
         Ok(character) => {
-          let bit: u8 = match character {
+          let lo_nibble: u8 = match character {
             'w' => 0b0001,
             'd' => 0b0010,
             's' => 0b0100,
             'a' => 0b1000,
             _ => 0b0000,
           };
-          memory[0x00] |= bit;
+          let hi_nibble: u8 = match character {
+            'i' => 0b0001,
+            'l' => 0b0010,
+            'k' => 0b0100,
+            'j' => 0b1000,
+            _ => 0b0000,
+          };
+          memory[0x00] |= lo_nibble | (hi_nibble << 4);
         }
         Err(TryRecvError::Empty) => {}
         Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
@@ -170,7 +181,7 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
                 } | carry_flag as u16;
 
                 memory[size_pointer as usize] = shifted as u8;
-                // TODO: set carry flag
+                carry_flag = shifted > 0xFF;
               }
 
               0x6 => {
@@ -188,7 +199,7 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
 
                 // TODO: use carry flag
                 memory[size_pointer as usize] = (shifted & 0xFF) as u8 | (shifted >> 8) as u8;
-                // TODO: set carry flag
+                carry_flag = shifted > 0xFF;
               }
 
               0x7 => {

@@ -1,3 +1,4 @@
+nibble_addr%
 nibble_addr: # (rot, addr) = nibble_addr(index, buffer)
 # addr = index // 2 + buffer
 ld2 ld2 x01 %shr add st2
@@ -6,6 +7,7 @@ ld1 not x01 and x02 shf st1
 # return* (rot, addr)
 %rt0
 
+load_nibble%
 load_nibble: # nibble = load_nibble(index, buffer)
 # (addr, rot) = swp(nibble_addr(index, buffer))
 ld2 ld2 :nibble_addr %call swp
@@ -15,6 +17,7 @@ lda swp %shr x0F and
 st2
 %rt1
 
+store_nibble%
 store_nibble: # store_nibble(index, buffer, nibble)
 # (rot, addr) = nibble_addr(index, buffer)
 ld2 ld2 :nibble_addr %call
@@ -26,8 +29,9 @@ swp ld6 swp shf orr
 sta
 %rt3
 
+print_char%
 print_char: # print_char(index, buffer, pos)
-x03 print_char_for_i: dec
+x03 for_i. dec
 # src = i + index * 3
 ld0 ld3 ld0 x01 shf add add
 # nibble = load_nibble(src, buffer)
@@ -36,7 +40,6 @@ ld4 swp :load_nibble %call
 ld1 x02 shf ld6 x02 %shr x04 shf add ld6 x03 and add
 # store_nibble(dst, &FRONT_BUFFER, nibble)
 %front_buffer swp :store_nibble %call
-buf :print_char_for_i :print_char_for_i_end iff sti
-print_char_for_i_end: pop
+buf .for_i %bcc pop
 # return*
 %rt3

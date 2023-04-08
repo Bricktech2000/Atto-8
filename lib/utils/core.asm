@@ -6,6 +6,8 @@ xnorr% xor not
 xnand% xnd not
 abs% ld0 x01 rot x01 and neg swp ld1 add xor
 
+bcc% .skip iff sti skip.
+bcs% .skip swp iff sti skip.
 call% .ret swp sti ret.
 ret% sti
 rt0% %ret

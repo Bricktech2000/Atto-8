@@ -1,7 +1,9 @@
 # clear; cargo run --bin asm asm/tests/counter.asm emu/tests/counter.bin && cargo run --bin emu emu/tests/counter.bin
 
-@../../lib/microcomputer/utils.asm
 @../../lib/utils/core.asm
+@../../lib/utils/text.asm
+@../../lib/microcomputer/utils.asm
+@../../lib/microcomputer/print_byte.asm
 
 main%
 %front_buffer %alloc_buffer
@@ -13,5 +15,8 @@ x00 x01 adc2 adc2 :loop sti
 
 %hlt
 
-@../utils/text.asm
-@../../lib/print_byte.asm
+%nibble_addr
+%load_nibble
+%store_nibble
+%print_char
+%print_byte
