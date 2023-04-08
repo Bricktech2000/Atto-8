@@ -36,7 +36,7 @@ The Atto-8 is equipped with a 16x16 pixel monochrome display. It fetches rows of
 
 ## Input
 
-The Atto-8 is equipped with two memory-mapped 4-button D-pad controllers. The _input buffer_ is a byte located at address `0x00`, the lower 4 bits of which represent the state of the buttons on the primary controller, and the upper 4 bits of which represent the state of the buttons on the secondary controller. It is bit-mapped as follows:
+The Atto-8 is equipped with two memory-mapped 4-button D-pad controllers. The _input buffer_ is a byte located at address `0x00`, the lower 4 bits of which represent the state of the buttons on the primary controller, and the upper 4 bits of which represent the state of the buttons on the secondary controller. It is bit-mapped as follows, where `0` represents the least significant bit:
 
 ```
 7 6 5 4 3 2 1 0
@@ -59,6 +59,8 @@ Primary  Secondary
 ```
 
 Upon a button state change, the microcomputer will set or clear the corresponding bit in the input buffer, without affecting the other bits. The input buffer behaves as any other memory region and can therefore both be read from and written to by a program.
+
+On boot up, input is disabled and the Atto-8 will not write to the input buffer. To enable input permanently, the program must write `0x00` to the input buffer.
 
 ## Conventions
 

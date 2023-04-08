@@ -8,10 +8,15 @@ fn main() {
   let memory: Vec<u8> =
     std::fs::read(&args[1]).expect(format!("Unable to read file: {}", &args[1]).as_str());
 
-  emulate(
-    memory.try_into().expect("Slice with incorrect length"),
-    1000000000,
-  );
+  match memory.try_into() {
+    Ok(slice) => {
+      emulate(slice, 1000000000);
+    }
+    Err(_) => {
+      println!("Error: Memory image has incorrect size");
+      std::process::exit(1);
+    }
+  };
 }
 
 fn emulate(memory: [u8; 0x100], clock: u64) {
@@ -22,7 +27,7 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
 
   let mut debug_flag: bool = false; // whether to print debug info
   let mut input_flag: bool = false; // whether to read input buffer
-  let mut debug_status: &str = "Emulating...";
+  let mut debug_status: String = "Emulating microcomputer...".to_string();
   let mut now = std::time::Instant::now();
 
   // clear screen
@@ -45,18 +50,9 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
       // move cursor to top left
       print!("\x1B[1;1H");
 
-      print_display(
-        &memory[0xE0..0x100]
-          .try_into()
-          .expect("Slice with incorrect length"),
-      );
+      print_display(&memory[0xE0..0x100].try_into().unwrap());
       print!("RAM\r\n");
-      print_memory(
-        &memory
-          .clone()
-          .try_into()
-          .expect("Slice with incorrect length"),
-      );
+      print_memory(&memory.clone().try_into().unwrap());
       print!(
         "IP {:8}\r\nSP {:8}\r\nCF {:8}\r\n",
         format!("{:02x}", instruction_pointer),
@@ -64,7 +60,7 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
         carry_flag,
       );
 
-      print!("\r\n{:14}", debug_status);
+      print!("\r\n{:26}", debug_status);
       use std::io::{stdout, Write};
       stdout().flush().unwrap();
     }
@@ -76,11 +72,11 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
         match input_channel.recv() {
           Ok('\n') => {
             debug_flag = false;
-            debug_status = "Continuing...";
+            debug_status = "Continuing emulation...".to_string();
             break;
           }
           Ok(' ') => {
-            debug_status = "Single Step.";
+            debug_status = "Single Stepped.".to_string();
             break;
           }
           _ => {}
@@ -192,9 +188,9 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
                 let b = memory[size_pointer as usize];
 
                 let shifted = if a as i8 >= 0 {
-                  (b as u16) << a as u16
+                  (b as u16).wrapping_shl(a as u32)
                 } else {
-                  (b as u16) >> a.wrapping_neg() as u16
+                  (b as u16).wrapping_shr(a.wrapping_neg() as u32)
                 };
 
                 // TODO: use carry flag
@@ -295,10 +291,13 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
                   // dbg
 
                   debug_flag = true;
-                  debug_status = "Debug Request.";
+                  debug_status = "Debug Request.".to_string();
                 }
 
-                _ => panic!("Unknown instruction: {:#04x}", instruction),
+                _ => {
+                  debug_flag = true;
+                  debug_status = format!("Unknown instruction: {:#04x}", instruction);
+                }
               },
             }
           }
@@ -417,7 +416,10 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
                     stack_pointer = a;
                   }
 
-                  _ => panic!("Unknown instruction: {:#04x}", instruction),
+                  _ => {
+                    debug_flag = true;
+                    debug_status = format!("Unknown instruction: {:#04x}", instruction);
+                  }
                 }
               }
 
