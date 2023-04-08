@@ -2,18 +2,18 @@
 
 ## Overview
 
-The Atto-8 microcomputer is a minimalist computer based on the Atto-8 microprocessor, as defined in [/spec/microprocessor.md](../spec/microprocessor.md). It equips the processor with memory, a clock, a display, and #todo input. It is designed to be a simple system that takes full advantage of the Atto-8 microprocessor. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex processors.
+The Atto-8 microcomputer is a minimalist computer based on the Atto-8 microprocessor, as defined in [/spec/microprocessor.md](../spec/microprocessor.md). It equips the processor with memory, a clock, a display, and a controller. It is designed to be a simple system that takes full advantage of the Atto-8 microprocessor. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex processors.
 
 ## Features
 
 - 16x16 pixel display
 - #todo Hz clock
 - 256 bytes of RAM
-- #todo input
+- two 4-button controllers
 
 ## Display
 
-The Atto-8 has a 16x16 pixel monochrome display. It fetches rows of pixels from addresses `0xE0..=0xFF`, and displays them from left to right, top to bottom. Refer to the following diagram, in which `[ 0xXX ]` represents a row of 8 pixels fetched from address `0xXX`:
+The Atto-8 is equipped with a 16x16 pixel monochrome display. It fetches rows of pixels from addresses `0xE0..=0xFF`, the _display buffer_, and displays them from left to right, top to bottom. Refer to the following diagram, in which `[ 0xXX ]` represents a row of 8 pixels fetched from address `0xXX`:
 
 ```
 [      0xE0      ] [      0xE1      ]
@@ -36,7 +36,29 @@ The Atto-8 has a 16x16 pixel monochrome display. It fetches rows of pixels from 
 
 ## Input
 
-#todo
+The Atto-8 is equipped with two memory-mapped 4-button D-pad controllers. The _input buffer_ is a byte located at address `0x00`, the lower 4 bits of which represent the state of the buttons on the primary controller, and the upper 4 bits of which represent the state of the buttons on the secondary controller. It is bit-mapped as follows:
+
+```
+7 6 5 4 3 2 1 0
+| | | | | | | |
+r l d u R L D U
+| | | | | | | |
+| | | | | | | +--- Primary Up
+| | | | | | +----- Primary Down
+| | | | | +------- Primary Left
+| | | | +--------- Primary Right
+| | | +----------- Secondary Up
+| | +------------- Secondary Down
+| +--------------- Secondary Left
++----------------- Secondary Right
+
+Primary  Secondary
+   U         u
+ L + R     l + r
+   D         d
+```
+
+Upon a button state change, the microcomputer will set or clear the corresponding bit in the input buffer, without affecting the other bits. The input buffer behaves as any other memory region and can therefore both be read from and written to by a program.
 
 ## Conventions
 

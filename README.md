@@ -22,7 +22,7 @@ potential improvements:
 - [x] fix `adc` in asm
 - [x] add `neg` to asm optimization
 - [x] fix `x80` push instruction and opt with `xFX`
-- [ ] add input capabilities to computer
+- [x] add input capabilities to computer
 
 constituents:
 
@@ -32,7 +32,3 @@ constituents:
 - microcode
 - schematics
 - circuits
-
-### doc
-
-computer listens to write to 0x00

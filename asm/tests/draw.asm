@@ -23,10 +23,10 @@ x01 %front_buffer ld5 x04 %shr ld5 xF0 and orr :store_bit %call
 %input_buffer lda x0F and :ignore %bcs
 # reset x_vel and y_vel to 0x00
 x00 x00 st2 st2
-# velocity = (input & 0b0110) ? 0xFF : 0x01
-ld0 x06 and pop x01 xFF iff
-# address = (input & 0b0101) ? 0x04 : 0x05
-ld1 x05 and pop x04 x05 iff lds add
+# velocity = (input & 0b1010) ? 0xFF : 0x01
+ld0 x0A and pop x01 xFF iff
+# address = (input & 0b0011) ? 0x04 : 0x05
+ld1 x03 and pop x04 x05 iff lds add
 # store velocity
 swp sta
 # reset input

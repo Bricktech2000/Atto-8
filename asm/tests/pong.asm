@@ -46,7 +46,7 @@ ld0 x02 add x01 sta
 ld0 x04 add x00 sta
 pop
 %input_buffer lda
-ld0 x05 and pop :check_next %bcs
+ld0 x03 and pop :check_next %bcs
 # continue_check:
 ld6 dec ld7 inc ld2 x01 and pop iff st6
 check_next:

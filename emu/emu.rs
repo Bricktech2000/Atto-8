@@ -94,16 +94,16 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
         Ok(character) => {
           let lo_nibble: u8 = match character {
             'w' => 0b0001,
-            'd' => 0b0010,
-            's' => 0b0100,
-            'a' => 0b1000,
+            's' => 0b0010,
+            'a' => 0b0100,
+            'd' => 0b1000,
             _ => 0b0000,
           };
           let hi_nibble: u8 = match character {
             'i' => 0b0001,
-            'l' => 0b0010,
-            'k' => 0b0100,
-            'j' => 0b1000,
+            'k' => 0b0010,
+            'j' => 0b0100,
+            'l' => 0b1000,
             _ => 0b0000,
           };
           memory[0x00] |= lo_nibble | (hi_nibble << 4);
