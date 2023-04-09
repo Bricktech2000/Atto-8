@@ -180,7 +180,7 @@ fn tokenize(source: String, errors: &mut Vec<Error>) -> Vec<Token> {
   // tokenize to valid tokens. tokens might be invalid instructions
 
   let tokens: Vec<Token> = tokens
-    .iter()
+    .into_iter()
     .map(|token| {
       use std::num::IntErrorKind::*;
 
@@ -204,60 +204,60 @@ fn tokenize(source: String, errors: &mut Vec<Error>) -> Vec<Token> {
       }
 
       match token {
-        &_ if token.ends_with(":") => Token::LabelDef((None, token[..token.len() - 1].to_string())),
-        &_ if token.starts_with(":") => Token::LabelRef((None, token[1..].to_string())),
-        &_ if token.ends_with(".") => {
+        _ if token.ends_with(":") => Token::LabelDef((None, token[..token.len() - 1].to_string())),
+        _ if token.starts_with(":") => Token::LabelRef((None, token[1..].to_string())),
+        _ if token.ends_with(".") => {
           Token::LabelDef((Some(0), token[..token.len() - 1].to_string()))
         }
-        &_ if token.starts_with(".") => Token::LabelRef((Some(0), token[1..].to_string())),
-        &_ if token.ends_with("%") => Token::MacroDef(token[..token.len() - 1].to_string()),
-        &_ if token.starts_with("%") => Token::MacroRef(token[1..].to_string()),
-        &"add" => Token::Add,
-        &"adc" => Token::Adc,
-        &_ if token.starts_with("add") => Token::AddS(hex(&token[3..], errors)),
-        &_ if token.starts_with("adc") => Token::AdcS(hex(&token[3..], errors)),
-        &"sub" => Token::Sub,
-        &"sbc" => Token::Sbc,
-        &_ if token.starts_with("sub") => Token::SubS(hex(&token[3..], errors)),
-        &_ if token.starts_with("sbc") => Token::SbcS(hex(&token[3..], errors)),
-        &"shf" => Token::Shf,
-        &_ if token.starts_with("shf") => Token::ShfS(hex(&token[3..], errors)),
-        &"shc" => Token::Sfc,
-        &_ if token.starts_with("sfc") => Token::SfcS(hex(&token[3..], errors)),
-        &"rot" => Token::Rot,
-        &_ if token.starts_with("rot") => Token::RotS(hex(&token[3..], errors)),
-        &"iff" => Token::Iff,
-        &_ if token.starts_with("iff") => Token::IffS(hex(&token[3..], errors)),
-        &"orr" => Token::Orr,
-        &_ if token.starts_with("orr") => Token::OrrS(hex(&token[3..], errors)),
-        &"and" => Token::And,
-        &_ if token.starts_with("and") => Token::AndS(hex(&token[3..], errors)),
-        &"xor" => Token::Xor,
-        &_ if token.starts_with("xor") => Token::XorS(hex(&token[3..], errors)),
-        &"xnd" => Token::Xnd,
-        &_ if token.starts_with("xnd") => Token::XndS(hex(&token[3..], errors)),
-        &"inc" => Token::Inc,
-        &"dec" => Token::Dec,
-        &"neg" => Token::Neg,
-        &"not" => Token::Not,
-        &"buf" => Token::Buf,
-        &"nop" => Token::Nop,
-        &"clc" => Token::Clc,
-        &"sec" => Token::Sec,
-        &"flc" => Token::Flc,
-        &"swp" => Token::Swp,
-        &"pop" => Token::Pop,
-        &"lda" => Token::Lda,
-        &"sta" => Token::Sta,
-        &"ldi" => Token::Ldi,
-        &"sti" => Token::Sti,
-        &"lds" => Token::Lds,
-        &"sts" => Token::Sts,
-        &_ if token.starts_with("d") => Token::DDD(hex(&token[1..], errors)),
-        &_ if token.starts_with("x") => Token::XXX(hex(&token[1..], errors)),
-        &_ if token.starts_with("ld") => Token::LdO(hex(&token[2..], errors)),
-        &_ if token.starts_with("st") => Token::StO(hex(&token[2..], errors)),
-        &_ => {
+        _ if token.starts_with(".") => Token::LabelRef((Some(0), token[1..].to_string())),
+        _ if token.ends_with("%") => Token::MacroDef(token[..token.len() - 1].to_string()),
+        _ if token.starts_with("%") => Token::MacroRef(token[1..].to_string()),
+        "add" => Token::Add,
+        "adc" => Token::Adc,
+        _ if token.starts_with("add") => Token::AddS(hex(&token[3..], errors)),
+        _ if token.starts_with("adc") => Token::AdcS(hex(&token[3..], errors)),
+        "sub" => Token::Sub,
+        "sbc" => Token::Sbc,
+        _ if token.starts_with("sub") => Token::SubS(hex(&token[3..], errors)),
+        _ if token.starts_with("sbc") => Token::SbcS(hex(&token[3..], errors)),
+        "shf" => Token::Shf,
+        _ if token.starts_with("shf") => Token::ShfS(hex(&token[3..], errors)),
+        "shc" => Token::Sfc,
+        _ if token.starts_with("sfc") => Token::SfcS(hex(&token[3..], errors)),
+        "rot" => Token::Rot,
+        _ if token.starts_with("rot") => Token::RotS(hex(&token[3..], errors)),
+        "iff" => Token::Iff,
+        _ if token.starts_with("iff") => Token::IffS(hex(&token[3..], errors)),
+        "orr" => Token::Orr,
+        _ if token.starts_with("orr") => Token::OrrS(hex(&token[3..], errors)),
+        "and" => Token::And,
+        _ if token.starts_with("and") => Token::AndS(hex(&token[3..], errors)),
+        "xor" => Token::Xor,
+        _ if token.starts_with("xor") => Token::XorS(hex(&token[3..], errors)),
+        "xnd" => Token::Xnd,
+        _ if token.starts_with("xnd") => Token::XndS(hex(&token[3..], errors)),
+        "inc" => Token::Inc,
+        "dec" => Token::Dec,
+        "neg" => Token::Neg,
+        "not" => Token::Not,
+        "buf" => Token::Buf,
+        "nop" => Token::Nop,
+        "clc" => Token::Clc,
+        "sec" => Token::Sec,
+        "flc" => Token::Flc,
+        "swp" => Token::Swp,
+        "pop" => Token::Pop,
+        "lda" => Token::Lda,
+        "sta" => Token::Sta,
+        "ldi" => Token::Ldi,
+        "sti" => Token::Sti,
+        "lds" => Token::Lds,
+        "sts" => Token::Sts,
+        _ if token.starts_with("d") => Token::DDD(hex(&token[1..], errors)),
+        _ if token.starts_with("x") => Token::XXX(hex(&token[1..], errors)),
+        _ if token.starts_with("ld") => Token::LdO(hex(&token[2..], errors)),
+        _ if token.starts_with("st") => Token::StO(hex(&token[2..], errors)),
+        _ => {
           errors.push(format!("Invalid token: {}", token));
           Token::Nop
         }
@@ -289,11 +289,11 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
 
   let mut scope: usize = 1;
   let entry_point = vec![Token::MacroRef(entry_point.to_string())];
-  let tokens: Vec<Token> = expand_macros(&macros, entry_point, &mut scope, errors);
+  let tokens: Vec<Token> = expand_macros(&macros, &entry_point, &mut scope, errors);
 
   fn expand_macros<'a>(
     macros: &HashMap<String, Vec<Token>>,
-    tokens: Vec<Token>,
+    tokens: &Vec<Token>,
     scope: &mut usize,
     errors: &mut Vec<Error>,
   ) -> Vec<Token> {
@@ -309,15 +309,15 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
             }
           };
           let tokens = tokens
-            .iter()
+            .into_iter()
             .map(|token| match token {
-              Token::LabelDef((Some(_), name)) => Token::LabelDef((Some(*scope), name.to_string())),
-              Token::LabelRef((Some(_), name)) => Token::LabelRef((Some(*scope), name.to_string())),
-              _ => token.clone(),
+              Token::LabelDef((Some(_), name)) => Token::LabelDef((Some(*scope), name)),
+              Token::LabelRef((Some(_), name)) => Token::LabelRef((Some(*scope), name)),
+              _ => token,
             })
             .collect();
           *scope += 1;
-          expand_macros(macros, tokens, scope, errors)
+          expand_macros(&macros, &tokens, scope, errors)
         }
         _ => vec![token.clone()],
       })
@@ -346,18 +346,16 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
 
   // turn assembly tokens into roots, an intermediate representation. roots correspond to valid instructions
 
-  type RootLabel = (Option<usize>, String);
-
   #[derive(Clone, Eq, PartialEq)]
   enum Root {
     Instruction(Instruction),
     Node(Node),
-    LabelDef(RootLabel),
+    LabelDef(Label),
   }
 
   #[derive(Clone, Eq, PartialEq)]
   enum Node {
-    LabelRef(RootLabel),
+    LabelRef(Label),
     Immediate(u8),
     Not(Box<Node>),
     Add(Box<Node>, Box<Node>),
@@ -371,39 +369,39 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
   }
 
   let roots: Vec<Root> = tokens
-    .iter()
+    .into_iter()
     .map(|token| match token {
-      Token::LabelDef((scope, name)) => Root::LabelDef((*scope, name.clone())),
-      Token::LabelRef((scope, name)) => Root::Node(Node::LabelRef((*scope, name.clone()))),
+      Token::LabelDef((scope, name)) => Root::LabelDef((scope, name)),
+      Token::LabelRef((scope, name)) => Root::Node(Node::LabelRef((scope, name))),
       Token::MacroDef(_) => panic!("Macro definition found in intermediate representation"),
       Token::MacroRef(_) => panic!("Macro reference found in intermediate representation"),
-      Token::XXX(immediate) => Root::Node(Node::Immediate(*immediate)),
-      Token::LdO(offset) => Root::Instruction(Instruction::Ldo(assert_offset(*offset, errors))),
-      Token::StO(offset) => Root::Instruction(Instruction::Sto(assert_offset(*offset, errors))),
+      Token::XXX(immediate) => Root::Node(Node::Immediate(immediate)),
+      Token::LdO(offset) => Root::Instruction(Instruction::Ldo(assert_offset(offset, errors))),
+      Token::StO(offset) => Root::Instruction(Instruction::Sto(assert_offset(offset, errors))),
       Token::Add => Root::Instruction(Instruction::Add(assert_size(0x01, errors))),
       Token::Adc => Root::Instruction(Instruction::Adc(assert_size(0x01, errors))),
-      Token::AddS(size) => Root::Instruction(Instruction::Add(assert_size(*size, errors))),
-      Token::AdcS(size) => Root::Instruction(Instruction::Adc(assert_size(*size, errors))),
+      Token::AddS(size) => Root::Instruction(Instruction::Add(assert_size(size, errors))),
+      Token::AdcS(size) => Root::Instruction(Instruction::Adc(assert_size(size, errors))),
       Token::Sub => Root::Instruction(Instruction::Sub(assert_size(0x01, errors))),
       Token::Sbc => Root::Instruction(Instruction::Sbc(assert_size(0x01, errors))),
-      Token::SubS(size) => Root::Instruction(Instruction::Sub(assert_size(*size, errors))),
-      Token::SbcS(size) => Root::Instruction(Instruction::Sbc(assert_size(*size, errors))),
+      Token::SubS(size) => Root::Instruction(Instruction::Sub(assert_size(size, errors))),
+      Token::SbcS(size) => Root::Instruction(Instruction::Sbc(assert_size(size, errors))),
       Token::Shf => Root::Instruction(Instruction::Shf(assert_size(0x01, errors))),
       Token::Sfc => Root::Instruction(Instruction::Sfc(assert_size(0x01, errors))),
-      Token::ShfS(size) => Root::Instruction(Instruction::Shf(assert_size(*size, errors))),
-      Token::SfcS(size) => Root::Instruction(Instruction::Sfc(assert_size(*size, errors))),
+      Token::ShfS(size) => Root::Instruction(Instruction::Shf(assert_size(size, errors))),
+      Token::SfcS(size) => Root::Instruction(Instruction::Sfc(assert_size(size, errors))),
       Token::Rot => Root::Instruction(Instruction::Rot(assert_size(0x01, errors))),
-      Token::RotS(size) => Root::Instruction(Instruction::Rot(assert_size(*size, errors))),
+      Token::RotS(size) => Root::Instruction(Instruction::Rot(assert_size(size, errors))),
       Token::Iff => Root::Instruction(Instruction::Iff(assert_size(0x01, errors))),
-      Token::IffS(size) => Root::Instruction(Instruction::Iff(assert_size(*size, errors))),
+      Token::IffS(size) => Root::Instruction(Instruction::Iff(assert_size(size, errors))),
       Token::Orr => Root::Instruction(Instruction::Orr(assert_size(0x01, errors))),
-      Token::OrrS(size) => Root::Instruction(Instruction::Orr(assert_size(*size, errors))),
+      Token::OrrS(size) => Root::Instruction(Instruction::Orr(assert_size(size, errors))),
       Token::And => Root::Instruction(Instruction::And(assert_size(0x01, errors))),
-      Token::AndS(size) => Root::Instruction(Instruction::And(assert_size(*size, errors))),
+      Token::AndS(size) => Root::Instruction(Instruction::And(assert_size(size, errors))),
       Token::Xor => Root::Instruction(Instruction::Xor(assert_size(0x01, errors))),
-      Token::XorS(size) => Root::Instruction(Instruction::Xor(assert_size(*size, errors))),
+      Token::XorS(size) => Root::Instruction(Instruction::Xor(assert_size(size, errors))),
       Token::Xnd => Root::Instruction(Instruction::Xnd(assert_size(0x01, errors))),
-      Token::XndS(size) => Root::Instruction(Instruction::Xnd(assert_size(*size, errors))),
+      Token::XndS(size) => Root::Instruction(Instruction::Xnd(assert_size(size, errors))),
       Token::Inc => Root::Instruction(Instruction::Inc),
       Token::Dec => Root::Instruction(Instruction::Dec),
       Token::Neg => Root::Instruction(Instruction::Neg),
@@ -421,7 +419,7 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
       Token::Sti => Root::Instruction(Instruction::Sti),
       Token::Lds => Root::Instruction(Instruction::Lds),
       Token::Sts => Root::Instruction(Instruction::Sts),
-      Token::DDD(immediate) => Root::Instruction(Instruction::Raw(*immediate)),
+      Token::DDD(immediate) => Root::Instruction(Instruction::Raw(immediate)),
     })
     .collect();
 
@@ -713,7 +711,7 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
       Root::LabelDef((scope, name)) => {
         // empty labels are used as an optimization blocker
         if name != "" {
-          if labels.contains_key(&(*scope, name.to_string())) {
+          if labels.contains_key(&(*scope, name.clone())) {
             errors.push(format!(
               "Label already defined : {}{}",
               match scope {
@@ -723,7 +721,7 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
               name,
             ));
           }
-          labels.insert((*scope, name.to_string()), address);
+          labels.insert((*scope, name.clone()), address);
         }
         vec![]
       }
@@ -789,42 +787,42 @@ fn codegen(instructions: Vec<Instruction>, errors: &mut Vec<Error>) -> Vec<u8> {
   // codegen instructions into bytes and sanity-check operands
 
   let bytes: Vec<u8> = instructions
-    .iter()
-    .flat_map(|instruction| match instruction {
-      Instruction::Psh(immediate) => vec![0b00000000 | encode_immediate(*immediate)],
-      Instruction::Phn(immediate) => vec![0b11110000 | encode_offset(*immediate)],
-      Instruction::Ldo(offset) => vec![0b11000000 | encode_offset(*offset)],
-      Instruction::Sto(offset) => vec![0b11010000 | encode_offset(*offset)],
-      Instruction::Add(size) => vec![0b10000000 | encode_size(*size)],
-      Instruction::Adc(size) => vec![0b10000100 | encode_size(*size)],
-      Instruction::Sub(size) => vec![0b10001000 | encode_size(*size)],
-      Instruction::Sbc(size) => vec![0b10001100 | encode_size(*size)],
-      Instruction::Shf(size) => vec![0b10010000 | encode_size(*size)],
-      Instruction::Sfc(size) => vec![0b10010100 | encode_size(*size)],
-      Instruction::Rot(size) => vec![0b10011000 | encode_size(*size)],
-      Instruction::Iff(size) => vec![0b10011100 | encode_size(*size)],
-      Instruction::Orr(size) => vec![0b10100000 | encode_size(*size)],
-      Instruction::And(size) => vec![0b10100100 | encode_size(*size)],
-      Instruction::Xor(size) => vec![0b10101000 | encode_size(*size)],
-      Instruction::Xnd(size) => vec![0b10101100 | encode_size(*size)],
-      Instruction::Inc => vec![0b10110000],
-      Instruction::Dec => vec![0b10110001],
-      Instruction::Neg => vec![0b10110010],
-      Instruction::Not => vec![0b10110100],
-      Instruction::Buf => vec![0b10110101],
-      Instruction::Nop => vec![0xE0],
-      Instruction::Clc => vec![0xE1],
-      Instruction::Sec => vec![0xE2],
-      Instruction::Flc => vec![0xE3],
-      Instruction::Swp => vec![0xE4],
-      Instruction::Pop => vec![0xE5],
-      Instruction::Lda => vec![0xE8],
-      Instruction::Sta => vec![0xE9],
-      Instruction::Ldi => vec![0xEA],
-      Instruction::Sti => vec![0xEB],
-      Instruction::Lds => vec![0xEC],
-      Instruction::Sts => vec![0xED],
-      Instruction::Raw(data) => vec![*data],
+    .into_iter()
+    .map(|instruction| match instruction {
+      Instruction::Psh(immediate) => 0b00000000 | encode_immediate(immediate),
+      Instruction::Phn(immediate) => 0b11110000 | encode_offset(immediate),
+      Instruction::Ldo(offset) => 0b11000000 | encode_offset(offset),
+      Instruction::Sto(offset) => 0b11010000 | encode_offset(offset),
+      Instruction::Add(size) => 0b10000000 | encode_size(size),
+      Instruction::Adc(size) => 0b10000100 | encode_size(size),
+      Instruction::Sub(size) => 0b10001000 | encode_size(size),
+      Instruction::Sbc(size) => 0b10001100 | encode_size(size),
+      Instruction::Shf(size) => 0b10010000 | encode_size(size),
+      Instruction::Sfc(size) => 0b10010100 | encode_size(size),
+      Instruction::Rot(size) => 0b10011000 | encode_size(size),
+      Instruction::Iff(size) => 0b10011100 | encode_size(size),
+      Instruction::Orr(size) => 0b10100000 | encode_size(size),
+      Instruction::And(size) => 0b10100100 | encode_size(size),
+      Instruction::Xor(size) => 0b10101000 | encode_size(size),
+      Instruction::Xnd(size) => 0b10101100 | encode_size(size),
+      Instruction::Inc => 0b10110000,
+      Instruction::Dec => 0b10110001,
+      Instruction::Neg => 0b10110010,
+      Instruction::Not => 0b10110100,
+      Instruction::Buf => 0b10110101,
+      Instruction::Nop => 0xE0,
+      Instruction::Clc => 0xE1,
+      Instruction::Sec => 0xE2,
+      Instruction::Flc => 0xE3,
+      Instruction::Swp => 0xE4,
+      Instruction::Pop => 0xE5,
+      Instruction::Lda => 0xE8,
+      Instruction::Sta => 0xE9,
+      Instruction::Ldi => 0xEA,
+      Instruction::Sti => 0xEB,
+      Instruction::Lds => 0xEC,
+      Instruction::Sts => 0xED,
+      Instruction::Raw(data) => data,
     })
     .collect();
 
