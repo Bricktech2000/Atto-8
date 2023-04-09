@@ -1,3 +1,5 @@
+![Atto-8 Banner](banner.png)
+
 # Atto-8
 
 A minimalist 8-bit microcomputer with stack-based microprocessor
