@@ -1,6 +1,4 @@
-use path_clean::PathClean;
 use std::collections::HashMap;
-use std::path::Path;
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
@@ -9,11 +7,12 @@ fn main() {
     std::process::exit(1);
   }
 
-  let mut errors = vec![];
-  let input = &args[1];
-  let preprocessed: String = preprocess(input, &mut errors);
-  let tokens: Vec<Token> = tokenize(preprocessed, &mut errors);
-  let instructions: Vec<Instruction> = assemble(tokens, "main", &mut errors);
+  let mut errors: Vec<(Position, Error)> = vec![];
+  let input: &String = &args[1];
+
+  let preprocessed: String = preprocess(input, &mut errors, "[bootstrap]");
+  let tokens: Vec<(Position, Token)> = tokenize(preprocessed, &mut errors, "[stream]");
+  let instructions: Vec<(Position, Instruction)> = assemble(tokens, "main", &mut errors);
   let bytes: Vec<u8> = codegen(instructions, &mut errors);
 
   match errors[..] {
@@ -31,7 +30,7 @@ fn main() {
         "{}\n\nAborting.",
         errors
           .iter()
-          .map(|error| format!("Error: {}", error))
+          .map(|error| format!("{}:{}: {}", error.0.scope, error.0.index, error.1.message))
           .collect::<Vec<_>>()
           .join("\n")
       );
@@ -40,9 +39,22 @@ fn main() {
   }
 }
 
-type Label = (Option<usize>, String);
+#[derive(Clone, Eq, PartialEq, Hash)]
+struct Label {
+  scope_id: Option<usize>,
+  identifier: String,
+}
 
-type Error = String;
+#[derive(Clone, Eq, PartialEq)]
+struct Error {
+  message: String,
+}
+
+#[derive(Clone, Eq, PartialEq)]
+struct Position {
+  scope: String,
+  index: usize,
+}
 
 #[derive(Clone, Eq, PartialEq)]
 enum Token {
@@ -135,15 +147,25 @@ enum Instruction {
   Raw(u8),
 }
 
-fn preprocess(filename: &str, errors: &mut Vec<Error>) -> String {
+fn preprocess(filename: &str, errors: &mut Vec<(Position, Error)>, scope: &str) -> String {
   // remove comments and resolve includes
 
+  use path_clean::PathClean;
+  use std::path::Path;
   let source = match std::fs::read_to_string(filename) {
     Ok(source) => source,
     Err(_) => {
-      errors.push(format!(
-        "Unable to read file: {}",
-        Path::new(filename).clean().to_str().unwrap()
+      errors.push((
+        Position {
+          scope: scope.to_string(),
+          index: 0,
+        },
+        Error {
+          message: format!(
+            "Unable to read file: {}",
+            Path::new(filename).clean().to_str().unwrap()
+          ),
+        },
       ));
       "".to_string()
     }
@@ -163,6 +185,10 @@ fn preprocess(filename: &str, errors: &mut Vec<Error>) -> String {
               .to_str()
               .unwrap(),
             errors,
+            &format!(
+              "@{}",
+              Path::new(filename).file_name().unwrap().to_str().unwrap()
+            ),
           )
           .as_str()
       }
@@ -174,28 +200,43 @@ fn preprocess(filename: &str, errors: &mut Vec<Error>) -> String {
   source
 }
 
-fn tokenize(source: String, errors: &mut Vec<Error>) -> Vec<Token> {
+fn tokenize(
+  source: String,
+  errors: &mut Vec<(Position, Error)>,
+  scope: &str,
+) -> Vec<(Position, Token)> {
   let tokens: Vec<&str> = source.split_whitespace().collect();
 
   // tokenize to valid tokens. tokens might be invalid instructions
 
-  let tokens: Vec<Token> = tokens
+  let tokens: Vec<(Position, Token)> = tokens
     .into_iter()
-    .map(|token| {
-      use std::num::IntErrorKind::*;
-
-      fn hex(string: &str, errors: &mut Vec<Error>) -> u8 {
+    .enumerate()
+    .map(|(index, token)| {
+      fn hex(string: &str, errors: &mut Vec<(Position, Error)>, position: &Position) -> u8 {
+        use std::num::IntErrorKind::*;
         match u8::from_str_radix(string, 16) {
           Ok(value) => value,
           Err(e) => {
             match e.kind() {
-              InvalidDigit => {
-                errors.push(format!("Invalid digits in hexadecimal literal: {}", string))
-              }
-              Empty => errors.push(format!("Invalid empty hexadecimal literal",)),
-              NegOverflow | PosOverflow => {
-                errors.push(format!("Overflow in hexadecimal literal: {}", string))
-              }
+              InvalidDigit => errors.push((
+                position.clone(),
+                Error {
+                  message: format!("Invalid digits in hexadecimal literal: {}", string),
+                },
+              )),
+              Empty => errors.push((
+                position.clone(),
+                Error {
+                  message: format!("Empty hexadecimal literal: {}", string),
+                },
+              )),
+              NegOverflow | PosOverflow => errors.push((
+                position.clone(),
+                Error {
+                  message: format!("Hexadecimal literal out of range: {}", string),
+                },
+              )),
               _ => panic!("Unexpected error: {:?}", e),
             };
             0x00
@@ -203,39 +244,54 @@ fn tokenize(source: String, errors: &mut Vec<Error>) -> Vec<Token> {
         }
       }
 
-      match token {
-        _ if token.ends_with(":") => Token::LabelDef((None, token[..token.len() - 1].to_string())),
-        _ if token.starts_with(":") => Token::LabelRef((None, token[1..].to_string())),
-        _ if token.ends_with(".") => {
-          Token::LabelDef((Some(0), token[..token.len() - 1].to_string()))
-        }
-        _ if token.starts_with(".") => Token::LabelRef((Some(0), token[1..].to_string())),
+      let position = Position {
+        scope: scope.to_string(),
+        index,
+      };
+
+      let token = match token {
+        _ if token.ends_with(":") => Token::LabelDef(Label {
+          scope_id: None,
+          identifier: token[..token.len() - 1].to_string(),
+        }),
+        _ if token.starts_with(":") => Token::LabelRef(Label {
+          scope_id: None,
+          identifier: token[1..].to_string(),
+        }),
+        _ if token.ends_with(".") => Token::LabelDef(Label {
+          scope_id: Some(0),
+          identifier: token[..token.len() - 1].to_string(),
+        }),
+        _ if token.starts_with(".") => Token::LabelRef(Label {
+          scope_id: Some(0),
+          identifier: token[1..].to_string(),
+        }),
         _ if token.ends_with("%") => Token::MacroDef(token[..token.len() - 1].to_string()),
         _ if token.starts_with("%") => Token::MacroRef(token[1..].to_string()),
         "add" => Token::Add,
         "adc" => Token::Adc,
-        _ if token.starts_with("add") => Token::AddS(hex(&token[3..], errors)),
-        _ if token.starts_with("adc") => Token::AdcS(hex(&token[3..], errors)),
+        _ if token.starts_with("add") => Token::AddS(hex(&token[3..], errors, &position)),
+        _ if token.starts_with("adc") => Token::AdcS(hex(&token[3..], errors, &position)),
         "sub" => Token::Sub,
         "sbc" => Token::Sbc,
-        _ if token.starts_with("sub") => Token::SubS(hex(&token[3..], errors)),
-        _ if token.starts_with("sbc") => Token::SbcS(hex(&token[3..], errors)),
+        _ if token.starts_with("sub") => Token::SubS(hex(&token[3..], errors, &position)),
+        _ if token.starts_with("sbc") => Token::SbcS(hex(&token[3..], errors, &position)),
         "shf" => Token::Shf,
-        _ if token.starts_with("shf") => Token::ShfS(hex(&token[3..], errors)),
+        _ if token.starts_with("shf") => Token::ShfS(hex(&token[3..], errors, &position)),
         "shc" => Token::Sfc,
-        _ if token.starts_with("sfc") => Token::SfcS(hex(&token[3..], errors)),
+        _ if token.starts_with("sfc") => Token::SfcS(hex(&token[3..], errors, &position)),
         "rot" => Token::Rot,
-        _ if token.starts_with("rot") => Token::RotS(hex(&token[3..], errors)),
+        _ if token.starts_with("rot") => Token::RotS(hex(&token[3..], errors, &position)),
         "iff" => Token::Iff,
-        _ if token.starts_with("iff") => Token::IffS(hex(&token[3..], errors)),
+        _ if token.starts_with("iff") => Token::IffS(hex(&token[3..], errors, &position)),
         "orr" => Token::Orr,
-        _ if token.starts_with("orr") => Token::OrrS(hex(&token[3..], errors)),
+        _ if token.starts_with("orr") => Token::OrrS(hex(&token[3..], errors, &position)),
         "and" => Token::And,
-        _ if token.starts_with("and") => Token::AndS(hex(&token[3..], errors)),
+        _ if token.starts_with("and") => Token::AndS(hex(&token[3..], errors, &position)),
         "xor" => Token::Xor,
-        _ if token.starts_with("xor") => Token::XorS(hex(&token[3..], errors)),
+        _ if token.starts_with("xor") => Token::XorS(hex(&token[3..], errors, &position)),
         "xnd" => Token::Xnd,
-        _ if token.starts_with("xnd") => Token::XndS(hex(&token[3..], errors)),
+        _ if token.starts_with("xnd") => Token::XndS(hex(&token[3..], errors, &position)),
         "inc" => Token::Inc,
         "dec" => Token::Dec,
         "neg" => Token::Neg,
@@ -253,92 +309,176 @@ fn tokenize(source: String, errors: &mut Vec<Error>) -> Vec<Token> {
         "sti" => Token::Sti,
         "lds" => Token::Lds,
         "sts" => Token::Sts,
-        _ if token.starts_with("d") => Token::DDD(hex(&token[1..], errors)),
-        _ if token.starts_with("x") => Token::XXX(hex(&token[1..], errors)),
-        _ if token.starts_with("ld") => Token::LdO(hex(&token[2..], errors)),
-        _ if token.starts_with("st") => Token::StO(hex(&token[2..], errors)),
+        _ if token.starts_with("d") => Token::DDD(hex(&token[1..], errors, &position)),
+        _ if token.starts_with("x") => Token::XXX(hex(&token[1..], errors, &position)),
+        _ if token.starts_with("ld") => Token::LdO(hex(&token[2..], errors, &position)),
+        _ if token.starts_with("st") => Token::StO(hex(&token[2..], errors, &position)),
         _ => {
-          errors.push(format!("Invalid token: {}", token));
+          errors.push((
+            position.clone(),
+            Error {
+              message: format!("Invalid token: {}", token),
+            },
+          ));
           Token::Nop
         }
-      }
+      };
+
+      (position, token)
     })
     .collect();
 
   tokens
 }
 
-fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> Vec<Instruction> {
+fn assemble(
+  tokens: Vec<(Position, Token)>,
+  entry_point: &str,
+  errors: &mut Vec<(Position, Error)>,
+) -> Vec<(Position, Instruction)> {
   // resolve macros recursively from `entry_point`
 
-  let mut macros: HashMap<String, Vec<Token>> = HashMap::new();
+  let mut macro_definitions: HashMap<String, Vec<(Position, Token)>> = HashMap::new();
   let mut current_macro_name = "".to_string();
 
-  for token in tokens {
-    match token {
+  for token in tokens.into_iter() {
+    match token.1 {
       Token::MacroDef(name) => {
         current_macro_name = name;
-        macros.entry(current_macro_name.clone()).or_insert(vec![]);
+        macro_definitions
+          .entry(current_macro_name.clone())
+          .or_insert(vec![]);
       }
-      _ => match macros.get_mut(&current_macro_name) {
-        Some(macro_tokens) => macro_tokens.push(token),
-        None => errors.push(format!("Orphan instruction found",)),
+      _ => match macro_definitions.get_mut(&current_macro_name) {
+        Some(macro_tokens) => macro_tokens.push((
+          Position {
+            scope: format!("%{}", current_macro_name),
+            index: macro_tokens.len(),
+          },
+          token.1,
+        )),
+        None => errors.push((
+          token.0,
+          Error {
+            message: format!("Orphan instruction found"),
+          },
+        )),
       },
     }
   }
 
   let mut scope: usize = 1;
-  let entry_point = vec![Token::MacroRef(entry_point.to_string())];
-  let tokens: Vec<Token> = expand_macros(&macros, &entry_point, &mut scope, errors);
+  let entry_point = vec![(
+    Position {
+      scope: "[bootstrap]".to_string(),
+      index: 0,
+    },
+    Token::MacroRef(entry_point.to_string()),
+  )];
+  let tokens: Vec<(Position, Token)> =
+    expand_macros(&macro_definitions, &entry_point, &mut scope, errors);
 
   fn expand_macros<'a>(
-    macros: &HashMap<String, Vec<Token>>,
-    tokens: &Vec<Token>,
-    scope: &mut usize,
-    errors: &mut Vec<Error>,
-  ) -> Vec<Token> {
+    macro_definitions: &HashMap<String, Vec<(Position, Token)>>,
+    tokens: &Vec<(Position, Token)>,
+    scope_id: &mut usize,
+    errors: &mut Vec<(Position, Error)>,
+  ) -> Vec<(Position, Token)> {
     tokens
-      .iter()
-      .flat_map(|token| match token {
+      .into_iter()
+      .flat_map(|token| match &token.1 {
         Token::MacroRef(name) => {
-          let tokens = match macros.get(name) {
+          let tokens = match macro_definitions.get(name) {
             Some(tokens) => tokens.clone(),
             None => {
-              errors.push(format!("Macro definition not found: {}{}", "%", name));
+              errors.push((
+                token.0.clone(),
+                Error {
+                  message: format!("Macro definition not found: {}{}", "%", name),
+                },
+              ));
               vec![]
             }
           };
           let tokens = tokens
             .into_iter()
-            .map(|token| match token {
-              Token::LabelDef((Some(_), name)) => Token::LabelDef((Some(*scope), name)),
-              Token::LabelRef((Some(_), name)) => Token::LabelRef((Some(*scope), name)),
+            .map(|token| match token.1 {
+              Token::LabelDef(Label {
+                scope_id: Some(_),
+                identifier,
+              }) => (
+                token.0,
+                Token::LabelDef(Label {
+                  scope_id: Some(*scope_id),
+                  identifier,
+                }),
+              ),
+              Token::LabelRef(Label {
+                scope_id: Some(_),
+                identifier,
+              }) => (
+                token.0,
+                Token::LabelRef(Label {
+                  scope_id: Some(*scope_id),
+                  identifier,
+                }),
+              ),
               _ => token,
             })
             .collect();
-          *scope += 1;
-          expand_macros(&macros, &tokens, scope, errors)
+          *scope_id += 1;
+          expand_macros(&macro_definitions, &tokens, scope_id, errors)
         }
         _ => vec![token.clone()],
       })
       .collect()
   }
 
-  fn assert_size(size: u8, errors: &mut Vec<Error>) -> u8 {
+  fn assert_immediate(
+    immediate: u8,
+    errors: &mut Vec<(Position, Error)>,
+    position: &Position,
+  ) -> u8 {
+    match immediate {
+      0b00000000..=0b11111111 => immediate,
+      #[allow(unreachable_patterns)]
+      _ => {
+        errors.push((
+          position.clone(),
+          Error {
+            message: format!("Invalid immediate operand: {}", immediate),
+          },
+        ));
+        0b00000000
+      }
+    }
+  }
+
+  fn assert_size(size: u8, errors: &mut Vec<(Position, Error)>, position: &Position) -> u8 {
     match size {
       0x01 | 0x02 | 0x04 | 0x08 => size,
       _ => {
-        errors.push(format!("Invalid size operand: {}", size));
+        errors.push((
+          position.clone(),
+          Error {
+            message: format!("Invalid size operand: {}", size),
+          },
+        ));
         0x01
       }
     }
   }
 
-  fn assert_offset(offset: u8, errors: &mut Vec<Error>) -> u8 {
+  fn assert_offset(offset: u8, errors: &mut Vec<(Position, Error)>, position: &Position) -> u8 {
     match offset {
       0b00000000..=0b00001111 => offset,
       _ => {
-        errors.push(format!("Invalid offset operand: {}", offset));
+        errors.push((
+          position.clone(),
+          Error {
+            message: format!("Invalid offset operand: {}", offset),
+          },
+        ));
         0b00000000
       }
     }
@@ -368,58 +508,93 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
     Xnd(Box<Node>, Box<Node>),
   }
 
-  let roots: Vec<Root> = tokens
+  let roots: Vec<(Position, Root)> = tokens
     .into_iter()
-    .map(|token| match token {
-      Token::LabelDef((scope, name)) => Root::LabelDef((scope, name)),
-      Token::LabelRef((scope, name)) => Root::Node(Node::LabelRef((scope, name))),
-      Token::MacroDef(_) => panic!("Macro definition found in intermediate representation"),
-      Token::MacroRef(_) => panic!("Macro reference found in intermediate representation"),
-      Token::XXX(immediate) => Root::Node(Node::Immediate(immediate)),
-      Token::LdO(offset) => Root::Instruction(Instruction::Ldo(assert_offset(offset, errors))),
-      Token::StO(offset) => Root::Instruction(Instruction::Sto(assert_offset(offset, errors))),
-      Token::Add => Root::Instruction(Instruction::Add(assert_size(0x01, errors))),
-      Token::Adc => Root::Instruction(Instruction::Adc(assert_size(0x01, errors))),
-      Token::AddS(size) => Root::Instruction(Instruction::Add(assert_size(size, errors))),
-      Token::AdcS(size) => Root::Instruction(Instruction::Adc(assert_size(size, errors))),
-      Token::Sub => Root::Instruction(Instruction::Sub(assert_size(0x01, errors))),
-      Token::Sbc => Root::Instruction(Instruction::Sbc(assert_size(0x01, errors))),
-      Token::SubS(size) => Root::Instruction(Instruction::Sub(assert_size(size, errors))),
-      Token::SbcS(size) => Root::Instruction(Instruction::Sbc(assert_size(size, errors))),
-      Token::Shf => Root::Instruction(Instruction::Shf(assert_size(0x01, errors))),
-      Token::Sfc => Root::Instruction(Instruction::Sfc(assert_size(0x01, errors))),
-      Token::ShfS(size) => Root::Instruction(Instruction::Shf(assert_size(size, errors))),
-      Token::SfcS(size) => Root::Instruction(Instruction::Sfc(assert_size(size, errors))),
-      Token::Rot => Root::Instruction(Instruction::Rot(assert_size(0x01, errors))),
-      Token::RotS(size) => Root::Instruction(Instruction::Rot(assert_size(size, errors))),
-      Token::Iff => Root::Instruction(Instruction::Iff(assert_size(0x01, errors))),
-      Token::IffS(size) => Root::Instruction(Instruction::Iff(assert_size(size, errors))),
-      Token::Orr => Root::Instruction(Instruction::Orr(assert_size(0x01, errors))),
-      Token::OrrS(size) => Root::Instruction(Instruction::Orr(assert_size(size, errors))),
-      Token::And => Root::Instruction(Instruction::And(assert_size(0x01, errors))),
-      Token::AndS(size) => Root::Instruction(Instruction::And(assert_size(size, errors))),
-      Token::Xor => Root::Instruction(Instruction::Xor(assert_size(0x01, errors))),
-      Token::XorS(size) => Root::Instruction(Instruction::Xor(assert_size(size, errors))),
-      Token::Xnd => Root::Instruction(Instruction::Xnd(assert_size(0x01, errors))),
-      Token::XndS(size) => Root::Instruction(Instruction::Xnd(assert_size(size, errors))),
-      Token::Inc => Root::Instruction(Instruction::Inc),
-      Token::Dec => Root::Instruction(Instruction::Dec),
-      Token::Neg => Root::Instruction(Instruction::Neg),
-      Token::Not => Root::Instruction(Instruction::Not),
-      Token::Buf => Root::Instruction(Instruction::Buf),
-      Token::Nop => Root::Instruction(Instruction::Nop),
-      Token::Clc => Root::Instruction(Instruction::Clc),
-      Token::Sec => Root::Instruction(Instruction::Sec),
-      Token::Flc => Root::Instruction(Instruction::Flc),
-      Token::Swp => Root::Instruction(Instruction::Swp),
-      Token::Pop => Root::Instruction(Instruction::Pop),
-      Token::Lda => Root::Instruction(Instruction::Lda),
-      Token::Sta => Root::Instruction(Instruction::Sta),
-      Token::Ldi => Root::Instruction(Instruction::Ldi),
-      Token::Sti => Root::Instruction(Instruction::Sti),
-      Token::Lds => Root::Instruction(Instruction::Lds),
-      Token::Sts => Root::Instruction(Instruction::Sts),
-      Token::DDD(immediate) => Root::Instruction(Instruction::Raw(immediate)),
+    .map(|token| {
+      let position = token.0;
+      let token = match token.1 {
+        Token::LabelDef(label) => Root::LabelDef(label),
+        Token::LabelRef(label) => Root::Node(Node::LabelRef(label)),
+        Token::MacroDef(_) => panic!("Macro definition found in intermediate representation"),
+        Token::MacroRef(_) => panic!("Macro reference found in intermediate representation"),
+        Token::XXX(immediate) => Root::Node(Node::Immediate(assert_immediate(
+          immediate, errors, &position,
+        ))),
+        Token::LdO(offset) => {
+          Root::Instruction(Instruction::Ldo(assert_offset(offset, errors, &position)))
+        }
+        Token::StO(offset) => {
+          Root::Instruction(Instruction::Sto(assert_offset(offset, errors, &position)))
+        }
+        Token::Add => Root::Instruction(Instruction::Add(assert_size(0x01, errors, &position))),
+        Token::Adc => Root::Instruction(Instruction::Adc(assert_size(0x01, errors, &position))),
+        Token::AddS(size) => {
+          Root::Instruction(Instruction::Add(assert_size(size, errors, &position)))
+        }
+        Token::AdcS(size) => {
+          Root::Instruction(Instruction::Adc(assert_size(size, errors, &position)))
+        }
+        Token::Sub => Root::Instruction(Instruction::Sub(assert_size(0x01, errors, &position))),
+        Token::Sbc => Root::Instruction(Instruction::Sbc(assert_size(0x01, errors, &position))),
+        Token::SubS(size) => {
+          Root::Instruction(Instruction::Sub(assert_size(size, errors, &position)))
+        }
+        Token::SbcS(size) => {
+          Root::Instruction(Instruction::Sbc(assert_size(size, errors, &position)))
+        }
+        Token::Shf => Root::Instruction(Instruction::Shf(assert_size(0x01, errors, &position))),
+        Token::Sfc => Root::Instruction(Instruction::Sfc(assert_size(0x01, errors, &position))),
+        Token::ShfS(size) => {
+          Root::Instruction(Instruction::Shf(assert_size(size, errors, &position)))
+        }
+        Token::SfcS(size) => {
+          Root::Instruction(Instruction::Sfc(assert_size(size, errors, &position)))
+        }
+        Token::Rot => Root::Instruction(Instruction::Rot(assert_size(0x01, errors, &position))),
+        Token::RotS(size) => {
+          Root::Instruction(Instruction::Rot(assert_size(size, errors, &position)))
+        }
+        Token::Iff => Root::Instruction(Instruction::Iff(assert_size(0x01, errors, &position))),
+        Token::IffS(size) => {
+          Root::Instruction(Instruction::Iff(assert_size(size, errors, &position)))
+        }
+        Token::Orr => Root::Instruction(Instruction::Orr(assert_size(0x01, errors, &position))),
+        Token::OrrS(size) => {
+          Root::Instruction(Instruction::Orr(assert_size(size, errors, &position)))
+        }
+        Token::And => Root::Instruction(Instruction::And(assert_size(0x01, errors, &position))),
+        Token::AndS(size) => {
+          Root::Instruction(Instruction::And(assert_size(size, errors, &position)))
+        }
+        Token::Xor => Root::Instruction(Instruction::Xor(assert_size(0x01, errors, &position))),
+        Token::XorS(size) => {
+          Root::Instruction(Instruction::Xor(assert_size(size, errors, &position)))
+        }
+        Token::Xnd => Root::Instruction(Instruction::Xnd(assert_size(0x01, errors, &position))),
+        Token::XndS(size) => {
+          Root::Instruction(Instruction::Xnd(assert_size(size, errors, &position)))
+        }
+        Token::Inc => Root::Instruction(Instruction::Inc),
+        Token::Dec => Root::Instruction(Instruction::Dec),
+        Token::Neg => Root::Instruction(Instruction::Neg),
+        Token::Not => Root::Instruction(Instruction::Not),
+        Token::Buf => Root::Instruction(Instruction::Buf),
+        Token::Nop => Root::Instruction(Instruction::Nop),
+        Token::Clc => Root::Instruction(Instruction::Clc),
+        Token::Sec => Root::Instruction(Instruction::Sec),
+        Token::Flc => Root::Instruction(Instruction::Flc),
+        Token::Swp => Root::Instruction(Instruction::Swp),
+        Token::Pop => Root::Instruction(Instruction::Pop),
+        Token::Lda => Root::Instruction(Instruction::Lda),
+        Token::Sta => Root::Instruction(Instruction::Sta),
+        Token::Ldi => Root::Instruction(Instruction::Ldi),
+        Token::Sti => Root::Instruction(Instruction::Sti),
+        Token::Lds => Root::Instruction(Instruction::Lds),
+        Token::Sts => Root::Instruction(Instruction::Sts),
+        Token::DDD(immediate) => Root::Instruction(Instruction::Raw(immediate)),
+      };
+
+      (position, token)
     })
     .collect();
 
@@ -428,23 +603,36 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
 
   // a convenience function to replace slice patterns within a vector
   fn match_replace<const N: usize>(
-    roots: &Vec<Root>,
+    roots: &Vec<(Position, Root)>,
     func: fn(&[Root; N]) -> Option<Vec<Root>>,
-  ) -> Vec<Root> {
+  ) -> Vec<(Position, Root)> {
     if roots.len() < N {
       return roots.clone();
     }
 
-    let mut output = vec![];
+    let mut output: Vec<(Position, Root)> = vec![];
 
     let mut skip_next = 0;
     for window in roots.windows(N) {
       if skip_next > 0 {
         skip_next -= 1;
       } else {
-        match func(window.try_into().unwrap()) {
+        match func(
+          window
+            .iter()
+            .map(|(_, root)| root.clone())
+            .collect::<Vec<Root>>()
+            .as_slice()
+            .try_into()
+            .unwrap(),
+        ) {
           Some(roots) => {
-            output.extend(roots);
+            output.extend(
+              roots
+                .into_iter()
+                .map(|root| (window[0].0.clone(), root))
+                .collect::<Vec<(Position, Root)>>(),
+            );
             skip_next = N - 1;
           }
           None => output.push(window[0].clone()),
@@ -595,21 +783,9 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
 
   // assemble roots into instructions by computing the value of every node and resolving labels
 
-  fn assert_immediate(immediate: u8, errors: &mut Vec<Error>) -> u8 {
-    match immediate {
-      0b00000000..=0b01111111 => immediate,
-      _ => {
-        errors.push(format!("Invalid immediate operand: {}", immediate));
-        0b00000000
-      }
-    }
-  }
-
   fn eval<'a>(node: &'a Node, labels: &HashMap<Label, u8>, address: u8) -> Result<u8, Label> {
     Ok(match node {
-      Node::LabelRef((scope, name)) => *labels
-        .get(&(*scope, name.clone()))
-        .ok_or((*scope, name.clone()))?,
+      Node::LabelRef(label) => *labels.get(label).ok_or(label.clone())?,
       Node::Immediate(immediate) => *immediate,
       Node::Not(node) => !eval(node, labels, address)?,
       Node::Add(node1, node2) => {
@@ -649,30 +825,24 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
     })
   }
 
-  fn make_push_instruction(immediate: u8, errors: &mut Vec<Error>) -> Vec<Instruction> {
+  fn make_push_instruction(immediate: u8, position: &Position) -> Vec<(Position, Instruction)> {
     // the `Psh` instruction allows us to push arbitrary 7-bit immediates onto the stack.
     // we then optionally use `Neg` and `Inc` to get the ability to push arbitrary 8-bit
     // immediates. we also use `Phn` as a shorthand when possible.
 
     if immediate & 0b11110000 == 0b11110000 {
-      vec![Instruction::Phn(assert_offset(
-        immediate & 0b00001111,
-        errors,
-      ))]
+      vec![(position.clone(), Instruction::Phn(immediate & 0b00001111))]
     } else if immediate == 0b10000000 {
       vec![
-        Instruction::Psh(assert_immediate(0b01111111, errors)),
-        Instruction::Inc,
+        (position.clone(), Instruction::Psh(0b01111111)),
+        (position.clone(), Instruction::Inc),
       ]
     } else {
       match immediate & 0b10000000 {
-        0b00000000 => vec![Instruction::Psh(assert_immediate(
-          immediate & 0b01111111,
-          errors,
-        ))],
+        0b00000000 => vec![(position.clone(), Instruction::Psh(immediate & 0b01111111))],
         0b10000000 => vec![
-          Instruction::Psh(assert_immediate(immediate.wrapping_neg(), errors)),
-          Instruction::Neg,
+          (position.clone(), Instruction::Psh(immediate.wrapping_neg())),
+          (position.clone(), Instruction::Neg),
         ],
         _ => unreachable!(),
       }
@@ -682,48 +852,61 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
   // if every label a node depends on could be resolved, we can replace it with an immediate.
   // if not, assume the worst case and reserve two bytes for pushing an immediate later
 
-  let mut labels: HashMap<Label, u8> = HashMap::new();
-  let mut nodes: HashMap<u8, Node> = HashMap::new();
+  let mut label_definitions: HashMap<Label, u8> = HashMap::new();
+  let mut unevaluated_nodes: HashMap<u8, (Position, Node)> = HashMap::new();
 
   let mut address: u8 = 0;
-  let instructions: Vec<Instruction> = roots
-    .iter()
-    .flat_map(|root| match root {
-      Root::Instruction(instruction) => {
-        let instructions = vec![instruction.clone()];
-        address = address.wrapping_add(instructions.len() as u8);
-        instructions
-      }
-      Root::Node(node) => match eval(node, &labels, address) {
-        Ok(value) => {
-          let instructions = make_push_instruction(value, errors);
+  let instructions: Vec<(Position, Instruction)> = roots
+    .into_iter()
+    .flat_map(|root| {
+      match root.1 {
+        Root::Instruction(instruction) => {
+          let instructions = vec![(root.0, instruction.clone())];
           address = address.wrapping_add(instructions.len() as u8);
           instructions
         }
-        Err(_) => {
-          let instructions = vec![Instruction::Nop, Instruction::Nop];
-          nodes.insert(address, node.clone());
-          address = address.wrapping_add(instructions.len() as u8);
-          instructions
-        }
-      },
-      Root::LabelDef((Some(0), _)) => panic!("Local label has no scope specified"),
-      Root::LabelDef((scope, name)) => {
-        // empty labels are used as an optimization blocker
-        if name != "" {
-          if labels.contains_key(&(*scope, name.clone())) {
-            errors.push(format!(
-              "Label already defined : {}{}",
-              match scope {
-                Some(_) => ".",
-                None => ":",
-              },
-              name,
-            ));
+        Root::Node(node) => match eval(&node, &label_definitions, address) {
+          Ok(value) => {
+            let instructions = make_push_instruction(value, &root.0);
+            address = address.wrapping_add(instructions.len() as u8);
+            instructions
           }
-          labels.insert((*scope, name.clone()), address);
+          Err(_) => {
+            let instructions = vec![
+              (root.0.clone(), Instruction::Nop),
+              (root.0.clone(), Instruction::Nop),
+            ];
+            unevaluated_nodes.insert(address, (root.0, node));
+            address = address.wrapping_add(instructions.len() as u8);
+            instructions
+          }
+        },
+        Root::LabelDef(Label {
+          scope_id: Some(0),
+          identifier: _,
+        }) => panic!("Local label has no scope specified"),
+        Root::LabelDef(label) => {
+          // empty labels are used as an optimization blocker
+          if label.identifier != "" {
+            if label_definitions.contains_key(&label) {
+              errors.push((
+                root.0,
+                Error {
+                  message: format!(
+                    "Label already defined: {}{}",
+                    match label.scope_id {
+                      Some(_) => ".",
+                      None => ":",
+                    },
+                    label.identifier,
+                  ),
+                },
+              ));
+            }
+            label_definitions.insert(label.clone(), address);
+          }
+          vec![]
         }
-        vec![]
       }
     })
     .collect();
@@ -732,26 +915,31 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
 
   let mut instructions = instructions;
 
-  for (address, node) in nodes.iter() {
+  for (address, node) in unevaluated_nodes.iter() {
     let push_instructions = make_push_instruction(
-      match eval(node, &labels, *address) {
+      match eval(&node.1, &label_definitions, *address) {
         Ok(value) => value,
-        Err((scope, name)) => {
-          errors.push(format!(
-            "Label definition not found: {}{}",
-            match scope {
-              Some(_) => ".",
-              None => ":",
+        Err(label) => {
+          errors.push((
+            node.0.clone(),
+            Error {
+              message: format!(
+                "Label definition not found: {}{}",
+                match label.scope_id {
+                  Some(_) => ".",
+                  None => ":",
+                },
+                label.identifier,
+              ),
             },
-            name,
           ));
           0x00
         }
       },
-      errors,
+      &node.0,
     );
-    for (i, instruction) in push_instructions.iter().enumerate() {
-      instructions[*address as usize + i] = instruction.clone();
+    for (index, instruction) in push_instructions.iter().enumerate() {
+      instructions[*address as usize + index] = instruction.clone();
     }
   }
 
@@ -759,7 +947,10 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
 }
 
 #[allow(unused)]
-fn codegen(instructions: Vec<Instruction>, errors: &mut Vec<Error>) -> Vec<u8> {
+fn codegen(
+  instructions: Vec<(Position, Instruction)>,
+  errors: &mut Vec<(Position, Error)>,
+) -> Vec<u8> {
   fn encode_immediate(immediate: u8) -> u8 {
     match immediate {
       0b00000000..=0b01111111 => immediate,
@@ -788,7 +979,7 @@ fn codegen(instructions: Vec<Instruction>, errors: &mut Vec<Error>) -> Vec<u8> {
 
   let bytes: Vec<u8> = instructions
     .into_iter()
-    .map(|instruction| match instruction {
+    .map(|instruction| match instruction.1 {
       Instruction::Psh(immediate) => 0b00000000 | encode_immediate(immediate),
       Instruction::Phn(immediate) => 0b11110000 | encode_offset(immediate),
       Instruction::Ldo(offset) => 0b11000000 | encode_offset(offset),

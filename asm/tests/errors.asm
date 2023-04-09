@@ -10,3 +10,4 @@ add3
 :label
 %macro
 foobar
+dup: dup:
