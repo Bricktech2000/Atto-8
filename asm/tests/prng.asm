@@ -1,5 +1,3 @@
-# clear; cargo run --bin asm asm/tests/prng.asm emu/tests/prng.bin && cargo run --bin emu emu/tests/prng.bin
-
 @../../lib/utils/core.asm
 @../../lib/utils/math.asm
 @../../lib/utils/text.asm

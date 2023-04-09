@@ -1,5 +1,3 @@
-# clear; cargo run --bin asm asm/tests/game\ of\ life.asm emu/tests/game\ of\ life.bin && cargo run --bin emu emu/tests/game\ of\ life.bin        
-
 # to count neighbours, front buffer is read from and back buffer is written to.
 # back buffer is copied to front buffer at the end of each iteration.
 #

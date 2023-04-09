@@ -1,5 +1,3 @@
-# clear; cargo run --bin asm asm/tests/counter.asm emu/tests/counter.bin && cargo run --bin emu emu/tests/counter.bin
-
 @../../lib/utils/core.asm
 @../../lib/utils/text.asm
 @../../lib/microcomputer/utils.asm

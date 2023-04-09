@@ -1,5 +1,3 @@
-# clear; cargo run --bin asm asm/tests/pong.asm emu/tests/pong.bin && cargo run --bin emu emu/tests/pong.bin
-
 @../../lib/utils/core.asm
 @../../lib/utils/pixel.asm
 @../../lib/microcomputer/utils.asm

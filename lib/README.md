@@ -1,6 +1,6 @@
 # Lib
 
-Standard library for Atto-8 microcomputer
+Assembly standard library for Atto-8 microcomputer
 
 ## Overview
 

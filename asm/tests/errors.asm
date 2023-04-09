@@ -1,5 +1,3 @@
-# clear; cargo run --bin asm asm/tests/errors.asm emu/tests/errors.bin && cargo run --bin emu emu/errors.bin  
-
 nop
 
 main%

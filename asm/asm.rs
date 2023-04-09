@@ -621,15 +621,27 @@ fn assemble(tokens: Vec<Token>, entry_point: &str, errors: &mut Vec<Error>) -> V
         eval(node2, labels, address)?.wrapping_sub(eval(node1, labels, address)?)
       }
       Node::Shf(node1, node2) => {
-        // TODO: negative shifts
-        let shifted =
-          (eval(node2, labels, address)? as u16) << eval(node1, labels, address)? as u16;
+        let a = eval(node1, labels, address)? as u16;
+        let b = eval(node2, labels, address)? as u16;
+
+        let shifted = if a as i8 >= 0 {
+          (b as u16).wrapping_shl(a as u32)
+        } else {
+          (b as u16).wrapping_shr(a.wrapping_neg() as u32)
+        } as u16;
+
         shifted as u8
       }
       Node::Rot(node1, node2) => {
-        // TODO: negative rotations
-        let shifted =
-          (eval(node2, labels, address)? as u16) << eval(node1, labels, address)? as u16;
+        let a = eval(node1, labels, address)? as u16;
+        let b = eval(node2, labels, address)? as u16;
+
+        let shifted = if a as i8 >= 0 {
+          (b as u16).wrapping_shl(a as u32)
+        } else {
+          (b as u16).wrapping_shr(a.wrapping_neg() as u32)
+        } as u16;
+
         (shifted & 0xFF) as u8 | (shifted >> 8) as u8
       }
       Node::Orr(node1, node2) => eval(node2, labels, address)? | eval(node1, labels, address)?,

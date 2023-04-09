@@ -7,7 +7,6 @@ The Atto-8 microcomputer is a minimalist computer based on the Atto-8 microproce
 ## Features
 
 - 16x16 pixel display
-- #todo Hz clock
 - 256 bytes of RAM
 - two 4-button controllers
 

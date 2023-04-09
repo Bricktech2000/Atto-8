@@ -1,5 +1,3 @@
-# clear; cargo run --bin asm asm/tests/mushroom.asm emu/tests/mushroom.bin && cargo run --bin emu emu/tests/mushroom.bin      
-
 @../../lib/utils/core.asm
 
 main%

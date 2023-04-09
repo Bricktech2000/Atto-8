@@ -171,9 +171,9 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
                 let b = memory[size_pointer as usize];
 
                 let shifted = if a as i8 >= 0 {
-                  (b as u16) << a as u16
+                  (b as u16).wrapping_shl(a as u32)
                 } else {
-                  (b as u16) >> a.wrapping_neg() as u16
+                  (b as u16).wrapping_shr(a.wrapping_neg() as u32)
                 } | carry_flag as u16;
 
                 memory[size_pointer as usize] = shifted as u8;
@@ -193,7 +193,6 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
                   (b as u16).wrapping_shr(a.wrapping_neg() as u32)
                 };
 
-                // TODO: use carry flag
                 memory[size_pointer as usize] = (shifted & 0xFF) as u8 | (shifted >> 8) as u8;
                 carry_flag = shifted > 0xFF;
               }

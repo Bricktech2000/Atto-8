@@ -2,33 +2,31 @@
 
 A minimalist 8-bit microcomputer with stack-based microprocessor
 
-## Work in Progress
+## Repository Structure
 
-This is a work in progress. See [/spec/](./spec/) for more information.
+- [/spec/](./spec/) &mdash; Specification for Atto-8 microprocessor and microcomputer
+- [/lib/](./lib/) &mdash; Assembly standard library for Atto-8 microcomputer
+- [/enc/](./enc/) &mdash; Hex-to-machine-code encoder for Atto-8 microprocessor
+- [/asm/](./asm/) &mdash; Optimizing assembler for Atto-8 microprocessor
+- [/emu/](./emu/) &mdash; High-level emulator for Atto-8 microcomputer
 
-## TODOs
+## Project Status
 
-potential improvements:
+This project is a work in progress. Try it out by running any of the following commands:
 
-- [x] create "carryful" and "carryless" instruction variants (adc, sbc, shl, shr...)
-- [x] add new useful instructions (sta, lda, sto, ldo...)
-- [x] merge rol with ror and shl with shr? (replace with `xXX rot` and `xXX shf`)
-- [x] `dup` VS `ld0`, `adc` VS `ad0`, `rot` VS `sh0`
-- [ ] use carry with `inc` and `dec`?
-- [x] rotate without carry?
-- [x] add macros and labels to IS?
-- [ ] come up with microcode
-- [ ] handle invalid instructions?
-- [x] fix `adc` in asm
-- [x] add `neg` to asm optimization
-- [x] fix `x80` push instruction and opt with `xFX`
-- [x] add input capabilities to computer
+```bash
+# finished programs
+cargo run --bin asm asm/tests/prng.asm emu/tests/prng.bin && cargo run --bin emu emu/tests/prng.bin
+cargo run --bin asm asm/tests/draw.asm emu/tests/draw.bin && cargo run --bin emu emu/tests/draw.bin
+cargo run --bin asm asm/tests/counter.asm emu/tests/counter.bin && cargo run --bin emu emu/tests/counter.bin
+cargo run --bin asm asm/tests/mushroom.asm emu/tests/mushroom.bin && cargo run --bin emu emu/tests/mushroom.bin
+cargo run --bin asm asm/tests/game\ of\ life.asm emu/tests/game\ of\ life.bin && cargo run --bin emu emu/tests/game\ of\ life.bin
+cargo run --bin asm asm/tests/this\ is\ a\ test.asm emu/tests/this\ is\ a\ test.bin && cargo run --bin emu emu/tests/this\ is\ a\ test.bin
 
-constituents:
+# feature tests
+cargo run --bin asm asm/tests/errors.asm emu/tests/errors.bin && cargo run --bin emu emu/errors.bin
+cargo run --bin asm asm/tests/optimization.asm emu/tests/optimization.bin && cargo run --bin emu emu/tests/optimization.bin
 
-- assembler
-- emulator
-- encoder
-- microcode
-- schematics
-- circuits
+# work in progress
+cargo run --bin asm asm/tests/pong.asm emu/tests/pong.bin && cargo run --bin emu emu/tests/pong.bin
+```

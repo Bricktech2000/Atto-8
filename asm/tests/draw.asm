@@ -1,5 +1,3 @@
-# clear; cargo run --bin asm asm/tests/draw.asm emu/tests/draw.bin && cargo run --bin emu emu/tests/draw.bin
-
 @../../lib/utils/core.asm
 @../../lib/utils/pixel.asm
 @../../lib/microcomputer/utils.asm
