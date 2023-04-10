@@ -1,26 +1,38 @@
 @../../lib/utils/core.asm
 @../../lib/utils/math.asm
 @../../lib/utils/text.asm
+@../../lib/utils/memcpy.asm
 @../../lib/microcomputer/utils.asm
+@../../lib/microcomputer/pause.asm
+@../../lib/microcomputer/hex_chars.asm
 @../../lib/microcomputer/print_byte.asm
 
 main!
-!front_buffer !alloc_buffer
-!reset_input
+  !front_buffer !alloc_buffer
+  !reset_input
 
-xF0 x0F sta
-xF1 xE0 sta
+  !display_data_len :display_data !front_buffer :memcpy !call
 
-loop:
-x05 :prng !call :print_byte !call
-wait: !input_buffer lda buf pop :wait !bcs
-!reset_input
-:loop sti
+  loop:
+    x13 :prng !call :print_byte !call
+    x12 :prng !call :print_byte !call
+    !pause !reset_input
+  :loop sti
 
-!prng_minimal
+  display_data:
+    # dEE dEC dEC dAA d8A dAE # PRNG
+    dE4 dEC dCE dAA dAA dAC # RAND
+    d00 d00 dFF dFF # underline
+    # d00 d00 d00 d00 d00 d00 # empty lines
+    # dEA d00 dA4 d00 dEA d00 # 0x
+  display_data_end:
 
-!nibble_addr
-!load_nibble
-!store_nibble
-!print_char
-!print_byte
+  !prng_minimal
+
+  !memcpy
+  !nibble_addr
+  !load_nibble
+  !hex_chars_minimal
+  !print_byte_minimal
+
+display_data_len! :display_data_end :display_data sub

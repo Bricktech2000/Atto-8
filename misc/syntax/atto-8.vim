@@ -13,9 +13,9 @@ syntax keyword atto8Todo TODO FIXME XXX NOTE contained
 highlight default link atto8Instruction Keyword
 highlight default link atto8XXX Number
 highlight default link atto8DDD Constant
-highlight default link atto8MacroRef Identifier
+highlight default link atto8MacroRef Macro
 highlight default link atto8MacroDef Macro
-highlight default link atto8LabelRef Identifier
+highlight default link atto8LabelRef Label
 highlight default link atto8LabelDef Label
 highlight default link atto8Include Include
 highlight default link atto8Comment Comment
