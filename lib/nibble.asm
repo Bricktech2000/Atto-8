@@ -38,4 +38,3 @@ load_nibble_minimal!
     swp lda swp !shr x0F and
   st2
   !rt1
-

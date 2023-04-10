@@ -1,6 +1,6 @@
-@../../lib/utils/core.asm
-@../../lib/utils/text.asm
-@../../lib/microcomputer/utils.asm
+@../../lib/core.asm
+@../../lib/text.asm
+@../../lib/microcomputer/core.asm
 @../../lib/microcomputer/hex_chars.asm
 @../../lib/microcomputer/print_byte.asm
 

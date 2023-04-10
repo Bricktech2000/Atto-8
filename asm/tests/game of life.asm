@@ -11,10 +11,10 @@
 # }
 # ```
 
-@../../lib/utils/core.asm
-@../../lib/utils/pixel.asm
-@../../lib/microcomputer/utils.asm
-@../../lib/microcomputer/back_to_front.asm
+@../../lib/bit.asm
+@../../lib/core.asm
+@../../lib/memcpy.asm
+@../../lib/microcomputer/core.asm
 
 main!
   !back_buffer !alloc_buffer
@@ -25,17 +25,26 @@ main!
   # blinker
   # !back_buffer x0C add x07 sta
   # glider
-  !back_buffer x08 add x07 sta
-  !back_buffer x0A add x01 sta
-  !back_buffer x0C add x02 sta
+  # !back_buffer x08 add x07 sta
+  # !back_buffer x0A add x01 sta
+  # !back_buffer x0C add x02 sta
   # r-pentomino
   # !back_buffer x0B add x06 sta
   # !back_buffer x0D add x0C sta
   # !back_buffer x0F add x04 sta
+  # lightweight spaceship
+  # !back_buffer x0B add x09 sta
+  # !back_buffer x0D add x10 sta
+  # !back_buffer x0F add x11 sta
+  # !back_buffer x11 add x1E sta
+  # name TODO
+  # !back_buffer x0C add x1F sta
+  # !back_buffer x0E add x21 sta
+  # !back_buffer x10 add x1F sta
 
   loop:
-    # copy back buffer to front buffer
-    :back_to_front !call
+    # copy back buffer to front buffer.
+    !front_buffer !back_buffer sub !back_buffer !front_buffer :memcpy !call
     # loop through every cell
     x00 for_xy: dec
       x00 # allocate neighbour count
@@ -59,7 +68,31 @@ main!
     buf :for_xy !bcc pop
   :loop sti
 
-  !back_to_front
+  !memcpy
   !bit_addr
   !load_bit
   !store_bit
+
+  # pattern that turns into pulsar
+  d00 d00 d00 d00 d00 d00 d00 d00
+  d00 d00 d00 d00 d00 d00 d00 d00
+  d00 d00 d00 d00 d00 d00 d00 d00
+  d00 d00 d00 d00 d00 d00 d00 d00
+  d07 dC0 d08 d40 d07 dC0
+
+  # spaceship
+  # d00 d00 d00 d00 d00 d00 d00 d00
+  # d00 d00 d00 d00 d00 d00 d00 d00
+  # d00 d00 d00 d00 d00 d00 d00 d00
+  # d06 d60
+  # d01 d80
+  # d01 d80
+  # d0A d50
+  # d08 d10
+  # d00 d00
+  # d08 d10
+  # d06 d60
+  # d03 dC0
+  # d00 d00
+  # d01 d80
+  # d01 d80

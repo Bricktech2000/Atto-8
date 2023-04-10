@@ -1,4 +1,4 @@
-@../../lib/utils/core.asm
+@../../lib/core.asm
 
 main! !dbg
   x4F x06 add

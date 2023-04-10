@@ -1,4 +1,4 @@
-@../../lib/utils/core.asm
+@../../lib/core.asm
 
 main!
   xF0 x0F
