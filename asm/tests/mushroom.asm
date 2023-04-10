@@ -1,20 +1,23 @@
-@../../lib/core.asm
+@ ../../lib/core.asm
+@ ../../lib/microcomputer/core.asm
 
 main!
-  xF0 x0F
-  x08 x10
-  x04 x20
-  x44 x22
-  x4E x72
-  xF1 xCF
-  x0D xE0
-  x9F xE7
-  xDF xCF
-  xCD x8F
-  xC1 x8F
-  x9E x67
-  x3E x70
-  x7C x38
-  x78 x18
-  xE0 x07
-  !hlt
+  pop !hlt
+
+  !front_buffer @org
+  d07 dE0
+  d18 d78
+  d38 d7C
+  d70 d3E
+  d67 d9E
+  d8F dC1
+  d8F dCD
+  dCF dDF
+  dE7 d9F
+  dE0 d0D
+  dCF dF1
+  d72 d4E
+  d22 d44
+  d20 d04
+  d10 d08
+  d0F dF0

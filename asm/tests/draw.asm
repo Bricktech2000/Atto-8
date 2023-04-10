@@ -1,6 +1,6 @@
-@../../lib/bit.asm
-@../../lib/core.asm
-@../../lib/microcomputer/core.asm
+@ ../../lib/bit.asm
+@ ../../lib/core.asm
+@ ../../lib/microcomputer/core.asm
 
 main!
   !front_buffer !alloc_buffer

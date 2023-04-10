@@ -11,36 +11,13 @@
 # }
 # ```
 
-@../../lib/bit.asm
-@../../lib/core.asm
-@../../lib/memcpy.asm
-@../../lib/microcomputer/core.asm
+@ ../../lib/bit.asm
+@ ../../lib/core.asm
+@ ../../lib/memcpy.asm
+@ ../../lib/microcomputer/core.asm
 
 main!
   !back_buffer !alloc_buffer
-
-  # diehard (advanced 2 generations)
-  # !back_buffer x09 add xC2 sta
-  # !back_buffer x0B add xC7 sta
-  # blinker
-  # !back_buffer x0C add x07 sta
-  # glider
-  # !back_buffer x08 add x07 sta
-  # !back_buffer x0A add x01 sta
-  # !back_buffer x0C add x02 sta
-  # r-pentomino
-  # !back_buffer x0B add x06 sta
-  # !back_buffer x0D add x0C sta
-  # !back_buffer x0F add x04 sta
-  # lightweight spaceship
-  # !back_buffer x0B add x09 sta
-  # !back_buffer x0D add x10 sta
-  # !back_buffer x0F add x11 sta
-  # !back_buffer x11 add x1E sta
-  # name TODO
-  # !back_buffer x0C add x1F sta
-  # !back_buffer x0E add x21 sta
-  # !back_buffer x10 add x1F sta
 
   loop:
     # copy back buffer to front buffer.
@@ -73,26 +50,70 @@ main!
   !load_bit
   !store_bit
 
-  # pattern that turns into pulsar
-  d00 d00 d00 d00 d00 d00 d00 d00
-  d00 d00 d00 d00 d00 d00 d00 d00
-  d00 d00 d00 d00 d00 d00 d00 d00
-  d00 d00 d00 d00 d00 d00 d00 d00
-  d07 dC0 d08 d40 d07 dC0
+  # !glider
+  # !blinker
+  # !r-pentomino
+  # !lightweight_spaceship
+  !heavyweight_spaceship
+  # !copperhead
+  # !diehard
+  # !compact_pulsar
 
-  # spaceship
-  # d00 d00 d00 d00 d00 d00 d00 d00
-  # d00 d00 d00 d00 d00 d00 d00 d00
-  # d00 d00 d00 d00 d00 d00 d00 d00
-  # d06 d60
-  # d01 d80
-  # d01 d80
-  # d0A d50
-  # d08 d10
-  # d00 d00
-  # d08 d10
-  # d06 d60
-  # d03 dC0
-  # d00 d00
-  # d01 d80
-  # d01 d80
+
+blinker!
+  !back_buffer x0C add @org
+  d07 d00
+glider!
+  !back_buffer x0C add @org
+  d07 d00
+  d01 d00
+  d02 d00
+
+diehard!
+  # already advanced 2 generations
+  !back_buffer x0C add @org
+  d30 d80
+  d31 dC0
+
+r-pentomino!
+  !back_buffer x0C add @org
+  d06 d00
+  d0C d00
+  d04 d00
+
+lightweight_spaceship!
+  !back_buffer x0A add @org
+  d00 d09
+  d00 d10
+  d00 d11
+  d00 d1E
+
+heavyweight_spaceship!
+  !back_buffer x0A add @org
+  d00 d0C
+  d00 d21
+  d00 d40
+  d00 d41
+  d00 d7E
+
+compact_pulsar!
+  # pattern that turns into a pulsar
+  !back_buffer x0C add @org
+  d07 dC0
+  d08 d40
+  d07 dC0
+
+copperhead!
+  !back_buffer x08 add @org
+  d06 d60
+  d01 d80
+  d01 d80
+  d0A d50
+  d08 d10
+  d00 d00
+  d08 d10
+  d06 d60
+  d03 dC0
+  d00 d00
+  d01 d80
+  d01 d80

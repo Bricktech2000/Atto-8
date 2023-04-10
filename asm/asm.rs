@@ -17,9 +17,6 @@ fn main() {
 
   match errors[..] {
     [] => {
-      let mut bytes = bytes;
-      bytes.extend(vec![0; 0x100 - bytes.len()]);
-
       let output = &args[2];
       std::fs::write(output, bytes).expect("Unable to write file");
 
@@ -62,6 +59,7 @@ enum Token {
   LabelRef(Label),
   MacroDef(String),
   MacroRef(String),
+  Org,
   DDD(u8),
   XXX(u8),
   LdO(u8),
@@ -174,14 +172,14 @@ fn preprocess(filename: &str, errors: &mut Vec<(Position, Error)>, scope: &str) 
   let source: String = source
     .lines()
     .map(|line| line.split("#").next().unwrap())
-    .map(|line| match line.find('@') {
+    .map(|line| match line.find("@ ") {
       Some(i) => {
         line[..i].to_owned()
           + preprocess(
             Path::new(filename)
               .parent()
               .unwrap()
-              .join(&line[i..][1..])
+              .join(&line[i..][2..])
               .to_str()
               .unwrap(),
             errors,
@@ -266,6 +264,7 @@ fn tokenize(
           scope_id: Some(0),
           identifier: token[1..].to_string(),
         }),
+        "@org" => Token::Org,
         _ if token.ends_with("!") => Token::MacroDef(token[..token.len() - 1].to_string()),
         _ if token.starts_with("!") => Token::MacroRef(token[1..].to_string()),
         "add" => Token::Add,
@@ -491,6 +490,7 @@ fn assemble(
     Instruction(Instruction),
     Node(Node),
     LabelDef(Label),
+    Org(Option<Node>),
   }
 
   #[derive(Clone, Eq, PartialEq)]
@@ -517,6 +517,7 @@ fn assemble(
         Token::LabelRef(label) => Root::Node(Node::LabelRef(label)),
         Token::MacroDef(_) => panic!("Macro definition found in intermediate representation"),
         Token::MacroRef(_) => panic!("Macro reference found in intermediate representation"),
+        Token::Org => Root::Org(None),
         Token::XXX(immediate) => Root::Node(Node::Immediate(assert_immediate(
           immediate, errors, &position,
         ))),
@@ -658,6 +659,7 @@ fn assemble(
 
     roots =
       match_replace(&roots, |window| match window {
+        [Root::Node(node), Root::Org(None)] => Some(vec![Root::Org(Some(node.clone()))]),
         [Root::Node(node), Root::Instruction(Instruction::Ldo(0x00))] => {
           Some(vec![Root::Node(node.clone()), Root::Node(node.clone())])
         }
@@ -783,20 +785,16 @@ fn assemble(
 
   // assemble roots into instructions by computing the value of every node and resolving labels
 
-  fn eval<'a>(node: &'a Node, labels: &HashMap<Label, u8>, address: u8) -> Result<u8, Label> {
+  fn eval<'a>(node: &'a Node, labels: &HashMap<Label, u8>) -> Result<u8, Label> {
     Ok(match node {
       Node::LabelRef(label) => *labels.get(label).ok_or(label.clone())?,
       Node::Immediate(immediate) => *immediate,
-      Node::Not(node) => !eval(node, labels, address)?,
-      Node::Add(node1, node2) => {
-        eval(node2, labels, address)?.wrapping_add(eval(node1, labels, address)?)
-      }
-      Node::Sub(node1, node2) => {
-        eval(node2, labels, address)?.wrapping_sub(eval(node1, labels, address)?)
-      }
+      Node::Not(node) => !eval(node, labels)?,
+      Node::Add(node1, node2) => eval(node2, labels)?.wrapping_add(eval(node1, labels)?),
+      Node::Sub(node1, node2) => eval(node2, labels)?.wrapping_sub(eval(node1, labels)?),
       Node::Shf(node1, node2) => {
-        let a = eval(node1, labels, address)? as u16;
-        let b = eval(node2, labels, address)? as u16;
+        let a = eval(node1, labels)? as u16;
+        let b = eval(node2, labels)? as u16;
 
         let shifted = if a as i8 >= 0 {
           (b as u16).wrapping_shl(a as u32)
@@ -807,8 +805,8 @@ fn assemble(
         shifted as u8
       }
       Node::Rot(node1, node2) => {
-        let a = eval(node1, labels, address)? as u16;
-        let b = eval(node2, labels, address)? as u16;
+        let a = eval(node1, labels)? as u16;
+        let b = eval(node2, labels)? as u16;
 
         let shifted = if a as i8 >= 0 {
           (b as u16).wrapping_shl(a as u32)
@@ -818,9 +816,9 @@ fn assemble(
 
         (shifted & 0xFF) as u8 | (shifted >> 8) as u8
       }
-      Node::Orr(node1, node2) => eval(node2, labels, address)? | eval(node1, labels, address)?,
-      Node::And(node1, node2) => eval(node2, labels, address)? & eval(node1, labels, address)?,
-      Node::Xor(node1, node2) => eval(node2, labels, address)? ^ eval(node1, labels, address)?,
+      Node::Orr(node1, node2) => eval(node2, labels)? | eval(node1, labels)?,
+      Node::And(node1, node2) => eval(node2, labels)? & eval(node1, labels)?,
+      Node::Xor(node1, node2) => eval(node2, labels)? ^ eval(node1, labels)?,
       Node::Xnd(_, _) => 0,
     })
   }
@@ -855,20 +853,21 @@ fn assemble(
   let mut label_definitions: HashMap<Label, u8> = HashMap::new();
   let mut unevaluated_nodes: HashMap<u8, (Position, Node)> = HashMap::new();
 
-  let mut address: u8 = 0;
+  let mut location_counter: u8 = 0;
   let instructions: Vec<(Position, Instruction)> = roots
     .into_iter()
     .flat_map(|root| {
       match root.1 {
         Root::Instruction(instruction) => {
           let instructions = vec![(root.0, instruction.clone())];
-          address = address.wrapping_add(instructions.len() as u8);
+          location_counter = location_counter.wrapping_add(instructions.len() as u8);
           instructions
         }
-        Root::Node(node) => match eval(&node, &label_definitions, address) {
+
+        Root::Node(node) => match eval(&node, &label_definitions) {
           Ok(value) => {
             let instructions = make_push_instruction(value, &root.0);
-            address = address.wrapping_add(instructions.len() as u8);
+            location_counter = location_counter.wrapping_add(instructions.len() as u8);
             instructions
           }
           Err(_) => {
@@ -876,15 +875,17 @@ fn assemble(
               (root.0.clone(), Instruction::Nop),
               (root.0.clone(), Instruction::Nop),
             ];
-            unevaluated_nodes.insert(address, (root.0, node));
-            address = address.wrapping_add(instructions.len() as u8);
+            unevaluated_nodes.insert(location_counter, (root.0, node));
+            location_counter = location_counter.wrapping_add(instructions.len() as u8);
             instructions
           }
         },
+
         Root::LabelDef(Label {
           scope_id: Some(0),
           identifier: _,
         }) => panic!("Local label has no scope specified"),
+
         Root::LabelDef(label) => {
           // empty labels are used as an optimization blocker
           if label.identifier != "" {
@@ -903,8 +904,55 @@ fn assemble(
                 },
               ));
             }
-            label_definitions.insert(label.clone(), address);
+            label_definitions.insert(label.clone(), location_counter);
           }
+          vec![]
+        }
+
+        Root::Org(Some(node)) => match eval(&node, &label_definitions) {
+          Ok(value) => {
+            if value > location_counter {
+              let difference = value - location_counter;
+              location_counter = location_counter.wrapping_sub(difference);
+              vec![(root.0, Instruction::Raw(0x00)); difference as usize]
+            } else {
+              errors.push((
+                root.0,
+                Error {
+                  message: format!(
+                    "Origin cannot move location counter from: {} to: {}",
+                    location_counter, value
+                  ),
+                },
+              ));
+              vec![]
+            }
+          }
+          Err(label) => {
+            errors.push((
+              root.0,
+              Error {
+                message: format!(
+                  "Origin argument contains unresolved label: {}{}",
+                  match label.scope_id {
+                    Some(_) => ".",
+                    None => ":",
+                  },
+                  label.identifier,
+                ),
+              },
+            ));
+            vec![]
+          }
+        },
+
+        Root::Org(None) => {
+          errors.push((
+            root.0,
+            Error {
+              message: format!("Origin argument is not a constant expression"),
+            },
+          ));
           vec![]
         }
       }
@@ -915,9 +963,9 @@ fn assemble(
 
   let mut instructions = instructions;
 
-  for (address, node) in unevaluated_nodes.iter() {
+  for (location_counter, node) in unevaluated_nodes.iter() {
     let push_instructions = make_push_instruction(
-      match eval(&node.1, &label_definitions, *address) {
+      match eval(&node.1, &label_definitions) {
         Ok(value) => value,
         Err(label) => {
           errors.push((
@@ -939,7 +987,7 @@ fn assemble(
       &node.0,
     );
     for (index, instruction) in push_instructions.iter().enumerate() {
-      instructions[*address as usize + index] = instruction.clone();
+      instructions[*location_counter as usize + index] = instruction.clone();
     }
   }
 
@@ -1016,6 +1064,22 @@ fn codegen(
       Instruction::Raw(data) => data,
     })
     .collect();
+
+  let mut bytes = bytes;
+
+  if bytes.len() > 0x100 {
+    errors.push((
+      Position {
+        scope: "[codegen]".to_string(),
+        index: 0,
+      },
+      Error {
+        message: format!("Program exceeds available memory"),
+      },
+    ));
+  } else {
+    bytes.extend(vec![0x00; 0x100 - bytes.len()]);
+  }
 
   bytes
 }

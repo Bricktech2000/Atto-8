@@ -1,8 +1,8 @@
-@../../lib/core.asm
-@../../lib/memcpy.asm
-@../../lib/memset.asm
-@../../lib/microcomputer/pause.asm
-@../../lib/microcomputer/core.asm
+@ ../../lib/core.asm
+@ ../../lib/memcpy.asm
+@ ../../lib/memset.asm
+@ ../../lib/microcomputer/pause.asm
+@ ../../lib/microcomputer/core.asm
 
 main!
   !front_buffer !alloc_buffer

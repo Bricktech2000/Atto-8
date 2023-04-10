@@ -1,7 +1,7 @@
 nop
 
 main!
-  @foo.asm
+  @ foo.asm
   dZZ
   xF00
   x

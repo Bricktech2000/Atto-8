@@ -1,11 +1,11 @@
-@../../lib/core.asm
-@../../lib/prng.asm
-@../../lib/nibble.asm
-@../../lib/memcpy.asm
-@../../lib/microcomputer/core.asm
-@../../lib/microcomputer/pause.asm
-@../../lib/microcomputer/hex_chars.asm
-@../../lib/microcomputer/print_byte.asm
+@ ../../lib/core.asm
+@ ../../lib/prng.asm
+@ ../../lib/nibble.asm
+@ ../../lib/memcpy.asm
+@ ../../lib/microcomputer/core.asm
+@ ../../lib/microcomputer/pause.asm
+@ ../../lib/microcomputer/hex_chars.asm
+@ ../../lib/microcomputer/print_byte.asm
 
 main!
   !front_buffer !alloc_buffer

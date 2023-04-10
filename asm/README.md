@@ -18,10 +18,10 @@ Labels are global by default; local labels are local to a macro. Macros are glob
 
 ## Preprocessing
 
-| Pattern   | Operation                                    |
-| --------- | -------------------------------------------- |
-| `/#.*/`   | Textually replace with `""`                  |
-| `/@(.*)/` | Textually replace with contents of file `$1` |
+| Pattern      | Operation                                    |
+| ------------ | -------------------------------------------- |
+| `/#( .+)?$/` | Textually replace with `""`                  |
+| `/@( .+)?$/` | Textually replace with contents of file `$1` |
 
 ## Tokens
 
@@ -33,6 +33,7 @@ Labels are global by default; local labels are local to a macro. Macros are glob
 | `.LABEL` | Push address of local label `LABEL`               |
 | `MACRO!` | Define start of macro `MACRO`                     |
 | `!MACRO` | Token-wise replace with contents of macro `MACRO` |
+| `@org`   | Set location counter to preceding expression      |
 | `dDD`    | Insert `DD` in output binary at current address   |
 | `xXX`    | Push `XX` through `psh` and `phn`                 |
 | `ldO`    | Instruction `ldo O`                               |

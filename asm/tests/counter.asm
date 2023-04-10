@@ -1,8 +1,8 @@
-@../../lib/core.asm
-@../../lib/text.asm
-@../../lib/microcomputer/core.asm
-@../../lib/microcomputer/hex_chars.asm
-@../../lib/microcomputer/print_byte.asm
+@ ../../lib/core.asm
+@ ../../lib/text.asm
+@ ../../lib/microcomputer/core.asm
+@ ../../lib/microcomputer/hex_chars.asm
+@ ../../lib/microcomputer/print_byte.asm
 
 main!
   !front_buffer !alloc_buffer
