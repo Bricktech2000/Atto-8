@@ -31,8 +31,8 @@ Labels are global by default; local labels are local to a macro. Macros are glob
 | `LABEL.` | Define local label `LABEL` at current address     |
 | `:LABEL` | Push address of label `LABEL`                     |
 | `.LABEL` | Push address of local label `LABEL`               |
-| `MACRO%` | Define start of macro `MACRO`                     |
-| `%MACRO` | Token-wise replace with contents of macro `MACRO` |
+| `MACRO!` | Define start of macro `MACRO`                     |
+| `!MACRO` | Token-wise replace with contents of macro `MACRO` |
 | `dDD`    | Insert `DD` in output binary at current address   |
 | `xXX`    | Push `XX` through `psh` and `phn`                 |
 | `ldO`    | Instruction `ldo O`                               |

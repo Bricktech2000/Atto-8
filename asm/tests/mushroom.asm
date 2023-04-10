@@ -1,6 +1,6 @@
 @../../lib/utils/core.asm
 
-main%
+main!
 xF0 x0F
 x08 x10
 x04 x20
@@ -17,4 +17,4 @@ x3E x70
 x7C x38
 x78 x18
 xE0 x07
-%hlt
+!hlt

@@ -1,4 +1,4 @@
-![Atto-8 Banner](banner.png)
+![Atto-8 Banner](misc/banner.png)
 
 # Atto-8
 
@@ -11,6 +11,7 @@ A minimalist 8-bit microcomputer with stack-based microprocessor
 - [/enc/](./enc/) &mdash; Hex-to-machine-code encoder for Atto-8 microprocessor
 - [/asm/](./asm/) &mdash; Optimizing assembler for Atto-8 microprocessor
 - [/emu/](./emu/) &mdash; High-level emulator for Atto-8 microcomputer
+- [/misc/](./misc/) &mdash; Miscellaneous files
 
 ## Project Status
 

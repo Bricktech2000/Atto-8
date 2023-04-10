@@ -1,6 +1,6 @@
 @../../lib/utils/core.asm
 
-main% %dbg
+main! !dbg
 
 x4F x06 add
 
@@ -10,15 +10,15 @@ xF5 x5F and
 
 xAB neg
 
-ld0 %abs
+ld0 !abs
 
-xAB %abs
+xAB !abs
 
 xAA x01 rot
 
-x54 :function %call
+x54 :function !call
 
-%hlt
+!hlt
 
 function:
-swp inc swp %rt0
+swp inc swp !rt0

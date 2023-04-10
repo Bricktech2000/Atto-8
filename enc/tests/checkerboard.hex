@@ -2,9 +2,9 @@
 
 # start:
 # x55 dup dup not dup
-# lds %display_buffer sub pop :start :stop iff sti
+# lds !display_buffer sub pop :start :stop iff sti
 # stop: hlt
-# display_buffer% xE0
+# display_buffer! xE0
 
 55 80 80 CC 80
 BC 1F CC C4 B1 00 0E CE BB

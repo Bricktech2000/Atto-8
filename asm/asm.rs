@@ -266,8 +266,8 @@ fn tokenize(
           scope_id: Some(0),
           identifier: token[1..].to_string(),
         }),
-        _ if token.ends_with("%") => Token::MacroDef(token[..token.len() - 1].to_string()),
-        _ if token.starts_with("%") => Token::MacroRef(token[1..].to_string()),
+        _ if token.ends_with("!") => Token::MacroDef(token[..token.len() - 1].to_string()),
+        _ if token.starts_with("!") => Token::MacroRef(token[1..].to_string()),
         "add" => Token::Add,
         "adc" => Token::Adc,
         _ if token.starts_with("add") => Token::AddS(hex(&token[3..], errors, &position)),
@@ -352,7 +352,7 @@ fn assemble(
       _ => match macro_definitions.get_mut(&current_macro_name) {
         Some(macro_tokens) => macro_tokens.push((
           Position {
-            scope: format!("%{}", current_macro_name),
+            scope: format!("!{}", current_macro_name),
             index: macro_tokens.len(),
           },
           token.1,
@@ -394,7 +394,7 @@ fn assemble(
               errors.push((
                 token.0.clone(),
                 Error {
-                  message: format!("Macro definition not found: {}{}", "%", name),
+                  message: format!("Macro definition not found: {}{}", "!", name),
                 },
               ));
               vec![]
