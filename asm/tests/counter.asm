@@ -7,12 +7,18 @@
 main!
   !front_buffer !alloc_buffer
 
-  x00 x00 loop:
-    x00 ld2 :print_byte !call
-    x01 ld1 :print_byte !call
-  x00 x01 adc2 adc2 :loop sti
+  x00 x00 x00 x00 x00 x00 x00 x00 loop:
+    x00 ld8 :print_byte !call
+    x01 ld7 :print_byte !call
+    x08 ld6 :print_byte !call
+    x09 ld5 :print_byte !call
+    x10 ld4 :print_byte !call
+    x11 ld3 :print_byte !call
+    x18 ld2 :print_byte !call
+    x19 ld1 :print_byte !call
+  x00 x00 x00 x00 x00 x00 x00 x01
+  adc8 adc8 adc8 adc8 adc8 adc8 adc8 adc8 :loop sti
 
-  !nibble_addr
-  !load_nibble
+  !load_nibble_minimal
   !hex_chars_minimal
   !print_byte_minimal

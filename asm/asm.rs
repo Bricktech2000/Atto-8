@@ -30,7 +30,7 @@ fn main() {
         "{}\n\nAborting.",
         errors
           .iter()
-          .map(|error| format!("{}:{}: {}", error.0.scope, error.0.index, error.1.message))
+          .map(|error| format!("{}#{}  {}", error.0.scope, error.0.index, error.1.message))
           .collect::<Vec<_>>()
           .join("\n")
       );

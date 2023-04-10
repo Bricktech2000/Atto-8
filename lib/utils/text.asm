@@ -29,3 +29,13 @@ store_nibble!
     sta
   # return*
   !rt3
+
+load_nibble_minimal!
+  load_nibble: # nibble = load_nibble(index, buffer)
+    # :load_nibble and :nibble_addr concatenated into a single function
+    ld2 ld2 x01 !shr add
+    ld2 not x01 and x02 shf
+    swp lda swp !shr x0F and
+  st2
+  !rt1
+

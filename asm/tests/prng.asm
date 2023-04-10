@@ -30,8 +30,7 @@ main!
   !prng_minimal
 
   !memcpy
-  !nibble_addr
-  !load_nibble
+  !load_nibble_minimal
   !hex_chars_minimal
   !print_byte_minimal
 
