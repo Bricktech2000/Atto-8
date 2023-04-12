@@ -21,7 +21,7 @@ main!
 
   loop:
     # copy back buffer to front buffer.
-    !front_buffer !back_buffer sub !back_buffer !front_buffer :memcpy !call
+    !front_buffer !back_buffer sub @const !back_buffer !front_buffer :memcpy !call
     # loop through every cell
     x00 for_xy: dec
       x00 # allocate neighbour count
@@ -29,9 +29,10 @@ main!
       # count neighbours
       x02 for_dx: dec
         x20 for_dy: x10 sub
-          # neighbour = (for_xy + for_dx & 0x0F) | (for_xy + for_dy & 0xF0)
+          # neighbour_addr = (for_xy + for_dx) & 0x0F | (for_xy + for_dy) & 0xF0
+          # neighbour_value = load_bit(neighbour_addr, &FRONT_BUFFER)
           !front_buffer ld4 ld3 add x0F and ld5 ld3 add xF0 and orr :load_bit !call
-          # neighbour_count += neighbour
+          # neighbour_count += neighbour_value
           ld3 add st2
         ld0 xF0 xor pop :for_dy !bcc pop
       ld0 xFF xor pop :for_dx !bcc pop
@@ -63,6 +64,7 @@ main!
 blinker!
   !back_buffer x0C add @org
   d07 d00
+
 glider!
   !back_buffer x0C add @org
   d07 d00

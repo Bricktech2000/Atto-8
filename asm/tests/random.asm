@@ -34,4 +34,4 @@ main!
     # dEA d00 dA4 d00 dEA d00 # 0x
   display_data_end:
 
-display_data_len! :display_data_end :display_data sub
+display_data_len! :display_data_end :display_data sub @const

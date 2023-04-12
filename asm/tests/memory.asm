@@ -25,4 +25,4 @@ main!
   !memset
   !memcpy
 
-display_data_len! :display_data_end :display_data sub
+display_data_len! :display_data_end :display_data sub @const

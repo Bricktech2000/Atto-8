@@ -4,7 +4,7 @@ norr! orr not
 nand! and not
 xnorr! xor not
 xnand! xnd not
-abs! ld0 x01 rot x01 and neg swp ld1 add xor
+abs! ld0 x01 rot x01 and neg swp ld1 add xor @const
 
 bcc! .skip iff sti skip.
 bcs! .skip swp iff sti skip.

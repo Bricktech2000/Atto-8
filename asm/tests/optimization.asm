@@ -1,17 +1,12 @@
 @ ../../lib/core.asm
 
-main! !dbg
-  x4F x06 add
-  x50 x05 orr
-  xF5 x5F and
-  xAB neg
-  ld0 !abs
-  xAB !abs
-  xAA x01 rot
-  x54 :function !call
+main!
+  x4F x06 add @const
+  x50 x05 orr @const
+  xF5 x5F and @const
+  xAB neg @const
+  ld0 !abs @const
+  xAB !abs @const
+  xAA x01 rot @const
 
   !hlt
-
-  function:
-    swp inc swp
-  !rt0

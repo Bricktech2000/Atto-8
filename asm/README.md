@@ -20,19 +20,20 @@ Labels are global by default; local labels are local to a macro. Macros are glob
 
 | Pattern      | Operation                                    |
 | ------------ | -------------------------------------------- |
-| `/#( .+)?$/` | Textually replace with `""`                  |
-| `/@( .+)?$/` | Textually replace with contents of file `$1` |
+| `/#( .*)?$/` | Textually replace with `""`                  |
+| `/@( .*)?$/` | Textually replace with contents of file `$1` |
 
 ## Tokens
 
 | Token    | Operation                                         |
 | -------- | ------------------------------------------------- |
-| `LABEL:` | Define label `LABEL` at current address           |
-| `LABEL.` | Define local label `LABEL` at current address     |
-| `:LABEL` | Push address of label `LABEL`                     |
-| `.LABEL` | Push address of local label `LABEL`               |
-| `MACRO!` | Define start of macro `MACRO`                     |
-| `!MACRO` | Token-wise replace with contents of macro `MACRO` |
+| `label:` | Define label `label` at current address           |
+| `label.` | Define local label `label` at current address     |
+| `:label` | Push address of label `label`                     |
+| `.label` | Push address of local label `label`               |
+| `macro!` | Define start of macro `macro`                     |
+| `!macro` | Token-wise replace with contents of macro `macro` |
+| `@const` | Assert that preceeding expression is constant     |
 | `@org`   | Set location counter to preceding expression      |
 | `dDD`    | Insert `DD` in output binary at current address   |
 | `xXX`    | Push `XX` through `psh` and `phn`                 |

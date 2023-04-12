@@ -5,8 +5,15 @@ fn main() {
     std::process::exit(1);
   }
 
-  let memory: Vec<u8> =
-    std::fs::read(&args[1]).expect(format!("Unable to read file: {}", &args[1]).as_str());
+  let filename: &String = &args[1];
+
+  let memory: Vec<u8> = match std::fs::read(filename) {
+    Ok(source) => source,
+    Err(_) => {
+      println!("Error: Unable to read file: {}", filename);
+      std::process::exit(1);
+    }
+  };
 
   match memory.try_into() {
     Ok(slice) => {
