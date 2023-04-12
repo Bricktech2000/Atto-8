@@ -2,12 +2,13 @@
 
 ## Overview
 
-The Atto-8 microcomputer is a minimalist computer based on the Atto-8 microprocessor, as defined in [/spec/microprocessor.md](../spec/microprocessor.md). It equips the processor with memory, a clock, a display, and a pair of D-pad controllers. It is designed to be a simple system that takes full advantage of the Atto-8 microprocessor. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex computers.
+The Atto-8 microcomputer is a minimalist computer based on the Atto-8 microprocessor, as defined in [/spec/microprocessor.md](../spec/microprocessor.md). It equips the processor with a clock, memory, a display, and a pair of D-pad controllers. It is designed to be a simple system that takes full advantage of the Atto-8 microprocessor. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex computers.
 
 ## Features
 
-- 16x16 pixel display
+- 2MHz clock
 - 256 bytes of RAM
+- 16x16 pixel display
 - two D-pad controllers
 
 ## Display

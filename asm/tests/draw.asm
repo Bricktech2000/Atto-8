@@ -1,6 +1,7 @@
 @ ../../lib/bit.asm
 @ ../../lib/core.asm
 @ ../../lib/microcomputer/core.asm
+@ ../../lib/microcomputer/delay.asm
 
 main!
   !front_buffer !alloc_buffer
@@ -31,7 +32,11 @@ main!
     !reset_input
     # pop input
     ignore: pop
+    # sleep
+    x01 :delay_long !call
   :loop sti
 
+  !delay
+  !delay_long
   !bit_addr
   !store_bit

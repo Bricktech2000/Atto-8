@@ -17,7 +17,7 @@ fn main() {
 
   match memory.try_into() {
     Ok(slice) => {
-      emulate(slice, 1000000000);
+      emulate(slice, 2000000);
     }
     Err(_) => {
       println!("Error: Memory image has incorrect size");
@@ -26,7 +26,7 @@ fn main() {
   };
 }
 
-fn emulate(memory: [u8; 0x100], clock: u64) {
+fn emulate(memory: [u8; 0x100], clock: u128) {
   let mut memory = memory.clone();
   let mut stack_pointer: u8 = 0x00; // SP
   let mut instruction_pointer: u8 = 0x00; // IP
@@ -36,6 +36,7 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
   let mut input_flag: bool = false; // whether to read input buffer
   let mut debug_status: String = "Emulating microcomputer...".to_string();
   let mut now = std::time::Instant::now();
+  let start = std::time::Instant::now();
 
   // clear screen
   print!("\x1B[2J");
@@ -43,12 +44,16 @@ fn emulate(memory: [u8; 0x100], clock: u64) {
   // this call will switch termital to raw mode
   let input_channel = spawn_input_channel();
 
-  loop {
+  for i in 0u128.. {
     let instruction: u8 = memory[instruction_pointer as usize];
     instruction_pointer = instruction_pointer.wrapping_add(1);
 
     // roughly 4 clock cycles per instruction
-    std::thread::sleep(std::time::Duration::from_micros(1000000 * 4 / clock));
+    if start.elapsed().as_millis() < i * 1000 * 4 / clock {
+      // assuming instruction emulation is instant, for 1ms to be enough to correct for
+      // the offset, it must be the case that the clock runs at more than 1000Hz
+      std::thread::sleep(std::time::Duration::from_millis(1));
+    }
 
     // only print 30 times per second
     if now.elapsed().as_millis() > 1000 / 30 || debug_flag {
