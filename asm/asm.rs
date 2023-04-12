@@ -106,6 +106,7 @@ enum Token {
   MacroDef(Macro),
   MacroRef(Macro),
   AtConst,
+  AtDyn,
   AtOrg,
   DDD(u8),
   XXX(u8),
@@ -162,6 +163,7 @@ impl std::fmt::Display for Token {
       Token::MacroDef(macro_) => write!(f, "{}", macro_),
       Token::MacroRef(macro_) => write!(f, "{}", macro_),
       Token::AtConst => write!(f, "@const"),
+      Token::AtDyn => write!(f, "@dyn"),
       Token::AtOrg => write!(f, "@org"),
       Token::DDD(n) => write!(f, "d{:02x}", n),
       Token::XXX(n) => write!(f, "x{:02x}", n),
@@ -354,6 +356,7 @@ fn tokenize(source: String, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)>
           identifier: token[1..].to_string(),
         }),
         "@const" => Token::AtConst,
+        "@dyn" => Token::AtDyn,
         "@org" => Token::AtOrg,
         _ if token.ends_with("!") => Token::MacroDef(Macro(token[..token.len() - 1].to_string())),
         _ if token.starts_with("!") => Token::MacroRef(Macro(token[1..].to_string())),
@@ -566,6 +569,7 @@ fn assemble(
     Node(Node),
     LabelDef(Label),
     Const,
+    Dyn(Option<Instruction>),
     Org(Option<Node>),
   }
 
@@ -594,6 +598,7 @@ fn assemble(
         Token::MacroDef(_) => panic!("Macro definition found in intermediate representation"),
         Token::MacroRef(_) => panic!("Macro reference found in intermediate representation"),
         Token::AtConst => Root::Const,
+        Token::AtDyn => Root::Dyn(None),
         Token::AtOrg => Root::Org(None),
         Token::XXX(immediate) => Root::Node(Node::Immediate(assert_immediate(
           immediate, errors, &position,
@@ -724,6 +729,13 @@ fn assemble(
 
   let mut roots = roots;
   let mut last_roots = vec![];
+
+  roots = match_replace(&roots, |window| match window {
+    [Root::Instruction(instruction), Root::Dyn(None)] => {
+      Some(vec![Root::Dyn(Some(instruction.clone()))])
+    }
+    _ => None,
+  });
 
   while roots != last_roots {
     last_roots = roots.clone();
@@ -936,7 +948,7 @@ fn assemble(
     .into_iter()
     .flat_map(|root| {
       match root.1 {
-        Root::Instruction(instruction) => {
+        Root::Instruction(instruction) | Root::Dyn(Some(instruction)) => {
           let instructions = vec![(root.0, instruction)];
           location_counter = location_counter.wrapping_add(instructions.len() as u8);
           instructions
@@ -985,7 +997,7 @@ fn assemble(
               errors.push((
                 root.0,
                 Error(format!(
-                  "Cannot move location counter backward from: {} to: {}",
+                  "Origin cannot move location counter backward from: {} to: {}",
                   location_counter, value
                 )),
               ));
@@ -996,7 +1008,7 @@ fn assemble(
             errors.push((
               root.0,
               Error(format!(
-                "Argument contains currently unresolved label: {}",
+                "Origin argument contains currently unresolved label: {}",
                 label
               )),
             ));
@@ -1008,8 +1020,16 @@ fn assemble(
           errors.push((
             root.0,
             Error(format!(
-              "Argument could not be reduced to constant expression"
+              "Origin or constant argument is not a constant expression"
             )),
+          ));
+          vec![]
+        }
+
+        Root::Dyn(None) => {
+          errors.push((
+            root.0,
+            Error(format!("Dynamic argument is not an instruction")),
           ));
           vec![]
         }

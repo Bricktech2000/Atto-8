@@ -34,6 +34,7 @@ Labels are global by default; local labels are local to a macro. Macros are glob
 | `macro!` | Define start of macro `macro`                     |
 | `!macro` | Token-wise replace with contents of macro `macro` |
 | `@const` | Assert that preceeding expression is constant     |
+| `@dyn`   | Prevent optimization of preceeding instruction    |
 | `@org`   | Set location counter to preceding expression      |
 | `dDD`    | Insert `DD` in output binary at current address   |
 | `xXX`    | Push `XX` through `psh` and `phn`                 |

@@ -6,9 +6,9 @@ xnorr! xor not
 xnand! xnd not
 abs! ld0 x01 rot x01 and neg swp ld1 add xor @const
 
-bcc! .skip iff sti skip.
-bcs! .skip swp iff sti skip.
-call! .ret swp sti ret.
+bcc! @const .skip iff sti skip.
+bcs! .skip swp @const iff sti skip.
+call! .ret swp @const sti ret.
 ret! sti
 rt0! !ret
 rt1! st0 !ret
