@@ -33,3 +33,5 @@ cargo run --bin asm asm/tests/optimization.asm emu/tests/optimization.bin && car
 # work in progress
 cargo run --bin asm asm/tests/pong.asm emu/tests/pong.bin && cargo run --bin emu emu/tests/pong.bin
 ```
+
+![Game of Life Demo](misc/demos/game%20of%20life.gif) ![Random Demo](misc/demos/random.gif) ![Mushroom Demo](misc/demos/mushroom.gif) ![Counter Demo](misc/demos/counter.gif)

@@ -1,6 +1,6 @@
 # TODO
 
-potential improvements:
+tasks:
 
 - [x] create "carryful" and "carryless" instruction variants (adc, sbc, shl, shr...)
 - [x] add new useful instructions (sta, lda, sto, ldo...)
@@ -14,7 +14,9 @@ potential improvements:
 - [x] add `neg` to asm optimization
 - [x] fix `x80` push instruction and opt with `xFX`
 - [x] add input capabilities to computer
-- [ ] come up with clock frequency and add to spec
+- [x] come up with clock frequency and add to spec
+- [x] buy components for computer
+- [ ] build computer
 - [ ] come up with microcode
 
 constituents:
@@ -25,3 +27,17 @@ constituents:
 - [ ] microcode
 - [ ] schematics
 - [ ] circuits
+
+microcode:
+
+```
+OP = SP + OR
+
+ldo:
+[load OR] OP_ADDR ADDR_MEM MEM_DATA DECSP_SP
+SP_ADDR ADDR_MEM DATA_MEM DONE
+
+inc:
+SP_ADDR ADDR_MEM MEM_DATA DATA_XR
+SP_ADDR ADDR_MEM INCXR_DATA DATA_MEM DONE
+```

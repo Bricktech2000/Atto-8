@@ -62,17 +62,18 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
       // move cursor to top left
       print!("\x1B[1;1H");
 
+      print!("\r\n    \r\n    ");
       print_display(&memory[0xE0..0x100].try_into().unwrap());
-      print!("RAM\r\n");
+      print!("RAM\r\n    ");
       print_memory(&memory.clone().try_into().unwrap());
       print!(
-        "IP {:8}\r\nSP {:8}\r\nCF {:8}\r\n",
+        "IP {:8}\r\n    SP {:8}\r\n    CF {:8}\r\n    ",
         format!("{:02x}", instruction_pointer),
         format!("{:02x}", stack_pointer),
         carry_flag,
       );
 
-      print!("\r\n{:26}", debug_status);
+      print!("\r\n    {:26}", debug_status);
       use std::io::{stdout, Write};
       stdout().flush().unwrap();
     }
@@ -458,8 +459,8 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
 fn print_display(display_buffer: &[u8; 0x20]) {
   let mut display_buffer_string: String = "".to_string();
   let line: &str = &"-".repeat(0x10);
-  let line_top: &str = &format!(".-{}-.\r\n", line);
-  let line_bottom: &str = &format!("'-{}-'\r\n", line);
+  let line_top: &str = &format!(".-{}-.\r\n    ", line);
+  let line_bottom: &str = &format!("'-{}-'\r\n    ", line);
   let col_left: &str = "| ";
   let col_right: &str = " |";
 
@@ -483,11 +484,11 @@ fn print_display(display_buffer: &[u8; 0x20]) {
       };
     }
     display_buffer_string += &col_right;
-    display_buffer_string += "\r\n";
+    display_buffer_string += "\r\n    ";
   }
 
   display_buffer_string += &line_bottom;
-  print!("{}\r\n", display_buffer_string);
+  print!("{}\r\n    ", display_buffer_string);
 }
 
 fn print_memory(memory: &[u8; 0x100]) {
@@ -497,9 +498,9 @@ fn print_memory(memory: &[u8; 0x100]) {
     for x in 0..0x10 {
       memory_string += &format!("{:02x} ", memory[(y << 0x04 | x) as usize]);
     }
-    memory_string += "\r\n";
+    memory_string += "\r\n    ";
   }
-  print!("{}\r\n", memory_string);
+  print!("{}\r\n    ", memory_string);
 }
 
 use std::sync::mpsc;
