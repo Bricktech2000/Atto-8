@@ -17,9 +17,12 @@ main!
   !hlt
 
   display_data:
-    dEA dE6 d4E d44 d4A dEC d00 d00
-    dE6 d0E d44 d0E dEC d0A d00 d00
-    dEE d6E d4C d44 d4E dC4 d00 d00
+    dEA dE6 d4E d44 d4A dEC d00 d00 # THIS
+    dE6 d04 d44 d0E dEC d0A d00 d00 # IS A
+    dEE d6E d4C d44 d4E dC4 d00 d00 # TEST
+
+    # d4E dEE dE4 d4A dA4 d4E d00 d00 # ATTO
+    # d00 d06 d00 dEE d00 d0E d00 d00 #   -8
   display_data_end:
 
   !memset

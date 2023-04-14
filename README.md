@@ -15,7 +15,7 @@ A minimalist 8-bit microcomputer with stack-based microprocessor
 
 ## Project Status
 
-This project is a work in progress. Try it out by running any of the following commands:
+This project is a [work in progress](TODO.md). Try it out by running any of the following commands:
 
 ```bash
 # finished programs

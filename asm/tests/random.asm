@@ -29,9 +29,9 @@ main!
   display_data:
     # dEE dEC dEC dAA d8A dAE # PRNG
     dE4 dEC dCE dAA dAA dAC # RAND
-    d00 d00 dFF dFF # underline
-    # d00 d00 d00 d00 d00 d00 d00 d00 # empty lines
-    # dEA d00 dA4 d00 dEA d00 # 0x
+    d00 d00 dFF dFF         # ----
+    # d00 d00 d00 d00 d00 d00 d00 d00 # (empty lines)
+    # dEA d00 dA4 d00 dEA d00 # 0X
   display_data_end:
 
 display_data_len! :display_data_end :display_data sub @const
