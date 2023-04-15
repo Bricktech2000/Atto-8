@@ -136,6 +136,8 @@ enum Token {
   XorS(u8),
   Xnd,
   XndS(u8),
+  Adn,
+  Sbn,
   Inc,
   Dec,
   Neg,
@@ -193,6 +195,8 @@ impl std::fmt::Display for Token {
       Token::XorS(n) => write!(f, "xor{:01x}", n),
       Token::Xnd => write!(f, "xnd"),
       Token::XndS(n) => write!(f, "xnd{:01x}", n),
+      Token::Adn => write!(f, "adn"),
+      Token::Sbn => write!(f, "sbn"),
       Token::Inc => write!(f, "inc"),
       Token::Dec => write!(f, "dec"),
       Token::Neg => write!(f, "neg"),
@@ -232,11 +236,13 @@ enum Instruction {
   And(u8),
   Xor(u8),
   Xnd(u8),
-  Not,
-  Buf,
+  Adn,
+  Sbn,
   Inc,
   Dec,
   Neg,
+  Not,
+  Buf,
   Nop,
   Clc,
   Sec,
@@ -384,6 +390,8 @@ fn tokenize(source: String, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)>
         _ if token.starts_with("xor") => Token::XorS(parse_hex(&token[3..], errors, &position)),
         "xnd" => Token::Xnd,
         _ if token.starts_with("xnd") => Token::XndS(parse_hex(&token[3..], errors, &position)),
+        "adn" => Token::Adn,
+        "sbn" => Token::Sbn,
         "inc" => Token::Inc,
         "dec" => Token::Dec,
         "neg" => Token::Neg,
@@ -657,6 +665,8 @@ fn assemble(
         Token::XndS(size) => {
           Root::Instruction(Instruction::Xnd(assert_size(size, errors, &position)))
         }
+        Token::Adn => Root::Instruction(Instruction::Adn),
+        Token::Sbn => Root::Instruction(Instruction::Sbn),
         Token::Inc => Root::Instruction(Instruction::Inc),
         Token::Dec => Root::Instruction(Instruction::Dec),
         Token::Neg => Root::Instruction(Instruction::Neg),
@@ -946,93 +956,88 @@ fn assemble(
   let mut location_counter: u8 = 0;
   let instructions: Vec<(Pos, Instruction)> = roots
     .into_iter()
-    .flat_map(|root| {
-      match root.1 {
-        Root::Instruction(instruction) | Root::Dyn(Some(instruction)) => {
-          let instructions = vec![(root.0, instruction)];
+    .flat_map(|root| match root.1 {
+      Root::Instruction(instruction) | Root::Dyn(Some(instruction)) => {
+        let instructions = vec![(root.0, instruction)];
+        location_counter = location_counter.wrapping_add(instructions.len() as u8);
+        instructions
+      }
+
+      Root::Node(node) => match eval(&node, &label_definitions) {
+        Ok(value) => {
+          let instructions = make_push_instruction(value, &root.0);
           location_counter = location_counter.wrapping_add(instructions.len() as u8);
           instructions
         }
-
-        Root::Node(node) => match eval(&node, &label_definitions) {
-          Ok(value) => {
-            let instructions = make_push_instruction(value, &root.0);
-            location_counter = location_counter.wrapping_add(instructions.len() as u8);
-            instructions
-          }
-          Err(_) => {
-            let instructions = vec![
-              (root.0.clone(), Instruction::Nop),
-              (root.0.clone(), Instruction::Nop),
-            ];
-            unevaluated_nodes.insert(location_counter, (root.0, node));
-            location_counter = location_counter.wrapping_add(instructions.len() as u8);
-            instructions
-          }
-        },
-
-        Root::LabelDef(Label {
-          scope_id: Some(0),
-          identifier: _,
-        }) => panic!("Local label has no scope specified"),
-
-        Root::LabelDef(label) => {
-          // empty labels are used as an optimization blocker
-          if label.identifier != "" {
-            if label_definitions.contains_key(&label) {
-              errors.push((root.0, Error(format!("Label already defined: {}", label))));
-            }
-            label_definitions.insert(label, location_counter);
-          }
-          vec![]
+        Err(_) => {
+          let instructions = vec![
+            (root.0.clone(), Instruction::Nop),
+            (root.0.clone(), Instruction::Nop),
+          ];
+          unevaluated_nodes.insert(location_counter, (root.0, node));
+          location_counter = location_counter.wrapping_add(instructions.len() as u8);
+          instructions
         }
+      },
 
-        Root::Org(Some(node)) => match eval(&node, &label_definitions) {
-          Ok(value) => {
-            if value > location_counter {
-              let difference = value - location_counter;
-              location_counter = location_counter.wrapping_sub(difference);
-              vec![(root.0, Instruction::Raw(0x00)); difference as usize]
-            } else {
-              errors.push((
-                root.0,
-                Error(format!(
-                  "Origin cannot move location counter backward from: {} to: {}",
-                  location_counter, value
-                )),
-              ));
-              vec![]
-            }
-          }
-          Err(label) => {
+      Root::LabelDef(Label {
+        scope_id: Some(0),
+        identifier: _,
+      }) => panic!("Local label has no scope specified"),
+
+      Root::LabelDef(label) => {
+        if label_definitions.contains_key(&label) {
+          errors.push((root.0, Error(format!("Label already defined: {}", label))));
+        }
+        label_definitions.insert(label, location_counter);
+        vec![]
+      }
+
+      Root::Org(Some(node)) => match eval(&node, &label_definitions) {
+        Ok(value) => {
+          if value > location_counter {
+            let difference = value - location_counter;
+            location_counter = location_counter.wrapping_sub(difference);
+            vec![(root.0, Instruction::Raw(0x00)); difference as usize]
+          } else {
             errors.push((
               root.0,
               Error(format!(
-                "Origin argument contains currently unresolved label: {}",
-                label
+                "Origin cannot move location counter backward from: {} to: {}",
+                location_counter, value
               )),
             ));
             vec![]
           }
-        },
-
-        Root::Org(None) | Root::Const => {
+        }
+        Err(label) => {
           errors.push((
             root.0,
             Error(format!(
-              "Origin or constant argument is not a constant expression"
+              "Origin argument contains currently unresolved label: {}",
+              label
             )),
           ));
           vec![]
         }
+      },
 
-        Root::Dyn(None) => {
-          errors.push((
-            root.0,
-            Error(format!("Dynamic argument is not an instruction")),
-          ));
-          vec![]
-        }
+      Root::Org(None) | Root::Const => {
+        errors.push((
+          root.0,
+          Error(format!(
+            "Origin or constant argument is not a constant expression"
+          )),
+        ));
+        vec![]
+      }
+
+      Root::Dyn(None) => {
+        errors.push((
+          root.0,
+          Error(format!("Dynamic argument is not an instruction")),
+        ));
+        vec![]
       }
     })
     .collect();
@@ -1113,11 +1118,13 @@ fn codegen(
         Instruction::And(size) => 0b10100100 | encode_size(size),
         Instruction::Xor(size) => 0b10101000 | encode_size(size),
         Instruction::Xnd(size) => 0b10101100 | encode_size(size),
-        Instruction::Inc => 0b10110000,
-        Instruction::Dec => 0b10110001,
-        Instruction::Neg => 0b10110010,
-        Instruction::Not => 0b10110100,
-        Instruction::Buf => 0b10110101,
+        Instruction::Adn => 0b10110000,
+        Instruction::Sbn => 0b10110001,
+        Instruction::Inc => 0b10110010,
+        Instruction::Dec => 0b10110011,
+        Instruction::Neg => 0b10110100,
+        Instruction::Not => 0b10110110,
+        Instruction::Buf => 0b10110111,
         Instruction::Nop => 0xE0,
         Instruction::Clc => 0xE1,
         Instruction::Sec => 0xE2,

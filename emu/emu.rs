@@ -265,24 +265,46 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
               _ => match (opcode, instruction & 0b00000011) {
                 // (size used as part of opcode)
                 (0xC, 0b00) => {
+                  // adn
+                  let a = memory[stack_pointer as usize];
+                  memory[stack_pointer as usize] = 0x00;
+                  stack_pointer = stack_pointer.wrapping_add(1);
+                  let b = memory[stack_pointer as usize];
+
+                  memory[stack_pointer as usize] = (b.wrapping_add(a) & 0b00001111)
+                    | ((b & 0b11110000).wrapping_add(a & 0b11110000));
+                }
+
+                (0xC, 0b01) => {
+                  // sbn
+                  let a = memory[stack_pointer as usize];
+                  memory[stack_pointer as usize] = 0x00;
+                  stack_pointer = stack_pointer.wrapping_add(1);
+                  let b = memory[stack_pointer as usize];
+
+                  memory[stack_pointer as usize] = (b.wrapping_sub(a) & 0b00001111)
+                    | ((b & 0b11110000).wrapping_sub(a & 0b11110000));
+                }
+
+                (0xC, 0b10) => {
                   // inc
                   let a = memory[stack_pointer as usize];
                   memory[stack_pointer as usize] = a.wrapping_add(1);
                 }
 
-                (0xC, 0b01) => {
+                (0xC, 0b11) => {
                   // dec
                   let a = memory[stack_pointer as usize];
                   memory[stack_pointer as usize] = a.wrapping_sub(1);
                 }
 
-                (0xC, 0b10) => {
+                (0xD, 0b00) => {
                   // neg
                   let a = memory[stack_pointer as usize];
                   memory[stack_pointer as usize] = a.wrapping_neg();
                 }
 
-                (0xD, 0b00) => {
+                (0xD, 0b10) => {
                   // not
                   let a = memory[stack_pointer as usize];
 
@@ -290,7 +312,7 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
                   carry_flag = memory[stack_pointer as usize] == 0x00;
                 }
 
-                (0xD, 0b01) => {
+                (0xD, 0b11) => {
                   // buf
                   let a = memory[stack_pointer as usize];
 
