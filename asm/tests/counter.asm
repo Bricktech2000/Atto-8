@@ -19,6 +19,6 @@ main!
   x00 x00 x00 x00 x00 x00 x00 x01
   adc8 adc8 adc8 adc8 adc8 adc8 adc8 adc8 :loop sti
 
-  !load_nibble_minimal
+  !load_nibble
   !hex_chars_minimal
   !print_byte_minimal

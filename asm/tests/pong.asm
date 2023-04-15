@@ -72,5 +72,4 @@ main!
   # pop
   # !rt2
 
-  !bit_addr
   !store_bit

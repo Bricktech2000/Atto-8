@@ -22,7 +22,7 @@ main!
   !prng
 
   !memcpy
-  !load_nibble_minimal
+  !load_nibble
   !hex_chars_minimal
   !print_byte_minimal
 

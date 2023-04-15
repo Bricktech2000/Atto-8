@@ -49,7 +49,6 @@ main!
   neighbours_end:
 
   !memcpy
-  !bit_addr
   !load_bit
   !store_bit
 

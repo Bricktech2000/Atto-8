@@ -1,26 +1,21 @@
-bit_addr!
-  bit_addr: # (rot, addr) = bit_addr(index, buffer)
-    # addr = index // 8 + buffer
-    ld2 ld2 x03 !shr add st2
-    # rot = ~index % 8
-    ld1 not x07 and st1
-  # return* (rot, addr)
-  !rt0
-
 load_bit!
   load_bit: # bit = get_bit(index, buffer)
-    # (addr, rot) = swp(bit_addr(index, buffer))
-    ld2 ld2 :bit_addr !call swp
-    # bin = (*addr >> rot) & 0x01
-    lda swp !ror x01 and
+    # addr = index // 8 + buffer
+    ld2 ld2 x03 !shr add
+    # rot = ~index % 8
+    ld2 not x07 and
+    # bit = (*addr >> rot) & 0x01
+    swp lda swp !ror x01 and
   # return* bin
   st2
   !rt1
 
 store_bit!
   store_bit: # store_bit(index, buffer, bit)
-    # (rot, addr) = bit_addr(index, buffer)
-    ld2 ld2 :bit_addr !call
+    # addr = index // 8 + buffer
+    ld2 ld2 x03 !shr add
+    # rot = ~index % 8
+    ld2 not x07 and
     # rest = *addr & ~(0x01 << rot)
     ld1 lda x01 ld2 shf not and
     # new = rest | (bit << rot)
