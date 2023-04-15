@@ -36,7 +36,7 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
   let mut input_flag: bool = false; // whether to read input buffer
   let mut debug_status: String = "Emulating microcomputer...".to_string();
   let mut now = std::time::Instant::now();
-  let start = std::time::Instant::now();
+  let mut start = std::time::Instant::now();
 
   // clear screen
   print!("\x1B[2J");
@@ -48,11 +48,11 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
     let instruction: u8 = memory[instruction_pointer as usize];
     instruction_pointer = instruction_pointer.wrapping_add(1);
 
-    // roughly 4 clock cycles per instruction
-    if start.elapsed().as_millis() < i * 1000 * 4 / clock {
-      // assuming instruction emulation is instant, for 1ms to be enough to correct for
-      // the offset, it must be the case that the clock runs at more than 1000Hz
-      std::thread::sleep(std::time::Duration::from_millis(1));
+    let elapsed = std::cmp::max(start.elapsed().as_millis(), 1); // prevent division by zero
+    let realtime_offset = elapsed as i128 - i as i128 * 1000 * 4 / clock as i128; // roughly 4 clock cycles per instruction
+    let realtime_ratio = realtime_offset as f64 / elapsed as f64;
+    if realtime_offset < 0 {
+      std::thread::sleep(std::time::Duration::from_millis(-realtime_offset as u64));
     }
 
     // only print 30 times per second
@@ -72,9 +72,19 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
         carry_flag,
       );
 
-      print!("\r\n{:26}", debug_status);
-      use std::io::{stdout, Write};
-      stdout().flush().unwrap();
+      let realtime_tolerance = 0.01;
+      print!("\r\n");
+      print!(
+        "{:32}\r\n",
+        if realtime_ratio > realtime_tolerance {
+          format!("Emulation behind by {:.0}%", realtime_ratio * 100.0)
+        } else if realtime_ratio < -realtime_tolerance {
+          format!("Emulation ahead by {:.0}%", -realtime_ratio * 100.0)
+        } else {
+          format!("Emulation on time")
+        }
+      );
+      print!("{:32}\r\n", debug_status);
     }
 
     if debug_flag {
@@ -94,6 +104,8 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
           _ => {}
         }
       }
+
+      start = std::time::Instant::now();
     }
 
     if input_flag {
