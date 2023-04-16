@@ -1,8 +1,8 @@
 @ ../../lib/core.asm
 @ ../../lib/memcpy.asm
 @ ../../lib/memset.asm
-@ ../../lib/microcomputer/pause.asm
-@ ../../lib/microcomputer/core.asm
+@ ../../lib/microcomputer/input.asm
+@ ../../lib/microcomputer/display.asm
 
 main!
   !front_buffer !alloc_buffer
@@ -10,9 +10,9 @@ main!
 
   loop:
     !display_data_len :display_data !front_buffer :memcpy !call
-    !pause
+    !wait_input
     !display_data_len x00 !front_buffer :memset !call
-    !pause
+    !wait_input
   :loop sti
   !hlt
 

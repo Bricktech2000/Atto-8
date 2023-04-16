@@ -14,7 +14,7 @@
 @ ../../lib/bit.asm
 @ ../../lib/core.asm
 @ ../../lib/memcpy.asm
-@ ../../lib/microcomputer/core.asm
+@ ../../lib/microcomputer/display.asm
 
 main!
   !back_buffer !alloc_buffer

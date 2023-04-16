@@ -16,6 +16,7 @@ tasks:
 - [x] add input capabilities to computer
 - [x] come up with clock frequency and add to spec
 - [x] buy components for computer
+- [ ] fix assembler stack overflow with self-referencing macros
 - [ ] build computer
 - [ ] come up with microcode
 

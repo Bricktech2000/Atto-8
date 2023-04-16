@@ -19,8 +19,8 @@ This project is a [work in progress](TODO.md). Try it out by running any of the 
 
 ```bash
 # finished programs
-cargo run --bin asm asm/tests/prng.asm emu/tests/prng.bin && cargo run --bin emu emu/tests/prng.bin
 cargo run --bin asm asm/tests/draw.asm emu/tests/draw.bin && cargo run --bin emu emu/tests/draw.bin
+cargo run --bin asm asm/tests/random.asm emu/tests/random.bin && cargo run --bin emu emu/tests/random.bin
 cargo run --bin asm asm/tests/memory.asm emu/tests/memory.bin && cargo run --bin emu emu/tests/memory.bin
 cargo run --bin asm asm/tests/counter.asm emu/tests/counter.bin && cargo run --bin emu emu/tests/counter.bin
 cargo run --bin asm asm/tests/mushroom.asm emu/tests/mushroom.bin && cargo run --bin emu emu/tests/mushroom.bin

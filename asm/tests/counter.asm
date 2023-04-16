@@ -1,6 +1,6 @@
 @ ../../lib/core.asm
 @ ../../lib/nibble.asm
-@ ../../lib/microcomputer/core.asm
+@ ../../lib/microcomputer/display.asm
 @ ../../lib/microcomputer/hex_chars.asm
 @ ../../lib/microcomputer/print_byte.asm
 

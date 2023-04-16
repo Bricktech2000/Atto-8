@@ -1,6 +1,7 @@
 @ ../../lib/bit.asm
 @ ../../lib/core.asm
-@ ../../lib/microcomputer/core.asm
+@ ../../lib/microcomputer/input.asm
+@ ../../lib/microcomputer/display.asm
 # @ ../../lib/microcomputer/delay.asm
 
 main!
@@ -13,14 +14,14 @@ main!
   xF0 # tail_vel
 
   loop:
-    x02 for_twice: dec
+    x02 for_head_twice: dec
     # head_pas += head_vel
     ld4 ld4 adn st4
     # game over if pixel at head_pos is set
     !front_buffer ld5 :load_bit !call buf pop :game_over !bcc
     # set pixel at head_pos
     x01 !front_buffer ld6 :store_bit !call
-    buf :for_twice !bcc pop
+    buf :for_head_twice !bcc pop
 
     :directions_end :directions sub @const for_dir: dec
     :directions ld1 add lda ld2
@@ -28,12 +29,12 @@ main!
     buf pop iff st1
     buf :for_dir !bcc pop
 
-    x02 for_twice_TODO: dec
+    x02 for_tail_twice: dec
     # tail_pas += tail_vel
     ld2 ld2 adn st2
     # clear pixel at tail_pos
     x00 !front_buffer ld4 :store_bit !call
-    buf :for_twice_TODO !bcc pop
+    buf :for_tail_twice !bcc pop
 
     # sleep
     # x40 :delay_long !call
@@ -42,7 +43,7 @@ main!
     !input_buffer lda
     # ignore if input is empty
     x0F and :ignore !bcs
-    # vel = (input & 0b1010) ? 0x0F : 0x01
+    # vel = (input & 0b1010) ? 0x01 : 0x0F
     ld0 x0A and pop x01 x0F iff
     # rot = (input & 0b0011) ? 0x04 : 0x00
     ld1 x03 and pop x04 x00 iff
