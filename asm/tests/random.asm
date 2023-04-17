@@ -14,8 +14,8 @@ main!
   :seed x00 wait: inc :wait !branch_input sta
 
   loop:
-    x13 :prng !call :print_byte !call
-    x12 :prng !call :print_byte !call
+    x13 :seed :prng !call :print_byte !call
+    x12 :seed :prng !call :print_byte !call
     !wait_input
   :loop sti
 
@@ -34,5 +34,3 @@ main!
     d00 d00 d00 d00 d00 d00 d00 d00 # (empty lines)
     # dEA d00 dA4 d00 dEA d00 # 0X
     d00 d00 d05 d40 # ...
-
-seed! :seed

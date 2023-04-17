@@ -22,7 +22,7 @@ main!
     # input = *INPUT_BUFFER
     !input_buffer lda
     # input = (1 << prng()) >> 4
-    # x01 :prng !call rot x04 !shr
+    # x01 :seed :prng !call rot x04 !shr
     # ignore if input is empty
     x0F and :ignore !bcs
     # vel = (input & 0b1010) ? 0x0F : 0x01
