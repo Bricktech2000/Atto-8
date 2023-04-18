@@ -464,7 +464,6 @@ fn assemble(
     }
   }
 
-  let mut scope_id: usize = 1;
   let entry_point = vec![(
     Pos {
       scope: "[bootstrap]".to_string(),
@@ -472,12 +471,20 @@ fn assemble(
     },
     Token::MacroRef(Macro(entry_point.to_string())),
   )];
-  let tokens: Vec<(Pos, Token)> =
-    expand_macros(&macro_definitions, &entry_point, &mut scope_id, errors);
+  let mut scope_id: usize = 1;
+  let mut parents: Vec<Macro> = vec![];
+  let tokens: Vec<(Pos, Token)> = expand_macros(
+    &macro_definitions,
+    &entry_point,
+    &mut parents,
+    &mut scope_id,
+    errors,
+  );
 
   fn expand_macros<'a>(
     macro_definitions: &HashMap<Macro, Vec<(Pos, Token)>>,
     tokens: &Vec<(Pos, Token)>,
+    parents: &mut Vec<Macro>,
     scope_id: &mut usize,
     errors: &mut Vec<(Pos, Error)>,
   ) -> Vec<(Pos, Token)> {
@@ -485,44 +492,65 @@ fn assemble(
       .into_iter()
       .flat_map(|token| match &token.1 {
         Token::MacroRef(macro_) => {
-          let tokens = match macro_definitions.get(macro_) {
-            Some(tokens) => tokens.clone(),
-            None => {
-              errors.push((
-                token.0.clone(),
-                Error(format!("Definition not found for macro: {}", macro_)),
-              ));
-              vec![]
-            }
-          };
-          let tokens = tokens
-            .into_iter()
-            .map(|token| match token.1 {
-              Token::LabelDef(Label {
-                scope_id: Some(_),
-                identifier,
-              }) => (
-                token.0,
+          if parents.contains(macro_) {
+            errors.push((
+              token.0.clone(),
+              Error(format!(
+                "Macro self-reference: {} -> {}",
+                parents
+                  .iter()
+                  .map(|macro_| format!("{}", macro_))
+                  .collect::<Vec<String>>()
+                  .join(" -> "),
+                macro_
+              )),
+            ));
+            vec![]
+          } else {
+            let tokens = match macro_definitions.get(macro_) {
+              Some(tokens) => tokens.clone(),
+              None => {
+                errors.push((
+                  token.0.clone(),
+                  Error(format!("Definition not found for macro: {}", macro_)),
+                ));
+                vec![]
+              }
+            };
+
+            let tokens = tokens
+              .into_iter()
+              .map(|token| match token.1 {
                 Token::LabelDef(Label {
-                  scope_id: Some(*scope_id),
+                  scope_id: Some(_),
                   identifier,
-                }),
-              ),
-              Token::LabelRef(Label {
-                scope_id: Some(_),
-                identifier,
-              }) => (
-                token.0,
+                }) => (
+                  token.0,
+                  Token::LabelDef(Label {
+                    scope_id: Some(*scope_id),
+                    identifier,
+                  }),
+                ),
                 Token::LabelRef(Label {
-                  scope_id: Some(*scope_id),
+                  scope_id: Some(_),
                   identifier,
-                }),
-              ),
-              _ => token,
-            })
-            .collect();
-          *scope_id += 1;
-          expand_macros(&macro_definitions, &tokens, scope_id, errors)
+                }) => (
+                  token.0,
+                  Token::LabelRef(Label {
+                    scope_id: Some(*scope_id),
+                    identifier,
+                  }),
+                ),
+                _ => token,
+              })
+              .collect();
+
+            *scope_id += 1;
+            parents.push(macro_.clone());
+            let expanded = expand_macros(&macro_definitions, &tokens, parents, scope_id, errors);
+            parents.pop();
+            expanded
+          }
         }
         _ => vec![token.clone()],
       })

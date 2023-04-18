@@ -17,6 +17,9 @@ main!
   x00 @org
   :future @org future:
   dyn: :dyn @dyn
+  !self
 
   !row !row !row !row !row !row !row !row !row !row !row !row !row !row !row !row
 row! d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00
+
+self! !main
