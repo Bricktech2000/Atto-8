@@ -16,7 +16,7 @@ main!
 
   loop:
     # erase pixel at (x_pos >> 4, y_pos >> 4)
-    x00 !front_buffer ld5 x04 !shr ld5 xF0 and orr :store_bit !call
+    !front_buffer ld4 x04 !shr ld4 xF0 and orr !bit_addr !clear_bit
     # x_pos, y_pos += x_vel, y_vel
     ld3 ld2 add st3
     ld2 ld1 add st2
@@ -46,7 +46,6 @@ main!
     pop
     !input_buffer lda
     ld0 x03 and pop :check_next !bcs
-    # continue_check:
     ld6 dec ld7 inc ld2 x01 and pop iff st6
     check_next:
     pop !reset_input
@@ -54,7 +53,7 @@ main!
     # x01 ld5 :draw_paddle !call
 
     # draw pixel at (x_pos >> 4, y_pos >> 4)
-    x01 !front_buffer ld2 :store_bit !call
+    !front_buffer ld1 !bit_addr !set_bit
 
     # pop (x_pos >> 4, y_pos >> 4) from the stack
     pop
@@ -72,5 +71,3 @@ main!
   # buf :for_p !bcc pop
   # pop
   # !rt2
-
-  !store_bit

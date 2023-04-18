@@ -1,5 +1,6 @@
 hex_chars!
   hex_chars:
+  # t m b t m b
     dEA dEC d4E # 0 1
     dC4 d6E d6E # 2 3
     dAE d26 d4C # 4 5

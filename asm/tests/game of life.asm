@@ -29,15 +29,15 @@ main!
       # count neighbours
       :neighbours_end :neighbours sub @const for_dxdy: dec
         # neighbour_addr = *(neighbours + dxdy) ++ for_xy
-        # neighbour_value = load_bit(neighbour_addr, &FRONT_BUFFER)
-        !front_buffer :neighbours ld2 add lda ld4 adn :load_bit !call
+        # neighbour_value = load_bit(bit_addr(neighbour_addr, &FRONT_BUFFER))
+        !front_buffer :neighbours ld2 add lda ld4 adn !bit_addr !load_bit
         # neighbour_count += neighbour_value
         ld2 add st1
       buf :for_dxdy !bcc pop
 
       # apply rules outlined above
       ld0 x04 xor pop :ignore !bcs
-      ld0 x03 xor pop x00 x01 iff !back_buffer ld3 :store_bit !call
+      ld0 x03 xor pop x00 x01 iff !back_buffer ld3 !bit_addr !store_bit
       ignore:
 
       pop # pop neighbour count
@@ -49,8 +49,6 @@ main!
   neighbours_end:
 
   !memcpy
-  !load_bit
-  !store_bit
 
   # !glider
   # !blinker

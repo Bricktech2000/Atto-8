@@ -17,15 +17,17 @@ main!
     x02 for_head_twice: dec
     # head_pas += head_vel
     ld4 ld4 adn st4
+    # compute bit_addr of head_pos
+    !front_buffer ld5 !bit_addr
     # game over if pixel at head_pos is set
-    !front_buffer ld5 :load_bit !call buf pop :game_over !bcc
+    ld1 ld1 !load_bit buf pop :game_over !bcc
     # set pixel at head_pos
-    x01 !front_buffer ld6 :store_bit !call
+    !set_bit
     buf :for_head_twice !bcc pop
 
     :directions_end :directions sub @const for_dir: dec
     :directions ld1 add lda ld2
-    !front_buffer ld5 :directions ld5 add lda adn :load_bit !call
+    !front_buffer ld5 :directions ld5 add lda adn !bit_addr !load_bit
     buf pop iff st1
     buf :for_dir !bcc pop
 
@@ -33,7 +35,7 @@ main!
     # tail_pas += tail_vel
     ld2 ld2 adn st2
     # clear pixel at tail_pos
-    x00 !front_buffer ld4 :store_bit !call
+    !front_buffer ld3 !bit_addr !clear_bit
     buf :for_tail_twice !bcc pop
 
     # sleep
@@ -64,5 +66,3 @@ main!
 
   # !delay
   # !delay_long
-  !load_bit
-  !store_bit

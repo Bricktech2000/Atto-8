@@ -15,8 +15,7 @@ main!
     # xy_pos += xy_vel
     ld1 ld1 adn st1
     # invert pixel at xy_pos
-    !front_buffer ld2 :load_bit !call
-    x01 xor !front_buffer ld3 :store_bit !call
+    !front_buffer ld2 !bit_addr !flip_bit
     # sleep
     x0C :delay_long !call
     # input = *INPUT_BUFFER
@@ -39,5 +38,3 @@ main!
 
   !delay
   !delay_long
-  !load_bit
-  !store_bit

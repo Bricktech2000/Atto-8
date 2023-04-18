@@ -21,7 +21,6 @@ main!
 
   !prng
 
-  !load_nibble
   !hex_chars_minimal
   !print_byte_minimal
 
