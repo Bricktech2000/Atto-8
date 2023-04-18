@@ -763,9 +763,6 @@ fn assemble(
         [Root::Node(node), Root::Instruction(Instruction::Ldo(0x00))] => {
           Some(vec![Root::Node(node.clone()), Root::Node(node.clone())])
         }
-        [Root::Instruction(Instruction::Swp), Root::Instruction(Instruction::Pop)] => {
-          Some(vec![Root::Instruction(Instruction::Sto(0x00))])
-        }
         [Root::Node(node), Root::Instruction(Instruction::Inc)] => Some(vec![Root::Node(
           Node::Add(Box::new(node.clone()), Box::new(Node::Immediate(1))),
         )]),
@@ -862,6 +859,24 @@ fn assemble(
       [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Swp)] => {
         Some(vec![Root::Node(node2.clone()), Root::Node(node1.clone())])
       }
+      [Root::Instruction(Instruction::Ldo(offset)), Root::Node(node2), Root::Instruction(Instruction::Swp)] => {
+        Some(vec![
+          Root::Node(node2.clone()),
+          Root::Instruction(Instruction::Ldo(*offset + 1)),
+        ])
+      }
+      [Root::Node(node1), Root::Instruction(Instruction::Ldo(offset)), Root::Instruction(Instruction::Swp)] => {
+        Some(vec![
+          Root::Instruction(Instruction::Ldo(*offset - 1)),
+          Root::Node(node1.clone()),
+        ])
+      }
+      [Root::Instruction(Instruction::Ldo(offset1)), Root::Instruction(Instruction::Ldo(offset2)), Root::Instruction(Instruction::Swp)] => {
+        Some(vec![
+          Root::Instruction(Instruction::Ldo(*offset2 - 1)),
+          Root::Instruction(Instruction::Ldo(*offset1 + 1)),
+        ])
+      }
       _ => None,
     });
   }
@@ -871,6 +886,9 @@ fn assemble(
       Root::Node(node1.clone()),
       Root::Instruction(Instruction::Ldo(0x00)),
     ]),
+    [Root::Instruction(Instruction::Swp), Root::Instruction(Instruction::Pop)] => {
+      Some(vec![Root::Instruction(Instruction::Sto(0x00))])
+    }
     _ => None,
   });
 
