@@ -7,7 +7,7 @@
 @ ../../lib/microcomputer/print_byte.asm
 
 main!
-  !front_buffer !alloc_buffer
+  pop !front_buffer sts
   !reset_input
 
   # seed PRNG by incrementing until keypress

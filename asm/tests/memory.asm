@@ -5,7 +5,7 @@
 @ ../../lib/microcomputer/display.asm
 
 main!
-  !front_buffer !alloc_buffer
+  pop !front_buffer sts
   !reset_input
 
   loop:

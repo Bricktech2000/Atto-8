@@ -5,7 +5,7 @@
 @ ../../lib/microcomputer/print_byte.asm
 
 main!
-  !front_buffer !alloc_buffer
+  pop !front_buffer sts
 
   x00 x00 x00 x00 x00 x00 x00 x00 loop:
     x00 ld8 :print_byte !call

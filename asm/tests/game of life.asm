@@ -17,7 +17,7 @@
 @ ../../lib/microcomputer/display.asm
 
 main!
-  !back_buffer !alloc_buffer
+  pop !back_buffer sts
 
   loop:
     # copy back buffer to front buffer.
