@@ -1,12 +1,8 @@
-delay!
-  delay: # delay(iterations)
-    swp delay. dec
-    buf .delay !bcc pop
-  !ret
+delay! # delay(iterations)
+  delay. dec
+  buf .delay !bcc pop
 
-delay_long!
-  delay_long: # delay_long(iterations)
-    swp delay. dec
-    xFF :delay !call
-    buf .delay !bcc pop
-  !ret
+delay_long! # delay_long(iterations)
+  delay. dec
+  xFF !delay
+  buf .delay !bcc pop

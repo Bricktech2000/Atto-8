@@ -39,7 +39,7 @@ main!
     buf :for_tail_twice !bcc pop
 
     # sleep
-    # x40 :delay_long !call
+    # x40 !delay_long
 
     # input = *INPUT_BUFFER
     !input_buffer lda
@@ -63,6 +63,3 @@ main!
   directions:
     d01 d0F d10 dF0
   directions_end:
-
-  # !delay
-  # !delay_long

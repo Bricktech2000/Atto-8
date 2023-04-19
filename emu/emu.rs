@@ -185,10 +185,6 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
                   carry_flag = false;
                 }
 
-                if opcode == 0x5 {
-                  todo!();
-                }
-
                 let a = memory[stack_pointer as usize];
                 memory[stack_pointer as usize] = 0x00;
                 stack_pointer = stack_pointer.wrapping_add(1);
@@ -200,7 +196,7 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
                   (b as u16).wrapping_shr(a.wrapping_neg() as u32)
                 } | carry_flag as u16;
 
-                memory[size_pointer as usize] = shifted as u8;
+                memory[size_pointer as usize] = (shifted & 0xFF) as u8 | carry_flag as u8;
                 carry_flag = shifted > 0xFF;
               }
 

@@ -17,7 +17,7 @@ main!
     # invert pixel at xy_pos
     !front_buffer ld2 !bit_addr !flip_bit
     # sleep
-    x0C :delay_long !call
+    x0F !delay_long
     # input = *INPUT_BUFFER
     !input_buffer lda
     # input = (1 << prng()) >> 4
@@ -35,6 +35,3 @@ main!
     # pop input
     ignore: pop
   :loop sti
-
-  !delay
-  !delay_long
