@@ -57,9 +57,9 @@ main!
     buf :for_i !bcc pop
     # remove a few pixels at a random height
     :seed :prng !call
-    x01 orr x0F and !front_buffer add
-    ld0 x04 add x00 sta
+    x01 orr x0F and !front_buffer x04 add add
     ld0 x02 add x00 sta
+    ld0 x02 sub x00 sta
     x00 sta
     ignore_pipe:
 

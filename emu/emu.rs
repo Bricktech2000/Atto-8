@@ -225,7 +225,6 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
                 let b = memory[stack_pointer as usize];
 
                 memory[stack_pointer as usize] = if carry_flag { a } else { b };
-                carry_flag = false;
               }
 
               0x8 => {
