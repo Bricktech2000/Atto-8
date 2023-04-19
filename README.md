@@ -36,4 +36,4 @@ cargo run --bin asm asm/tests/pong.asm emu/tests/pong.bin && cargo run --bin emu
 cargo run --bin asm asm/tests/snake.asm emu/tests/snake.bin && cargo run --bin emu emu/tests/snake.bin
 ```
 
-![Game of Life Demo](misc/demos/game%20of%20life.gif) ![Random Demo](misc/demos/random.gif) ![Mushroom Demo](misc/demos/mushroom.gif) ![Counter Demo](misc/demos/counter.gif)
+![Game of Life Demo](misc/demos/game%20of%20life.gif) ![Random Demo](misc/demos/random.gif) ![Flappy Bird Demo](misc/demos/flappy%20bird.gif) ![Counter Demo](misc/demos/counter.gif)
