@@ -1,3 +1,8 @@
+@ ../../lib/microprocessor/bit.asm
+@ ../../lib/microprocessor/core.asm
+@ ../../lib/microprocessor/memcpy.asm
+@ ../../lib/microcomputer/display.asm
+
 # to count neighbours, front buffer is read from and back buffer is written to.
 # back buffer is copied to front buffer at the end of each iteration.
 #
@@ -10,11 +15,6 @@
 #   _ => State::Dead,
 # }
 # ```
-
-@ ../../lib/bit.asm
-@ ../../lib/core.asm
-@ ../../lib/memcpy.asm
-@ ../../lib/microcomputer/display.asm
 
 main!
   pop !back_buffer sts

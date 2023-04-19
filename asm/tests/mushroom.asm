@@ -1,4 +1,4 @@
-@ ../../lib/core.asm
+@ ../../lib/microprocessor/core.asm
 @ ../../lib/microcomputer/display.asm
 
 main!

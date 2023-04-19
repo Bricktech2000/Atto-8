@@ -1,6 +1,6 @@
-@ ../../lib/core.asm
-@ ../../lib/memcpy.asm
-@ ../../lib/memset.asm
+@ ../../lib/microprocessor/core.asm
+@ ../../lib/microprocessor/memcpy.asm
+@ ../../lib/microprocessor/memset.asm
 @ ../../lib/microcomputer/input.asm
 @ ../../lib/microcomputer/display.asm
 

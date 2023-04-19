@@ -1,5 +1,5 @@
-@ ../../lib/bit.asm
-@ ../../lib/core.asm
+@ ../../lib/microprocessor/bit.asm
+@ ../../lib/microprocessor/core.asm
 @ ../../lib/microcomputer/input.asm
 @ ../../lib/microcomputer/display.asm
 # @ ../../lib/microcomputer/delay.asm

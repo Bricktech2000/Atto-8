@@ -1,5 +1,5 @@
-@ ../../lib/core.asm
-@ ../../lib/nibble.asm
+@ ../../lib/microprocessor/core.asm
+@ ../../lib/microprocessor/nibble.asm
 @ ../../lib/microcomputer/display.asm
 @ ../../lib/microcomputer/hex_chars.asm
 @ ../../lib/microcomputer/print_byte.asm

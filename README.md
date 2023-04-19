@@ -1,4 +1,4 @@
-![Atto-8 Banner](misc/banner.png)
+![Atto-8 Banner](misc/assets/banner.png)
 
 # Atto-8
 
@@ -6,12 +6,12 @@ A minimalist 8-bit microcomputer with stack-based microprocessor
 
 ## Repository Structure
 
-- [/spec/](./spec/) &mdash; Specification for Atto-8 microprocessor and microcomputer
-- [/lib/](./lib/) &mdash; Assembly standard library for Atto-8 microcomputer
-- [/enc/](./enc/) &mdash; Hex-to-machine-code encoder for Atto-8 microprocessor
-- [/asm/](./asm/) &mdash; Optimizing assembler for Atto-8 microprocessor
-- [/emu/](./emu/) &mdash; High-level emulator for Atto-8 microcomputer
-- [/misc/](./misc/) &mdash; Miscellaneous files
+- [/spec/](spec/) &mdash; Specification for Atto-8 microprocessor and microcomputer
+- [/lib/](lib/) &mdash; Assembly standard library for Atto-8 microprocessor and microcomputer
+- [/enc/](enc/) &mdash; Hex-to-machine-code encoder for Atto-8 microprocessor
+- [/asm/](asm/) &mdash; Optimizing assembler for Atto-8 microprocessor
+- [/emu/](emu/) &mdash; Instruction-level emulator for Atto-8 microcomputer
+- [/misc/](misc/) &mdash; Miscellaneous files
 
 ## Project Status
 
@@ -40,4 +40,4 @@ python3 enc/enc.py enc/tests/addition.hex emu/tests/addition.bin && cargo run --
 python3 enc/enc.py enc/tests/checkerboard.hex emu/tests/checkerboard.bin && cargo run --bin emu emu/tests/checkerboard.bin
 ```
 
-![Game of Life Demo](misc/demos/game%20of%20life.gif) ![Random Demo](misc/demos/random.gif) ![Flappy Bird Demo](misc/demos/flappy%20bird.gif) ![Counter Demo](misc/demos/counter.gif)
+![Game of Life Demo](misc/assets/game%20of%20life.gif) ![Random Demo](misc/assets/random.gif) ![Flappy Bird Demo](misc/assets/flappy%20bird.gif) ![Counter Demo](misc/assets/counter.gif)
