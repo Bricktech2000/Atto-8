@@ -27,13 +27,17 @@ cargo run --bin asm asm/tests/mushroom.asm emu/tests/mushroom.bin && cargo run -
 cargo run --bin asm asm/tests/flappy\ bird.asm emu/tests/flappy\ bird.bin && cargo run --bin emu emu/tests/flappy\ bird.bin
 cargo run --bin asm asm/tests/game\ of\ life.asm emu/tests/game\ of\ life.bin && cargo run --bin emu emu/tests/game\ of\ life.bin
 
-# feature tests
-cargo run --bin asm asm/tests/errors.asm emu/tests/errors.bin && cargo run --bin emu emu/errors.bin
-cargo run --bin asm asm/tests/optimization.asm emu/tests/optimization.bin && cargo run --bin emu emu/tests/optimization.bin
-
 # work in progress
 cargo run --bin asm asm/tests/pong.asm emu/tests/pong.bin && cargo run --bin emu emu/tests/pong.bin
 cargo run --bin asm asm/tests/snake.asm emu/tests/snake.bin && cargo run --bin emu emu/tests/snake.bin
+
+# assembler tests
+cargo run --bin asm asm/tests/errors.asm emu/tests/errors.bin && cargo run --bin emu emu/errors.bin
+cargo run --bin asm asm/tests/optimization.asm emu/tests/optimization.bin && cargo run --bin emu emu/tests/optimization.bin
+
+# hand-assembled programs
+python3 enc/enc.py enc/tests/addition.hex emu/tests/addition.bin && cargo run --bin emu emu/tests/addition.bin
+python3 enc/enc.py enc/tests/checkerboard.hex emu/tests/checkerboard.bin && cargo run --bin emu emu/tests/checkerboard.bin
 ```
 
 ![Game of Life Demo](misc/demos/game%20of%20life.gif) ![Random Demo](misc/demos/random.gif) ![Flappy Bird Demo](misc/demos/flappy%20bird.gif) ![Counter Demo](misc/demos/counter.gif)

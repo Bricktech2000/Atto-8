@@ -12,8 +12,14 @@ def pad_or_slice(L, n):
     return L[:n]
 
 
-filename = sys.argv[1]
-with open(filename, 'rb') as input_file:
-  with open(os.path.splitext(filename)[0] + '.bin', 'wb') as output_file:
+if len(sys.argv) != 3:
+  print("Usage: enc.py <input file> <output file>")
+  sys.exit(1)
+
+input = sys.argv[1]
+output = sys.argv[2]
+
+with open(input, 'rb') as input_file:
+  with open(os.path.splitext(output)[0] + '.bin', 'wb') as output_file:
     output_file.write(bytes(pad_or_slice(list(bytes.fromhex(
         ''.join(list(filter(lambda line: not line.startswith('#'), input_file.read().decode('utf-8').split('\n')))))), 0x100)))

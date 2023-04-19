@@ -1,11 +1,11 @@
-# clear; python3 src/enc.py tests/checkerboard.hex && cargo run --bin emu tests/checkerboard.bin
+# main!
+#   start:
+#     x55 ld0 ld0 not ld0
+#   lds !front_buffer sub pop :start :stop iff sti
+#
+#   stop:
+#     !hlt
 
-# start:
-# x55 dup dup not dup
-# lds !display_buffer sub pop :start :stop iff sti
-# stop: hlt
-# display_buffer! xE0
-
-55 80 80 CC 80
-BC 1F CC C4 B1 00 0E CE BB
-AF
+55 C0 C0 B6 C0
+EC 1F B6 88 E5 00 0E 9C EB
+0E EB
