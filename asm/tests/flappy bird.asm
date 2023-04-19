@@ -63,7 +63,7 @@ main!
     x00 sta
     ignore_pipe:
 
-    x07 # argument to `delay_long`
+    x08 # argument to `delay_long`
   :loop sti
 
   game_over:
