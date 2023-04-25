@@ -10,16 +10,16 @@ main!
   pop !front_buffer sts
   !reset_input
 
-  # seed PRNG by incrementing until keypress
-  :seed x00 wait: inc :wait !branch_input sta
+  x00 # prng_seed
+
+  # seed prng by incrementing until keypress
+  wait: inc :wait !branch_input
 
   loop:
-    x13 :seed :prng !call :print_byte !call
-    x12 :seed :prng !call :print_byte !call
+    x13 ld1 !prng st1 ld1 :print_byte !call
+    x12 ld1 !prng st1 ld1 :print_byte !call
     !wait_input
   :loop sti
-
-  !prng
 
   !hex_chars_minimal
   !print_byte_minimal

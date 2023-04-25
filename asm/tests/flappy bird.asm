@@ -10,6 +10,8 @@ main!
   pop !front_buffer sts
   !reset_input
 
+  xF0 # prng_seed
+
   x00 # x_pos
   x80 # y_pos
   x02 # x_vel
@@ -56,7 +58,7 @@ main!
       ld0 x01 shf xE1 add x01 sta
     buf :for_i !bcc pop
     # remove a few pixels at a random height
-    :seed :prng !call
+    ld4 !prng_minimal st4 ld4
     x01 orr x0F and !front_buffer x04 add add
     ld0 x02 add x00 sta
     ld0 x02 sub x00 sta
@@ -70,8 +72,6 @@ main!
     !hlt
 
   seed: d80
-
-  !prng_minimal
 
   !front_buffer @org
   d00 d00 d00 d00 d00 d00 d00 d00

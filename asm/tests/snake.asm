@@ -1,46 +1,30 @@
 @ ../../lib/microprocessor/bit.asm
 @ ../../lib/microprocessor/core.asm
+@ ../../lib/microprocessor/prng.asm
 @ ../../lib/microcomputer/input.asm
 @ ../../lib/microcomputer/display.asm
-# @ ../../lib/microcomputer/delay.asm
+@ ../../lib/microcomputer/delay.asm
 
 main!
   pop !front_buffer sts
   !reset_input
+
+  xF0 # prng_seed
+      # food_pos = prng_seed | 0x11
 
   x77 # head_pos
   xF0 # head_vel
   x77 # tail_pos
   xF0 # tail_vel
 
+  x00 # push dummy
+  food:
+    pop # pop dummy
+    !front_buffer
+      ld5 !prng_minimal st5 ld5
+    x11 orr !bit_addr !set_bit
+
   loop:
-    x02 for_head_twice: dec
-    # head_pas += head_vel
-    ld4 ld4 adn st4
-    # compute bit_addr of head_pos
-    !front_buffer ld5 !bit_addr
-    # game over if pixel at head_pos is set
-    ld1 ld1 !load_bit buf pop :game_over !bcc
-    # set pixel at head_pos
-    !set_bit
-    buf :for_head_twice !bcc pop
-
-    :directions_end :directions sub @const for_dir: dec
-    :directions ld1 add lda ld2
-    !front_buffer ld5 :directions ld5 add lda adn !bit_addr !load_bit
-    buf pop iff st1
-    buf :for_dir !bcc pop
-
-    x02 for_tail_twice: dec
-    # tail_pas += tail_vel
-    ld2 ld2 adn st2
-    # clear pixel at tail_pos
-    !front_buffer ld3 !bit_addr !clear_bit
-    buf :for_tail_twice !bcc pop
-
-    # sleep
-    # x40 !delay_long
-
     # input = *INPUT_BUFFER
     !input_buffer lda
     # ignore if input is empty
@@ -55,10 +39,39 @@ main!
     !reset_input
     # pop input
     ignore: pop
+
+    x02 for_head_twice: dec
+    # head_pas += head_vel
+    ld4 ld4 adn st4
+    # if head_pos == food_pos, spawn a new food
+    ld5 x11 orr ld5 xor pop :food !bcs
+    # compute bit_addr of head_pos
+    !front_buffer ld5 !bit_addr
+    # game over if pixel at head_pos is set
+    ld1 ld1 !load_bit buf pop :game_over !bcc
+    # set pixel at head_pos
+    !set_bit
+    buf :for_head_twice !bcc pop
+
+    :directions_end :directions sub @const for_dir: dec
+    :directions ld1 add lda ld2
+      !front_buffer ld5 ld3 adn !bit_addr !load_bit
+    buf pop iff st1
+    buf :for_dir !bcc pop
+
+    x02 for_tail_twice: dec
+    # tail_pas += tail_vel
+    ld2 ld2 adn st2
+    # clear pixel at tail_pos
+    !front_buffer ld3 !bit_addr !clear_bit
+    buf :for_tail_twice !bcc pop
+
+    # sleep
+    # x40 !delay_long
   :loop sti
 
   game_over:
-    !hlt
+    # !hlt
 
   directions:
     d01 d0F d10 dF0

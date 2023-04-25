@@ -1,5 +1,6 @@
 @ ../../lib/microprocessor/bit.asm
 @ ../../lib/microprocessor/core.asm
+@ ../../lib/microprocessor/prng.asm
 @ ../../lib/microcomputer/delay.asm
 @ ../../lib/microcomputer/input.asm
 @ ../../lib/microcomputer/display.asm
@@ -7,6 +8,8 @@
 main!
   pop !front_buffer sts
   !reset_input
+
+  # xF0 # prng_seed
 
   x77 # xy_pos
   x00 # xy_vel
@@ -21,7 +24,7 @@ main!
     # input = *INPUT_BUFFER
     !input_buffer lda
     # input = (1 << prng()) >> 4
-    # x01 :seed :prng !call rot x04 !shr
+    # x01 ld3 !prng_minimal st3 ld3 rot x04 !shr
     # ignore if input is empty
     x0F and :ignore !bcs
     # vel = (input & 0b1010) ? 0x0F : 0x01
