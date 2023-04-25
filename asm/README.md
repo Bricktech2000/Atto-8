@@ -4,6 +4,10 @@ Optimizing assembler for Atto-8 microprocessor
 
 ## Overview
 
+The assembler loads an assembly file from `argv[1]` and outputs an image file to `argv[2]` which is exactly `0x100` bytes in size.
+
+Disassembly adheres to microprocessor specification as defined in [/spec/microprocessor.md](../spec/microprocessor.md).
+
 Assembly consists of following operations:
 
 1. Preprocess then tokenize source code from file `argv[1]`.

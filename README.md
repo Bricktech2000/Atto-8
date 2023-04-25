@@ -10,8 +10,8 @@ A minimalist 8-bit microcomputer with stack-based microprocessor
 - [/lib/](lib/) &mdash; Assembly standard library for Atto-8 microprocessor and microcomputer
 - [/enc/](enc/) &mdash; Hex-to-machine-code encoder for Atto-8 microprocessor
 - [/asm/](asm/) &mdash; Optimizing assembler for Atto-8 microprocessor
+- [/dasm/](dasm/) &mdash; Elementary disassembler for Atto-8 microprocessor
 - [/emu/](emu/) &mdash; Instruction-level emulator for Atto-8 microcomputer
-- [/dasm/](dasm/) &mdash; Disassembler for Atto-8 microprocessor
 - [/misc/](misc/) &mdash; Miscellaneous files
 
 ## Project Status
