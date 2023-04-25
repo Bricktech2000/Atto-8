@@ -71,8 +71,8 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
       print_memory(&memory.clone().try_into().unwrap());
       print!(
         "IP {:8}\r\nSP {:8}\r\nCF {:8}\r\n",
-        format!("{:02x}", instruction_pointer),
-        format!("{:02x}", stack_pointer),
+        format!("{:02X}", instruction_pointer),
+        format!("{:02X}", stack_pointer),
         format!("{:01b}", carry_flag as u8)
       );
 
@@ -344,7 +344,7 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
 
                 _ => {
                   debug_flag = true;
-                  debug_status = format!("Unknown instruction: {:#04x}", instruction);
+                  debug_status = format!("Unknown instruction: {:#04X}", instruction);
                 }
               },
             }
@@ -466,7 +466,7 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
 
                   _ => {
                     debug_flag = true;
-                    debug_status = format!("Unknown instruction: {:#04x}", instruction);
+                    debug_status = format!("Unknown instruction: {:#04X}", instruction);
                   }
                 }
               }
@@ -560,7 +560,7 @@ fn print_memory(memory: &[u8; 0x100]) {
 
   for y in 0..0x10 {
     for x in 0..0x10 {
-      memory_string += &format!("{:02x} ", memory[(y << 0x04 | x) as usize]);
+      memory_string += &format!("{:02X} ", memory[(y << 0x04 | x) as usize]);
     }
     memory_string += "\r\n";
   }

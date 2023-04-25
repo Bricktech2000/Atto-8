@@ -167,34 +167,34 @@ impl std::fmt::Display for Token {
       Token::AtConst => write!(f, "@const"),
       Token::AtDyn => write!(f, "@dyn"),
       Token::AtOrg => write!(f, "@org"),
-      Token::DDD(n) => write!(f, "d{:02x}", n),
-      Token::XXX(n) => write!(f, "x{:02x}", n),
-      Token::LdO(n) => write!(f, "ld{:01x}", n),
-      Token::StO(n) => write!(f, "st{:01x}", n),
+      Token::DDD(n) => write!(f, "d{:02X}", n),
+      Token::XXX(n) => write!(f, "x{:02X}", n),
+      Token::LdO(n) => write!(f, "ld{:01X}", n),
+      Token::StO(n) => write!(f, "st{:01X}", n),
       Token::Add => write!(f, "add"),
       Token::Adc => write!(f, "adc"),
-      Token::AddS(n) => write!(f, "add{:01x}", n),
-      Token::AdcS(n) => write!(f, "adc{:01x}", n),
+      Token::AddS(n) => write!(f, "add{:01X}", n),
+      Token::AdcS(n) => write!(f, "adc{:01X}", n),
       Token::Sub => write!(f, "sub"),
       Token::Sbc => write!(f, "sbc"),
-      Token::SubS(n) => write!(f, "sub{:01x}", n),
-      Token::SbcS(n) => write!(f, "sbc{:01x}", n),
+      Token::SubS(n) => write!(f, "sub{:01X}", n),
+      Token::SbcS(n) => write!(f, "sbc{:01X}", n),
       Token::Shf => write!(f, "shf"),
       Token::Sfc => write!(f, "sfc"),
-      Token::ShfS(n) => write!(f, "shf{:01x}", n),
-      Token::SfcS(n) => write!(f, "sfc{:01x}", n),
+      Token::ShfS(n) => write!(f, "shf{:01X}", n),
+      Token::SfcS(n) => write!(f, "sfc{:01X}", n),
       Token::Rot => write!(f, "rot"),
-      Token::RotS(n) => write!(f, "rot{:01x}", n),
+      Token::RotS(n) => write!(f, "rot{:01X}", n),
       Token::Iff => write!(f, "iff"),
-      Token::IffS(n) => write!(f, "iff{:01x}", n),
+      Token::IffS(n) => write!(f, "iff{:01X}", n),
       Token::Orr => write!(f, "orr"),
-      Token::OrrS(n) => write!(f, "orr{:01x}", n),
+      Token::OrrS(n) => write!(f, "orr{:01X}", n),
       Token::And => write!(f, "and"),
-      Token::AndS(n) => write!(f, "and{:01x}", n),
+      Token::AndS(n) => write!(f, "and{:01X}", n),
       Token::Xor => write!(f, "xor"),
-      Token::XorS(n) => write!(f, "xor{:01x}", n),
+      Token::XorS(n) => write!(f, "xor{:01X}", n),
       Token::Xnd => write!(f, "xnd"),
-      Token::XndS(n) => write!(f, "xnd{:01x}", n),
+      Token::XndS(n) => write!(f, "xnd{:01X}", n),
       Token::Adn => write!(f, "adn"),
       Token::Sbn => write!(f, "sbn"),
       Token::Inc => write!(f, "inc"),
@@ -564,7 +564,7 @@ fn assemble(
       _ => {
         errors.push((
           position.clone(),
-          Error(format!("Invalid immediate operand: {:02x}", immediate)),
+          Error(format!("Invalid immediate operand: {:02X}", immediate)),
         ));
         0b00000000
       }
@@ -577,7 +577,7 @@ fn assemble(
       _ => {
         errors.push((
           position.clone(),
-          Error(format!("Invalid size operand: {:02x}", size)),
+          Error(format!("Invalid size operand: {:02X}", size)),
         ));
         0x01
       }
@@ -590,7 +590,7 @@ fn assemble(
       _ => {
         errors.push((
           position.clone(),
-          Error(format!("Invalid offset operand: {:02x}", offset)),
+          Error(format!("Invalid offset operand: {:02X}", offset)),
         ));
         0b00000000
       }
@@ -772,6 +772,18 @@ fn assemble(
     [Root::Instruction(instruction), Root::Dyn(None)] => {
       Some(vec![Root::Dyn(Some(instruction.clone()))])
     }
+    [Root::Node(Node::Immediate(immediate)), Root::Dyn(None)] => Some(
+      make_push_instruction(
+        immediate.clone(),
+        &Pos {
+          scope: "".to_string(),
+          index: 0,
+        },
+      )
+      .iter()
+      .map(|(_position, instruction)| Root::Dyn(Some(instruction.clone())))
+      .collect(),
+    ),
     _ => None,
   });
 
@@ -1041,7 +1053,7 @@ fn assemble(
 
       Root::Org(Some(node)) => match eval(&node, &label_definitions) {
         Ok(value) => {
-          if value > location_counter {
+          if value >= location_counter {
             let difference = value - location_counter;
             location_counter = location_counter.wrapping_sub(difference);
             vec![(root.0, Instruction::Raw(0x00)); difference as usize]
@@ -1201,7 +1213,7 @@ fn codegen(
     errors.push((
       position,
       Error(format!(
-        "Program size: {:02x} exceeds available memory: {:02x}",
+        "Program size: {:02X} exceeds available memory: {:02X}",
         bytes.len(),
         available_memory
       )),
