@@ -35,6 +35,7 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
   let mut debug_flag: bool = false; // whether to print debug info
   let mut input_flag: bool = false; // whether to read input buffer
   let mut debug_status: String = "Emulating microcomputer...".to_string();
+  let mut input_ored: [u8; 0x01] = [memory[0]]; // input buffer values since last frame ORed together
   let mut now = std::time::Instant::now();
   let mut start = std::time::Instant::now();
 
@@ -63,13 +64,16 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
       print!("\x1B[1;1H");
 
       print_display(&memory[0xE0..0x100].try_into().unwrap());
+      print!("\r\n");
+      print_input(&input_ored.try_into().unwrap());
+      print!("\r\n");
       print!("RAM\r\n");
       print_memory(&memory.clone().try_into().unwrap());
       print!(
         "IP {:8}\r\nSP {:8}\r\nCF {:8}\r\n",
         format!("{:02x}", instruction_pointer),
         format!("{:02x}", stack_pointer),
-        carry_flag,
+        format!("{:01b}", carry_flag as u8)
       );
 
       let realtime_tolerance = 0.01;
@@ -85,6 +89,8 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
         }
       );
       print!("{:32}\r\n", debug_status);
+
+      input_ored = [memory[0x00]];
     }
 
     if debug_flag {
@@ -127,6 +133,7 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
             _ => 0b0000,
           };
           memory[0x00] |= lo_nibble | (hi_nibble << 4);
+          input_ored = [input_ored[0x00] | memory[0x00]];
         }
         Err(TryRecvError::Empty) => {}
         Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
@@ -484,13 +491,14 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
   }
 }
 
+// https://en.wikipedia.org/wiki/Block_Elements
+
 fn print_display(display_buffer: &[u8; 0x20]) {
   let mut display_buffer_string: String = "".to_string();
-  let line: &str = &"-".repeat(0x10);
-  let line_top: &str = &format!(".-{}-.\r\n", line);
-  let line_bottom: &str = &format!("'-{}-'\r\n", line);
-  let col_left: &str = "| ";
-  let col_right: &str = " |";
+  let line_top: &str = "\u{25aa}                \u{25aa}\r\n";
+  let line_bottom: &str = "\u{25aa}                \u{25aa}\r\n";
+  let col_left: &str = " ";
+  let col_right: &str = " ";
 
   display_buffer_string += &line_top;
   for y in (0..0x10).step_by(2) {
@@ -502,7 +510,6 @@ fn print_display(display_buffer: &[u8; 0x20]) {
         let pixel = display_buffer[address as usize] >> (0x07 - (x & 0x07)) & 0x01;
         pixel_pair |= pixel << y2;
       }
-      // https://en.wikipedia.org/wiki/Block_Elements
       display_buffer_string += match pixel_pair {
         0b00 => " ",
         0b01 => "\u{2580}",
@@ -516,7 +523,35 @@ fn print_display(display_buffer: &[u8; 0x20]) {
   }
 
   display_buffer_string += &line_bottom;
-  print!("{}\r\n", display_buffer_string);
+  print!("{}", display_buffer_string);
+}
+
+fn print_input(input_buffer: &[u8; 0x01]) {
+  fn bit_to_str(input_buffer: &[u8; 0x01], bit: u8) -> &str {
+    match input_buffer[0] >> bit & 0x01 {
+      0b0 => "\u{2591}\u{2591}",
+      0b1 => "\u{2588}\u{2588}",
+      _ => unreachable!(),
+    }
+  }
+
+  print!(
+    "    {}      {}    \r\n",
+    bit_to_str(input_buffer, 0),
+    bit_to_str(input_buffer, 4),
+  );
+  print!(
+    "  {}  {}  {}  {}  \r\n",
+    bit_to_str(input_buffer, 2),
+    bit_to_str(input_buffer, 3),
+    bit_to_str(input_buffer, 6),
+    bit_to_str(input_buffer, 7),
+  );
+  print!(
+    "    {}      {}    \r\n",
+    bit_to_str(input_buffer, 1),
+    bit_to_str(input_buffer, 5),
+  );
 }
 
 fn print_memory(memory: &[u8; 0x100]) {
