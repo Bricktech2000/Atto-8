@@ -3,7 +3,7 @@ use std::collections::HashMap;
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() != 3 {
-    println!("Usage: asm <input file> <output file>");
+    println!("Usage: asm <assembly file> <image file>");
     std::process::exit(1);
   }
 

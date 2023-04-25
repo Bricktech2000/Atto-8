@@ -20,6 +20,13 @@ tasks:
 - [ ] build computer
 - [ ] come up with microcode
 
+moving forward:
+
+- [ ] command line interface
+- [ ] text editor
+- [ ] file system
+- [ ] native assembler
+
 constituents:
 
 - [x] assembler

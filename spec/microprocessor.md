@@ -13,6 +13,7 @@ The Atto-8 microprocessor is a minimalist stack-based processor with 8-bit data 
 - 0 general-purpose registers
 - 0 internal oscillators
 - 0 hardware timers
+- 0 memory banks
 - 0 interrupts
 - 0 I/O ports
 

@@ -16,3 +16,7 @@ path = "asm/asm.rs"
 [[bin]]
 name = "emu"
 path = "emu/emu.rs"
+
+[[bin]]
+name = "dasm"
+path = "dasm/dasm.rs"

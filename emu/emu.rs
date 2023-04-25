@@ -5,12 +5,12 @@ fn main() {
     std::process::exit(1);
   }
 
-  let filename: &String = &args[1];
+  let image_file: &String = &args[1];
 
-  let memory: Vec<u8> = match std::fs::read(filename) {
+  let memory: Vec<u8> = match std::fs::read(image_file) {
     Ok(source) => source,
     Err(_) => {
-      println!("Error: Unable to read file: {}", filename);
+      println!("Error: Unable to read file: {}", image_file);
       std::process::exit(1);
     }
   };
@@ -147,6 +147,7 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
         stack_pointer = stack_pointer.wrapping_sub(1);
         memory[stack_pointer as usize] = immediate;
       }
+
       0b1 => {
         match (instruction & 0b01000000) >> 6 {
           0b0 => {
