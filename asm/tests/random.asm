@@ -16,8 +16,8 @@ main!
   wait: inc :wait !branch_input
 
   loop:
-    x13 ld1 !prng st1 ld1 :print_byte !call
-    x12 ld1 !prng st1 ld1 :print_byte !call
+    !prng x13 ld1 :print_byte !call
+    !prng x12 ld1 :print_byte !call
     !wait_input
   :loop sti
 

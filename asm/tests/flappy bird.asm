@@ -10,12 +10,12 @@ main!
   pop !front_buffer sts
   !reset_input
 
-  xF0 # prng_seed
-
   x00 # x_pos
-  x80 # y_pos
   x02 # x_vel
+  x80 # y_pos
   xF0 # y_vel
+
+  xF0 # prng_seed
 
   xFF # argument to `delay_long`
 
@@ -23,19 +23,19 @@ main!
     !delay_long
 
     # set y_vel to flap_vel if W is pressed
-    !input_buffer lda x01 xor pop !flap_vel iff !reset_input
+    !input_buffer lda x01 xor pop ld1 !flap_vel iff st1 !reset_input
     # clear pixel at (x_pos, y_pos)
     !front_buffer ld3 x04 !shr x01 shf add x07 !bird_pos sub @const !clear_bit
 
     # x_pos += x_vel
-    ld3 ld2 add st3
+    ld4 ld4 add st4
     # y_vel += !y_accel
-    ld0 !y_accel add st0
+    ld1 !y_accel add st1
     # y_pos += y_vel
-    ld2 ld1 add st2
+    ld2 ld2 add st2
 
     # if x_pos % 0x10 == 0, shift entire screen left by 1 pixel
-    ld3 x0F and pop :ignore_shift !bcc
+    ld4 x0F and pop :ignore_shift !bcc
     !front_buffer for_addr:
     ld0 lda ld1 inc lda
     x01 x01 shf2 sfc2 x00 adc
@@ -52,13 +52,13 @@ main!
     !set_bit
 
     # if x_pos % 0x80 == 0, generate a new pipe
-    ld3 x7F and pop :ignore_pipe !bcc
+    ld4 x7F and pop :ignore_pipe !bcc
     # fill right side of the screen with 0x01
     x0C for_i: dec
       ld0 x01 shf xE1 add x01 sta
     buf :for_i !bcc pop
     # remove a few pixels at a random height
-    ld4 !prng_minimal st4 ld4
+    !prng_minimal ld0
     x01 orr x0F and !front_buffer x04 add add
     ld0 x02 add x00 sta
     ld0 x02 sub x00 sta
@@ -70,8 +70,6 @@ main!
 
   game_over:
     !hlt
-
-  seed: d80
 
   !front_buffer @org
   d00 d00 d00 d00 d00 d00 d00 d00

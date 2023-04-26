@@ -9,22 +9,22 @@ main!
   pop !front_buffer sts
   !reset_input
 
-  # xF0 # prng_seed
-
   x77 # xy_pos
   x00 # xy_vel
 
+  xF0 # prng_seed
+
   loop:
     # xy_pos += xy_vel
-    ld1 ld1 adn st1
+    ld2 ld2 adn st2
     # invert pixel at xy_pos
-    !front_buffer ld2 !bit_addr !flip_bit
+    !front_buffer ld3 !bit_addr !flip_bit
     # sleep
     x0F !delay_long
     # input = *INPUT_BUFFER
     !input_buffer lda
     # input = (1 << prng()) >> 4
-    # x01 ld3 !prng_minimal st3 ld3 rot x04 !shr
+    # !prng_minimal x01 ld1 rot x04 !shr
     # ignore if input is empty
     x0F and :ignore !bcs
     # vel = (input & 0b1010) ? 0x0F : 0x01
@@ -32,7 +32,7 @@ main!
     # rot = (input & 0b0011) ? 0x04 : 0x00
     ld1 x03 and pop x04 x00 iff
     # xy_vel = vel << rot
-    rot st1
+    rot st2
     # reset the input buffer
     !reset_input
     # pop input
