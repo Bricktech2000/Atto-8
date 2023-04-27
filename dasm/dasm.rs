@@ -87,7 +87,7 @@ fn disassemble(memory: [u8; 0x100], entry_point: &str) -> String {
 
                     (0xD, 0b11) => format!("buf  @dyn"),
 
-                    (0b1110, 0b11) => format!("dBB"),
+                    (0b1110, 0b11) => format!("dBB      "),
 
                     _ => {
                       format!("d{:02X}      ", instruction)

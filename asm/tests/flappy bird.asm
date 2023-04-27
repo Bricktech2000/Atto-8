@@ -65,7 +65,11 @@ main!
   :loop sti
 
   game_over:
-    !hlt
+    # blink pixel at (x_pos, y_pos)
+    blink:
+    ld1 ld1 !flip_bit
+    xFF !delay
+    :blink sti
 
   !front_buffer @org
   d00 d00 d00 d00 d00 d00 d00 d00
