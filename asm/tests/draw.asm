@@ -20,7 +20,7 @@ main!
     # invert pixel at xy_pos
     !front_buffer ld3 !bit_addr !flip_bit
     # sleep
-    x0F !delay_long
+    x03 !delay_long
     # input = *INPUT_BUFFER
     !input_buffer lda
     # input = (1 << prng()) >> 4

@@ -65,7 +65,7 @@ main!
     buf :for_tail_twice !bcc pop
 
     # sleep
-    # x40 !delay_long
+    # x40 !delay
   :loop sti
 
   game_over:

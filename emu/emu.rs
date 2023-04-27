@@ -17,7 +17,7 @@ fn main() {
 
   match memory.try_into() {
     Ok(slice) => {
-      emulate(slice, 2000000);
+      emulate(slice, 100000);
     }
     Err(_) => {
       println!("Error: Memory image has incorrect size");
@@ -56,8 +56,8 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
       std::thread::sleep(std::time::Duration::from_millis(-realtime_offset as u64));
     }
 
-    // only print 30 times per second
-    if now.elapsed().as_millis() > 1000 / 30 || debug_flag {
+    // only print 60 times per second
+    if now.elapsed().as_millis() > 1000 / 60 || debug_flag {
       now = std::time::Instant::now();
 
       // move cursor to top left

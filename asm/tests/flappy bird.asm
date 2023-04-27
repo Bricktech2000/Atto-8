@@ -17,13 +17,9 @@ main!
 
   xF0 # prng_seed
 
-  xFF # argument to `delay_long`
-
   loop:
-    !delay_long
-
-    # set y_vel to flap_vel if W is pressed
-    !input_buffer lda x01 xor pop ld1 !flap_vel iff st1 !reset_input
+    # set y_vel to flap_vel if any button is pressed
+    !input_buffer lda buf pop !flap_vel ld2 iff st1 !reset_input
     # clear pixel at (x_pos, y_pos)
     !front_buffer ld3 x04 !shr x01 shf add x07 !bird_pos sub @const !clear_bit
 
@@ -65,7 +61,7 @@ main!
     x00 sta
     ignore_pipe:
 
-    x08 # argument to `delay_long`
+    x60 !delay
   :loop sti
 
   game_over:

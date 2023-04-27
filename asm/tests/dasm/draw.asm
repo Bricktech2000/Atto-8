@@ -33,9 +33,9 @@ ld1  @dyn # x1C @org dC1
 lda  @dyn # x1D @org dE8
 xor1 @dyn # x1E @org dA8
 sta  @dyn # x1F @org dE9
-x0F  @dyn # x20 @org d0F
+x03  @dyn # x20 @org d03
 dec  @dyn # x21 @org dB3
-xFF  @dyn # x22 @org dFF
+x7F  @dyn # x22 @org d7F
 dec  @dyn # x23 @org dB3
 buf  @dyn # x24 @org dB7
 x23  @dyn # x25 @org d23

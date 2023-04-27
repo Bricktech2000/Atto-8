@@ -4,5 +4,5 @@ delay! # delay(iterations)
 
 delay_long! # delay_long(iterations)
   delay. dec
-  xFF !delay
+  x7F !delay
   buf .delay !bcc pop
