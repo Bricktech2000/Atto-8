@@ -51,14 +51,11 @@ fn disassemble(memory: [u8; 0x100], entry_point: &str) -> String {
 
                 match opcode {
                   0x0 => format!("add{:01X} @dyn", size),
-                  0x1 => format!("adc{:01X} @dyn", size),
-
+                  // TODO 0x1 => format!("adc{:01X} @dyn", size),
                   0x2 => format!("sub{:01X} @dyn", size),
-                  0x3 => format!("sbc{:01X} @dyn", size),
-
-                  0x4 => format!("shf{:01X} @dyn", size),
-                  0x5 => format!("sfc{:01X} @dyn", size),
-
+                  // TODO 0x3 => format!("sbc{:01X} @dyn", size),
+                  // TODO 0x4 => format!("shf{:01X} @dyn", size),
+                  // TODO 0x5 => format!("sfc{:01X} @dyn", size),
                   0x6 => format!("rot{:01X} @dyn", size),
 
                   0x7 => format!("iff{:01X} @dyn", size),
@@ -109,7 +106,7 @@ fn disassemble(memory: [u8; 0x100], entry_point: &str) -> String {
                   }
 
                   0b10 => {
-                    // (clock and flags and stack)
+                    // (carry and flags and stack)
                     match instruction & 0b00001111 {
                       0x0 => format!("nop  @dyn"),
 

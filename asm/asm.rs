@@ -113,17 +113,9 @@ enum Token {
   LdO(u8),
   StO(u8),
   Add,
-  Adc,
   AddS(u8),
-  AdcS(u8),
   Sub,
-  Sbc,
   SubS(u8),
-  SbcS(u8),
-  Shf,
-  Sfc,
-  ShfS(u8),
-  SfcS(u8),
   Rot,
   RotS(u8),
   Iff,
@@ -172,17 +164,9 @@ impl std::fmt::Display for Token {
       Token::LdO(n) => write!(f, "ld{:01X}", n),
       Token::StO(n) => write!(f, "st{:01X}", n),
       Token::Add => write!(f, "add"),
-      Token::Adc => write!(f, "adc"),
       Token::AddS(n) => write!(f, "add{:01X}", n),
-      Token::AdcS(n) => write!(f, "adc{:01X}", n),
       Token::Sub => write!(f, "sub"),
-      Token::Sbc => write!(f, "sbc"),
       Token::SubS(n) => write!(f, "sub{:01X}", n),
-      Token::SbcS(n) => write!(f, "sbc{:01X}", n),
-      Token::Shf => write!(f, "shf"),
-      Token::Sfc => write!(f, "sfc"),
-      Token::ShfS(n) => write!(f, "shf{:01X}", n),
-      Token::SfcS(n) => write!(f, "sfc{:01X}", n),
       Token::Rot => write!(f, "rot"),
       Token::RotS(n) => write!(f, "rot{:01X}", n),
       Token::Iff => write!(f, "iff"),
@@ -225,11 +209,7 @@ enum Instruction {
   Ldo(u8),
   Sto(u8),
   Add(u8),
-  Adc(u8),
   Sub(u8),
-  Sbc(u8),
-  Shf(u8),
-  Sfc(u8),
   Rot(u8),
   Iff(u8),
   Orr(u8),
@@ -367,17 +347,9 @@ fn tokenize(source: String, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)>
         _ if token.ends_with("!") => Token::MacroDef(Macro(token[..token.len() - 1].to_string())),
         _ if token.starts_with("!") => Token::MacroRef(Macro(token[1..].to_string())),
         "add" => Token::Add,
-        "adc" => Token::Adc,
         _ if token.starts_with("add") => Token::AddS(parse_hex(&token[3..], errors, &position)),
-        _ if token.starts_with("adc") => Token::AdcS(parse_hex(&token[3..], errors, &position)),
         "sub" => Token::Sub,
-        "sbc" => Token::Sbc,
         _ if token.starts_with("sub") => Token::SubS(parse_hex(&token[3..], errors, &position)),
-        _ if token.starts_with("sbc") => Token::SbcS(parse_hex(&token[3..], errors, &position)),
-        "shf" => Token::Shf,
-        _ if token.starts_with("shf") => Token::ShfS(parse_hex(&token[3..], errors, &position)),
-        "shc" => Token::Sfc,
-        _ if token.starts_with("sfc") => Token::SfcS(parse_hex(&token[3..], errors, &position)),
         "rot" => Token::Rot,
         _ if token.starts_with("rot") => Token::RotS(parse_hex(&token[3..], errors, &position)),
         "iff" => Token::Iff,
@@ -616,7 +588,6 @@ fn assemble(
     Not(Box<Node>),
     Add(Box<Node>, Box<Node>),
     Sub(Box<Node>, Box<Node>),
-    Shf(Box<Node>, Box<Node>),
     Rot(Box<Node>, Box<Node>),
     Orr(Box<Node>, Box<Node>),
     And(Box<Node>, Box<Node>),
@@ -646,28 +617,12 @@ fn assemble(
           Root::Instruction(Instruction::Sto(assert_offset(offset, errors, &position)))
         }
         Token::Add => Root::Instruction(Instruction::Add(assert_size(0x01, errors, &position))),
-        Token::Adc => Root::Instruction(Instruction::Adc(assert_size(0x01, errors, &position))),
         Token::AddS(size) => {
           Root::Instruction(Instruction::Add(assert_size(size, errors, &position)))
         }
-        Token::AdcS(size) => {
-          Root::Instruction(Instruction::Adc(assert_size(size, errors, &position)))
-        }
         Token::Sub => Root::Instruction(Instruction::Sub(assert_size(0x01, errors, &position))),
-        Token::Sbc => Root::Instruction(Instruction::Sbc(assert_size(0x01, errors, &position))),
         Token::SubS(size) => {
           Root::Instruction(Instruction::Sub(assert_size(size, errors, &position)))
-        }
-        Token::SbcS(size) => {
-          Root::Instruction(Instruction::Sbc(assert_size(size, errors, &position)))
-        }
-        Token::Shf => Root::Instruction(Instruction::Shf(assert_size(0x01, errors, &position))),
-        Token::Sfc => Root::Instruction(Instruction::Sfc(assert_size(0x01, errors, &position))),
-        Token::ShfS(size) => {
-          Root::Instruction(Instruction::Shf(assert_size(size, errors, &position)))
-        }
-        Token::SfcS(size) => {
-          Root::Instruction(Instruction::Sfc(assert_size(size, errors, &position)))
         }
         Token::Rot => Root::Instruction(Instruction::Rot(assert_size(0x01, errors, &position))),
         Token::RotS(size) => {
@@ -836,32 +791,8 @@ fn assemble(
           Box::new(node1.clone()),
         ))])
       }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Adc(0x01))] => {
-        Some(vec![Root::Node(Node::Add(
-          Box::new(node2.clone()),
-          Box::new(node1.clone()),
-        ))])
-      }
       [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Sub(0x01))] => {
         Some(vec![Root::Node(Node::Sub(
-          Box::new(node2.clone()),
-          Box::new(node1.clone()),
-        ))])
-      }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Sbc(0x01))] => {
-        Some(vec![Root::Node(Node::Sub(
-          Box::new(node2.clone()),
-          Box::new(node1.clone()),
-        ))])
-      }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Shf(0x01))] => {
-        Some(vec![Root::Node(Node::Shf(
-          Box::new(node2.clone()),
-          Box::new(node1.clone()),
-        ))])
-      }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Sfc(0x01))] => {
-        Some(vec![Root::Node(Node::Shf(
           Box::new(node2.clone()),
           Box::new(node1.clone()),
         ))])
@@ -950,7 +881,7 @@ fn assemble(
       Node::Not(node) => !eval(node, labels)?,
       Node::Add(node1, node2) => eval(node2, labels)?.wrapping_add(eval(node1, labels)?),
       Node::Sub(node1, node2) => eval(node2, labels)?.wrapping_sub(eval(node1, labels)?),
-      Node::Shf(node1, node2) => {
+      /* TODO Node::Shf(node1, node2) => {
         let a = eval(node1, labels)? as u16;
         let b = eval(node2, labels)? as u16;
 
@@ -961,7 +892,7 @@ fn assemble(
         } as u16;
 
         shifted as u8
-      }
+      } */
       Node::Rot(node1, node2) => {
         let a = eval(node1, labels)? as u16;
         let b = eval(node2, labels)? as u16;
@@ -1165,11 +1096,7 @@ fn codegen(
         Instruction::Ldo(offset) => 0b11000000 | encode_offset(offset),
         Instruction::Sto(offset) => 0b11010000 | encode_offset(offset),
         Instruction::Add(size) => 0b10000000 | encode_size(size),
-        Instruction::Adc(size) => 0b10000100 | encode_size(size),
         Instruction::Sub(size) => 0b10001000 | encode_size(size),
-        Instruction::Sbc(size) => 0b10001100 | encode_size(size),
-        Instruction::Shf(size) => 0b10010000 | encode_size(size),
-        Instruction::Sfc(size) => 0b10010100 | encode_size(size),
         Instruction::Rot(size) => 0b10011000 | encode_size(size),
         Instruction::Iff(size) => 0b10011100 | encode_size(size),
         Instruction::Orr(size) => 0b10100000 | encode_size(size),

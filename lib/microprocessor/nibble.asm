@@ -1,8 +1,8 @@
-nibble_addr! # (rot, addr) = nibble_addr(index, buffer)
+nibble_addr! clc # (rot, addr) = nibble_addr(index, buffer)
   # addr = index // 2 + buffer
-  swp ld1 x01 !shr add
+  swp ld1 x01 !ror add
   # rot = 4 * (~index % 2)
-  swp not x01 and x02 shf
+  swp not x01 and x02 rot
   # return*
 
 load_nibble! # nibble = load_nibble(rot, addr)
@@ -12,9 +12,9 @@ load_nibble! # nibble = load_nibble(rot, addr)
 
 store_nibble! # store_nibble(rot, addr, nibble)
   # rest = *addr & ~(0x0F << rot)
-  ld1 lda x0F ld2 shf not and
+  ld1 lda x0F ld2 rot not and
   # new = rest | (nibble << rot)
-  swp ld3 swp shf orr
+  swp ld3 swp rot orr
   # *addr = new
   sta
   # return*
@@ -22,21 +22,21 @@ store_nibble! # store_nibble(rot, addr, nibble)
 
 set_nibble! # set_nibble(rot, addr)
   # new = *addr | (0x0F << rot)
-  x0F swp shf ld1 lda orr
+  x0F swp rot ld1 lda orr
   # *addr = new
   sta
   # return*
 
 clear_nibble! # clear_nibble(rot, addr)
   # new = *addr & ~(0x0F << rot)
-  x0F swp shf not ld1 lda and
+  x0F swp rot not ld1 lda and
   # *addr = new
   sta
   # return*
 
 flip_nibble! # flip_nibble(rot, addr)
   # new = *addr ^ (0x0F << rot)
-  x0F swp shf ld1 lda xor
+  x0F swp rot ld1 lda xor
   # *addr = new
   sta
   # return*

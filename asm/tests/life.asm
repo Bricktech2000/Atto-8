@@ -30,7 +30,7 @@ main!
       :neighbours_end :neighbours sub @const for_dxdy: dec
         # neighbour_addr = *(neighbours + dxdy) ++ for_xy
         # neighbour_value = load_bit(bit_addr(neighbour_addr, &FRONT_BUFFER))
-        !front_buffer :neighbours ld2 add lda ld4 adn !bit_addr !load_bit
+        !front_buffer :neighbours ld2 add lda ld4 adn !bit_addr !load_bit clc
         # neighbour_count += neighbour_value
         ld2 add st1
       buf :for_dxdy !bcc pop

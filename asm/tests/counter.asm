@@ -16,8 +16,8 @@ main!
     x11 ld3 :print_byte !call
     x18 ld2 :print_byte !call
     x19 ld1 :print_byte !call
-  x00 x00 x00 x00 x00 x00 x00 x01
-  add8 adc8 adc8 adc8 adc8 adc8 adc8 adc8 :loop sti
+  x00 x00 x00 x00 x00 x00 x00 x00 sec
+  add8 add8 add8 add8 add8 add8 add8 add8 :loop sti
 
   !hex_chars_minimal
   !print_byte_minimal

@@ -20,6 +20,18 @@ tasks:
 - [ ] build computer
 - [ ] come up with microcode
 
+- potentially remove: neg, not, sub, xnd, clc, sec, flc
+- only flappy and prng use `shf` with carry
+- instructions removed: adc, sbc, shf, sfc
+
+todos:
+
+- go through all programs (pong and test are the only ones left) and fix them with new `shl` and `shr` instructions
+- fix all TODO items
+- test `draw` with PRNG
+- test `print_byte` (not `_minimal`)
+- update instruction set
+
 moving forward:
 
 - [ ] command line interface

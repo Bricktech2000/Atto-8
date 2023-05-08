@@ -49,7 +49,7 @@ main!
       ld1 ld1 !load_bit buf pop :game_over !bcc
       # set pixel at head_pos
       !set_bit
-    buf :for_head_twice !bcc pop
+    buf :for_head_twice !bcc clc pop
 
     :directions_end :directions sub @const for_dir: dec
       :directions ld1 add lda ld3

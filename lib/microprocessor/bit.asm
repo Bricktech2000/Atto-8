@@ -1,6 +1,6 @@
-bit_addr! # (rot, addr) = bit_addr(index, buffer)
+bit_addr! clc # (rot, addr) = bit_addr(index, buffer)
   # addr = index // 8 + buffer
-  swp ld1 x03 !shr add
+  swp ld1 x03 !ror add
   # rot = ~index % 8
   swp not x07 and
   # return* (rot, addr)
@@ -12,9 +12,9 @@ load_bit! # bit = load_bit(rot, addr)
 
 store_bit! # store_bit(rot, addr, bit)
   # rest = *addr & ~(0x01 << rot)
-  ld1 lda x01 ld2 shf not and
+  ld1 lda x01 ld2 rot not and
   # new = rest | (bit << rot)
-  swp ld3 swp shf orr
+  swp ld3 swp rot orr
   # *addr = new
   sta
   # return*
@@ -22,21 +22,21 @@ store_bit! # store_bit(rot, addr, bit)
 
 set_bit! # set_bit(rot, addr)
   # new = *addr | (0x01 << rot)
-  x01 swp shf ld1 lda orr
+  x01 swp rot ld1 lda orr
   # *addr = new
   sta
   # return*
 
 clear_bit! # clear_bit(rot, addr)
   # new = *addr & ~(0x01 << rot)
-  x01 swp shf not ld1 lda and
+  x01 swp rot not ld1 lda and
   # *addr = new
   sta
   # return*
 
 flip_bit! # flip_bit(rot, addr)
   # new = *addr ^ (0x01 << rot)
-  x01 swp shf ld1 lda xor
+  x01 swp rot ld1 lda xor
   # *addr = new
   sta
   # return*

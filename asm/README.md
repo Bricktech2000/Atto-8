@@ -46,16 +46,8 @@ Labels are global by default; local labels are local to a macro. Macros are glob
 | `stO`    | Instruction `sto O`                               |
 | `add`    | Instruction `add 0x01`                            |
 | `addS`   | Instruction `add S`                               |
-| `adc`    | Instruction `adc 0x01`                            |
-| `adcS`   | Instruction `adc S`                               |
 | `sub`    | Instruction `sub 0x01`                            |
 | `subS`   | Instruction `sub S`                               |
-| `sbc`    | Instruction `sbc 0x01`                            |
-| `sbcS`   | Instruction `sbc S`                               |
-| `shf`    | Instruction `shf 0x01`                            |
-| `shfS`   | Instruction `shf S`                               |
-| `sfc`    | Instruction `sfc 0x01`                            |
-| `sfcS`   | Instruction `sfc S`                               |
 | `rot`    | Instruction `rot 0x01`                            |
 | `rotS`   | Instruction `rot S`                               |
 | `iff`    | Instruction `iff 0x01`                            |

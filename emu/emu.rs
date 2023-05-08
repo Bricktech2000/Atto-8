@@ -157,11 +157,9 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
             let size_pointer = stack_pointer.wrapping_add(size);
 
             match opcode {
+              // TODO
               0x0 | 0x1 => {
-                // add, adc
-                if opcode == 0x0 {
-                  carry_flag = false;
-                }
+                // add
 
                 let a = memory[stack_pointer as usize];
                 memory[stack_pointer as usize] = 0x00;
@@ -172,11 +170,9 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
                 carry_flag = (b as u16 + a as u16 + carry_flag as u16) > 0xFF;
               }
 
+              // TODO
               0x2 | 0x3 => {
-                // sub, sbc
-                if opcode == 0x2 {
-                  carry_flag = false;
-                }
+                // sub
 
                 let a = memory[stack_pointer as usize];
                 memory[stack_pointer as usize] = 0x00;
@@ -185,27 +181,6 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
 
                 memory[size_pointer as usize] = (b as i16 - a as i16 - carry_flag as i16) as u8;
                 carry_flag = (b as i16 - a as i16 - carry_flag as i16) < 0x00;
-              }
-
-              0x4 | 0x5 => {
-                // shf, sfc
-                if opcode == 0x4 {
-                  carry_flag = false;
-                }
-
-                let a = memory[stack_pointer as usize];
-                memory[stack_pointer as usize] = 0x00;
-                stack_pointer = stack_pointer.wrapping_add(1);
-                let b = memory[size_pointer as usize];
-
-                let shifted = if a as i8 >= 0 {
-                  (b as u16).wrapping_shl(a as u32)
-                } else {
-                  (b as u16).wrapping_shr(a.wrapping_neg() as u32)
-                } | carry_flag as u16;
-
-                memory[size_pointer as usize] = (shifted & 0xFF) as u8 | carry_flag as u8;
-                carry_flag = shifted > 0xFF;
               }
 
               0x6 => {
@@ -222,7 +197,6 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
                 };
 
                 memory[size_pointer as usize] = (shifted & 0xFF) as u8 | (shifted >> 8) as u8;
-                carry_flag = shifted > 0xFF;
               }
 
               0x7 => {
@@ -376,7 +350,7 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
               }
 
               0b10 => {
-                // (clock and flags and stack)
+                // (carry and flags and stack)
                 match instruction & 0b00001111 {
                   0x0 => {
                     // nop
@@ -462,6 +436,22 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
                     memory[stack_pointer as usize] = 0x00;
 
                     stack_pointer = a;
+                  }
+
+                  0xE => {
+                    // shl
+                    let a = memory[stack_pointer as usize];
+
+                    memory[stack_pointer as usize] = a.wrapping_shl(1) | (carry_flag as u8);
+                    carry_flag = a & 0b10000000 != 0;
+                  }
+
+                  0xF => {
+                    // shr
+                    let a = memory[stack_pointer as usize];
+
+                    memory[stack_pointer as usize] = a.wrapping_shr(1) | ((carry_flag as u8) << 7);
+                    carry_flag = a & 0b00000001 != 0;
                   }
 
                   _ => {

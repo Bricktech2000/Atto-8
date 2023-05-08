@@ -1,5 +1,5 @@
 memcpy!
-  memcpy: # memcpy(dst, src, len)
+  memcpy: clc # memcpy(dst, src, len)
     ld3 for_i. dec
       ld0 ld3 add
       ld1 ld5 add

@@ -21,7 +21,7 @@ main!
     # set y_vel to flap_vel if any button is pressed
     !input_buffer lda buf pop !flap_vel ld2 iff st1 !reset_input
     # clear pixel at (x_pos, y_pos)
-    !front_buffer ld3 x04 !shr x01 shf add x07 !bird_pos sub @const !clear_bit
+    !front_buffer ld3 xF0 and x05 rot orr x07 !bird_pos sub @const !clear_bit clc
 
     # x_pos += x_vel
     ld4 ld4 add st4
@@ -31,17 +31,16 @@ main!
     ld2 ld2 add st2
 
     # if x_pos % 0x10 == 0, shift entire screen left by 1 pixel
-    ld4 x0F and pop :ignore_shift !bcc
+    ld4 x0F and pop :ignore_shift !bcc clc
     !front_buffer for_addr:
-    ld0 lda ld1 inc lda
-    x01 x01 shf2 sfc2 x00 adc
-    ld2 inc swp sta
-    ld1 swp sta
+      ld0 ld0 lda dEE sta # TODO shl
+      ld0 inc ld0 lda dEE sta # TODO shl
+      ld0 ld0 lda x00 add sta
     x02 add :for_addr !bcc pop
     ignore_shift:
 
     # compute bit_addr of (x_pos, y_pos)
-    !front_buffer ld3 x04 !shr x01 shf add x07 !bird_pos sub @const
+    !front_buffer ld3 xF0 and x05 rot orr x07 !bird_pos sub @const
     # if pixel at (x_pos, y_pos) is set, game over
     ld1 ld1 !load_bit buf pop :game_over !bcc
     # set pixel at (x_pos, y_pos)
@@ -51,7 +50,7 @@ main!
     ld4 x7F and pop :ignore_pipe !bcc
     # fill right side of the screen with 0x01
     x0C for_i: dec
-      ld0 x01 shf xE1 add x01 sta
+      !front_buffer ld1 x01 rot orr inc x01 sta
     buf :for_i !bcc pop
     # remove a few pixels at a random height
     !prng_minimal ld0
