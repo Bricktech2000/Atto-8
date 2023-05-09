@@ -6,8 +6,8 @@ main!
   dZZ
   xF00
   x
-  add3
-  add12
+  ad3
+  ad12
   :label
   !macro
   foobar

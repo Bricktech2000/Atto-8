@@ -42,38 +42,38 @@ Labels are global by default; local labels are local to a macro. Macros are glob
 | `@org`   | Set location counter to preceding expression      |
 | `dDD`    | Insert `DD` in output binary at current address   |
 | `xXX`    | Push `XX` through `psh` and `phn`                 |
-| `ldO`    | Instruction `ldo O`                               |
-| `stO`    | Instruction `sto O`                               |
 | `add`    | Instruction `add 0x01`                            |
-| `addS`   | Instruction `add S`                               |
+| `adS`    | Instruction `add S`                               |
 | `sub`    | Instruction `sub 0x01`                            |
-| `subS`   | Instruction `sub S`                               |
-| `rot`    | Instruction `rot 0x01`                            |
-| `rotS`   | Instruction `rot S`                               |
+| `suS`    | Instruction `sub S`                               |
 | `iff`    | Instruction `iff 0x01`                            |
-| `iffS`   | Instruction `iff S`                               |
+| `ifS`    | Instruction `iff S`                               |
+| `rot`    | Instruction `rot 0x01`                            |
+| `roS`    | Instruction `rot S`                               |
 | `orr`    | Instruction `orr 0x01`                            |
-| `orrS`   | Instruction `orr S`                               |
+| `orS`    | Instruction `orr S`                               |
 | `and`    | Instruction `and 0x01`                            |
-| `andS`   | Instruction `and S`                               |
+| `anS`    | Instruction `and S`                               |
 | `xor`    | Instruction `xor 0x01`                            |
-| `xorS`   | Instruction `xor S`                               |
+| `xoS`    | Instruction `xor S`                               |
 | `xnd`    | Instruction `xnd 0x01`                            |
-| `xndS`   | Instruction `xnd S`                               |
+| `xnS`    | Instruction `xnd S`                               |
 | `inc`    | Instruction `inc`                                 |
 | `dec`    | Instruction `dec`                                 |
 | `neg`    | Instruction `neg`                                 |
 | `not`    | Instruction `not`                                 |
 | `buf`    | Instruction `buf`                                 |
-| `nop`    | Instruction `nop`                                 |
-| `clc`    | Instruction `clc`                                 |
-| `sec`    | Instruction `sec`                                 |
-| `flc`    | Instruction `flc`                                 |
-| `swp`    | Instruction `swp`                                 |
-| `pop`    | Instruction `pop`                                 |
+| `ldO`    | Instruction `ldo O`                               |
+| `stO`    | Instruction `sto O`                               |
 | `lda`    | Instruction `lda`                                 |
 | `sta`    | Instruction `sta`                                 |
 | `ldi`    | Instruction `ldi`                                 |
 | `sti`    | Instruction `sti`                                 |
 | `lds`    | Instruction `lds`                                 |
 | `sts`    | Instruction `sts`                                 |
+| `nop`    | Instruction `nop`                                 |
+| `clc`    | Instruction `clc`                                 |
+| `sec`    | Instruction `sec`                                 |
+| `flc`    | Instruction `flc`                                 |
+| `swp`    | Instruction `swp`                                 |
+| `pop`    | Instruction `pop`                                 |

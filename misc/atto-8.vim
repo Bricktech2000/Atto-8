@@ -4,8 +4,8 @@ endif
 
 let b:current_syntax = "atto-8"
 
-syntax match atto8Instruction "\<\(add\|sub\|rot\|iff\|orr\|and\|xor\|xnd\|inc\|dec\|neg\|adn\|shl\|shr\|not\|buf\|nop\|sec\|clc\|flc\|swp\|pop\|lda\|sta\|ldi\|sti\|lds\|sts\)\>"
-syntax match atto8Instruction "\<\(add\|sub\|rot\|iff\|orr\|and\|xor\|xnd\)[1248]\{1\}\>"
+syntax match atto8Instruction "\<\(add\|sub\|iff\|rot\|orr\|and\|xor\|xnd\|inc\|dec\|neg\|adn\|shl\|shr\|not\|buf\|lda\|sta\|ldi\|sti\|lds\|sts\|nop\|sec\|clc\|flc\|swp\|pop\)\>"
+syntax match atto8Instruction "\<\(ad\|su\|if\|ro\|or\|an\|xo\|xn\)[1248]\{1\}\>"
 syntax match atto8Instruction "\<\(ld\|st\)[0-9A-F]\{1\}\>"
 syntax match atto8XXX "\<x[0-9A-F]\{2\}\>"
 syntax match atto8DDD "\<d[0-9A-F]\{2\}\>"

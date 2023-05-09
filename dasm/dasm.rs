@@ -39,7 +39,7 @@ fn disassemble(memory: [u8; 0x100], entry_point: &str) -> String {
         match (instruction & 0b10000000) >> 7 {
           0b0 => {
             let immediate = instruction; // decode_immediate
-            format!("x{:02X}  @dyn", immediate)
+            format!("x{:02X} @dyn", immediate)
           }
 
           0b1 => {
@@ -49,45 +49,55 @@ fn disassemble(memory: [u8; 0x100], entry_point: &str) -> String {
                 let size = 1 << (instruction & 0b00000011); // decode_size
                 let opcode = (instruction & 0b00111100) >> 2;
 
+                fn shorthand(instruction: &str, size: u8) -> String {
+                  // generates a shorthand for instruction parameter when available
+                  // for example, `shorthand("add", 0x01)` returns `add` instead of `ad1`
+
+                  match size {
+                    0x01 => format!("{}", &instruction[0..instruction.len()]),
+                    _ => format!("{}{:01X}", &instruction[0..instruction.len() - 1], size),
+                  }
+                }
+
                 match opcode {
-                  0x0 => format!("add{:01X} @dyn", size),
+                  0x0 => format!("{} @dyn", shorthand("add", size)),
 
-                  0x1 => format!("sub{:01X} @dyn", size),
+                  0x1 => format!("{} @dyn", shorthand("sub", size)),
 
-                  0x4 => format!("rot{:01X} @dyn", size),
+                  0x4 => format!("{} @dyn", shorthand("iff", size)),
 
-                  0x5 => format!("iff{:01X} @dyn", size),
+                  0x5 => format!("{} @dyn", shorthand("rot", size)),
 
-                  0x8 => format!("orr{:01X} @dyn", size),
+                  0x8 => format!("{} @dyn", shorthand("orr", size)),
 
-                  0x9 => format!("and{:01X} @dyn", size),
+                  0x9 => format!("{} @dyn", shorthand("and", size)),
 
-                  0xA => format!("xor{:01X} @dyn", size),
+                  0xA => format!("{} @dyn", shorthand("xor", size)),
 
-                  0xB => format!("xnd{:01X} @dyn", size),
+                  0xB => format!("{} @dyn", shorthand("xnd", size)),
 
                   _ => match (opcode, instruction & 0b00000011) {
                     // (size used as part of opcode)
-                    (0xC, 0b00) => format!("inc  @dyn"),
+                    (0xC, 0b00) => format!("inc @dyn"),
 
-                    (0xC, 0b01) => format!("dec  @dyn"),
+                    (0xC, 0b01) => format!("dec @dyn"),
 
-                    (0xC, 0b10) => format!("neg  @dyn"),
+                    (0xC, 0b10) => format!("neg @dyn"),
 
-                    (0xC, 0b11) => format!("adn  @dyn"),
+                    (0xC, 0b11) => format!("adn @dyn"),
 
-                    (0xD, 0b00) => format!("shl  @dyn"),
+                    (0xD, 0b00) => format!("shl @dyn"),
 
-                    (0xD, 0b01) => format!("shr  @dyn"),
+                    (0xD, 0b01) => format!("shr @dyn"),
 
-                    (0xD, 0b10) => format!("not  @dyn"),
+                    (0xD, 0b10) => format!("not @dyn"),
 
-                    (0xD, 0b11) => format!("buf  @dyn"),
+                    (0xD, 0b11) => format!("buf @dyn"),
 
-                    (0b1110, 0b11) => format!("dBB      "),
+                    (0b1110, 0b11) => format!("dBB     "),
 
                     _ => {
-                      format!("d{:02X}      ", instruction)
+                      format!("d{:02X}     ", instruction)
                     }
                   },
                 }
@@ -100,12 +110,12 @@ fn disassemble(memory: [u8; 0x100], entry_point: &str) -> String {
                     match (instruction & 0b00010000) >> 4 {
                       0b0 => {
                         let offset = instruction & 0b00001111; // decode_offset
-                        format!("ld{:01X}  @dyn", offset)
+                        format!("ld{:01X} @dyn", offset)
                       }
 
                       0b1 => {
                         let offset = instruction & 0b00001111; // decode_offset
-                        format!("st{:01X}  @dyn", offset)
+                        format!("st{:01X} @dyn", offset)
                       }
 
                       _ => unreachable!(),
@@ -117,39 +127,39 @@ fn disassemble(memory: [u8; 0x100], entry_point: &str) -> String {
                       0b0 => {
                         // (carry and flags and stack)
                         match instruction & 0b00001111 {
-                          0x0 => format!("nop  @dyn"),
+                          0x0 => format!("lda @dyn"),
 
-                          0x1 => format!("clc  @dyn"),
+                          0x1 => format!("sta @dyn"),
 
-                          0x2 => format!("sec  @dyn"),
+                          0x2 => format!("ldi @dyn"),
 
-                          0x3 => format!("flc  @dyn"),
+                          0x3 => format!("sti @dyn"),
 
-                          0x4 => format!("swp  @dyn"),
+                          0x4 => format!("lds @dyn"),
 
-                          0x5 => format!("pop  @dyn"),
+                          0x5 => format!("sts @dyn"),
 
-                          0x8 => format!("lda  @dyn"),
+                          0x8 => format!("nop @dyn"),
 
-                          0x9 => format!("sta  @dyn"),
+                          0x9 => format!("clc @dyn"),
 
-                          0xA => format!("ldi  @dyn"),
+                          0xA => format!("sec @dyn"),
 
-                          0xB => format!("sti  @dyn"),
+                          0xB => format!("flc @dyn"),
 
-                          0xC => format!("lds  @dyn"),
+                          0xC => format!("swp @dyn"),
 
-                          0xD => format!("sts  @dyn"),
+                          0xD => format!("pop @dyn"),
 
                           _ => {
-                            format!("d{:02X}      ", instruction)
+                            format!("d{:02X}     ", instruction)
                           }
                         }
                       }
 
                       0b1 => {
                         let immediate = instruction; // decode_immediate
-                        format!("x{:02X}  @dyn", immediate)
+                        format!("x{:02X} @dyn", immediate)
                       }
 
                       _ => unreachable!(),

@@ -180,6 +180,16 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
               }
 
               0x4 => {
+                // iff
+                let a = memory[stack_pointer as usize];
+                memory[stack_pointer as usize] = 0x00;
+                stack_pointer = stack_pointer.wrapping_add(1);
+                let b = memory[stack_pointer as usize];
+
+                memory[stack_pointer as usize] = if carry_flag { a } else { b };
+              }
+
+              0x5 => {
                 // rot
                 let a = memory[stack_pointer as usize];
                 memory[stack_pointer as usize] = 0x00;
@@ -193,16 +203,6 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
                 };
 
                 memory[size_pointer as usize] = (shifted & 0xFF) as u8 | (shifted >> 8) as u8;
-              }
-
-              0x5 => {
-                // iff
-                let a = memory[stack_pointer as usize];
-                memory[stack_pointer as usize] = 0x00;
-                stack_pointer = stack_pointer.wrapping_add(1);
-                let b = memory[stack_pointer as usize];
-
-                memory[stack_pointer as usize] = if carry_flag { a } else { b };
               }
 
               0x8 => {
@@ -363,49 +363,13 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
                     // (carry and flags and stack)
                     match instruction & 0b00001111 {
                       0x0 => {
-                        // nop
-                      }
-
-                      0x1 => {
-                        // clc
-                        carry_flag = false;
-                      }
-
-                      0x2 => {
-                        // sec
-                        carry_flag = true;
-                      }
-
-                      0x3 => {
-                        // flc
-                        carry_flag = !carry_flag;
-                      }
-
-                      0x4 => {
-                        // swp
-                        let a = memory[stack_pointer as usize];
-                        stack_pointer = stack_pointer.wrapping_add(1);
-                        let b = memory[stack_pointer as usize];
-
-                        memory[stack_pointer as usize] = a;
-                        stack_pointer = stack_pointer.wrapping_sub(1);
-                        memory[stack_pointer as usize] = b;
-                      }
-
-                      0x5 => {
-                        // pop
-                        memory[stack_pointer as usize] = 0x00;
-                        stack_pointer = stack_pointer.wrapping_add(1);
-                      }
-
-                      0x8 => {
                         // lda
                         let a = memory[stack_pointer as usize];
 
                         memory[stack_pointer as usize] = memory[a as usize];
                       }
 
-                      0x9 => {
+                      0x1 => {
                         // sta
                         let a = memory[stack_pointer as usize];
                         memory[stack_pointer as usize] = 0x00;
@@ -421,31 +385,67 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
                         }
                       }
 
-                      0xA => {
+                      0x2 => {
                         // ldi
                         stack_pointer = stack_pointer.wrapping_sub(1);
                         memory[stack_pointer as usize] = instruction_pointer;
                       }
 
-                      0xB => {
+                      0x3 => {
                         // sti
                         instruction_pointer = memory[stack_pointer as usize];
                         memory[stack_pointer as usize] = 0x00;
                         stack_pointer = stack_pointer.wrapping_add(1);
                       }
 
-                      0xC => {
+                      0x4 => {
                         // lds
                         stack_pointer = stack_pointer.wrapping_sub(1);
                         memory[stack_pointer as usize] = stack_pointer;
                       }
 
-                      0xD => {
+                      0x5 => {
                         // sts
                         let a = memory[stack_pointer as usize];
                         memory[stack_pointer as usize] = 0x00;
 
                         stack_pointer = a;
+                      }
+
+                      0x8 => {
+                        // nop
+                      }
+
+                      0x9 => {
+                        // clc
+                        carry_flag = false;
+                      }
+
+                      0xA => {
+                        // sec
+                        carry_flag = true;
+                      }
+
+                      0xB => {
+                        // flc
+                        carry_flag = !carry_flag;
+                      }
+
+                      0xC => {
+                        // swp
+                        let a = memory[stack_pointer as usize];
+                        stack_pointer = stack_pointer.wrapping_add(1);
+                        let b = memory[stack_pointer as usize];
+
+                        memory[stack_pointer as usize] = a;
+                        stack_pointer = stack_pointer.wrapping_sub(1);
+                        memory[stack_pointer as usize] = b;
+                      }
+
+                      0xD => {
+                        // pop
+                        memory[stack_pointer as usize] = 0x00;
+                        stack_pointer = stack_pointer.wrapping_add(1);
                       }
 
                       _ => {
