@@ -31,12 +31,12 @@ main!
     ld2 ld2 add st2
 
     # if x_pos % 0x10 == 0, shift entire screen left by 1 pixel
-    ld4 x0F and pop :ignore_shift !bcc clc
+    ld4 x0F and pop :ignore_shift !bcc
     !front_buffer for_addr:
-      ld0 ld0 lda shl sta
-      ld0 inc ld0 lda shl sta
-      ld0 ld0 lda x00 add sta
-    x02 add :for_addr !bcc pop
+      ld0 inc lda shl pop # load carry
+      ld0 ld0 lda shl sta inc
+      ld0 ld0 lda shl sta inc
+    buf :for_addr !bcc pop
     ignore_shift:
 
     # compute bit_addr of (x_pos, y_pos)
