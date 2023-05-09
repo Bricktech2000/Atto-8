@@ -24,11 +24,6 @@ tasks:
 - only flappy and prng use `shf` with carry
 - instructions removed: adc, sbc, shf, sfc
 
-todos:
-
-- fix all TODO items
-- update instruction set
-
 moving forward:
 
 - [ ] command line interface

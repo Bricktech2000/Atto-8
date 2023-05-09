@@ -3,7 +3,7 @@
 main!
 pop  @dyn # x00 @org dE5
 x20  @dyn # x01 @org d20
-neg  @dyn # x02 @org dB4
+neg  @dyn # x02 @org dB2
 sts  @dyn # x03 @org dED
 x00  @dyn # x04 @org d00
 ld0  @dyn # x05 @org dC0
@@ -13,7 +13,7 @@ nop  @dyn # x08 @org dE0
 x38  @dyn # x09 @org d38
 nop  @dyn # x0A @org dE0
 x20  @dyn # x0B @org d20
-neg  @dyn # x0C @org dB4
+neg  @dyn # x0C @org dB2
 x12  @dyn # x0D @org d12
 nop  @dyn # x0E @org dE0
 x62  @dyn # x0F @org d62
@@ -26,7 +26,7 @@ x00  @dyn # x15 @org d00
 lda  @dyn # x16 @org dE8
 buf  @dyn # x17 @org dB7
 pop  @dyn # x18 @org dE5
-iff1 @dyn # x19 @org d9C
+iff1 @dyn # x19 @org d94
 sti  @dyn # x1A @org dEB
 x00  @dyn # x1B @org d00
 ld0  @dyn # x1C @org dC0
@@ -35,7 +35,7 @@ x18  @dyn # x1E @org d18
 nop  @dyn # x1F @org dE0
 x00  @dyn # x20 @org d00
 x20  @dyn # x21 @org d20
-neg  @dyn # x22 @org dB4
+neg  @dyn # x22 @org dB2
 x28  @dyn # x23 @org d28
 nop  @dyn # x24 @org dE0
 x50  @dyn # x25 @org d50
@@ -48,7 +48,7 @@ x00  @dyn # x2B @org d00
 lda  @dyn # x2C @org dE8
 buf  @dyn # x2D @org dB7
 pop  @dyn # x2E @org dE5
-iff1 @dyn # x2F @org d9C
+iff1 @dyn # x2F @org d94
 sti  @dyn # x30 @org dEB
 x00  @dyn # x31 @org d00
 ld0  @dyn # x32 @org dC0
@@ -82,7 +82,7 @@ ld4  @dyn # x4D @org dC4
 x00  @dyn # x4E @org d00
 x00  @dyn # x4F @org d00
 ld3  @dyn # x50 @org dC3
-dec  @dyn # x51 @org dB3
+dec  @dyn # x51 @org dB1
 ld0  @dyn # x52 @org dC0
 ld3  @dyn # x53 @org dC3
 add1 @dyn # x54 @org d80
@@ -92,7 +92,7 @@ buf  @dyn # x57 @org dB7
 x51  @dyn # x58 @org d51
 x5D  @dyn # x59 @org d5D
 nop  @dyn # x5A @org dE0
-iff1 @dyn # x5B @org d9C
+iff1 @dyn # x5B @org d94
 sti  @dyn # x5C @org dEB
 pop  @dyn # x5D @org dE5
 st2  @dyn # x5E @org dD2
@@ -101,7 +101,7 @@ pop  @dyn # x60 @org dE5
 sti  @dyn # x61 @org dEB
 clc  @dyn # x62 @org dE1
 ld3  @dyn # x63 @org dC3
-dec  @dyn # x64 @org dB3
+dec  @dyn # x64 @org dB1
 ld0  @dyn # x65 @org dC0
 ld3  @dyn # x66 @org dC3
 add1 @dyn # x67 @org d80
@@ -114,7 +114,7 @@ buf  @dyn # x6D @org dB7
 x64  @dyn # x6E @org d64
 x73  @dyn # x6F @org d73
 nop  @dyn # x70 @org dE0
-iff1 @dyn # x71 @org d9C
+iff1 @dyn # x71 @org d94
 sti  @dyn # x72 @org dEB
 pop  @dyn # x73 @org dE5
 st2  @dyn # x74 @org dD2

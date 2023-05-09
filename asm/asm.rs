@@ -128,11 +128,12 @@ enum Token {
   XorS(u8),
   Xnd,
   XndS(u8),
-  Adn,
-  Sbn,
   Inc,
   Dec,
   Neg,
+  Adn,
+  Shl,
+  Shr,
   Not,
   Buf,
   Nop,
@@ -179,11 +180,12 @@ impl std::fmt::Display for Token {
       Token::XorS(n) => write!(f, "xor{:01X}", n),
       Token::Xnd => write!(f, "xnd"),
       Token::XndS(n) => write!(f, "xnd{:01X}", n),
-      Token::Adn => write!(f, "adn"),
-      Token::Sbn => write!(f, "sbn"),
       Token::Inc => write!(f, "inc"),
       Token::Dec => write!(f, "dec"),
       Token::Neg => write!(f, "neg"),
+      Token::Adn => write!(f, "adn"),
+      Token::Shl => write!(f, "shl"),
+      Token::Shr => write!(f, "shr"),
       Token::Not => write!(f, "not"),
       Token::Buf => write!(f, "buf"),
       Token::Nop => write!(f, "nop"),
@@ -216,11 +218,12 @@ enum Instruction {
   And(u8),
   Xor(u8),
   Xnd(u8),
-  Adn,
-  Sbn,
   Inc,
   Dec,
   Neg,
+  Adn,
+  Shl,
+  Shr,
   Not,
   Buf,
   Nop,
@@ -362,11 +365,12 @@ fn tokenize(source: String, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)>
         _ if token.starts_with("xor") => Token::XorS(parse_hex(&token[3..], errors, &position)),
         "xnd" => Token::Xnd,
         _ if token.starts_with("xnd") => Token::XndS(parse_hex(&token[3..], errors, &position)),
-        "adn" => Token::Adn,
-        "sbn" => Token::Sbn,
         "inc" => Token::Inc,
         "dec" => Token::Dec,
         "neg" => Token::Neg,
+        "adn" => Token::Adn,
+        "shl" => Token::Shl,
+        "shr" => Token::Shr,
         "not" => Token::Not,
         "buf" => Token::Buf,
         "nop" => Token::Nop,
@@ -648,11 +652,12 @@ fn assemble(
         Token::XndS(size) => {
           Root::Instruction(Instruction::Xnd(assert_size(size, errors, &position)))
         }
-        Token::Adn => Root::Instruction(Instruction::Adn),
-        Token::Sbn => Root::Instruction(Instruction::Sbn),
         Token::Inc => Root::Instruction(Instruction::Inc),
         Token::Dec => Root::Instruction(Instruction::Dec),
         Token::Neg => Root::Instruction(Instruction::Neg),
+        Token::Adn => Root::Instruction(Instruction::Adn),
+        Token::Shl => Root::Instruction(Instruction::Shl),
+        Token::Shr => Root::Instruction(Instruction::Shr),
         Token::Not => Root::Instruction(Instruction::Not),
         Token::Buf => Root::Instruction(Instruction::Buf),
         Token::Nop => Root::Instruction(Instruction::Nop),
@@ -881,18 +886,6 @@ fn assemble(
       Node::Not(node) => !eval(node, labels)?,
       Node::Add(node1, node2) => eval(node2, labels)?.wrapping_add(eval(node1, labels)?),
       Node::Sub(node1, node2) => eval(node2, labels)?.wrapping_sub(eval(node1, labels)?),
-      /* TODO Node::Shf(node1, node2) => {
-        let a = eval(node1, labels)? as u16;
-        let b = eval(node2, labels)? as u16;
-
-        let shifted = if a as i8 >= 0 {
-          (b as u16).wrapping_shl(a as u32)
-        } else {
-          (b as u16).wrapping_shr(a.wrapping_neg() as u32)
-        } as u16;
-
-        shifted as u8
-      } */
       Node::Rot(node1, node2) => {
         let a = eval(node1, labels)? as u16;
         let b = eval(node2, labels)? as u16;
@@ -1096,18 +1089,19 @@ fn codegen(
         Instruction::Ldo(offset) => 0b11000000 | encode_offset(offset),
         Instruction::Sto(offset) => 0b11010000 | encode_offset(offset),
         Instruction::Add(size) => 0b10000000 | encode_size(size),
-        Instruction::Sub(size) => 0b10001000 | encode_size(size),
-        Instruction::Rot(size) => 0b10011000 | encode_size(size),
-        Instruction::Iff(size) => 0b10011100 | encode_size(size),
+        Instruction::Sub(size) => 0b10000100 | encode_size(size),
+        Instruction::Rot(size) => 0b10010000 | encode_size(size),
+        Instruction::Iff(size) => 0b10010100 | encode_size(size),
         Instruction::Orr(size) => 0b10100000 | encode_size(size),
         Instruction::And(size) => 0b10100100 | encode_size(size),
         Instruction::Xor(size) => 0b10101000 | encode_size(size),
         Instruction::Xnd(size) => 0b10101100 | encode_size(size),
-        Instruction::Adn => 0b10110000,
-        Instruction::Sbn => 0b10110001,
-        Instruction::Inc => 0b10110010,
-        Instruction::Dec => 0b10110011,
-        Instruction::Neg => 0b10110100,
+        Instruction::Inc => 0b10110000,
+        Instruction::Dec => 0b10110001,
+        Instruction::Neg => 0b10110010,
+        Instruction::Adn => 0b10110011,
+        Instruction::Shl => 0b10110100,
+        Instruction::Shr => 0b10110101,
         Instruction::Not => 0b10110110,
         Instruction::Buf => 0b10110111,
         Instruction::Nop => 0xE0,

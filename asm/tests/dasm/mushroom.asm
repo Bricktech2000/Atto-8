@@ -234,7 +234,7 @@ x7C  @dyn # xE5 @org d7C
 x70  @dyn # xE6 @org d70
 x3E  @dyn # xE7 @org d3E
 x67  @dyn # xE8 @org d67
-iff4 @dyn # xE9 @org d9E
+d9E       # xE9 @org d9E
 d8F       # xEA @org d8F
 ld1  @dyn # xEB @org dC1
 d8F       # xEC @org d8F
@@ -242,7 +242,7 @@ ldD  @dyn # xED @org dCD
 ldF  @dyn # xEE @org dCF
 stF  @dyn # xEF @org dDF
 dE7       # xF0 @org dE7
-iff8 @dyn # xF1 @org d9F
+d9F       # xF1 @org d9F
 nop  @dyn # xF2 @org dE0
 x0D  @dyn # xF3 @org d0D
 ldF  @dyn # xF4 @org dCF

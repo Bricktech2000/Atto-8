@@ -40,18 +40,19 @@ Negative values are represented in two's complement.
 | `ldo O`     | Load from Offset              | `*(SP + O) -> *(--SP);`                                                  | `0b1100OOOO` (`0xCO`) |
 | `sto O`     | Store to Offset               | `*SP++ -> *(SP + O);`                                                    | `0b1101OOOO` (`0xDO`) |
 | `add S`     | Add with Carry                | `*(SP++) + *(SP + 2 ** S) + CF -> *(SP + 2 ** S); *SP > 0xFF -> C;`      | `0b100000SS`          |
-| `sub S`     | Subtract with Carry           | `-*(SP++) + *(SP + 2 ** S) - CF -> *(SP + 2 ** S); *SP < 0x00 -> C;`     | `0b100010SS`          |
-| `rot S`     | Rotate                        | `(*SP << S) \| ((*SP << S) >> 8) -> *SP;`                                | `0b100110SS`          |
-| `iff S`     | Conditional with Carry        | `CF ? *((SP++)++) : *((++SP)++ + 2 ** S) -> *(--SP);`                    | `0b100111SS`          |
+| `sub S`     | Subtract with Carry           | `-*(SP++) + *(SP + 2 ** S) - CF -> *(SP + 2 ** S); *SP < 0x00 -> C;`     | `0b100001SS`          |
+| `rot S`     | Rotate                        | `(*SP << S) \| ((*SP << S) >> 8) -> *SP;`                                | `0b100100SS`          |
+| `iff S`     | Conditional with Carry        | `CF ? *((SP++)++) : *((++SP)++ + 2 ** S) -> *(--SP);`                    | `0b100101SS`          |
 | `orr S`     | Bitwise OR                    | `*(SP++) \| *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`           | `0b101000SS`          |
 | `and S`     | Bitwise AND                   | `*(SP++) & *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`            | `0b101001SS`          |
 | `xor S`     | Bitwise XOR                   | `*(SP++) ^ *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`            | `0b101010SS`          |
 | `xnd S`     | Bitwise XAND                  | `SP++; 0 -> *(SP + 2 ** S); *SP == 0 -> CF;`                             | `0b101011SS`          |
-| `adn`       | Add Nibbles                   | `*SP + *(SP + 1) & 0x0F \| (*SP & 0xF0) + (*(SP + 1) & 0xF0) -> *(++SP)` | `0b10110000`          |
-| `sbn`       | Subtract Nibbles              | `*SP - *(SP + 1) & 0x0F \| (*SP & 0xF0) - (*(SP + 1) & 0xF0) -> *(++SP)` | `0b10110001`          |
-| `inc`       | Increment                     | `*SP + 1 -> *SP;`                                                        | `0b10110010`          |
-| `dec`       | Decrement                     | `*SP - 1 -> *SP;`                                                        | `0b10110011`          |
-| `neg`       | Negate                        | `-*SP -> *SP`                                                            | `0b10110100`          |
+| `inc`       | Increment                     | `*SP + 1 -> *SP;`                                                        | `0b10110000`          |
+| `dec`       | Decrement                     | `*SP - 1 -> *SP;`                                                        | `0b10110001`          |
+| `neg`       | Negate                        | `-*SP -> *SP`                                                            | `0b10110010`          |
+| `adn`       | Add Nibbles                   | `*SP + *(SP + 1) & 0x0F \| (*SP & 0xF0) + (*(SP + 1) & 0xF0) -> *(++SP)` | `0b10110011`          |
+| `shl`       | Shift Left                    | `(*SP & 0x80) -> C;  (*SP << 1) -> *SP;`                                 | `0b10110100`          |
+| `shr`       | Shift Right                   | `(*SP & 0x01) -> C;  (*SP >> 1) -> *SP;`                                 | `0b10110101`          |
 | `not`       | Bitwise NOT                   | `!*SP -> *SP; *SP == 0 -> CF;`                                           | `0b10110110`          |
 | `buf`       | Bitwise Buffer                | `*SP -> *SP; *SP == 0 -> CF;`                                            | `0b10110111`          |
 | `nop`       | No Operation                  | `;`                                                                      | `0b11100000` (`0xE0`) |
@@ -66,10 +67,6 @@ Negative values are represented in two's complement.
 | `sti`       | Store to Instruction Pointer  | `*(SP++) -> IP;`                                                         | `0b11101011` (`0xEB`) |
 | `lds`       | Load from Stack Pointer       | `SP -> *(--SP);`                                                         | `0b11101100` (`0xEC`) |
 | `sts`       | Store to Stack Pointer        | `*(SP++) -> SP;`                                                         | `0b11101101` (`0xED`) |
-
-#TODO shl is EE, shr is EF
-
-<!-- #TODO | `shf S`     | Shift                   | `(*SP << S) > 0xFF -> C;  (*SP << S) -> *SP;`                            | `0b100100SS`          | -->
 
 ## Initial State
 

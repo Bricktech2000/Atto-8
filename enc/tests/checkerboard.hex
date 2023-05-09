@@ -1,11 +1,11 @@
 # main!
 #   start:
 #     x55 ld0 ld0 not ld0
-#   lds !front_buffer sub pop :start :stop iff sti
+#   lds !front_buffer clc sub pop :start :stop iff sti
 #
 #   stop:
 #     !hlt
 
 55 C0 C0 B6 C0
-EC 1F B6 88 E5 00 0E 9C EB
-0E EB
+EC 1F B0 E1 84 E5 00 0F 94 EB
+0F EB

@@ -33,8 +33,8 @@ main!
     # if x_pos % 0x10 == 0, shift entire screen left by 1 pixel
     ld4 x0F and pop :ignore_shift !bcc clc
     !front_buffer for_addr:
-      ld0 ld0 lda dEE sta # TODO shl
-      ld0 inc ld0 lda dEE sta # TODO shl
+      ld0 ld0 lda shl sta
+      ld0 inc ld0 lda shl sta
       ld0 ld0 lda x00 add sta
     x02 add :for_addr !bcc pop
     ignore_shift:
