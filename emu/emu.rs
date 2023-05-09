@@ -160,7 +160,6 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
               // TODO
               0x0 | 0x1 => {
                 // add
-
                 let a = memory[stack_pointer as usize];
                 memory[stack_pointer as usize] = 0x00;
                 stack_pointer = stack_pointer.wrapping_add(1);

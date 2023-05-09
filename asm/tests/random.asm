@@ -13,7 +13,7 @@ main!
   x00 # prng_seed
 
   # seed prng by incrementing until keypress
-  wait: inc :wait !branch_input
+  wait: inc :wait !branch_input !reset_input
 
   loop:
     !prng x13 ld1 :print_byte !call

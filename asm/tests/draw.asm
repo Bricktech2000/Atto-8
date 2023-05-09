@@ -23,8 +23,8 @@ main!
     x03 !delay_long
     # input = *INPUT_BUFFER
     !input_buffer lda
-    # input = (1 << prng()) >> 4
-    # !prng_minimal x01 ld1 rot x04 !shr TODO shr
+    # input = (1 << prng()) & 0x0F
+    # !prng_minimal x01 ld1 rot x0F and
     # ignore if input is empty
     x0F and :ignore !bcs
     # vel = (input & 0b1010) ? 0x0F : 0x01

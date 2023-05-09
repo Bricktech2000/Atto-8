@@ -21,6 +21,7 @@ main!
     !prng_minimal
 
   loop:
+    # draw food at food_ps
     !front_buffer ld1 x11 orr !bit_addr !set_bit
 
     # input = *INPUT_BUFFER
@@ -51,6 +52,7 @@ main!
       !set_bit
     buf :for_head_twice !bcc clc pop
 
+    # figure out where the tail is headed
     :directions_end :directions sub @const for_dir: dec
       :directions ld1 add lda ld3
         !front_buffer ld6 ld3 adn !bit_addr !load_bit

@@ -1,7 +1,3 @@
-# shr! neg shf TODO
-# shl! x01 rot ld0 xFE and swp x01 and pop flc # TODO
-# shr! x01 !ror ld0 xEF and swp x80 and pop flc # TODO
-
 ror! neg rot
 norr! orr not
 nand! and not
