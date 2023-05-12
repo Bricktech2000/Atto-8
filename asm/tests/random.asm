@@ -19,7 +19,7 @@ main!
     !prng x13 ld1 :print_byte !call
     !prng x12 ld1 :print_byte !call
     !wait_input
-  :loop sti
+  :loop !jmp
 
   !hex_chars_minimal
   !print_byte_minimal

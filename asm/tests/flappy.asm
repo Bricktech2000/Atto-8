@@ -61,14 +61,14 @@ main!
     ignore_pipe:
 
     x60 !delay
-  :loop sti
+  :loop !jmp
 
   game_over:
     # blink pixel at (x_pos, y_pos)
     blink:
     ld1 ld1 !flip_bit
     xFF !delay
-    :blink sti
+    :blink !jmp
 
   !front_buffer @org
   d00 d00 d00 d00 d00 d00 d00 d00

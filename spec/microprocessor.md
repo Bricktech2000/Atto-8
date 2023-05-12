@@ -100,8 +100,8 @@ This implies the following:
 Program execution is as follows:
 
 1. Fetch the instruction at `IP`.
-2. Execute the instruction.
-3. Increment `IP`.
+2. Increment `IP`.
+3. Execute the instruction.
 4. Repeat.
 
 ## Conventions

@@ -5,10 +5,11 @@ xnorr! xor not
 xnand! xnd not
 abs! ld0 x01 rot x01 and neg swp ld1 add xor @const
 
-bcc! @const .skip iff sti skip.
-bcs! .skip swp @const iff sti skip.
-call! .ret swp @const sti ret.
-ret! sti
+jmp! sti
+bcc! @const .skip iff !jmp skip.
+bcs! .skip swp @const iff !jmp skip.
+call! .ret swp @const !jmp ret.
+ret! !jmp
 rt0! !ret
 rt1! st0 !ret
 rt2! st1 pop !ret
@@ -18,4 +19,4 @@ rt4! st3 pop pop pop !ret
 dbg! dBB # emulator treats unofficial `BB` as debug request
 nop! nop @dyn
 here! lbl. .lbl
-hlt! !here sti
+hlt! !here !jmp

@@ -57,7 +57,7 @@ main!
 
     x7F !delay
 
-  :loop sti
+  :loop !jmp
 
   game_over:
     !hlt

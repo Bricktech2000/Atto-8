@@ -47,6 +47,7 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
 
   for i in 0u128.. {
     let instruction: u8 = memory[instruction_pointer as usize];
+    instruction_pointer = instruction_pointer.wrapping_add(1);
 
     let elapsed = std::cmp::max(start.elapsed().as_millis(), 1); // prevent division by zero
     let realtime_offset = elapsed as i128 - i as i128 * 1000 * 4 / clock as i128; // roughly 4 clock cycles per instruction
@@ -399,8 +400,10 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
 
                       0x4 => {
                         // lds
+                        let a = stack_pointer;
                         stack_pointer = stack_pointer.wrapping_sub(1);
-                        memory[stack_pointer as usize] = stack_pointer;
+
+                        memory[stack_pointer as usize] = a;
                       }
 
                       0x5 => {
@@ -476,8 +479,6 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
 
       _ => unreachable!(),
     }
-
-    instruction_pointer = instruction_pointer.wrapping_add(1);
   }
 }
 

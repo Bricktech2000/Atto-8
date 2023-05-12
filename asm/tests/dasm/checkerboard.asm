@@ -9,7 +9,7 @@ ld0 @dyn # x04 @org dC0
 lds @dyn # x05 @org dE4
 x1F @dyn # x06 @org d1F
 not @dyn # x07 @org dB6
-sub @dyn # x08 @org d84
+xor @dyn # x08 @org dA8
 pop @dyn # x09 @org dED
 x00 @dyn # x0A @org d00
 x0E @dyn # x0B @org d0E

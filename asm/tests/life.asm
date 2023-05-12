@@ -42,7 +42,7 @@ main!
 
       pop # pop neighbour count
     buf :for_xy !bcc pop
-  :loop sti
+  :loop !jmp
 
   neighbours:
     dFF dF0 dF1 d0F d00 d01 d1F d10 d11

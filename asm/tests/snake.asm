@@ -5,6 +5,8 @@
 @ ../../lib/microcomputer/display.asm
 @ ../../lib/microcomputer/delay.asm
 
+# currently a few bytes short, stack runs into program data
+
 main!
   pop !front_buffer sts
   !reset_input
@@ -68,7 +70,7 @@ main!
 
     # sleep
     # x40 !delay
-  :loop sti
+  :loop !jmp
 
   game_over:
     # !hlt

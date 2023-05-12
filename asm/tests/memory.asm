@@ -13,7 +13,7 @@ main!
     !wait_input
     !display_data_len x00 !front_buffer :memset !call
     !wait_input
-  :loop sti
+  :loop !jmp
   !hlt
 
   display_data:

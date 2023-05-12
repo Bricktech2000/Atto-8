@@ -5,7 +5,7 @@ x05 @dyn # x00 @org d05
 x04 @dyn # x01 @org d04
 add @dyn # x02 @org d80
 x03 @dyn # x03 @org d03
-flc @dyn # x04 @org dEB
+sti @dyn # x04 @org dE3
 x00 @dyn # x05 @org d00
 x00 @dyn # x06 @org d00
 x00 @dyn # x07 @org d00

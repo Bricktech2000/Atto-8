@@ -37,4 +37,4 @@ main!
     !reset_input
     # pop input
     ignore: pop
-  :loop sti
+  :loop !jmp
