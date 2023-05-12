@@ -25,7 +25,7 @@ cargo run --bin asm asm/tests/random.asm       dasm/tests/random.bin       && ca
 cargo run --bin asm asm/tests/memory.asm       dasm/tests/memory.bin       && cargo run --bin dasm dasm/tests/memory.bin       asm/tests/dasm/memory.asm       && cargo run --bin asm asm/tests/dasm/memory.asm       emu/tests/memory.bin       && cargo run --bin emu emu/tests/memory.bin
 cargo run --bin asm asm/tests/counter.asm      dasm/tests/counter.bin      && cargo run --bin dasm dasm/tests/counter.bin      asm/tests/dasm/counter.asm      && cargo run --bin asm asm/tests/dasm/counter.asm      emu/tests/counter.bin      && cargo run --bin emu emu/tests/counter.bin
 cargo run --bin asm asm/tests/mushroom.asm     dasm/tests/mushroom.bin     && cargo run --bin dasm dasm/tests/mushroom.bin     asm/tests/dasm/mushroom.asm     && cargo run --bin asm asm/tests/dasm/mushroom.asm     emu/tests/mushroom.bin     && cargo run --bin emu emu/tests/mushroom.bin
-cargo run --bin asm asm/tests/flappy\ bird.asm dasm/tests/flappy\ bird.bin && cargo run --bin dasm dasm/tests/flappy\ bird.bin asm/tests/dasm/flappy\ bird.asm && cargo run --bin asm asm/tests/dasm/flappy\ bird.asm emu/tests/flappy\ bird.bin && cargo run --bin emu emu/tests/flappy\ bird.bin
+cargo run --bin asm asm/tests/flappy.asm       dasm/tests/flappy.bin       && cargo run --bin dasm dasm/tests/flappy.bin       asm/tests/dasm/flappy.asm       && cargo run --bin asm asm/tests/dasm/flappy.asm       emu/tests/flappy.bin       && cargo run --bin emu emu/tests/flappy.bin
 cargo run --bin asm asm/tests/life.asm         dasm/tests/life.bin         && cargo run --bin dasm dasm/tests/life.bin         asm/tests/dasm/life.asm         && cargo run --bin asm asm/tests/dasm/life.asm         emu/tests/life.bin         && cargo run --bin emu emu/tests/life.bin
 
 # work in progress
@@ -41,4 +41,4 @@ python3 enc/enc.py  enc/tests/addition.hex     dasm/tests/addition.bin     && ca
 python3 enc/enc.py  enc/tests/checkerboard.hex dasm/tests/checkerboard.bin && cargo run --bin dasm dasm/tests/checkerboard.bin asm/tests/dasm/checkerboard.asm && cargo run --bin asm asm/tests/dasm/checkerboard.asm emu/tests/checkerboard.bin && cargo run --bin emu emu/tests/checkerboard.bin
 ```
 
-![Game of Life Demo](misc/assets/life.gif) ![Random Number Generator Demo](misc/assets/random.gif) ![Flappy Bird Demo](misc/assets/flappy%20bird.gif) ![Infinite Counter Demo](misc/assets/counter.gif)
+![Game of Life Demo](misc/assets/life.gif) ![Random Number Generator Demo](misc/assets/random.gif) ![Flappy Bird Demo](misc/assets/flappy.gif) ![Infinite Counter Demo](misc/assets/counter.gif)
