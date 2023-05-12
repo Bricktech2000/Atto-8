@@ -184,9 +184,9 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
                 let a = memory[stack_pointer as usize];
                 memory[stack_pointer as usize] = 0x00;
                 stack_pointer = stack_pointer.wrapping_add(1);
-                let b = memory[stack_pointer as usize];
+                let b = memory[size_pointer as usize];
 
-                memory[stack_pointer as usize] = if carry_flag { a } else { b };
+                memory[size_pointer as usize] = if carry_flag { a } else { b };
               }
 
               0x5 => {
