@@ -589,7 +589,6 @@ fn assemble(
   enum Node {
     LabelRef(Label),
     Immediate(u8),
-    Not(Box<Node>),
     Add(Box<Node>, Box<Node>),
     Sub(Box<Node>, Box<Node>),
     Rot(Box<Node>, Box<Node>),
@@ -597,6 +596,9 @@ fn assemble(
     And(Box<Node>, Box<Node>),
     Xor(Box<Node>, Box<Node>),
     Xnd(Box<Node>, Box<Node>),
+    Shl(Box<Node>),
+    Shr(Box<Node>),
+    Not(Box<Node>),
   }
 
   let roots: Vec<(Pos, Root)> = tokens
@@ -769,6 +771,12 @@ fn assemble(
         [Root::Node(node), Root::Instruction(Instruction::Neg)] => Some(vec![Root::Node(
           Node::Sub(Box::new(node.clone()), Box::new(Node::Immediate(0))),
         )]),
+        [Root::Node(node), Root::Instruction(Instruction::Shl)] => {
+          Some(vec![Root::Node(Node::Shl(Box::new(node.clone())))])
+        }
+        [Root::Node(node), Root::Instruction(Instruction::Shr)] => {
+          Some(vec![Root::Node(Node::Shr(Box::new(node.clone())))])
+        }
         [Root::Node(node), Root::Instruction(Instruction::Not)] => {
           Some(vec![Root::Node(Node::Not(Box::new(node.clone())))])
         }
@@ -883,7 +891,6 @@ fn assemble(
     Ok(match node {
       Node::LabelRef(label) => *labels.get(label).ok_or(label.clone())?,
       Node::Immediate(immediate) => *immediate,
-      Node::Not(node) => !eval(node, labels)?,
       Node::Add(node1, node2) => eval(node2, labels)?.wrapping_add(eval(node1, labels)?),
       Node::Sub(node1, node2) => eval(node2, labels)?.wrapping_sub(eval(node1, labels)?),
       Node::Rot(node1, node2) => {
@@ -902,6 +909,9 @@ fn assemble(
       Node::And(node1, node2) => eval(node2, labels)? & eval(node1, labels)?,
       Node::Xor(node1, node2) => eval(node2, labels)? ^ eval(node1, labels)?,
       Node::Xnd(_, _) => 0,
+      Node::Shl(node) => eval(node, labels)?.wrapping_shl(1),
+      Node::Shr(node) => eval(node, labels)?.wrapping_shl(1),
+      Node::Not(node) => !eval(node, labels)?,
     })
   }
 
