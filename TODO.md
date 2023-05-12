@@ -103,4 +103,47 @@ SP_ADDR IP_DATA DATA_MEM DONE
 lds:
 DECSP_SP
 SP_ADDR SP_DATA DATA_MEM DONE
+
+---
+
+fetch:
+IP_ADDR MEM_DATA DATA_IR 0_OR
+
+nop:
+IP_ADDR MEM_DATA DATA_IR 0_OR
+0_SR
+
+inc:
+IP_ADDR MEM_DATA DATA_IR 0_OR
+SP_ADDR MEM_DATA DATA_AR
+...
+SP_ADDR DATA_MEM ..._DATA
 ```
+
+- `add`: `AR + BR`
+- `sub`: `~AR + BR + 1`
+- `rot`:
+- `orr`:
+- `and`:
+- `xor`:
+- `xnd`: `0`, is_zero to carry
+- `inc`: `AR + 1`
+- `dec`: `~AR + ~0 + 1`
+- `neg`: `~AR + 1`
+- `adn`: `AR + BR`, half carry disabled
+- `shl`: `AR + AR`
+- `shr`:
+- `not`: `~AR`, is_zero to carry
+- `buf`: `AR`, is_zero to carry
+
+**`(a >< b) \/ a`**
+
+- A register: `AR`
+- B register: `BR`
+- offset register: `OR`
+- step register: `SR`
+- instruction register: `IR`
+- instruction pointer: `IP`
+- stack pointer: `SP`
+
+`SP_DATA` will put `OR + SP` on the bus
