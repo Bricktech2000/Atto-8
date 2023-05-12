@@ -27,14 +27,14 @@ main!
     # this checks if y_pos & 0xF0 is either 0x00 of 0xF0
     ld3 ld0 x01 rot xor xE0 and pop ld1 ld0 neg iff st1
     # ld3 buf pop ld1 ld0 neg iff st1
-    # if (x_pos ^ x_pos << 1) & 0xE0 != 0 { goto skip_check }
+    # if (x_pos ^ x_pos << 1) & 0xE0 != 0 { goto ignore_check }
     # this only checks paddle bounces if the ball is on either side of the screen
-    ld4 ld0 x01 rot xor xE0 and pop :skip_check !bcc
+    ld4 ld0 x01 rot xor xE0 and pop :ignore_check !bcc
     # if the byte in memory where the ball is is 0, game over
     !front_buffer ld1 x03 !ror clc add lda buf pop :game_over !bcs
     # otherwise, x_vel = -x_vel
     ld2 neg st2
-    skip_check:
+    ignore_check:
 
     !front_buffer ld6 x01 rot clc add inc
     ld0 x04 sub x00 sta

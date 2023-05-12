@@ -27,6 +27,7 @@ cargo run --bin asm asm/tests/counter.asm      dasm/tests/counter.bin      && ca
 cargo run --bin asm asm/tests/mushroom.asm     dasm/tests/mushroom.bin     && cargo run --bin dasm dasm/tests/mushroom.bin     asm/tests/dasm/mushroom.asm     && cargo run --bin asm asm/tests/dasm/mushroom.asm     emu/tests/mushroom.bin     && cargo run --bin emu emu/tests/mushroom.bin
 cargo run --bin asm asm/tests/flappy.asm       dasm/tests/flappy.bin       && cargo run --bin dasm dasm/tests/flappy.bin       asm/tests/dasm/flappy.asm       && cargo run --bin asm asm/tests/dasm/flappy.asm       emu/tests/flappy.bin       && cargo run --bin emu emu/tests/flappy.bin
 cargo run --bin asm asm/tests/life.asm         dasm/tests/life.bin         && cargo run --bin dasm dasm/tests/life.bin         asm/tests/dasm/life.asm         && cargo run --bin asm asm/tests/dasm/life.asm         emu/tests/life.bin         && cargo run --bin emu emu/tests/life.bin
+cargo run --bin asm asm/tests/dino.asm         dasm/tests/dino.bin         && cargo run --bin dasm dasm/tests/dino.bin         asm/tests/dasm/dino.asm         && cargo run --bin asm asm/tests/dasm/dino.asm         emu/tests/dino.bin         && cargo run --bin emu emu/tests/dino.bin
 
 # work in progress
 cargo run --bin asm asm/tests/pong.asm         dasm/tests/pong.bin         && cargo run --bin dasm dasm/tests/pong.bin         asm/tests/dasm/pong.asm         && cargo run --bin asm asm/tests/dasm/pong.asm         emu/tests/pong.bin         && cargo run --bin emu emu/tests/pong.bin
