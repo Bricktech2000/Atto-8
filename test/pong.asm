@@ -1,8 +1,8 @@
-@ ../../lib/microprocessor/bit.asm
-@ ../../lib/microprocessor/core.asm
-@ ../../lib/microcomputer/delay.asm
-@ ../../lib/microcomputer/input.asm
-@ ../../lib/microcomputer/display.asm
+@ lib/microprocessor/bit.asm
+@ lib/microprocessor/core.asm
+@ lib/microcomputer/delay.asm
+@ lib/microcomputer/input.asm
+@ lib/microcomputer/display.asm
 
 main!
   pop !front_buffer sts

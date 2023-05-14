@@ -1,8 +1,8 @@
-@ ../../lib/microprocessor/core.asm
-@ ../../lib/microprocessor/nibble.asm
-@ ../../lib/microcomputer/display.asm
-@ ../../lib/microcomputer/hex_chars.asm
-@ ../../lib/microcomputer/print_byte.asm
+@ lib/microprocessor/core.asm
+@ lib/microprocessor/nibble.asm
+@ lib/microcomputer/display.asm
+@ lib/microcomputer/hex_chars.asm
+@ lib/microcomputer/print_byte.asm
 
 main!
   pop !front_buffer sts

@@ -1,10 +1,10 @@
-@ ../../lib/microprocessor/core.asm
-@ ../../lib/microprocessor/prng.asm
-@ ../../lib/microprocessor/nibble.asm
-@ ../../lib/microcomputer/input.asm
-@ ../../lib/microcomputer/display.asm
-@ ../../lib/microcomputer/hex_chars.asm
-@ ../../lib/microcomputer/print_byte.asm
+@ lib/microprocessor/core.asm
+@ lib/microprocessor/prng.asm
+@ lib/microprocessor/nibble.asm
+@ lib/microcomputer/input.asm
+@ lib/microcomputer/display.asm
+@ lib/microcomputer/hex_chars.asm
+@ lib/microcomputer/print_byte.asm
 
 main!
   pop !front_buffer sts

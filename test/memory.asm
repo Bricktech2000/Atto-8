@@ -1,8 +1,8 @@
-@ ../../lib/microprocessor/core.asm
-@ ../../lib/microprocessor/memcpy.asm
-@ ../../lib/microprocessor/memset.asm
-@ ../../lib/microcomputer/input.asm
-@ ../../lib/microcomputer/display.asm
+@ lib/microprocessor/core.asm
+@ lib/microprocessor/memcpy.asm
+@ lib/microprocessor/memset.asm
+@ lib/microcomputer/input.asm
+@ lib/microcomputer/display.asm
 
 main!
   pop !front_buffer sts

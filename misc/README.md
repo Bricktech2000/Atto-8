@@ -2,7 +2,7 @@
 
 Miscellaneous files
 
-# Contents
+## Contents
 
 - [/misc/assets/](../misc/assets/) &mdash; Assets for `README.md`
 - [/misc/font.txt](../misc/font.txt) &mdash; Default font for Atto-8 microcomputer

@@ -1,4 +1,4 @@
-@ ../../lib/microprocessor/core.asm
+@ lib/microprocessor/core.asm
 
 main!
   x4F x06 add @const

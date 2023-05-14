@@ -1,9 +1,9 @@
-@ ../../lib/microprocessor/bit.asm
-@ ../../lib/microprocessor/core.asm
-@ ../../lib/microprocessor/prng.asm
-@ ../../lib/microcomputer/input.asm
-@ ../../lib/microcomputer/display.asm
-@ ../../lib/microcomputer/delay.asm
+@ lib/microprocessor/bit.asm
+@ lib/microprocessor/core.asm
+@ lib/microprocessor/prng.asm
+@ lib/microcomputer/input.asm
+@ lib/microcomputer/display.asm
+@ lib/microcomputer/delay.asm
 
 # currently a few bytes short, stack runs into program data
 
