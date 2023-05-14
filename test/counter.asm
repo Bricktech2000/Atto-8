@@ -1,8 +1,8 @@
 @ lib/microprocessor/core.asm
-@ lib/microprocessor/nibble.asm
+@ lib/microprocessor/math.asm
+@ lib/microprocessor/memory.asm
+@ lib/microcomputer/text.asm
 @ lib/microcomputer/display.asm
-@ lib/microcomputer/hex_chars.asm
-@ lib/microcomputer/print_byte.asm
 
 main!
   pop !front_buffer sts
@@ -16,8 +16,8 @@ main!
     x11 ld3 :print_byte !call
     x18 ld2 :print_byte !call
     x19 ld1 :print_byte !call
-  x00 x00 x00 x00 x00 x00 x00 x00 sec
-  ad8 ad8 ad8 ad8 ad8 ad8 ad8 ad8 :loop !jmp
+  x00 x00 x00 x00 x00 x00 x00 x01
+  !add_u64 :loop !jmp
 
   !hex_chars_minimal
   !print_byte_minimal

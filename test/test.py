@@ -25,6 +25,7 @@ if len(sys.argv) <= 1:
 _filename = sys.argv[-1]
 _operations = sys.argv[1:-1]
 
+shutil.rmtree(rel_path('target/lib'), ignore_errors=True)
 shutil.copytree(rel_path('../lib'), rel_path('target/lib'), dirs_exist_ok=True)
 os.makedirs(rel_path('target'), exist_ok=True)
 shutil.copyfile(_filename, rel_path('target', os.path.basename(_filename)))

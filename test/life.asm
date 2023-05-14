@@ -1,6 +1,5 @@
-@ lib/microprocessor/bit.asm
 @ lib/microprocessor/core.asm
-@ lib/microprocessor/memcpy.asm
+@ lib/microprocessor/memory.asm
 @ lib/microcomputer/display.asm
 
 # to count neighbours, front buffer is read from and back buffer is written to.

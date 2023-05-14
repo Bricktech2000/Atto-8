@@ -1,14 +1,15 @@
-@ lib/microprocessor/bit.asm
 @ lib/microprocessor/core.asm
-@ lib/microprocessor/prng.asm
-@ lib/microprocessor/memcpy.asm
-@ lib/microcomputer/delay.asm
+@ lib/microprocessor/math.asm
+@ lib/microprocessor/memory.asm
+@ lib/microcomputer/time.asm
 @ lib/microcomputer/input.asm
 @ lib/microcomputer/display.asm
 
 main!
   pop !front_buffer sts
   !reset_input
+
+  xF0 # prng_seed
 
   x00 # cactus_bot
   x00 # cactus_top
@@ -18,26 +19,24 @@ main!
   xB0 # y_pos
   x00 # y_vel
 
-  xF0 # prng_seed
-
   loop:
     # set y_vel to jump_vel if any button is pressed and y_pos > GROUND_POS
-    !input_buffer lda buf pop !jump_vel ld2 iff ld3 !ground_pos sub pop ld2 iff st1 !reset_input
-    # compute bit_addr of (x_pos, y_pos)
-    !front_buffer ld3 xF0 and x05 rot orr x07 !dino_pos sub @const
+    !input_buffer lda buf pop !jump_vel ld1 iff ld2 !ground_pos sub pop ld1 iff st0 !reset_input
+    # compute bit_addr of (DINO_POS, y_pos)
+    !front_buffer ld2 xF0 and x05 rot orr x07 !dino_pos sub @const
     # clear pixel at (x_pos, y_pos - 2)
     # ld1 dec dec ld1 !clear_bit
     # clear pixel at (x_pos, y_pos)
     !clear_bit clc
 
     # x_pos += x_vel
-    ld4 ld4 add st4
+    ld3 ld3 add st3
     # y_vel += !y_accel
-    ld1 !y_accel add st1
+    !y_accel add
     # y_pos += y_vel
-    ld2 ld2 add st2
+    ld1 ld1 add st1
     # if y_pos > GROUND_POS, (y_pos, y_vel) = (GROUND_POS, 0x00)
-    ld2 !ground_pos sub pop !ground_pos x00 ld4 ld4 if2 if2 st2 st2
+    ld1 !ground_pos sub pop !ground_pos x00 !iff_u16
 
     # shift bottom halh of screen left by 1 pixel,
     # regardless of x_vel because we're out of memory
@@ -49,30 +48,30 @@ main!
 
     # shift in cactus from cactus_top and cactus_bot
     !front_buffer x15 add @const
-    ld0 ld0 lda xFE and clc
-    ld8 shl st8 x00 add sta
-    inc inc ld0 lda xFE and clc
-    ld8 shl st8 x00 add sta
+    ld0 ld0 lda shr clc
+    ld7 shl st7 shl sta
+    inc inc ld0 lda shr clc
+    ld7 shl st7 shl sta
 
-    # compute bit_addr of (x_pos, y_pos)
-    !front_buffer ld3 xF0 and x05 rot orr x07 !dino_pos sub @const
+    # compute bit_addr of (DINO_POS, y_pos)
+    !front_buffer ld2 xF0 and x05 rot orr x07 !dino_pos sub @const
     # if pixel at (x_pos, y_pos) is set, game over
-    ld1 ld1 !load_bit buf pop :game_over !bcc
+    !ld0_u16 !load_bit buf pop :game_over !bcc
     # set pixel at (x_pos, y_pos - 2)
     # ld1 dec dec ld1 !set_bit
     # set pixel at (x_pos, y_pos)
     !set_bit
 
     # if x_pos % 0x100 == 0, generate a new cactus
-    ld4 xFF and pop :ignore_cactus !bcc
+    ld3 xFF and pop :ignore_cactus !bcc
       # generate a pointer to a random cactus
       # the x06 (0b00000110) below requires 4 cacti
       # x0E (0x00001110) could be used for 8 cacti
-      !prng_minimal ld0
+      ld6 !prng_minimal st6 ld6
       x06 and clc :cacti add
       # copy cactus data to cactus_top and cactus_bot
-      ld0 lda st6
-      inc lda st6
+      ld0 lda st5
+      inc lda st5
     ignore_cactus:
 
     x60 !delay

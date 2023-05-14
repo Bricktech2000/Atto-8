@@ -6,8 +6,6 @@ main!
   dZZ
   xF00
   x
-  ad3
-  ad12
   :label
   !macro
   foobar
