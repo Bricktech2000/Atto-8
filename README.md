@@ -36,6 +36,7 @@ python3 test.py asm emu snake.asm
 
 # assembler tests
 python3 test.py asm emu errors.asm
+python3 test.py asm emu multiply.asm
 python3 test.py asm emu optimization.asm
 
 # hand-assembled programs

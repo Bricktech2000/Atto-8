@@ -25,11 +25,11 @@ main!
     !clear_bit clc
 
     # x_pos += x_vel
-    ld3 ld3 add st3
+    !u16.ld1 add st3
     # y_vel += !y_accel
     !y_accel add
     # y_pos += y_vel
-    ld1 ld1 add st1
+    !u16.ld0 add st1
 
     # if x_pos % 0x10 == 0, rotate entire screen left by 1 pixel
     ld3 x0F and pop :ignore_shift !bcc
@@ -43,7 +43,7 @@ main!
     # compute bit_addr of (BIRD_POS, y_pos)
     !front_buffer ld2 xF0 and x05 rot orr x07 !bird_pos sub @const
     # if pixel at (x_pos, y_pos) is set, game over
-    !ld0_u16 !load_bit buf pop :game_over !bcc
+    !u16.ld0 !load_bit buf pop :game_over !bcc
     # set pixel at (x_pos, y_pos)
     !set_bit
 
@@ -67,7 +67,7 @@ main!
   game_over:
     # blink pixel at (x_pos, y_pos)
     blink:
-    ld1 ld1 !flip_bit
+    !u16.ld0 !flip_bit
     xFF !delay
     :blink !jmp
 

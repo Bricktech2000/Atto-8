@@ -30,13 +30,13 @@ main!
     !clear_bit clc
 
     # x_pos += x_vel
-    ld3 ld3 add st3
+    !u16.ld1 add st3
     # y_vel += !y_accel
     !y_accel add
     # y_pos += y_vel
-    ld1 ld1 add st1
+    !u16.ld0 add st1
     # if y_pos > GROUND_POS, (y_pos, y_vel) = (GROUND_POS, 0x00)
-    ld1 !ground_pos sub pop !ground_pos x00 !iff_u16
+    !ground_pos ld2 sub pop !ground_pos x00 !u16.iff
 
     # shift bottom halh of screen left by 1 pixel,
     # regardless of x_vel because we're out of memory
@@ -56,7 +56,7 @@ main!
     # compute bit_addr of (DINO_POS, y_pos)
     !front_buffer ld2 xF0 and x05 rot orr x07 !dino_pos sub @const
     # if pixel at (x_pos, y_pos) is set, game over
-    !ld0_u16 !load_bit buf pop :game_over !bcc
+    !u16.ld0 !load_bit buf pop :game_over !bcc
     # set pixel at (x_pos, y_pos - 2)
     # ld1 dec dec ld1 !set_bit
     # set pixel at (x_pos, y_pos)
