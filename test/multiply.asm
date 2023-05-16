@@ -2,9 +2,7 @@
 @ lib/microprocessor/math.asm
 
 main!
-  x12 !u8 x34 !u8 :u8.mul !call
-  x12 x34 !u16 x56 x78 !u16 :u16.mul !call
+  x12 x45 !i8f8 x52 x55 !i8f8 !c8f8 x2F xB9 !i8f8 x21 x05 !i8f8 !c8f8 !c8f8.mul
   !hlt
 
-  !u8.mul
-  !u16.mul
+  !i16.mul_def

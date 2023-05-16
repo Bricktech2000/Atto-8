@@ -1,11 +1,11 @@
-memset!
+memset_def!
   memset: # memset(ptr, val, len)
     ld3 for_i. dec
       ld0 ld3 add ld4 sta
     buf .for_i !bcc pop
   !rt3
 
-memcpy!
+memcpy_def!
   memcpy: clc # memcpy(dst, src, len)
     ld3 for_i. dec
       ld0 ld3 add

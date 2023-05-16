@@ -20,8 +20,8 @@ main!
     !wait_input
   :loop !jmp
 
-  !hex_chars_minimal
-  !print_byte_minimal
+  !hex_chars_minimal_def
+  !print_byte_minimal_def
 
   seed: d00
 

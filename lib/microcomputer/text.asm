@@ -1,4 +1,4 @@
-hex_chars!
+hex_chars_def!
   hex_chars:
   # t m b t m b
     dEA dEC d4E # 0 1
@@ -10,7 +10,7 @@ hex_chars!
     dE8 dEC dAC # C D
     dEC dEE dC8 # E F
 
-hex_chars_minimal!
+hex_chars_minimal_def!
   hex_chars:
   # 0 1 2 3 4 5 6 7 8 9 A B C D E F
     dEC dCE dA6 d8E d6E d4C dEC dEE # top row
@@ -18,7 +18,7 @@ hex_chars_minimal!
     dEE d6E d2C dE2 dE2 dAE dEC dE8 # bottom row
 
 
-print_char!
+print_char_def!
   print_char: # print_char(index, buffer, pos)
     x03 for_i. dec
       # src = i + index * 3
@@ -33,14 +33,14 @@ print_char!
   # return*
   !rt3
 
-print_byte!
+print_byte_def!
   print_byte: # print_byte(byte, pos)
     ld2 inc :hex_chars ld3 x0F and :print_char !call
     ld2 :hex_chars ld3 x04 !ror x0F and :print_char !call
   # return*
   !rt2
 
-print_byte_minimal!
+print_byte_minimal_def!
   print_byte: clc # print_byte(byte, addr)
     # loop through rows
     x03 for_row. dec

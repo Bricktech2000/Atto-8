@@ -47,7 +47,7 @@ main!
     dFF dF0 dF1 d0F d00 d01 d1F d10 d11
   neighbours_end:
 
-  !memcpy
+  !memcpy_def
 
   # !glider
   # !blinker

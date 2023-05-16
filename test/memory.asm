@@ -24,7 +24,7 @@ main!
     # d00 d06 d00 dEE d00 d0E d00 d00 #   -8
   display_data_end:
 
-  !memset
-  !memcpy
+  !memset_def
+  !memcpy_def
 
 display_data_len! :display_data_end :display_data sub @const
