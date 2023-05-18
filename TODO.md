@@ -17,6 +17,8 @@ tasks:
 - [x] come up with clock frequency and add to spec
 - [x] buy components for computer
 - [x] fix assembler stack overflow with self-referencing macros
+- [ ] create `u4` and `i4` pair types
+- [ ] update programs with new types
 - [ ] build computer
 - [ ] come up with microcode
 

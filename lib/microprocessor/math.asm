@@ -1012,7 +1012,8 @@ c8f8.mul! # c8f8 product = c8f8.mul(c8f8 a, c8f8 b)
   !i8f8.ld4 !i8f8.ld2 !i8f8.mul !i8f8.ld4 !i8f8.ld4 !i8f8.mul !i8f8.add # imaginary part
   !i32.st1 !i32.pop
 
-c8f8.norm! !i8f8.ld1 !i8f8.ld0 !i8f8.mul !i8f8.st1 !i8f8.ld0 !i8f8.mul # i8f8 norm = c8f8.norm(c8f8 c)
+c4f4.norm! !i4f4.ld1 !i4f4.ld0 !i4f4.mul !i4f4.st1 !i4f4.ld0 !i4f4.mul !i4f4.add # i4f4 norm = c4f4.norm(c4f4 c)
+c8f8.norm! !i8f8.ld1 !i8f8.ld0 !i8f8.mul !i8f8.st1 !i8f8.ld0 !i8f8.mul !i4f4.add # i8f8 norm = c8f8.norm(c8f8 c)
 
 u8.mul_def!
   u8.mul: clc # u16 product = u8.mul(u8 a, u8 b)

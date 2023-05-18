@@ -33,6 +33,7 @@ python3 test.py asm emu dino.asm
 # work in progress
 python3 test.py asm emu pong.asm
 python3 test.py asm emu snake.asm
+python3 test.py asm emu mandelbrot.asm
 
 # assembler tests
 python3 test.py asm emu errors.asm
