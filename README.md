@@ -2,7 +2,7 @@
 
 # Atto-8
 
-A minimalist 8-bit microcomputer with stack-based microprocessor
+_A minimalist 8-bit microcomputer with stack-based microprocessor_
 
 ## Repository Structure
 
