@@ -3,7 +3,10 @@ norr! orr not
 nand! and not
 xnorr! xor not
 xnand! xnd not
-abs! ld0 x01 rot x01 and neg swp ld1 add xor @const
+abs! ld0 neg ld1 shl @dyn pop iff
+cabs! ld0 x01 rot x01 and neg swp ld1 add xor @const
+min! ld1 ld1 swp sub @dyn pop iff
+max! ld1 ld1 sub @dyn pop iff
 
 jmp! sti
 bcc! @const .skip iff !jmp skip.

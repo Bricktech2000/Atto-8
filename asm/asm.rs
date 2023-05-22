@@ -727,8 +727,16 @@ fn assemble(
     output
   }
 
+  // returns `true` if the given root effectively just pushes a value onto the stack
+  fn just_pushes(root: &Root) -> bool {
+    match root {
+      Root::Instruction(Instruction::Ldo(_)) => true,
+      Root::Node(_) => true,
+      _ => false,
+    }
+  }
+
   let mut roots = roots;
-  let mut last_roots = vec![];
 
   roots = match_replace(&roots, |window| match window {
     [Root::Instruction(instruction), Root::Dyn(None)] => {
@@ -743,12 +751,15 @@ fn assemble(
         },
       )
       .iter()
-      .map(|(_position, instruction)| Root::Dyn(Some(instruction.clone())))
+      .map(|(_, instruction)| Root::Dyn(Some(instruction.clone())))
       .collect(),
     ),
     _ => None,
   });
 
+  // optimize as much as possible into `Node`s for assembly-time evaluation
+
+  let mut last_roots = vec![];
   while roots != last_roots {
     last_roots = roots.clone();
     // println!("roots: {:?}\nlen: {}", roots, roots.len());
@@ -833,10 +844,10 @@ fn assemble(
           Box::new(node1.clone()),
         ))])
       }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Ldo(0x01))] => {
+      [Root::Node(node1), root, Root::Instruction(Instruction::Ldo(0x01))] if just_pushes(root) => {
         Some(vec![
           Root::Node(node1.clone()),
-          Root::Node(node2.clone()),
+          root.clone(),
           Root::Node(node1.clone()),
         ])
       }
@@ -863,27 +874,64 @@ fn assemble(
       }
       _ => None,
     });
+
+    roots = match_replace(&roots, |window| match window {
+      [Root::Node(node1), root1, root2, Root::Instruction(Instruction::Ldo(0x02))]
+        if just_pushes(root1) && just_pushes(root2) =>
+      {
+        Some(vec![
+          Root::Node(node1.clone()),
+          root1.clone(),
+          root2.clone(),
+          Root::Node(node1.clone()),
+        ])
+      }
+      _ => None,
+    });
   }
 
-  roots = match_replace(&roots, |window| match window {
-    [Root::Node(node1), Root::Node(node2)] if node1 == node2 => Some(vec![
-      Root::Node(node1.clone()),
-      Root::Instruction(Instruction::Ldo(0x00)),
-    ]),
-    [Root::Instruction(Instruction::Swp), Root::Instruction(Instruction::Pop)] => {
-      Some(vec![Root::Instruction(Instruction::Sto(0x00))])
-    }
-    _ => None,
-  });
+  // optimize duplicate `Node`s (pushing them might take up two bytes) into `Ldo`s (always take up one byte)
 
-  roots = match_replace(&roots, |window| match window {
-    [Root::Node(node1), Root::Node(node2), Root::Node(node3)] if node1 == node3 => Some(vec![
-      Root::Node(node1.clone()),
-      Root::Node(node2.clone()),
-      Root::Instruction(Instruction::Ldo(0x01)),
-    ]),
-    _ => None,
-  });
+  let mut last_roots = vec![];
+  while roots != last_roots {
+    last_roots = roots.clone();
+
+    roots = match_replace(&roots, |window| match window {
+      [Root::Node(node1), Root::Node(node2)] if node1 == node2 => Some(vec![
+        Root::Node(node1.clone()),
+        Root::Instruction(Instruction::Ldo(0x00)),
+      ]),
+      [Root::Instruction(Instruction::Swp), Root::Instruction(Instruction::Pop)] => {
+        Some(vec![Root::Instruction(Instruction::Sto(0x00))])
+      }
+      _ => None,
+    });
+
+    roots = match_replace(&roots, |window| match window {
+      [Root::Node(node1), root, Root::Node(node2)] if node1 == node2 && just_pushes(root) => {
+        Some(vec![
+          Root::Node(node1.clone()),
+          root.clone(),
+          Root::Instruction(Instruction::Ldo(0x01)),
+        ])
+      }
+      _ => None,
+    });
+
+    roots = match_replace(&roots, |window| match window {
+      [Root::Node(node1), root1, root2, Root::Node(node2)]
+        if node1 == node2 && just_pushes(root1) && just_pushes(root2) =>
+      {
+        Some(vec![
+          Root::Node(node1.clone()),
+          root1.clone(),
+          root2.clone(),
+          Root::Instruction(Instruction::Ldo(0x02)),
+        ])
+      }
+      _ => None,
+    });
+  }
 
   // assemble roots into instructions by computing the value of every node and resolving labels
 

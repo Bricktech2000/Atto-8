@@ -3,6 +3,8 @@
 @ lib/microprocessor/memory.asm
 @ lib/microcomputer/display.asm
 
+# a few bytes short, never fully tested. missing `scale` factor from C implementation
+
 main!
   pop !front_buffer sts
 

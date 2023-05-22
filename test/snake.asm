@@ -5,7 +5,7 @@
 @ lib/microcomputer/input.asm
 @ lib/microcomputer/display.asm
 
-# currently a few bytes short, stack runs into program data
+# a few bytes short, but was working before having to add `clc`. missing `!delay` call
 
 main!
   pop !front_buffer sts

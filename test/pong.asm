@@ -4,6 +4,8 @@
 @ lib/microcomputer/input.asm
 @ lib/microcomputer/display.asm
 
+# missing second paddle, paddle bounds checks and ball bounce randomization
+
 main!
   pop !front_buffer sts
   !reset_input
