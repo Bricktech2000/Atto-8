@@ -7,23 +7,18 @@ fn main() {
 
   let image_file: &String = &args[1];
 
-  let memory: Vec<u8> = match std::fs::read(image_file) {
-    Ok(source) => source,
-    Err(_) => {
+  let memory = std::fs::read(image_file)
+    .unwrap_or_else(|_| {
       println!("Error: Unable to read file: {}", image_file);
       std::process::exit(1);
-    }
-  };
-
-  match memory.try_into() {
-    Ok(slice) => {
-      emulate(slice, 100000);
-    }
-    Err(_) => {
+    })
+    .try_into()
+    .unwrap_or_else(|_| {
       println!("Error: Memory image has incorrect size");
       std::process::exit(1);
-    }
-  };
+    });
+
+  emulate(memory, 100000);
 }
 
 fn emulate(memory: [u8; 0x100], clock: u128) {
@@ -67,7 +62,7 @@ fn emulate(memory: [u8; 0x100], clock: u128) {
       print!("\r\n");
       print_input(&input_ored.try_into().unwrap());
       print!("\r\n");
-      print!("RAM\r\n");
+      print!("MEM\r\n");
       print_memory(&memory.clone().try_into().unwrap());
       print!(
         "IP {:8}\r\nSP {:8}\r\nCF {:8}\r\n",

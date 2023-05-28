@@ -246,7 +246,7 @@ fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -
 
   use std::path::Path;
   let source = match std::fs::read_to_string(&file.path) {
-    Ok(source) => source,
+    Ok(data) => data,
     Err(_) => {
       errors.push((
         Pos {

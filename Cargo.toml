@@ -20,3 +20,7 @@ path = "dasm/dasm.rs"
 [[bin]]
 name = "emu"
 path = "emu/emu.rs"
+
+[[bin]]
+name = "sim"
+path = "sim/sim.rs"

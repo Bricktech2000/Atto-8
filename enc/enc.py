@@ -18,4 +18,4 @@ image_file = sys.argv[2]
 with open(hex_file, 'rb') as input_file:
   with open(image_file, 'wb') as output_file:
     output_file.write(bytes(pad_or_slice(list(bytes.fromhex(
-        ''.join(list(filter(lambda line: not line.startswith('# ') and line != '#', input_file.read().decode('utf-8').split('\n')))))), 0x100)))
+        ''.join(list(filter(lambda line: not line.startswith('# ') and line != '#', input_file.read().decode('utf-8').split('\n')))))), 0x10)))

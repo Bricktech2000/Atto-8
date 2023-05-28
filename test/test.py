@@ -46,6 +46,8 @@ for operation in _operations:
       filename += '.asm'
     case 'emu':
       operations.append(functools.partial(run_cargo, 'run', '--bin', 'emu', filename))
+    case 'sim':
+      operations.append(functools.partial(run_cargo, 'run', '--bin', 'sim', filename))
     case _:
       print(f'Error: Unknown operation: {operation}')
       sys.exit(1)

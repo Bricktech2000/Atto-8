@@ -79,10 +79,10 @@ nop:
 DONE
 
 clc:
-0_DATA NONZERO_CARRY DONE
+ZERO_DATA NONZERO_CARRY DONE
 
 sec:
-0_DATA ZERO_CARRY DONE
+ZERO_DATA ZERO_CARRY DONE
 
 flc:
 CARRY_DATA ZERO_CARRY DONE
@@ -109,15 +109,15 @@ SP_ADDR SP_DATA DATA_MEM DONE
 ---
 
 fetch:
-IP_ADDR MEM_DATA DATA_IR 0_OR
+IP_ADDR MEM_DATA DATA_IR ZERO_OR
 
 nop:
-IP_ADDR MEM_DATA DATA_IR 0_OR
-0_SR
+IP_ADDR MEM_DATA DATA_IR ZERO_OR
+ZERO_SR
 
 inc:
-IP_ADDR MEM_DATA DATA_IR 0_OR
-SP_ADDR MEM_DATA DATA_AR
+IP_ADDR MEM_DATA DATA_IR ZERO_OR
+SP_ADDR MEM_DATA DATA_AL
 ...
 SP_ADDR DATA_MEM ..._DATA
 ```
@@ -130,15 +130,13 @@ SP_ADDR DATA_MEM ..._DATA
 - `xor`:
 - `xnd`: `0`, is_zero to carry
 - `inc`: `AR + 1`
-- `dec`: `~AR + ~0 + 1`
+- `dec`: `AR + ~0`
 - `neg`: `~AR + 1`
 - `adn`: `AR + BR`, half carry disabled
 - `shl`: `AR + AR`
 - `shr`:
 - `not`: `~AR`, is_zero to carry
 - `buf`: `AR`, is_zero to carry
-
-**`(a >< b) \/ a`**
 
 - A register: `AR`
 - B register: `BR`
