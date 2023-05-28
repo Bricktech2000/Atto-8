@@ -1,15 +1,15 @@
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   // if args.len() != 3 {
-  //   println!("Usage: sim <image file> <microcode file>");
+  //   println!("Usage: sim <memory image file> <microcode image file>");
   //   std::process::exit(1);
   // }
 
-  let image_file: &String = &args[1];
+  let memory_image_file: &String = &args[1];
 
-  let memory = std::fs::read(image_file)
+  let memory_image = std::fs::read(memory_image_file)
     .unwrap_or_else(|_| {
-      println!("Error: Unable to read file: {}", image_file);
+      println!("Error: Unable to read file: {}", memory_image_file);
       std::process::exit(1);
     })
     .try_into()
@@ -18,22 +18,22 @@ fn main() {
       std::process::exit(1);
     });
 
-  // let microcode_file: &String = &args[2];
+  // let microcode_image_file: &String = &args[2];
   //
-  // let microcode = std::fs::read(microcode_file)
+  // let microcode = std::fs::read(microcode_image_file)
   //   .unwrap_or_else(|_| {
-  //     println!("Error: Unable to read file: {}", image_file);
+  //     println!("Error: Unable to read file: {}", microcode_image_file);
   //     std::process::exit(1);
   //   })
   //   .try_into()
   //   .unwrap_or_else(|_| {
-  //     println!("Error: Microcode has incorrect size");
+  //     println!("Error: Microcode image has incorrect size");
   //     std::process::exit(1);
   //   });
 
-  let microcode = [0x00; 0x10];
+  let microcode_image = [0x00; 0x10];
 
-  simulate(memory, microcode, 100000);
+  simulate(memory_image, microcode_image, 100000);
 }
 
 fn simulate(memory: [u8; 0x10], microcode: [u8; 0x10], clock: u128) {

@@ -43,32 +43,11 @@ struct Label {
   identifier: String,
 }
 
-impl std::fmt::Display for Label {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    match self.scope_id {
-      Some(_) => write!(f, ".{}", self.identifier),
-      None => write!(f, ":{}", self.identifier),
-    }
-  }
-}
-
 #[derive(Clone, Eq, PartialEq, Hash)]
 struct Macro(String);
 
-impl std::fmt::Display for Macro {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    write!(f, "!{}", self.0)
-  }
-}
-
 #[derive(Clone, Eq, PartialEq)]
 struct Error(String);
-
-impl std::fmt::Display for Error {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    write!(f, "{}", self.0)
-  }
-}
 
 #[derive(Clone, Eq, PartialEq)]
 struct Pos {
@@ -76,27 +55,9 @@ struct Pos {
   index: usize,
 }
 
-impl std::fmt::Display for Pos {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    write!(f, "{}#{}", self.scope, self.index)
-  }
-}
-
 #[derive(Clone, Eq, PartialEq)]
 struct File {
   path: String,
-}
-
-impl std::fmt::Display for File {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    use path_clean::PathClean;
-    use std::path::Path;
-    write!(
-      f,
-      "@{}",
-      Path::new(&self.path).clean().to_str().unwrap().to_string()
-    )
-  }
 }
 
 #[derive(Clone, Eq, PartialEq)]
@@ -148,60 +109,6 @@ enum Token {
   Flc,
   Swp,
   Pop,
-}
-
-impl std::fmt::Display for Token {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    match self {
-      Token::LabelDef(label) => write!(f, "{}", label),
-      Token::LabelRef(label) => write!(f, "{}", label),
-      Token::MacroDef(macro_) => write!(f, "{}", macro_),
-      Token::MacroRef(macro_) => write!(f, "{}", macro_),
-      Token::AtConst => write!(f, "@const"),
-      Token::AtDyn => write!(f, "@dyn"),
-      Token::AtOrg => write!(f, "@org"),
-      Token::DDD(n) => write!(f, "d{:02X}", n),
-      Token::XXX(n) => write!(f, "x{:02X}", n),
-      Token::Add => write!(f, "add"),
-      Token::AdS(n) => write!(f, "ad{:01X}", n),
-      Token::Sub => write!(f, "sub"),
-      Token::SuS(n) => write!(f, "su{:01X}", n),
-      Token::Iff => write!(f, "iff"),
-      Token::IfS(n) => write!(f, "if{:01X}", n),
-      Token::Rot => write!(f, "rot"),
-      Token::RoS(n) => write!(f, "ro{:01X}", n),
-      Token::Orr => write!(f, "orr"),
-      Token::OrS(n) => write!(f, "or{:01X}", n),
-      Token::And => write!(f, "and"),
-      Token::AnS(n) => write!(f, "an{:01X}", n),
-      Token::Xor => write!(f, "xor"),
-      Token::XoS(n) => write!(f, "xo{:01X}", n),
-      Token::Xnd => write!(f, "xnd"),
-      Token::XnS(n) => write!(f, "xn{:01X}", n),
-      Token::Inc => write!(f, "inc"),
-      Token::Dec => write!(f, "dec"),
-      Token::Neg => write!(f, "neg"),
-      Token::Adn => write!(f, "adn"),
-      Token::Shl => write!(f, "shl"),
-      Token::Shr => write!(f, "shr"),
-      Token::Not => write!(f, "not"),
-      Token::Buf => write!(f, "buf"),
-      Token::LdO(n) => write!(f, "ld{:01X}", n),
-      Token::StO(n) => write!(f, "st{:01X}", n),
-      Token::Lda => write!(f, "lda"),
-      Token::Sta => write!(f, "sta"),
-      Token::Ldi => write!(f, "ldi"),
-      Token::Sti => write!(f, "sti"),
-      Token::Lds => write!(f, "lds"),
-      Token::Sts => write!(f, "sts"),
-      Token::Nop => write!(f, "nop"),
-      Token::Clc => write!(f, "clc"),
-      Token::Sec => write!(f, "sec"),
-      Token::Flc => write!(f, "flc"),
-      Token::Swp => write!(f, "swp"),
-      Token::Pop => write!(f, "pop"),
-    }
-  }
 }
 
 #[derive(Clone, Eq, PartialEq)]
@@ -1202,4 +1109,97 @@ fn codegen(
   }
 
   bytes
+}
+
+impl std::fmt::Display for Label {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    match self.scope_id {
+      Some(_) => write!(f, ".{}", self.identifier),
+      None => write!(f, ":{}", self.identifier),
+    }
+  }
+}
+
+impl std::fmt::Display for Macro {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    write!(f, "!{}", self.0)
+  }
+}
+
+impl std::fmt::Display for Error {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    write!(f, "{}", self.0)
+  }
+}
+
+impl std::fmt::Display for Pos {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    write!(f, "{}#{}", self.scope, self.index)
+  }
+}
+
+impl std::fmt::Display for File {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    use path_clean::PathClean;
+    use std::path::Path;
+    write!(
+      f,
+      "@{}",
+      Path::new(&self.path).clean().to_str().unwrap().to_string()
+    )
+  }
+}
+
+impl std::fmt::Display for Token {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    match self {
+      Token::LabelDef(label) => write!(f, "{}", label),
+      Token::LabelRef(label) => write!(f, "{}", label),
+      Token::MacroDef(macro_) => write!(f, "{}", macro_),
+      Token::MacroRef(macro_) => write!(f, "{}", macro_),
+      Token::AtConst => write!(f, "@const"),
+      Token::AtDyn => write!(f, "@dyn"),
+      Token::AtOrg => write!(f, "@org"),
+      Token::DDD(n) => write!(f, "d{:02X}", n),
+      Token::XXX(n) => write!(f, "x{:02X}", n),
+      Token::Add => write!(f, "add"),
+      Token::AdS(n) => write!(f, "ad{:01X}", n),
+      Token::Sub => write!(f, "sub"),
+      Token::SuS(n) => write!(f, "su{:01X}", n),
+      Token::Iff => write!(f, "iff"),
+      Token::IfS(n) => write!(f, "if{:01X}", n),
+      Token::Rot => write!(f, "rot"),
+      Token::RoS(n) => write!(f, "ro{:01X}", n),
+      Token::Orr => write!(f, "orr"),
+      Token::OrS(n) => write!(f, "or{:01X}", n),
+      Token::And => write!(f, "and"),
+      Token::AnS(n) => write!(f, "an{:01X}", n),
+      Token::Xor => write!(f, "xor"),
+      Token::XoS(n) => write!(f, "xo{:01X}", n),
+      Token::Xnd => write!(f, "xnd"),
+      Token::XnS(n) => write!(f, "xn{:01X}", n),
+      Token::Inc => write!(f, "inc"),
+      Token::Dec => write!(f, "dec"),
+      Token::Neg => write!(f, "neg"),
+      Token::Adn => write!(f, "adn"),
+      Token::Shl => write!(f, "shl"),
+      Token::Shr => write!(f, "shr"),
+      Token::Not => write!(f, "not"),
+      Token::Buf => write!(f, "buf"),
+      Token::LdO(n) => write!(f, "ld{:01X}", n),
+      Token::StO(n) => write!(f, "st{:01X}", n),
+      Token::Lda => write!(f, "lda"),
+      Token::Sta => write!(f, "sta"),
+      Token::Ldi => write!(f, "ldi"),
+      Token::Sti => write!(f, "sti"),
+      Token::Lds => write!(f, "lds"),
+      Token::Sts => write!(f, "sts"),
+      Token::Nop => write!(f, "nop"),
+      Token::Clc => write!(f, "clc"),
+      Token::Sec => write!(f, "sec"),
+      Token::Flc => write!(f, "flc"),
+      Token::Swp => write!(f, "swp"),
+      Token::Pop => write!(f, "pop"),
+    }
+  }
 }
