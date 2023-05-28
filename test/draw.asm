@@ -7,7 +7,6 @@
 
 main!
   pop !front_buffer sts
-  !reset_input
 
   # xF0 # prng_seed
 

@@ -9,7 +9,6 @@
 
 main!
   pop !front_buffer sts
-  !reset_input
 
   x77 # head_pos
   xF0 # head_vel

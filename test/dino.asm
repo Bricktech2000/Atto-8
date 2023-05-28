@@ -90,12 +90,12 @@ main!
     d00 d00 # ________
 
   !front_buffer @org
-  # !void
-  !planet_and_stars
-  # !clouds_and_sun
-  # !stars_and_moon
-  # !light_ground
-  !dark_ground
+    # !void
+    !planet_and_stars
+    # !clouds_and_sun
+    # !stars_and_moon
+    # !light_ground
+    !dark_ground
 
 dino_pos! x02 # from left edge of the screen
 y_accel! x04 # gravity

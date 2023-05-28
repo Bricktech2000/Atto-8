@@ -25,7 +25,6 @@ fn main() {
       cf: false,
     },
     mem: memory_image,
-    if_: false,
   };
 
   emulate(mc, 100000);
@@ -34,7 +33,6 @@ fn main() {
 struct Microcomputer {
   mp: Microprocessor, // microprocessor
   mem: [u8; 0x100],   // memory
-  if_: bool,          // input flag
 }
 
 struct Microprocessor {
@@ -61,30 +59,28 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
   let input_channel = spawn_input_channel();
 
   loop {
-    if mc.if_ {
-      use std::sync::mpsc::TryRecvError;
-      match input_channel.try_recv() {
-        Ok(character) => {
-          let lo_nibble: u8 = match character {
-            'w' => 0b0001,
-            's' => 0b0010,
-            'a' => 0b0100,
-            'd' => 0b1000,
-            _ => 0b0000,
-          };
-          let hi_nibble: u8 = match character {
-            'i' => 0b0001,
-            'k' => 0b0010,
-            'j' => 0b0100,
-            'l' => 0b1000,
-            _ => 0b0000,
-          };
-          mc.mem[0x00] |= lo_nibble | (hi_nibble << 4);
-          // TODO input_ored = [input_ored[0x00] | mc.mem[0x00]];
-        }
-        Err(TryRecvError::Empty) => {}
-        Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
+    use std::sync::mpsc::TryRecvError;
+    match input_channel.try_recv() {
+      Ok(character) => {
+        let lo_nibble: u8 = match character {
+          'w' => 0b0001,
+          's' => 0b0010,
+          'a' => 0b0100,
+          'd' => 0b1000,
+          _ => 0b0000,
+        };
+        let hi_nibble: u8 = match character {
+          'i' => 0b0001,
+          'k' => 0b0010,
+          'j' => 0b0100,
+          'l' => 0b1000,
+          _ => 0b0000,
+        };
+        mc.mem[0x00] |= lo_nibble | (hi_nibble << 4);
+        // TODO input_ored = [input_ored[0x00] | mc.mem[0x00]];
       }
+      Err(TryRecvError::Empty) => {}
+      Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
     }
 
     if debug_mode {
@@ -408,7 +404,6 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
                       mc.mp.sp = mc.mp.sp.wrapping_add(1);
 
                       mc.mem[b as usize] = a;
-                      mc.if_ |= a == 0x00 && b == 0x00;
                       (0x04, None)
                     }
 
@@ -615,15 +610,10 @@ impl std::fmt::Display for Microcomputer {
 
 impl std::fmt::Display for Microprocessor {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    let mut fmt: String = "".to_string();
-
-    fmt += &format!(
-      "IP {:8}\r\nSP {:8}\r\nCF {:8}\r\n",
-      format!("{:02X}", self.ip),
-      format!("{:02X}", self.sp),
-      format!("{:01b}", self.cf as u8)
-    );
-
-    write!(f, "{}", fmt)
+    write!(
+      f,
+      "IP  SP  CF\r\n{:02X}  {:02X}  {:02X}\r\n",
+      self.ip, self.sp, self.cf as u8,
+    )
   }
 }

@@ -8,8 +8,6 @@
 main!
   pop !front_buffer sts
 
-  !hlt
-
   loop:
     x00 for_xy: dec
         ld0 x0F and x08 sub !i4f4 x03 !ror

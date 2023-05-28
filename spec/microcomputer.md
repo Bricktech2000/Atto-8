@@ -13,7 +13,7 @@ The Atto-8 microcomputer is a minimalist computer based on the Atto-8 microproce
 
 ## Display
 
-The Atto-8 is equipped with a 16x16 pixel monochrome display. It fetches rows of pixels from addresses `0xE0..=0xFF`, the _display buffer_, and displays them from left to right, top to bottom. Refer to the following diagram, in which `[ 0xXX ]` represents a row of 8 pixels fetched from address `0xXX`:
+The Atto-8 is equipped with a 16x16 pixel monochrome display. It fetches rows of pixels from addresses `0xE0..0x100`, the _display buffer_, and displays them from left to right, top to bottom. Refer to the following diagram, in which `[ 0xXX ]` represents a row of 8 pixels fetched from address `0xXX`:
 
 ```
 [      0xE0      ] [      0xE1      ]
@@ -33,6 +33,8 @@ The Atto-8 is equipped with a 16x16 pixel monochrome display. It fetches rows of
 [      0xFC      ] [      0xFD      ]
 [      0xFE      ] [      0xFF      ]
 ```
+
+The display buffer behaves as any other memory region and can therefore both be read from and written to by a program.
 
 ## Input
 
@@ -59,8 +61,6 @@ Primary  Secondary
 ```
 
 Upon a button state change, the microcomputer will set or clear the corresponding bit in the input buffer, without affecting the other bits. The input buffer behaves as any other memory region and can therefore both be read from and written to by a program.
-
-On boot up, input is disabled and the Atto-8 will not write to the input buffer. To enable input permanently, the program must write `0x00` to the input buffer.
 
 ## Conventions
 

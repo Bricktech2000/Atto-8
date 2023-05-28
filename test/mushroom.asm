@@ -2,7 +2,7 @@
 @ lib/microcomputer/display.asm
 
 main!
-  pop !hlt
+  pop pop !hlt
 
   !front_buffer @org
   d07 dE0

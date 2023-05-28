@@ -8,7 +8,6 @@
 
 main!
   pop !front_buffer sts
-  !reset_input
 
   x07 # paddle_a
   x07 # paddle_b
