@@ -12,7 +12,7 @@ _A minimalist 8-bit microcomputer with stack-based microprocessor_
 - [/asm/](asm/) &mdash; Optimizing assembler for Atto-8 microprocessor
 - [/dasm/](dasm/) &mdash; Elementary disassembler for Atto-8 microprocessor
 - [/emu/](emu/) &mdash; Instruction-level emulator for Atto-8 microcomputer
-- [/sim/](sim/) &mdash; #todo
+- [/sim/](sim/) &mdash; Cycle-accurate simulator for Atto-8 microcomputer
 - [/test/](test/) &mdash; Test programs and test framework for Atto-8 microcomputer
 - [/misc/](misc/) &mdash; Miscellaneous files
 
@@ -42,6 +42,7 @@ python3 test.py asm emu multiply.asm
 python3 test.py asm emu optimization.asm
 
 # hand-assembled programs
+python3 test.py enc emu nop.hex
 python3 test.py enc emu addition.hex
 python3 test.py enc emu checkerboard.hex
 ```

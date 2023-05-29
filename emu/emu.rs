@@ -19,20 +19,20 @@ fn main() {
     });
 
   let mc = Microcomputer {
+    mem: memory_image,
     mp: Microprocessor {
       sp: 0x00,
       ip: 0x00,
       cf: false,
     },
-    mem: memory_image,
   };
 
   emulate(mc, 100000);
 }
 
 struct Microcomputer {
-  mp: Microprocessor, // microprocessor
   mem: [u8; 0x100],   // memory
+  mp: Microprocessor, // microprocessor
 }
 
 struct Microprocessor {
@@ -77,9 +77,8 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
           _ => 0b0000,
         };
         mc.mem[0x00] |= lo_nibble | (hi_nibble << 4);
-        // TODO input_ored = [input_ored[0x00] | mc.mem[0x00]];
       }
-      Err(TryRecvError::Empty) => {}
+      Err(TryRecvError::Empty) => (),
       Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
     }
 
@@ -139,23 +138,23 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
       print!("{}", mc);
       print!("\r\n");
       print!("{:32}\r\n", status_line);
-
-      // TODO input_ored = [memory[0x00]];
     }
   }
 }
 
 fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
-  let instruction: u8 = mc.mem[mc.mp.ip as usize];
-  mc.mp.ip = mc.mp.ip.wrapping_add(1);
+  let mp = &mut mc.mp;
+
+  let instruction: u8 = mc.mem[mp.ip as usize];
+  mp.ip = mp.ip.wrapping_add(1);
 
   match (instruction & 0b10000000) >> 7 {
     0b0 => {
       // psh
       let immediate = instruction; // decode_immediate
-      mc.mp.sp = mc.mp.sp.wrapping_sub(1);
+      mp.sp = mp.sp.wrapping_sub(1);
 
-      mc.mem[mc.mp.sp as usize] = immediate;
+      mc.mem[mp.sp as usize] = immediate;
       (0x04, None)
     }
 
@@ -165,49 +164,49 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
           // (arithmetic and logic)
           let size = 1 << (instruction & 0b00000011); // decode_size
           let opcode = (instruction & 0b00111100) >> 2;
-          let size_pointer = mc.mp.sp.wrapping_add(size);
+          let size_pointer = mp.sp.wrapping_add(size);
 
           match opcode {
             0x0 => {
               // add
-              let a = mc.mem[mc.mp.sp as usize];
-              mc.mem[mc.mp.sp as usize] = 0x00;
-              mc.mp.sp = mc.mp.sp.wrapping_add(1);
+              let a = mc.mem[mp.sp as usize];
+              mc.mem[mp.sp as usize] = 0x00;
+              mp.sp = mp.sp.wrapping_add(1);
               let b = mc.mem[size_pointer as usize];
 
-              mc.mem[size_pointer as usize] = (b as u16 + a as u16 + mc.mp.cf as u16) as u8;
-              mc.mp.cf = (b as u16 + a as u16 + mc.mp.cf as u16) > 0xFF;
+              mc.mem[size_pointer as usize] = (b as u16 + a as u16 + mp.cf as u16) as u8;
+              mp.cf = (b as u16 + a as u16 + mp.cf as u16) > 0xFF;
               (0x04, None)
             }
 
             0x1 => {
               // sub
-              let a = mc.mem[mc.mp.sp as usize];
-              mc.mem[mc.mp.sp as usize] = 0x00;
-              mc.mp.sp = mc.mp.sp.wrapping_add(1);
+              let a = mc.mem[mp.sp as usize];
+              mc.mem[mp.sp as usize] = 0x00;
+              mp.sp = mp.sp.wrapping_add(1);
               let b = mc.mem[size_pointer as usize];
 
-              mc.mem[size_pointer as usize] = (b as i16 - a as i16 - mc.mp.cf as i16) as u8;
-              mc.mp.cf = (b as i16 - a as i16 - mc.mp.cf as i16) < 0x00;
+              mc.mem[size_pointer as usize] = (b as i16 - a as i16 - mp.cf as i16) as u8;
+              mp.cf = (b as i16 - a as i16 - mp.cf as i16) < 0x00;
               (0x04, None)
             }
 
             0x4 => {
               // iff
-              let a = mc.mem[mc.mp.sp as usize];
-              mc.mem[mc.mp.sp as usize] = 0x00;
-              mc.mp.sp = mc.mp.sp.wrapping_add(1);
+              let a = mc.mem[mp.sp as usize];
+              mc.mem[mp.sp as usize] = 0x00;
+              mp.sp = mp.sp.wrapping_add(1);
               let b = mc.mem[size_pointer as usize];
 
-              mc.mem[size_pointer as usize] = if mc.mp.cf { a } else { b };
+              mc.mem[size_pointer as usize] = if mp.cf { a } else { b };
               (0x04, None)
             }
 
             0x5 => {
               // rot
-              let a = mc.mem[mc.mp.sp as usize];
-              mc.mem[mc.mp.sp as usize] = 0x00;
-              mc.mp.sp = mc.mp.sp.wrapping_add(1);
+              let a = mc.mem[mp.sp as usize];
+              mc.mem[mp.sp as usize] = 0x00;
+              mp.sp = mp.sp.wrapping_add(1);
               let b = mc.mem[size_pointer as usize];
 
               let shifted = if a as i8 >= 0 {
@@ -222,47 +221,47 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
 
             0x8 => {
               // orr
-              let a = mc.mem[mc.mp.sp as usize];
-              mc.mem[mc.mp.sp as usize] = 0x00;
-              mc.mp.sp = mc.mp.sp.wrapping_add(1);
+              let a = mc.mem[mp.sp as usize];
+              mc.mem[mp.sp as usize] = 0x00;
+              mp.sp = mp.sp.wrapping_add(1);
               let b = mc.mem[size_pointer as usize];
 
               mc.mem[size_pointer as usize] = a | b;
-              mc.mp.cf = mc.mem[size_pointer as usize] == 0x00;
+              mp.cf = mc.mem[size_pointer as usize] == 0x00;
               (0x04, None)
             }
 
             0x9 => {
               // and
-              let a = mc.mem[mc.mp.sp as usize];
-              mc.mem[mc.mp.sp as usize] = 0x00;
-              mc.mp.sp = mc.mp.sp.wrapping_add(1);
+              let a = mc.mem[mp.sp as usize];
+              mc.mem[mp.sp as usize] = 0x00;
+              mp.sp = mp.sp.wrapping_add(1);
               let b = mc.mem[size_pointer as usize];
 
               mc.mem[size_pointer as usize] = a & b;
-              mc.mp.cf = mc.mem[size_pointer as usize] == 0x00;
+              mp.cf = mc.mem[size_pointer as usize] == 0x00;
               (0x04, None)
             }
 
             0xA => {
               // xor
-              let a = mc.mem[mc.mp.sp as usize];
-              mc.mem[mc.mp.sp as usize] = 0x00;
-              mc.mp.sp = mc.mp.sp.wrapping_add(1);
+              let a = mc.mem[mp.sp as usize];
+              mc.mem[mp.sp as usize] = 0x00;
+              mp.sp = mp.sp.wrapping_add(1);
               let b = mc.mem[size_pointer as usize];
 
               mc.mem[size_pointer as usize] = a ^ b;
-              mc.mp.cf = mc.mem[size_pointer as usize] == 0x00;
+              mp.cf = mc.mem[size_pointer as usize] == 0x00;
               (0x04, None)
             }
 
             0xB => {
               // xnd
-              mc.mem[mc.mp.sp as usize] = 0x00;
-              mc.mp.sp = mc.mp.sp.wrapping_add(1);
+              mc.mem[mp.sp as usize] = 0x00;
+              mp.sp = mp.sp.wrapping_add(1);
 
               mc.mem[size_pointer as usize] = 0;
-              mc.mp.cf = mc.mem[size_pointer as usize] == 0x00;
+              mp.cf = mc.mem[size_pointer as usize] == 0x00;
               (0x04, None)
             }
 
@@ -270,70 +269,70 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
               // (size used as part of opcode)
               (0xC, 0b00) => {
                 // inc
-                let a = mc.mem[mc.mp.sp as usize];
-                mc.mem[mc.mp.sp as usize] = a.wrapping_add(1);
+                let a = mc.mem[mp.sp as usize];
+                mc.mem[mp.sp as usize] = a.wrapping_add(1);
                 (0x04, None)
               }
 
               (0xC, 0b01) => {
                 // dec
-                let a = mc.mem[mc.mp.sp as usize];
-                mc.mem[mc.mp.sp as usize] = a.wrapping_sub(1);
+                let a = mc.mem[mp.sp as usize];
+                mc.mem[mp.sp as usize] = a.wrapping_sub(1);
                 (0x04, None)
               }
 
               (0xC, 0b10) => {
                 // neg
-                let a = mc.mem[mc.mp.sp as usize];
-                mc.mem[mc.mp.sp as usize] = a.wrapping_neg();
+                let a = mc.mem[mp.sp as usize];
+                mc.mem[mp.sp as usize] = a.wrapping_neg();
                 (0x04, None)
               }
 
               (0xC, 0b11) => {
                 // adn
-                let a = mc.mem[mc.mp.sp as usize];
-                mc.mem[mc.mp.sp as usize] = 0x00;
-                mc.mp.sp = mc.mp.sp.wrapping_add(1);
-                let b = mc.mem[mc.mp.sp as usize];
+                let a = mc.mem[mp.sp as usize];
+                mc.mem[mp.sp as usize] = 0x00;
+                mp.sp = mp.sp.wrapping_add(1);
+                let b = mc.mem[mp.sp as usize];
 
-                mc.mem[mc.mp.sp as usize] = (b.wrapping_add(a) & 0b00001111)
+                mc.mem[mp.sp as usize] = (b.wrapping_add(a) & 0b00001111)
                   | ((b & 0b11110000).wrapping_add(a & 0b11110000));
                 (0x04, None)
               }
 
               (0xD, 0b00) => {
                 // shl
-                let a = mc.mem[mc.mp.sp as usize];
+                let a = mc.mem[mp.sp as usize];
 
-                mc.mem[mc.mp.sp as usize] = a.wrapping_shl(1) | (mc.mp.cf as u8);
-                mc.mp.cf = a & 0b10000000 != 0;
+                mc.mem[mp.sp as usize] = a.wrapping_shl(1) | (mp.cf as u8);
+                mp.cf = a & 0b10000000 != 0;
                 (0x04, None)
               }
 
               (0xD, 0b01) => {
                 // shr
-                let a = mc.mem[mc.mp.sp as usize];
+                let a = mc.mem[mp.sp as usize];
 
-                mc.mem[mc.mp.sp as usize] = a.wrapping_shr(1) | ((mc.mp.cf as u8) << 7);
-                mc.mp.cf = a & 0b00000001 != 0;
+                mc.mem[mp.sp as usize] = a.wrapping_shr(1) | ((mp.cf as u8) << 7);
+                mp.cf = a & 0b00000001 != 0;
                 (0x04, None)
               }
 
               (0xD, 0b10) => {
                 // not
-                let a = mc.mem[mc.mp.sp as usize];
+                let a = mc.mem[mp.sp as usize];
 
-                mc.mem[mc.mp.sp as usize] = !a;
-                mc.mp.cf = mc.mem[mc.mp.sp as usize] == 0x00;
+                mc.mem[mp.sp as usize] = !a;
+                mp.cf = mc.mem[mp.sp as usize] == 0x00;
                 (0x04, None)
               }
 
               (0xD, 0b11) => {
                 // buf
-                let a = mc.mem[mc.mp.sp as usize];
+                let a = mc.mem[mp.sp as usize];
 
-                mc.mem[mc.mp.sp as usize] = a;
-                mc.mp.cf = mc.mem[mc.mp.sp as usize] == 0x00;
+                mc.mem[mp.sp as usize] = a;
+                mp.cf = mc.mem[mp.sp as usize] == 0x00;
                 (0x04, None)
               }
 
@@ -355,23 +354,23 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
                 0b0 => {
                   // ldo
                   let offset = instruction & 0b00001111; // decode_offset
-                  let offset_pointer = mc.mp.sp.wrapping_add(offset);
+                  let offset_pointer = mp.sp.wrapping_add(offset);
 
-                  mc.mp.sp = mc.mp.sp.wrapping_sub(1);
+                  mp.sp = mp.sp.wrapping_sub(1);
                   let a = mc.mem[offset_pointer as usize];
 
-                  mc.mem[mc.mp.sp as usize] = a;
+                  mc.mem[mp.sp as usize] = a;
                   (0x04, None)
                 }
 
                 0b1 => {
                   // sto
-                  let a = mc.mem[mc.mp.sp as usize];
-                  mc.mem[mc.mp.sp as usize] = 0x00;
-                  mc.mp.sp = mc.mp.sp.wrapping_add(1);
+                  let a = mc.mem[mp.sp as usize];
+                  mc.mem[mp.sp as usize] = 0x00;
+                  mp.sp = mp.sp.wrapping_add(1);
 
                   let offset = instruction & 0b00001111; // decode_offset
-                  let offset_pointer = mc.mp.sp.wrapping_add(offset);
+                  let offset_pointer = mp.sp.wrapping_add(offset);
 
                   mc.mem[offset_pointer as usize] = a;
                   (0x04, None)
@@ -388,20 +387,20 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
                   match instruction & 0b00001111 {
                     0x0 => {
                       // lda
-                      let a = mc.mem[mc.mp.sp as usize];
+                      let a = mc.mem[mp.sp as usize];
 
-                      mc.mem[mc.mp.sp as usize] = mc.mem[a as usize];
+                      mc.mem[mp.sp as usize] = mc.mem[a as usize];
                       (0x04, None)
                     }
 
                     0x1 => {
                       // sta
-                      let a = mc.mem[mc.mp.sp as usize];
-                      mc.mem[mc.mp.sp as usize] = 0x00;
-                      mc.mp.sp = mc.mp.sp.wrapping_add(1);
-                      let b = mc.mem[mc.mp.sp as usize];
-                      mc.mem[mc.mp.sp as usize] = 0x00;
-                      mc.mp.sp = mc.mp.sp.wrapping_add(1);
+                      let a = mc.mem[mp.sp as usize];
+                      mc.mem[mp.sp as usize] = 0x00;
+                      mp.sp = mp.sp.wrapping_add(1);
+                      let b = mc.mem[mp.sp as usize];
+                      mc.mem[mp.sp as usize] = 0x00;
+                      mp.sp = mp.sp.wrapping_add(1);
 
                       mc.mem[b as usize] = a;
                       (0x04, None)
@@ -409,34 +408,34 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
 
                     0x2 => {
                       // ldi
-                      mc.mp.sp = mc.mp.sp.wrapping_sub(1);
-                      mc.mem[mc.mp.sp as usize] = mc.mp.ip;
+                      mp.sp = mp.sp.wrapping_sub(1);
+                      mc.mem[mp.sp as usize] = mp.ip;
                       (0x04, None)
                     }
 
                     0x3 => {
                       // sti
-                      mc.mp.ip = mc.mem[mc.mp.sp as usize];
-                      mc.mem[mc.mp.sp as usize] = 0x00;
-                      mc.mp.sp = mc.mp.sp.wrapping_add(1);
+                      mp.ip = mc.mem[mp.sp as usize];
+                      mc.mem[mp.sp as usize] = 0x00;
+                      mp.sp = mp.sp.wrapping_add(1);
                       (0x04, None)
                     }
 
                     0x4 => {
                       // lds
-                      let a = mc.mp.sp;
-                      mc.mp.sp = mc.mp.sp.wrapping_sub(1);
+                      let a = mp.sp;
+                      mp.sp = mp.sp.wrapping_sub(1);
 
-                      mc.mem[mc.mp.sp as usize] = a;
+                      mc.mem[mp.sp as usize] = a;
                       (0x04, None)
                     }
 
                     0x5 => {
                       // sts
-                      let a = mc.mem[mc.mp.sp as usize];
-                      mc.mem[mc.mp.sp as usize] = 0x00;
+                      let a = mc.mem[mp.sp as usize];
+                      mc.mem[mp.sp as usize] = 0x00;
 
-                      mc.mp.sp = a;
+                      mp.sp = a;
                       (0x04, None)
                     }
 
@@ -447,38 +446,38 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
 
                     0x9 => {
                       // clc
-                      mc.mp.cf = false;
+                      mp.cf = false;
                       (0x04, None)
                     }
 
                     0xA => {
                       // sec
-                      mc.mp.cf = true;
+                      mp.cf = true;
                       (0x04, None)
                     }
 
                     0xB => {
                       // flc
-                      mc.mp.cf = !mc.mp.cf;
+                      mp.cf = !mp.cf;
                       (0x04, None)
                     }
 
                     0xC => {
                       // swp
-                      let a = mc.mem[mc.mp.sp as usize];
-                      mc.mp.sp = mc.mp.sp.wrapping_add(1);
-                      let b = mc.mem[mc.mp.sp as usize];
+                      let a = mc.mem[mp.sp as usize];
+                      mp.sp = mp.sp.wrapping_add(1);
+                      let b = mc.mem[mp.sp as usize];
 
-                      mc.mem[mc.mp.sp as usize] = a;
-                      mc.mp.sp = mc.mp.sp.wrapping_sub(1);
-                      mc.mem[mc.mp.sp as usize] = b;
+                      mc.mem[mp.sp as usize] = a;
+                      mp.sp = mp.sp.wrapping_sub(1);
+                      mc.mem[mp.sp as usize] = b;
                       (0x04, None)
                     }
 
                     0xD => {
                       // pop
-                      mc.mem[mc.mp.sp as usize] = 0x00;
-                      mc.mp.sp = mc.mp.sp.wrapping_add(1);
+                      mc.mem[mp.sp as usize] = 0x00;
+                      mp.sp = mp.sp.wrapping_add(1);
                       (0x04, None)
                     }
 
@@ -489,9 +488,9 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
                 0b1 => {
                   // phn
                   let immediate = instruction; // decode_immediate
-                  mc.mp.sp = mc.mp.sp.wrapping_sub(1);
+                  mp.sp = mp.sp.wrapping_sub(1);
 
-                  mc.mem[mc.mp.sp as usize] = immediate;
+                  mc.mem[mp.sp as usize] = immediate;
                   (0x04, None)
                 }
 

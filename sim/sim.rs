@@ -1,3 +1,10 @@
+const IP_TO_ADDR: u32 = 0b00000000000000000000000000000001;
+const MEM_TO_DATA: u32 = 0b00000000000000000000000000000010;
+const DATA_TO_IR: u32 = 0b00000000000000000000000000000100;
+const ZERO_TO_OR: u32 = 0b00000000000000000000000000001000;
+const ZERO_TO_SC: u32 = 0b00000000000000000000000000010000;
+const INCIP_TO_IP: u32 = 0b00000000000000000000000000100000;
+
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   // if args.len() != 3 {
@@ -31,123 +38,81 @@ fn main() {
   //     std::process::exit(1);
   //   });
 
-  let microcode_image = [0x00; 0x10];
+  let mut microcode_image = [0x0000; 0x10000];
 
-  simulate(memory_image, microcode_image, 100000);
-}
+  // fetch
+  for instruction in 0..0x100 {
+    microcode_image[instruction | 0x00 << 8] |= IP_TO_ADDR | MEM_TO_DATA | DATA_TO_IR | ZERO_TO_OR;
+    microcode_image[instruction | 0x01 << 8] |= INCIP_TO_IP;
+  }
 
-fn simulate(memory: [u8; 0x10], microcode: [u8; 0x10], clock: u128) {
-  println!("sim");
+  // psh
+  for immediate in 0..0x7F {
+    let instruction = immediate; // encode_immediate
+    microcode_image[instruction | 0x01 << 8] |= 0x00; // TODO
+  }
 
-  let mut microcomputer = Microcomputer {
-    cpu: Microprocessor {
-      sc: StepCounter(0x00),
-      ip: InstructionPointer(0x00),
-      ir: Register(0x00),
-      ctrl: ControlLogic(microcode),
-      ar: Register(0x00),
-      br: Register(0x00),
+  // nop
+  microcode_image[0xE8 | 0x01 << 8] |= ZERO_TO_SC;
 
-      ip_to_addr: ControlSignal(false),
-      data_to_ir: ControlSignal(false),
-      zero_to_or: ControlSignal(false),
-      zero_to_sr: ControlSignal(false),
+  let mc = Microcomputer {
+    mem: memory_image,
+    mp: Microprocessor {
+      ctrl: microcode_image,
+      sc: 0x00,
+      ip: 0x00,
+      ir: 0x00,
+      ar: 0x00,
+      br: 0x00,
+
+      ip_to_addr: false,
+      data_to_ir: false,
+      zero_to_or: false,
+      zero_to_sc: false,
+      incip_to_ip: false,
     },
     clk: Clock::High,
-    rst: Reset::Low,
-    data: Bus(0x00),
-    addr: Bus(0x00),
-    mem: Memory(memory),
+    rst: false,
+    data: 0x00,
+    addr: 0x00,
 
-    data_to_mem: ControlSignal(false),
-    mem_to_data: ControlSignal(false),
+    data_to_mem: false,
+    mem_to_data: false,
   };
 
-  loop {
-    microcomputer.tick();
-  }
+  simulate(mc);
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 struct Microcomputer {
-  cpu: Microprocessor,
+  mem: [u8; 0x100],
+  mp: Microprocessor,
   clk: Clock,
-  rst: Reset,
-  data: Bus,
-  addr: Bus,
-  mem: Memory,
+  rst: bool,
+  data: u8,
+  addr: u8,
 
-  data_to_mem: ControlSignal,
-  mem_to_data: ControlSignal,
+  data_to_mem: bool,
+  mem_to_data: bool,
 }
 
-impl Microcomputer {
-  fn tick(&mut self) {
-    println!("{:#?}", self);
-    println!("-----------------------------------------------------------------------------------------------");
-
-    self.cpu.tick(
-      &self.clk,
-      &self.rst,
-      &mut self.data,
-      &mut self.addr,
-      &mut self.data_to_mem,
-      &mut self.mem_to_data,
-    );
-    self.mem.tick(
-      &self.data_to_mem,
-      &self.mem_to_data,
-      &self.addr,
-      &mut self.data,
-    );
-    self.clk.tick(&self.rst);
-  }
-}
-
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 struct Microprocessor {
-  sc: StepCounter,
-  ip: InstructionPointer,
-  ir: Register,
-  ctrl: ControlLogic,
-  ar: Register,
-  br: Register,
+  ctrl: [u32; 0x10000],
+  sc: u8,
+  ip: u8,
+  ir: u8,
+  ar: u8,
+  br: u8,
 
-  ip_to_addr: ControlSignal,
-  data_to_ir: ControlSignal,
-  zero_to_or: ControlSignal,
-  zero_to_sr: ControlSignal,
+  ip_to_addr: bool,
+  data_to_ir: bool,
+  zero_to_or: bool,
+  zero_to_sc: bool,
+  incip_to_ip: bool,
 }
 
-impl Microprocessor {
-  fn tick(
-    &mut self,
-    clk: &Clock,
-    rst: &Reset,
-    data: &mut Bus,
-    addr: &mut Bus,
-    data_to_mem: &mut ControlSignal,
-    mem_to_data: &mut ControlSignal,
-  ) {
-    self
-      .sc
-      .tick(clk, rst, &ControlSignal(true), &ControlSignal(false));
-    self.ip.tick(clk, rst, addr, &self.ip_to_addr);
-    self.ctrl.tick(
-      clk,
-      rst,
-      &self.sc,
-      &self.ir,
-      &mut self.ip_to_addr,
-      mem_to_data,
-      &mut self.data_to_ir,
-      &mut self.zero_to_or,
-      &mut self.zero_to_sr,
-    );
-  }
-}
-
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 enum Clock {
   Rising,
   High,
@@ -155,151 +120,144 @@ enum Clock {
   Low,
 }
 
-impl Clock {
-  fn tick(&mut self, rst: &Reset) {
-    match rst {
-      Reset::High => *self = Clock::High,
-      Reset::Low => match self {
-        Clock::Rising => *self = Clock::High,
-        Clock::High => *self = Clock::Falling,
-        Clock::Falling => *self = Clock::Low,
-        Clock::Low => *self = Clock::Rising,
-      },
-    };
+fn simulate(mut mc: Microcomputer) {
+  loop {
+    println!("{}", mc);
+    tick(&mut mc);
   }
 }
 
-#[derive(Debug)]
-enum Reset {
-  High,
-  Low,
-}
+fn tick(mc: &mut Microcomputer) {
+  let mp = &mut mc.mp;
 
-#[derive(Debug)]
-struct Register(u8);
+  // clock
+  match mc.rst {
+    true => mc.clk = Clock::High,
+    false => match mc.clk {
+      Clock::Rising => mc.clk = Clock::High,
+      Clock::High => mc.clk = Clock::Falling,
+      Clock::Falling => mc.clk = Clock::Low,
+      Clock::Low => mc.clk = Clock::Rising,
+    },
+  };
 
-#[derive(Debug)]
-struct InstructionPointer(u8);
-
-impl InstructionPointer {
-  fn tick(&mut self, clk: &Clock, rst: &Reset, addr: &mut Bus, ip_to_addr: &ControlSignal) {
-    match rst {
-      Reset::High => self.0 = 0x00,
-      Reset::Low => match ip_to_addr.0 {
-        true => addr.0 = self.0,
-        false => match clk {
-          Clock::Rising => {}
-          Clock::High => {}
-          Clock::Falling => {}
-          Clock::Low => {}
+  // instruction pointer
+  match mc.rst {
+    true => mp.ip = 0x00,
+    false => {
+      match mp.ip_to_addr {
+        true => mc.addr = mp.ip,
+        false => (),
+      }
+      match mc.clk {
+        Clock::Rising => match mp.incip_to_ip {
+          true => mp.ip += 1,
+          false => (),
         },
-      },
-    };
-  }
-}
-
-#[derive(Debug)]
-struct StepCounter(u8);
-
-impl StepCounter {
-  fn tick(&mut self, clk: &Clock, rst: &Reset, increment: &ControlSignal, clear: &ControlSignal) {
-    match rst {
-      Reset::High => self.0 = 0x00,
-      Reset::Low => match clk {
-        Clock::Rising => {
-          match increment.0 {
-            true => self.0 += 1,
-            false => {}
-          };
-          match clear.0 {
-            true => self.0 = 0x00,
-            false => {}
-          };
-        }
-        Clock::High => {}
-        Clock::Falling => {}
-        Clock::Low => {}
-      },
-    };
-  }
-}
-
-#[derive(Debug)]
-struct Bus(u8);
-
-#[derive(Debug)]
-struct ControlSignal(bool);
-
-#[derive(Debug)]
-struct Memory([u8; 0x10]);
-
-impl Memory {
-  fn tick(
-    &mut self,
-    data_mem: &ControlSignal,
-    mem_data: &ControlSignal,
-    addr: &Bus,
-    data: &mut Bus,
-  ) {
-    match (data_mem.0, mem_data.0) {
-      (false, false) => {}
-      (false, true) => data.0 = self.0[addr.0 as usize],
-      (true, false) => self.0[addr.0 as usize] = data.0,
-      (true, true) => {
-        panic!("Error: simultaneous read and write to `MEM`")
+        Clock::High => (),
+        Clock::Falling => (),
+        Clock::Low => (),
       }
-    };
+    }
+  };
+
+  // instruction register
+  match mc.rst {
+    true => mp.ir = 0x00,
+    false => match mc.clk {
+      Clock::Rising => match mp.data_to_ir {
+        true => mp.ir = mc.data,
+        false => (),
+      },
+      Clock::High => (),
+      Clock::Falling => (),
+      Clock::Low => (),
+    },
+  };
+
+  // step counter
+  match mc.rst {
+    true => mp.sc = 0x00,
+    false => match mc.clk {
+      Clock::Rising => match mp.zero_to_sc {
+        true => mp.sc = 0x00,
+        false => mp.sc = mp.sc.wrapping_add(1),
+      },
+      Clock::High => (),
+      Clock::Falling => (),
+      Clock::Low => (),
+    },
+  };
+
+  // memory
+  match (mc.data_to_mem, mc.mem_to_data) {
+    (false, false) => (),
+    (false, true) => mc.data = mc.mem[mc.addr as usize],
+    (true, false) => mc.mem[mc.addr as usize] = mc.data,
+    (true, true) => {
+      panic!("Error: simultaneous read and write to memory")
+    }
+  };
+
+  // control logic
+  match mc.clk {
+    Clock::Rising => (),
+    Clock::High => (),
+    Clock::Falling => {
+      let control_word = mp.ctrl[mp.ir as usize | (mp.sc as usize) << 8];
+
+      mp.ip_to_addr = control_word & IP_TO_ADDR != 0;
+      mc.mem_to_data = control_word & MEM_TO_DATA != 0;
+      mp.data_to_ir = control_word & DATA_TO_IR != 0;
+      mp.zero_to_or = control_word & ZERO_TO_OR != 0;
+      mp.zero_to_sc = control_word & ZERO_TO_SC != 0;
+      mp.incip_to_ip = control_word & INCIP_TO_IP != 0;
+
+      if control_word == 0x0000 {
+        panic!(
+          "Error: Unimplemented instruction: {:02X}#{:02X}",
+          mp.ir, mp.sc
+        );
+      }
+    }
+    Clock::Low => (),
+  };
+}
+
+impl std::fmt::Display for Microcomputer {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    writeln!(f, "Microcomputer:")?;
+    writeln!(f, "  Microprocessor:")?;
+    writeln!(f, "    Registers:")?;
+    writeln!(f, "      SC: {:02X}", self.mp.sc)?;
+    writeln!(f, "      IP: {:02X}", self.mp.ip)?;
+    writeln!(f, "      IR: {:02X}", self.mp.ir)?;
+    writeln!(f, "      AR: {:02X}", self.mp.ar)?;
+    writeln!(f, "      BR: {:02X}", self.mp.br)?;
+    writeln!(f, "    Signals:")?;
+    writeln!(f, "      IP_TO_ADDR: {:02X}", self.mp.ip_to_addr as u8)?;
+    writeln!(f, "      DATA_TO_IR: {:02X}", self.mp.data_to_ir as u8)?;
+    writeln!(f, "      ZERO_TO_OR: {:02X}", self.mp.zero_to_or as u8)?;
+    writeln!(f, "      ZERO_TO_SC: {:02X}", self.mp.zero_to_sc as u8)?;
+    writeln!(f, "      INCIP_TO_IP: {:02X}", self.mp.incip_to_ip as u8)?;
+    writeln!(f, "  Clock: {}", self.clk)?;
+    writeln!(f, "  Reset: {:02X}", self.rst as u8)?;
+    writeln!(f, "  Data: {:02X}", self.data)?;
+    writeln!(f, "  Address: {:02X}", self.addr)?;
+    writeln!(f, "  Signals:")?;
+    writeln!(f, "    DATA_TO_MEM: {:02X}", self.data_to_mem as u8)?;
+    writeln!(f, "    MEM_TO_DATA: {:02X}", self.mem_to_data as u8)?;
+    Ok(())
   }
 }
 
-#[derive(Debug)]
-struct ControlLogic([u8; 0x10]);
-
-impl ControlLogic {
-  fn tick(
-    &self,
-    clk: &Clock,
-    rst: &Reset,
-    sc: &StepCounter,
-    ir: &Register,
-    ip_to_addr: &mut ControlSignal,
-    mem_to_data: &mut ControlSignal,
-    data_to_ir: &mut ControlSignal,
-    zero_to_or: &mut ControlSignal,
-    zero_to_sr: &mut ControlSignal,
-  ) {
-    match clk {
-      Clock::Rising => {}
-      Clock::High => {}
-      Clock::Falling => {
-        (
-          ip_to_addr.0,
-          mem_to_data.0,
-          data_to_ir.0,
-          zero_to_or.0,
-          zero_to_sr.0,
-        ) = match ir.0 {
-          0xE8 => match sc.0 {
-            0x00 => (true, false, false, false, false),
-            0x01 => (false, true, false, false, false),
-            0x02 => (false, false, true, false, false),
-            0x03 => (false, false, false, true, false),
-            0x04 => (false, false, false, true, true),
-            _ => panic!(
-              "Error: Unimplemented step: {:02X} for instruction: {:02X}",
-              sc.0, ir.0
-            ),
-          },
-          _ => match sc.0 {
-            0x00 => (true, false, false, false, false),
-            0x01 => (false, true, false, false, false),
-            0x02 => (false, false, true, false, false),
-            0x03 => (false, false, false, true, false),
-            _ => panic!("Error: Unimplemented instruction: {:02X}", ir.0),
-          },
-        }
-      }
-      Clock::Low => {}
-    };
+impl std::fmt::Display for Clock {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Clock::Rising => write!(f, "Rising"),
+      Clock::High => write!(f, "High"),
+      Clock::Falling => write!(f, "Falling"),
+      Clock::Low => write!(f, "Low"),
+    }
   }
 }
