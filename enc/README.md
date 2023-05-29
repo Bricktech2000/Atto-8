@@ -1,6 +1,6 @@
 # Enc
 
-Hex-to-machine-code encoder for Atto-8 microprocessor
+_Hex-to-machine-code encoder for Atto-8 microprocessor_
 
 ## Overview
 

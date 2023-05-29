@@ -1,6 +1,6 @@
 # Dasm
 
-Elementary disassembler for Atto-8 microprocessor
+_Elementary disassembler for Atto-8 microprocessor_
 
 ## Overview
 

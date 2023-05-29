@@ -1,6 +1,6 @@
 # Misc
 
-Miscellaneous files
+_Miscellaneous files_
 
 ## Contents
 

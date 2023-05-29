@@ -1,6 +1,6 @@
 # Emu
 
-Instruction-level emulator for Atto-8 microcomputer
+_Instruction-level emulator for Atto-8 microcomputer_
 
 ## Overview
 

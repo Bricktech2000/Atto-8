@@ -1,6 +1,6 @@
 # Asm
 
-Optimizing assembler for Atto-8 microprocessor
+_Optimizing assembler for Atto-8 microprocessor_
 
 ## Overview
 
