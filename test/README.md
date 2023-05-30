@@ -10,13 +10,17 @@ End-to-end testing of the Atto-8 microprocessor and microcomputer is done throug
 - `asm` &mdash; see [/asm/](../asm/)
 - `dasm` &mdash; see [/dasm/](../dasm/)
 - `emu` &mdash; see [/emu/](../emu/)
+- `sim` &mdash; see [/sim/](../sim/)
 
 ## Examples
 
 ```bash
+# assemble source code, emulate binary
+python3 test.py asm emu flappy.asm
+
 # assemble source code, disassemble binary, assemble disassembly, emulate resulting binary
 python3 test.py asm dasm asm emu life.asm
 
-# encode from hex, disassemble binary, assemble disassembly, emulate resulting binary
-python3 test.py enc dasm asm emu addition.hex
+# encode from hex, disassemble binary, assemble disassembly, simulate resulting binary
+python3 test.py enc dasm asm sim addition.hex
 ```
