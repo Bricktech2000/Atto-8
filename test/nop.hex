@@ -1,4 +1,4 @@
 # main!
-#   !nop !nop !nop x05
+#   !nop !nop !nop
 
-E8 E8 E8 05
+E8 E8 E8

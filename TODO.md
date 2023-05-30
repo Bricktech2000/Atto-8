@@ -45,13 +45,13 @@ constituents:
 microcode:
 
 ```
-OP = SP + OR
+OP = SP + OL
 mem always reads from addr
 zero and nonzero always read from data
 add, sub, xor, not, etc. always read from x and y
 
 ldo:
-[load OR] OP_ADDR MEM_DATA DECSP_SP
+[load OL] OP_ADDR MEM_DATA DECSP_SP
 SP_ADDR DATA_MEM DONE
 
 inc:
@@ -104,46 +104,46 @@ SP_ADDR IP_DATA DATA_MEM DONE
 
 lds:
 DECSP_SP
-SP_ADDR SP_DATA DATA_MEM DONE
+SP_ADDR OP_DATA DATA_MEM DONE
 
 ---
 
 fetch:
-IP_ADDR MEM_DATA DATA_IR ZERO_OR
+IP_ADDR MEM_DATA DATA_IR ZERO_OL
 
 nop:
-IP_ADDR MEM_DATA DATA_IR ZERO_OR
-ZERO_SR
+IP_ADDR MEM_DATA DATA_IR ZERO_OL
+ZERO_SC
 
 inc:
-IP_ADDR MEM_DATA DATA_IR ZERO_OR
+IP_ADDR MEM_DATA DATA_IR ZERO_OL
 SP_ADDR MEM_DATA DATA_AL
 ...
 SP_ADDR DATA_MEM ..._DATA
 ```
 
-- `add`: `AR + BR`
-- `sub`: `~AR + BR + 1`
+- `add`: `AL + BL`
+- `sub`: `~AL + BL + 1`
 - `rot`:
 - `orr`:
 - `and`:
 - `xor`:
 - `xnd`: `0`, is_zero to carry
-- `inc`: `AR + 1`
-- `dec`: `AR + ~0`
-- `neg`: `~AR + 1`
-- `adn`: `AR + BR`, half carry disabled
-- `shl`: `AR + AR`
+- `inc`: `AL + 1`
+- `dec`: `AL + ~0`
+- `neg`: `~AL + 1`
+- `adn`: `AL + BL`, half carry disabled
+- `shl`: `AL + AL`
 - `shr`:
-- `not`: `~AR`, is_zero to carry
-- `buf`: `AR`, is_zero to carry
+- `not`: `~AL`, is_zero to carry
+- `buf`: `AL`, is_zero to carry
 
-- A register: `AR`
-- B register: `BR`
-- offset register: `OR`
-- step register: `SR`
+- A latch: `AL`
+- B latch: `BL`
+- offset latch: `OL`
+- step counter: `SC`
 - instruction register: `IR`
 - instruction pointer: `IP`
 - stack pointer: `SP`
 
-`SP_DATA` will put `OR + SP` on the bus
+`OP_DATA` will put `OL + SP` on the bus
