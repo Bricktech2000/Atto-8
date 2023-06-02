@@ -19,7 +19,7 @@ main!
   pop !back_buffer sts
 
   loop:
-    # copy back buffer to front buffer.
+    # copy back buffer to front buffer
     !front_buffer !back_buffer sub @const !back_buffer !front_buffer :memcpy !call
     # loop through every cell
     x00 for_xy: dec
@@ -28,15 +28,17 @@ main!
       # count neighbours
       :neighbours_end :neighbours sub @const for_dxdy: dec
         # neighbour_addr = *(neighbours + dxdy) ++ for_xy
+        !front_buffer :neighbours ld2 add lda ld4 adn
         # neighbour_value = load_bit(bit_addr(neighbour_addr, &FRONT_BUFFER))
-        !front_buffer :neighbours ld2 add lda ld4 adn !bit_addr !load_bit clc
+        !bit_addr !load_bit clc
         # neighbour_count += neighbour_value
-        ld2 add st1
+        ad2
       buf :for_dxdy !bcc pop
 
       # apply rules outlined above
       ld0 x04 xor pop :ignore !bcs
-      ld0 x03 xor pop x00 x01 iff !back_buffer ld3 !bit_addr !store_bit
+      ld0 x03 xor pop x00 shl @dyn
+      !back_buffer ld3 !bit_addr !store_bit
       ignore:
 
       pop # pop neighbour count
