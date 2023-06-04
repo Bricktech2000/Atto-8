@@ -1,20 +1,31 @@
 const CTRL_NONE: u32 = 0b00000000000000000000000000000000;
+
+const DATA_TO_IP: u32 = 0b00000000000000001000000000000000;
 const IP_TO_ADDR: u32 = 0b00000000000000000000000000000001;
-const MEM_TO_DATA: u32 = 0b00000000000000000000000000000010;
-const DATA_TO_IR: u32 = 0b00000000000000000000000000000100;
-const ZERO_TO_OL: u32 = 0b00000000000000000000000000001000;
-const ZERO_TO_SC: u32 = 0b00000000000000000000000000010000;
 const INCIP_TO_IP: u32 = 0b00000000000000000000000000100000;
+
+const DATA_TO_MEM: u32 = 0b00000000000000000000001000000000;
+const MEM_TO_DATA: u32 = 0b00000000000000000000000000000010;
+
+const DATA_TO_IR: u32 = 0b00000000000000000000000000000100;
+const IR_TO_DATA: u32 = 0b00000000000000000000000100000000;
+
+const SIZE_TO_OL: u32 = 0b00000000000000000000010000000000;
+const OFST_TO_OL: u32 = 0b00000000000000010000000000000000;
+const ZERO_TO_OL: u32 = 0b00000000000000000000000000001000;
+
+const ZERO_TO_SC: u32 = 0b00000000000000000000000000010000;
+
+const INCSP_TO_SP: u32 = 0b00000000000000000010000000000000;
 const DECSP_TO_SP: u32 = 0b00000000000000000000000001000000;
 const OP_TO_ADDR: u32 = 0b00000000000000000000000010000000;
-const IR_TO_DATA: u32 = 0b00000000000000000000000100000000;
-const DATA_TO_MEM: u32 = 0b00000000000000000000001000000000;
-const SZIR_TO_OL: u32 = 0b00000000000000000000010000000000;
+
 const DATA_TO_AL: u32 = 0b00000000000000000000100000000000;
 const DATA_TO_BL: u32 = 0b00000000000000000001000000000000;
-const INCSP_TO_SP: u32 = 0b00000000000000000010000000000000;
-const SUM_TO_DATA: u32 = 0b00000000000000000100000000000000;
-const DATA_TO_IP: u32 = 0b00000000000000001000000000000000;
+const ADD_TO_DATA: u32 = 0b00000000000000000100000000000000;
+const ORR_TO_DATA: u32 = 0b00000000000000100000000000000000;
+
+// const ORR_TO_DATA: u32 = 0b00000000000000100000000000000000;
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
@@ -71,12 +82,14 @@ fn main() {
       decsp_to_sp: false,
       op_to_addr: false,
       ir_to_data: false,
-      szir_to_ol: false,
+      size_to_ol: false,
       data_to_al: false,
       data_to_bl: false,
       incsp_to_sp: false,
-      sum_to_data: false,
+      add_to_data: false,
       data_to_ip: false,
+      ofst_to_ol: false,
+      orr_to_data: false,
     },
     clk: Clock::Low,
     rst: true, // reset microcomputer on startup
@@ -122,12 +135,14 @@ struct Microprocessor {
   decsp_to_sp: bool,
   op_to_addr: bool,
   ir_to_data: bool,
-  szir_to_ol: bool,
+  size_to_ol: bool,
   data_to_al: bool,
   data_to_bl: bool,
   incsp_to_sp: bool,
-  sum_to_data: bool,
+  add_to_data: bool,
   data_to_ip: bool,
+  ofst_to_ol: bool,
+  orr_to_data: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -184,12 +199,14 @@ fn tick(mc: &mut Microcomputer) {
   mp.op_to_addr = control_word & OP_TO_ADDR != 0;
   mp.ir_to_data = control_word & IR_TO_DATA != 0;
   mc.data_to_mem = control_word & DATA_TO_MEM != 0;
-  mp.szir_to_ol = control_word & SZIR_TO_OL != 0;
+  mp.size_to_ol = control_word & SIZE_TO_OL != 0;
   mp.data_to_al = control_word & DATA_TO_AL != 0;
   mp.data_to_bl = control_word & DATA_TO_BL != 0;
   mp.incsp_to_sp = control_word & INCSP_TO_SP != 0;
-  mp.sum_to_data = control_word & SUM_TO_DATA != 0;
+  mp.add_to_data = control_word & ADD_TO_DATA != 0;
   mp.data_to_ip = control_word & DATA_TO_IP != 0;
+  mp.ofst_to_ol = control_word & OFST_TO_OL != 0;
+  mp.orr_to_data = control_word & ORR_TO_DATA != 0;
   if control_word == CTRL_NONE {
     panic!(
       "Error: Unimplemented instruction: {:02X}#{:02X}",
@@ -264,8 +281,11 @@ fn tick(mc: &mut Microcomputer) {
 
   // offset latch
   if let Clock::Rising = mc.clk {
-    if mp.szir_to_ol {
+    if mp.size_to_ol {
       mp.ol = 1 << (mp.ir & 0b00000011); // decode_size
+    }
+    if mp.ofst_to_ol {
+      mp.ol = mp.ir & 0b00001111; // decode_offset
     }
   }
   if mp.zero_to_ol {
@@ -286,8 +306,11 @@ fn tick(mc: &mut Microcomputer) {
   }
 
   // arithmetic logic unit
-  if mp.sum_to_data {
+  if mp.add_to_data {
     mc.data = mp.al.wrapping_add(mp.bl);
+  };
+  if mp.orr_to_data {
+    mc.data = mp.al | mp.bl;
   };
 }
 
@@ -319,16 +342,24 @@ fn build_microcode_image() -> [u32; 0x10000] {
 
   // add
   for instruction in 0x80..=0x83 {
-    microcode_image[instruction | 0x01 << 8] |= OP_TO_ADDR | MEM_TO_DATA | DATA_TO_AL | SZIR_TO_OL;
+    microcode_image[instruction | 0x01 << 8] |= SIZE_TO_OL | OP_TO_ADDR | MEM_TO_DATA | DATA_TO_AL;
     microcode_image[instruction | 0x02 << 8] |= OP_TO_ADDR | MEM_TO_DATA | DATA_TO_BL;
     microcode_image[instruction | 0x03 << 8] |=
-      OP_TO_ADDR | SUM_TO_DATA | DATA_TO_MEM | INCSP_TO_SP;
+      OP_TO_ADDR | ADD_TO_DATA | DATA_TO_MEM | INCSP_TO_SP;
     microcode_image[instruction | 0x04 << 8] |= ZERO_TO_SC;
   }
 
   // sti
   microcode_image[0xE3 | 0x01 << 8] |= OP_TO_ADDR | MEM_TO_DATA | DATA_TO_IP | INCSP_TO_SP;
   microcode_image[0xE3 | 0x02 << 8] |= ZERO_TO_SC;
+
+  // ldo
+  for instructior in 0xC0..=0xCF {
+    microcode_image[instructior | 0x01 << 8] |=
+      OFST_TO_OL | OP_TO_ADDR | MEM_TO_DATA | DATA_TO_AL | DATA_TO_BL | DECSP_TO_SP;
+    microcode_image[instructior | 0x02 << 8] |= ORR_TO_DATA | ZERO_TO_OL | OP_TO_ADDR | DATA_TO_MEM;
+    microcode_image[instructior | 0x03 << 8] |= ZERO_TO_SC;
+  }
 
   microcode_image
 }
@@ -364,12 +395,14 @@ impl std::fmt::Display for Microcomputer {
     writeln!(f, "      DECSP_TO_SP: {:01X}", self.mp.decsp_to_sp as u8)?;
     writeln!(f, "      OP_TO_ADDR: {:01X}", self.mp.op_to_addr as u8)?;
     writeln!(f, "      IR_TO_DATA: {:01X}", self.mp.ir_to_data as u8)?;
-    writeln!(f, "      SZIR_TO_OL: {:01X}", self.mp.szir_to_ol as u8)?;
+    writeln!(f, "      SIZE_TO_OL: {:01X}", self.mp.size_to_ol as u8)?;
     writeln!(f, "      DATA_TO_AL: {:01X}", self.mp.data_to_al as u8)?;
     writeln!(f, "      DATA_TO_BL: {:01X}", self.mp.data_to_bl as u8)?;
     writeln!(f, "      INCSP_TO_SP: {:01X}", self.mp.incsp_to_sp as u8)?;
-    writeln!(f, "      SUM_TO_DATA: {:01X}", self.mp.sum_to_data as u8)?;
+    writeln!(f, "      ADD_TO_DATA: {:01X}", self.mp.add_to_data as u8)?;
     writeln!(f, "      DATA_TO_IP: {:01X}", self.mp.data_to_ip as u8)?;
+    writeln!(f, "      OFST_TO_OL: {:01X}", self.mp.ofst_to_ol as u8)?;
+    writeln!(f, "      ORR_TO_DATA: {:01X}", self.mp.orr_to_data as u8)?;
     writeln!(f, "  Clock State: {}", self.clk)?;
     writeln!(f, "  Reset State: {:01X}", self.rst as u8)?;
     writeln!(f, "  Data Bus: {:02X}", self.data)?;
