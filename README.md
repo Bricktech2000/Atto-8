@@ -21,7 +21,7 @@ _A minimalist 8-bit microcomputer with stack-based microprocessor_
 This project is a [work in progress](TODO.md). Try it out by running any of the following commands from the [/test/](test/) directory:
 
 ```bash
-# finished programs
+# completed programs
 python3 test.py asm emu draw.asm
 python3 test.py asm emu random.asm
 python3 test.py asm emu memory.asm
@@ -31,7 +31,7 @@ python3 test.py asm emu flappy.asm
 python3 test.py asm emu life.asm
 python3 test.py asm emu dino.asm
 
-# work in progress
+# incomplete programs
 python3 test.py asm emu pong.asm
 python3 test.py asm emu snake.asm
 python3 test.py asm emu mandelbrot.asm
@@ -41,8 +41,6 @@ python3 test.py asm emu ore.asm
 python3 test.py asm emu multiply.asm
 python3 test.py asm emu errors.asm
 python3 test.py asm emu optimization.asm
-
-# hand-assembled programs
 python3 test.py enc emu nop.hex
 python3 test.py enc emu addition.hex
 python3 test.py enc emu checkerboard.hex
