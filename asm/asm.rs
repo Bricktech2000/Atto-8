@@ -39,7 +39,7 @@ fn main() {
 
 #[derive(Clone, Eq, PartialEq, Hash)]
 struct Label {
-  scope_id: Option<usize>,
+  parent_scope: Option<usize>,
   identifier: String,
 }
 
@@ -90,7 +90,6 @@ enum Token {
   Inc,
   Dec,
   Neg,
-  Adn,
   Shl,
   Shr,
   Not,
@@ -126,7 +125,6 @@ enum Instruction {
   Inc,
   Dec,
   Neg,
-  Adn,
   Shl,
   Shr,
   Not,
@@ -236,19 +234,19 @@ fn tokenize(source: String, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)>
 
       let token = match token {
         _ if token.ends_with(":") => Token::LabelDef(Label {
-          scope_id: None,
+          parent_scope: None,
           identifier: token[..token.len() - 1].to_string(),
         }),
         _ if token.starts_with(":") => Token::LabelRef(Label {
-          scope_id: None,
+          parent_scope: None,
           identifier: token[1..].to_string(),
         }),
         _ if token.ends_with(".") => Token::LabelDef(Label {
-          scope_id: Some(0),
+          parent_scope: Some(0),
           identifier: token[..token.len() - 1].to_string(),
         }),
         _ if token.starts_with(".") => Token::LabelRef(Label {
-          scope_id: Some(0),
+          parent_scope: Some(0),
           identifier: token[1..].to_string(),
         }),
         _ if token.ends_with("!") => Token::MacroDef(Macro(token[..token.len() - 1].to_string())),
@@ -267,7 +265,6 @@ fn tokenize(source: String, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)>
         "inc" => Token::Inc,
         "dec" => Token::Dec,
         "neg" => Token::Neg,
-        "adn" => Token::Adn,
         "shl" => Token::Shl,
         "shr" => Token::Shr,
         "not" => Token::Not,
@@ -325,6 +322,12 @@ fn assemble(
   for token in tokens.into_iter() {
     match token.1 {
       Token::MacroDef(macro_) => {
+        if macro_definitions.contains_key(&macro_) {
+          errors.push((
+            token.0.clone(),
+            Error(format!("Macro already defined: {}", macro_)),
+          ));
+        }
         current_macro = Some(macro_.clone());
         macro_definitions.entry(macro_).or_insert(vec![]);
       }
@@ -341,7 +344,7 @@ fn assemble(
         )),
         None => errors.push((
           token.0,
-          Error(format!("Orphan instruction found: {}", token.1)),
+          Error(format!("Orphan token encountered: {}", token.1)),
         )),
       },
     }
@@ -354,13 +357,13 @@ fn assemble(
     },
     Token::MacroRef(Macro(entry_point.to_string())),
   )];
-  let mut scope_id: usize = 1;
+  let mut parent_scope: usize = 1;
   let mut parents: Vec<Macro> = vec![];
   let tokens: Vec<(Pos, Token)> = expand_macros(
     &macro_definitions,
     &entry_point,
     &mut parents,
-    &mut scope_id,
+    &mut parent_scope,
     errors,
   );
 
@@ -368,7 +371,7 @@ fn assemble(
     macro_definitions: &HashMap<Macro, Vec<(Pos, Token)>>,
     tokens: &Vec<(Pos, Token)>,
     parents: &mut Vec<Macro>,
-    scope_id: &mut usize,
+    parent_scope: &mut usize,
     errors: &mut Vec<(Pos, Error)>,
   ) -> Vec<(Pos, Token)> {
     tokens
@@ -405,22 +408,22 @@ fn assemble(
               .into_iter()
               .map(|token| match token.1 {
                 Token::LabelDef(Label {
-                  scope_id: Some(_),
+                  parent_scope: Some(_),
                   identifier,
                 }) => (
                   token.0,
                   Token::LabelDef(Label {
-                    scope_id: Some(*scope_id),
+                    parent_scope: Some(*parent_scope),
                     identifier,
                   }),
                 ),
                 Token::LabelRef(Label {
-                  scope_id: Some(_),
+                  parent_scope: Some(_),
                   identifier,
                 }) => (
                   token.0,
                   Token::LabelRef(Label {
-                    scope_id: Some(*scope_id),
+                    parent_scope: Some(*parent_scope),
                     identifier,
                   }),
                 ),
@@ -428,9 +431,10 @@ fn assemble(
               })
               .collect();
 
-            *scope_id += 1;
+            *parent_scope += 1;
             parents.push(macro_.clone());
-            let expanded = expand_macros(&macro_definitions, &tokens, parents, scope_id, errors);
+            let expanded =
+              expand_macros(&macro_definitions, &tokens, parents, parent_scope, errors);
             parents.pop();
             expanded
           }
@@ -558,7 +562,6 @@ fn assemble(
         Token::Inc => Root::Instruction(Instruction::Inc),
         Token::Dec => Root::Instruction(Instruction::Dec),
         Token::Neg => Root::Instruction(Instruction::Neg),
-        Token::Adn => Root::Instruction(Instruction::Adn),
         Token::Shl => Root::Instruction(Instruction::Shl),
         Token::Shr => Root::Instruction(Instruction::Shr),
         Token::Not => Root::Instruction(Instruction::Not),
@@ -645,25 +648,6 @@ fn assemble(
 
   let mut roots = roots;
 
-  roots = match_replace(&roots, |window| match window {
-    [Root::Instruction(instruction), Root::Dyn(None)] => {
-      Some(vec![Root::Dyn(Some(instruction.clone()))])
-    }
-    [Root::Node(Node::Immediate(immediate)), Root::Dyn(None)] => Some(
-      make_push_instruction(
-        immediate.clone(),
-        &Pos {
-          scope: "".to_string(),
-          index: 0,
-        },
-      )
-      .iter()
-      .map(|(_, instruction)| Root::Dyn(Some(instruction.clone())))
-      .collect(),
-    ),
-    _ => None,
-  });
-
   // optimize as much as possible into `Node`s for assembly-time evaluation
 
   let mut last_roots = vec![];
@@ -672,14 +656,33 @@ fn assemble(
     // println!("roots: {:?}\nlen: {}", roots, roots.len());
 
     roots = match_replace(&roots, |window| match window {
+      [Root::Node(node), Root::Const] => Some(vec![Root::Node(node.clone())]),
+      [Root::Instruction(instruction), Root::Dyn(None)] => {
+        Some(vec![Root::Dyn(Some(instruction.clone()))])
+      }
+      [Root::Node(Node::Immediate(immediate)), Root::Dyn(None)] => Some(
+        make_push_instruction(
+          immediate.clone(),
+          &Pos {
+            scope: "".to_string(),
+            index: 0,
+          },
+        )
+        .iter()
+        .map(|(_, instruction)| Root::Dyn(Some(instruction.clone())))
+        .collect(),
+      ),
+      [Root::Node(node), Root::Org(None)] => Some(vec![Root::Org(Some(node.clone()))]),
+      _ => None,
+    });
+
+    roots = match_replace(&roots, |window| match window {
       [Root::Instruction(Instruction::Nop)] => Some(vec![]),
       _ => None,
     });
 
     roots =
       match_replace(&roots, |window| match window {
-        [Root::Node(node), Root::Const] => Some(vec![Root::Node(node.clone())]),
-        [Root::Node(node), Root::Org(None)] => Some(vec![Root::Org(Some(node.clone()))]),
         [Root::Node(node), Root::Instruction(Instruction::Inc)] => Some(vec![Root::Node(
           Node::Add(Box::new(node.clone()), Box::new(Node::Immediate(1))),
         )]),
@@ -842,15 +845,19 @@ fn assemble(
 
   // assemble roots into instructions by computing the value of every node and resolving labels
 
-  fn eval<'a>(node: &'a Node, labels: &HashMap<Label, u8>) -> Result<u8, Label> {
+  fn eval<'a>(node: &'a Node, label_definitions: &HashMap<Label, u8>) -> Result<u8, Label> {
     Ok(match node {
-      Node::LabelRef(label) => *labels.get(label).ok_or(label.clone())?,
+      Node::LabelRef(label) => *label_definitions.get(label).ok_or(label.clone())?,
       Node::Immediate(immediate) => *immediate,
-      Node::Add(node1, node2) => eval(node2, labels)?.wrapping_add(eval(node1, labels)?),
-      Node::Sub(node1, node2) => eval(node2, labels)?.wrapping_sub(eval(node1, labels)?),
+      Node::Add(node1, node2) => {
+        eval(node2, label_definitions)?.wrapping_add(eval(node1, label_definitions)?)
+      }
+      Node::Sub(node1, node2) => {
+        eval(node2, label_definitions)?.wrapping_sub(eval(node1, label_definitions)?)
+      }
       Node::Rot(node1, node2) => {
-        let a = eval(node1, labels)? as u16;
-        let b = eval(node2, labels)? as u16;
+        let a = eval(node1, label_definitions)? as u16;
+        let b = eval(node2, label_definitions)? as u16;
 
         let shifted = if a as i8 >= 0 {
           (b as u16).wrapping_shl(a as u32)
@@ -860,13 +867,13 @@ fn assemble(
 
         (shifted & 0xFF) as u8 | (shifted >> 8) as u8
       }
-      Node::Orr(node1, node2) => eval(node2, labels)? | eval(node1, labels)?,
-      Node::And(node1, node2) => eval(node2, labels)? & eval(node1, labels)?,
-      Node::Xor(node1, node2) => eval(node2, labels)? ^ eval(node1, labels)?,
+      Node::Orr(node1, node2) => eval(node2, label_definitions)? | eval(node1, label_definitions)?,
+      Node::And(node1, node2) => eval(node2, label_definitions)? & eval(node1, label_definitions)?,
+      Node::Xor(node1, node2) => eval(node2, label_definitions)? ^ eval(node1, label_definitions)?,
       Node::Xnd(_, _) => 0,
-      Node::Shl(node) => eval(node, labels)?.wrapping_shl(1),
-      Node::Shr(node) => eval(node, labels)?.wrapping_shl(1),
-      Node::Not(node) => !eval(node, labels)?,
+      Node::Shl(node) => eval(node, label_definitions)?.wrapping_shl(1),
+      Node::Shr(node) => eval(node, label_definitions)?.wrapping_shl(1),
+      Node::Not(node) => !eval(node, label_definitions)?,
     })
   }
 
@@ -928,7 +935,7 @@ fn assemble(
       },
 
       Root::LabelDef(Label {
-        scope_id: Some(0),
+        parent_scope: Some(0),
         identifier: _,
       }) => panic!("Local label has no scope specified"),
 
@@ -969,11 +976,21 @@ fn assemble(
         }
       },
 
-      Root::Org(None) | Root::Const => {
+      Root::Org(None) => {
         errors.push((
           root.0,
           Error(format!(
-            "Origin or constant argument is not a constant expression"
+            "Origin argument could not be reduced to a constant expression"
+          )),
+        ));
+        vec![]
+      }
+
+      Root::Const => {
+        errors.push((
+          root.0,
+          Error(format!(
+            "Constant argument could not be reduced to a constant expression"
           )),
         ));
         vec![]
@@ -982,7 +999,9 @@ fn assemble(
       Root::Dyn(None) => {
         errors.push((
           root.0,
-          Error(format!("Dynamic argument is not an instruction")),
+          Error(format!(
+            "Dynamic argument could not be reduced to an instruction"
+          )),
         ));
         vec![]
       }
@@ -1061,7 +1080,6 @@ fn codegen(
         Instruction::Inc => 0b10110000,
         Instruction::Dec => 0b10110001,
         Instruction::Neg => 0b10110010,
-        Instruction::Adn => 0b10110011,
         Instruction::Shl => 0b10110100,
         Instruction::Shr => 0b10110101,
         Instruction::Not => 0b10110110,
@@ -1113,7 +1131,7 @@ fn codegen(
 
 impl std::fmt::Display for Label {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    match self.scope_id {
+    match self.parent_scope {
       Some(_) => write!(f, ".{}", self.identifier),
       None => write!(f, ":{}", self.identifier),
     }
@@ -1181,7 +1199,6 @@ impl std::fmt::Display for Token {
       Token::Inc => write!(f, "inc"),
       Token::Dec => write!(f, "dec"),
       Token::Neg => write!(f, "neg"),
-      Token::Adn => write!(f, "adn"),
       Token::Shl => write!(f, "shl"),
       Token::Shr => write!(f, "shr"),
       Token::Not => write!(f, "not"),

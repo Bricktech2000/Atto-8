@@ -45,40 +45,39 @@ The processor assumes it can address memory of the shape `[u8; 0x100]`. The `*` 
 
 Negative values are represented in two's complement.
 
-| Instruction | Description                   | Operation                                                                | Opcode                |
-| ----------- | ----------------------------- | ------------------------------------------------------------------------ | --------------------- |
-| `psh X`     | Push                          | `X & 0b01111111 -> *(--SP);`                                             | `0b0XXXXXXX` (`0xXX`) |
-| `add S`     | Add with Carry                | `*(SP++) + *(SP + 2 ** S) + CF -> *(SP + 2 ** S); *SP > 0xFF -> CF;`     | `0b100000SS`          |
-| `sub S`     | Subtract with Carry           | `-*(SP++) + *(SP + 2 ** S) - CF -> *(SP + 2 ** S); *SP < 0x00 -> CF;`    | `0b100001SS`          |
-| `iff S`     | Conditional with Carry        | `CF ? *((SP++)++) : *((++SP)++ + 2 ** S) -> *(--SP);`                    | `0b100100SS`          |
-| `rot S`     | Rotate                        | `(*SP << S) \| ((*SP << S) >> 8) -> *SP;`                                | `0b100101SS`          |
-| `orr S`     | Bitwise OR                    | `*(SP++) \| *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`           | `0b101000SS`          |
-| `and S`     | Bitwise AND                   | `*(SP++) & *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`            | `0b101001SS`          |
-| `xor S`     | Bitwise XOR                   | `*(SP++) ^ *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`            | `0b101010SS`          |
-| `xnd S`     | Bitwise XAND                  | `SP++; 0 -> *(SP + 2 ** S); *SP == 0 -> CF;`                             | `0b101011SS`          |
-| `inc`       | Increment                     | `*SP + 1 -> *SP;`                                                        | `0b10110000`          |
-| `dec`       | Decrement                     | `*SP - 1 -> *SP;`                                                        | `0b10110001`          |
-| `neg`       | Negate                        | `-*SP -> *SP`                                                            | `0b10110010`          |
-| `adn`       | Add Nibbles                   | `*SP + *(SP + 1) & 0x0F \| (*SP & 0xF0) + (*(SP + 1) & 0xF0) -> *(++SP)` | `0b10110011`          |
-| `shl`       | Shift Left                    | `(*SP & 0x80) -> CF;  (*SP << 1) -> *SP;`                                | `0b10110100`          |
-| `shr`       | Shift Right                   | `(*SP & 0x01) -> CF;  (*SP >> 1) -> *SP;`                                | `0b10110101`          |
-| `not`       | Bitwise NOT                   | `!*SP -> *SP; *SP == 0 -> CF;`                                           | `0b10110110`          |
-| `buf`       | Bitwise Buffer                | `*SP -> *SP; *SP == 0 -> CF;`                                            | `0b10110111`          |
-| `ldo O`     | Load from Offset              | `*(SP + O) -> *(--SP);`                                                  | `0b1100OOOO` (`0xCO`) |
-| `sto O`     | Store to Offset               | `*SP++ -> *(SP + O);`                                                    | `0b1101OOOO` (`0xDO`) |
-| `lda`       | Load from Address             | `*(*(SP++)) -> *(--SP);`                                                 | `0b11101000` (`0xE0`) |
-| `sta`       | Store to Address              | `*(SP++) -> *(*(SP++));`                                                 | `0b11101001` (`0xE1`) |
-| `ldi`       | Load from Instruction Pointer | `IP -> *(--SP);`                                                         | `0b11101010` (`0xE2`) |
-| `sti`       | Store to Instruction Pointer  | `*(SP++) -> IP;`                                                         | `0b11101011` (`0xE3`) |
-| `lds`       | Load from Stack Pointer       | `SP -> *(--SP);`                                                         | `0b11101100` (`0xE4`) |
-| `sts`       | Store to Stack Pointer        | `*(SP++) -> SP;`                                                         | `0b11101101` (`0xE5`) |
-| `nop`       | No Operation                  | `;`                                                                      | `0b11100000` (`0xE8`) |
-| `clc`       | Clear Carry                   | `0 -> CF;`                                                               | `0b11100001` (`0xE9`) |
-| `sec`       | Set Carry                     | `1 -> CF;`                                                               | `0b11100010` (`0xEA`) |
-| `flc`       | Flip Carry                    | `!CF -> CF;`                                                             | `0b11100011` (`0xEB`) |
-| `swp`       | Swap                          | `*(SP++) -> *SP -> *(--SP);`                                             | `0b11100100` (`0xEC`) |
-| `pop`       | Pop                           | `0 -> *(SP++);`                                                          | `0b11100101` (`0xED`) |
-| `phn X`     | Push Negative                 | `X \| 0b11110000 -> *(--SP);`                                            | `0b1111XXXX` (`0xFX`) |
+| Instruction | Description                   | Operation                                                             | Opcode                |
+| ----------- | ----------------------------- | --------------------------------------------------------------------- | --------------------- |
+| `psh X`     | Push                          | `X & 0b01111111 -> *(--SP);`                                          | `0b0XXXXXXX` (`0xXX`) |
+| `add S`     | Add with Carry                | `*(SP++) + *(SP + 2 ** S) + CF -> *(SP + 2 ** S); *SP > 0xFF -> CF;`  | `0b100000SS`          |
+| `sub S`     | Subtract with Carry           | `-*(SP++) + *(SP + 2 ** S) - CF -> *(SP + 2 ** S); *SP < 0x00 -> CF;` | `0b100001SS`          |
+| `iff S`     | Conditional with Carry        | `CF ? *((SP++)++) : *((++SP)++ + 2 ** S) -> *(--SP);`                 | `0b100100SS`          |
+| `rot S`     | Rotate                        | `(*SP << S) \| ((*SP << S) >> 8) -> *SP;`                             | `0b100101SS`          |
+| `orr S`     | Bitwise OR                    | `*(SP++) \| *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`        | `0b101000SS`          |
+| `and S`     | Bitwise AND                   | `*(SP++) & *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`         | `0b101001SS`          |
+| `xor S`     | Bitwise XOR                   | `*(SP++) ^ *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`         | `0b101010SS`          |
+| `xnd S`     | Bitwise XAND                  | `SP++; 0 -> *(SP + 2 ** S); *SP == 0 -> CF;`                          | `0b101011SS`          |
+| `inc`       | Increment                     | `*SP + 1 -> *SP;`                                                     | `0b10110000`          |
+| `dec`       | Decrement                     | `*SP - 1 -> *SP;`                                                     | `0b10110001`          |
+| `neg`       | Negate                        | `-*SP -> *SP`                                                         | `0b10110010`          |
+| `shl`       | Shift Left                    | `(*SP & 0x80) -> CF;  (*SP << 1) -> *SP;`                             | `0b10110100`          |
+| `shr`       | Shift Right                   | `(*SP & 0x01) -> CF;  (*SP >> 1) -> *SP;`                             | `0b10110101`          |
+| `not`       | Bitwise NOT                   | `!*SP -> *SP; *SP == 0 -> CF;`                                        | `0b10110110`          |
+| `buf`       | Bitwise Buffer                | `*SP -> *SP; *SP == 0 -> CF;`                                         | `0b10110111`          |
+| `ldo O`     | Load from Offset              | `*(SP + O) -> *(--SP);`                                               | `0b1100OOOO` (`0xCO`) |
+| `sto O`     | Store to Offset               | `*SP++ -> *(SP + O);`                                                 | `0b1101OOOO` (`0xDO`) |
+| `lda`       | Load from Address             | `*(*(SP++)) -> *(--SP);`                                              | `0b11101000` (`0xE0`) |
+| `sta`       | Store to Address              | `*(SP++) -> *(*(SP++));`                                              | `0b11101001` (`0xE1`) |
+| `ldi`       | Load from Instruction Pointer | `IP -> *(--SP);`                                                      | `0b11101010` (`0xE2`) |
+| `sti`       | Store to Instruction Pointer  | `*(SP++) -> IP;`                                                      | `0b11101011` (`0xE3`) |
+| `lds`       | Load from Stack Pointer       | `SP -> *(--SP);`                                                      | `0b11101100` (`0xE4`) |
+| `sts`       | Store to Stack Pointer        | `*(SP++) -> SP;`                                                      | `0b11101101` (`0xE5`) |
+| `nop`       | No Operation                  | `;`                                                                   | `0b11100000` (`0xE8`) |
+| `clc`       | Clear Carry                   | `0 -> CF;`                                                            | `0b11100001` (`0xE9`) |
+| `sec`       | Set Carry                     | `1 -> CF;`                                                            | `0b11100010` (`0xEA`) |
+| `flc`       | Flip Carry                    | `!CF -> CF;`                                                          | `0b11100011` (`0xEB`) |
+| `swp`       | Swap                          | `*(SP++) -> *SP -> *(--SP);`                                          | `0b11100100` (`0xEC`) |
+| `pop`       | Pop                           | `0 -> *(SP++);`                                                       | `0b11100101` (`0xED`) |
+| `phn X`     | Push Negative                 | `X \| 0b11110000 -> *(--SP);`                                         | `0b1111XXXX` (`0xFX`) |
 
 ## Initial State
 

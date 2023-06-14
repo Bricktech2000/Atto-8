@@ -17,6 +17,7 @@ tasks:
 - [x] come up with clock frequency and add to spec
 - [x] buy components for computer
 - [x] fix assembler stack overflow with self-referencing macros
+- [x] get rid of `adn` instruction
 - [ ] create `u4` and `i4` pair types
 - [ ] update programs with new types
 - [ ] build computer
@@ -122,22 +123,6 @@ SP_ADDR MEM_DATA DATA_AL
 SP_ADDR DATA_MEM ..._DATA
 ```
 
-- `add`: `AL + BL`
-- `sub`: `~AL + BL + 1`
-- `rot`:
-- `orr`:
-- `and`:
-- `xor`:
-- `xnd`: `0`, is_zero to carry
-- `inc`: `AL + 1`
-- `dec`: `AL + ~0`
-- `neg`: `~AL + 1`
-- `adn`: `AL + BL`, half carry disabled
-- `shl`: `AL + AL`
-- `shr`:
-- `not`: `~AL`, is_zero to carry
-- `buf`: `AL`, is_zero to carry
-
 - A latch: `AL`
 - B latch: `BL`
 - offset latch: `OL`
@@ -147,3 +132,28 @@ SP_ADDR DATA_MEM ..._DATA
 - stack pointer: `SP`
 
 `OP_DATA` will put `OL + SP` on the bus
+
+- `add`: `AL + BL`
+- `sub`: `~AL + BL + 1`
+- `rot`: `AL << BL`
+- `orr`:
+- `and`:
+- `xor`:
+- `xnd`: `0`, is_zero to carry
+- `inc`: `AL + 1`
+- `dec`: `AL + ~0`
+- `neg`: `~AL + 1`
+- `shl`: `AL + AL`
+- `shr`: `(AL >> 1 + AL >> 1) >> 1`
+- `not`: `~AL`, is_zero to carry
+- `buf`: `AL`, is_zero to carry
+
+things needed:
+
+- carry in
+- ~~half carry enable~~
+- sum to data
+- zero to bl
+- rot do data
+- [ ] not
+- [ ] latch carry

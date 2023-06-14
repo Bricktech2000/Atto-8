@@ -2,6 +2,7 @@ nop
 .label
 
 main!
+main!
   @ foo.asm
   dZZ
   xF00

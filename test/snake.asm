@@ -5,7 +5,8 @@
 @ lib/microcomputer/input.asm
 @ lib/microcomputer/display.asm
 
-# a few bytes short, but was working before having to add `clc`. missing `!delay` call
+# a few bytes short, but was working before removing `adn`s and having to add `clc`s.
+# has always been missing `!delay` call
 
 main!
   pop !front_buffer sts
@@ -42,7 +43,7 @@ main!
 
     x02 for_head_twice: dec
       # head_pas += head_vel
-      ld5 ld5 adn st5
+      ld5 ld5 !adn st5
       # if head_pos == food_pos, spawn a new food
       ld1 x11 orr ld6 xor pop :food !bcs
       # compute bit_addr of head_pos
@@ -56,13 +57,13 @@ main!
     # figure out where the tail is headed
     :directions_end :directions sub @const for_dir: dec
       :directions ld1 add lda ld3
-        !front_buffer ld6 ld3 adn !bit_addr !load_bit
+        !front_buffer ld6 ld3 !adn !bit_addr !load_bit
       buf pop iff st2
     buf :for_dir !bcc pop
 
     x02 for_tail_twice: dec
       # tail_pas += tail_vel
-      ld3 ld3 adn st3
+      ld3 ld3 !adn st3
       # clear pixel at tail_pos
       !front_buffer ld4 !bit_addr !clear_bit
     buf :for_tail_twice !bcc pop

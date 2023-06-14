@@ -26,4 +26,4 @@ main!
       ld1 add swp # assume no overflow
     x01 su4 :for_n !bcc
     # return*
-    st2 pop !ret
+    st2 pop !rt0

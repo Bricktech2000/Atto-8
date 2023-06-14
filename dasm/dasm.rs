@@ -84,8 +84,6 @@ fn disassemble(memory: [u8; 0x100], entry_point: &str) -> String {
 
                     (0xC, 0b10) => format!("neg @dyn"),
 
-                    (0xC, 0b11) => format!("adn @dyn"),
-
                     (0xD, 0b00) => format!("shl @dyn"),
 
                     (0xD, 0b01) => format!("shr @dyn"),

@@ -1027,7 +1027,7 @@ u8.mul_def!
       !u8.ld1+1 !u16.shr !u16.st0+1
     buf .for_bit !bcc pop
   # return* product
-  !u16.st0+1 !ret
+  !u16.st0+1 !rt0
 i8.mul_def!
   i8.mul: clc # i16 product = i8.mul(i8 a, i8 b)
     # u16 product = (u8)a * (u8)b
@@ -1037,7 +1037,7 @@ i8.mul_def!
     # product -= (b & 0x80 ? a << 0x08 : 0x00)
     ld4 shl pop !u16.0 !u8.ld4+1 !u8.0 !u16.iff clc !u16.sub
   # return* product
-  !u16.st0+1 !ret
+  !u16.st0+1 !rt0
 u16.mul_def!
   u16.mul: clc # u32 product = u16.mul(u16 a, u16 b)
     !u32.0 # product
@@ -1050,7 +1050,7 @@ u16.mul_def!
       !u16.ld1+1 !u32.shr !u32.st0+1
     buf .for_bit !bcc pop
   # return* product
-  !u32.st0+1 !ret
+  !u32.st0+1 !rt0
 i16.mul_def!
   i16.mul: clc # i32 product = i16.mul(i16 a, i16 b)
     # u32 product = (u16)a * (u16)b
@@ -1060,7 +1060,7 @@ i16.mul_def!
     # product -= (b & 0x8000 ? a << 0x10 : 0x00)
     ld8 shl pop !u32.0 !u16.ld4+1 !u16.0 !u32.iff clc !u32.sub
   # return* product
-  !u32.st0+1 !ret
+  !u32.st0+1 !rt0
 u4f4.mul_def!
   u4f4.mul: clc # u4f4 product = u4f4.mul(u4f4 a, u4f4 b)
     # product = (u8)a * (u8)b

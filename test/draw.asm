@@ -15,7 +15,7 @@ main!
 
   loop:
     # xy_pos += xy_vel
-    ld1 ld1 adn st1
+    ld1 ld1 !adn st1
     # invert pixel at xy_pos
     !front_buffer ld2 !bit_addr !flip_bit
     # sleep

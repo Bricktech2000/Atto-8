@@ -121,7 +121,7 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
 
     if !debug_mode {
       let realtime_tolerance = 0.01;
-      status_line = if realtime_ratio < -realtime_tolerance {
+      status_line = if -realtime_ratio > realtime_tolerance {
         format!("Emulation behind by {:.0}%.", -realtime_ratio * 100.0)
       } else if realtime_ratio > realtime_tolerance {
         format!("Emulation ahead by {:.0}%.", realtime_ratio * 100.0)
@@ -285,18 +285,6 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
                 // neg
                 let a = mc.mem[mp.sp as usize];
                 mc.mem[mp.sp as usize] = a.wrapping_neg();
-                (0x04, None)
-              }
-
-              (0xC, 0b11) => {
-                // adn
-                let a = mc.mem[mp.sp as usize];
-                mc.mem[mp.sp as usize] = 0x00;
-                mp.sp = mp.sp.wrapping_add(1);
-                let b = mc.mem[mp.sp as usize];
-
-                mc.mem[mp.sp as usize] = (b.wrapping_add(a) & 0b00001111)
-                  | ((b & 0b11110000).wrapping_add(a & 0b11110000));
                 (0x04, None)
               }
 
