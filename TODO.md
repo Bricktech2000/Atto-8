@@ -154,6 +154,6 @@ things needed:
 - ~~half carry enable~~
 - sum to data
 - zero to bl
-- rot do data
+- rot to data
 - [ ] not
 - [ ] latch carry
