@@ -77,8 +77,6 @@ main!
     x60 !delay
   :loop !jmp
 
-  !nop !nop !nop
-
   game_over:
     !hlt
 
