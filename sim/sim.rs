@@ -38,12 +38,15 @@ fn main() {
 
   let memory_image = std::fs::read(memory_image_file)
     .unwrap_or_else(|_| {
-      println!("Error: Unable to read file: {}", memory_image_file);
+      println!("Sim: Error: Unable to read file `{}`", memory_image_file);
       std::process::exit(1);
     })
     .try_into()
     .unwrap_or_else(|_| {
-      println!("Error: Memory image has incorrect size");
+      println!(
+        "Sim: Error: Memory image `{}` has incorrect size",
+        memory_image_file
+      );
       std::process::exit(1);
     });
 
@@ -51,12 +54,15 @@ fn main() {
   //
   // let microcode = std::fs::read(microcode_image_file)
   //   .unwrap_or_else(|_| {
-  //     println!("Error: Unable to read file: {}", microcode_image_file);
+  //     println!("Sim: Error: Unable to read file `{}`", microcode_image_file);
   //     std::process::exit(1);
   //   })
   //   .try_into()
   //   .unwrap_or_else(|_| {
-  //     println!("Error: Microcode image has incorrect size");
+  //     println!(
+  //       "Sim: Error: Microcode image `{}` has incorrect size",
+  //       microcode_image_file
+  //     );
   //     std::process::exit(1);
   //   });
 
@@ -208,10 +214,7 @@ fn tick(mc: &mut Microcomputer) {
   mp.ofst_to_ol = control_word & OFST_TO_OL != 0;
   mp.orr_to_data = control_word & ORR_TO_DATA != 0;
   if control_word == CTRL_NONE {
-    panic!(
-      "Error: Unimplemented instruction: {:02X}#{:02X}",
-      mp.ir, mp.sc
-    );
+    panic!("Unimplemented instruction: {:02X}#{:02X}", mp.ir, mp.sc);
   }
 
   // instruction pointer

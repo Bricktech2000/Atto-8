@@ -6,12 +6,13 @@ import subprocess
 
 
 def run(*args):
-  print(f"Running: {' '.join(args)}")
+  print(f"Test: Running `{' '.join(args)}`")
   subprocess.run([*args], check=True)
 
 
 def rel_path(*args):
-  return os.path.join(os.path.dirname(__file__), *args)
+  # from path relative to this file to path relative to cwd
+  return os.path.relpath(os.path.join(os.path.dirname(__file__), *args), os.getcwd())
 
 
 run_cargo = functools.partial(run, 'cargo')
@@ -19,7 +20,7 @@ run_python = functools.partial(run, 'python3')
 
 
 if len(sys.argv) <= 1:
-  print("Usage: test.py <operations> <filename>")
+  print("Test: Usage: test.py <operations> <filename>")
   sys.exit(1)
 
 _filename = sys.argv[-1]
@@ -31,30 +32,32 @@ os.makedirs(rel_path('target'), exist_ok=True)
 shutil.copyfile(_filename, rel_path('target', os.path.basename(_filename)))
 filename = rel_path('target', os.path.basename(_filename))
 
-
 operations = []
 for operation in _operations:
   match operation:
     case 'enc':
-      operations.append(functools.partial(run_python, rel_path('../enc/enc.py'), filename, filename + '.bin'))
+      operations.append(('enc', functools.partial(run_python, rel_path('../enc/enc.py'), filename, filename + '.bin')))
       filename += '.bin'
     case 'asm':
-      operations.append(functools.partial(run_cargo, 'run', '--bin', 'asm', filename, filename + '.bin'))
+      operations.append(('asm', functools.partial(run_cargo, 'run', '--bin', 'asm', filename, filename + '.bin')))
       filename += '.bin'
     case 'dasm':
-      operations.append(functools.partial(run_cargo, 'run', '--bin', 'dasm', filename, filename + '.asm'))
+      operations.append(('dasm', functools.partial(run_cargo, 'run', '--bin', 'dasm', filename, filename + '.asm')))
       filename += '.asm'
     case 'emu':
-      operations.append(functools.partial(run_cargo, 'run', '--bin', 'emu', filename))
+      operations.append(('emu', functools.partial(run_cargo, 'run', '--bin', 'emu', filename)))
     case 'sim':
-      operations.append(functools.partial(run_cargo, 'run', '--bin', 'sim', filename))
+      operations.append(('sim', functools.partial(run_cargo, 'run', '--bin', 'sim', filename)))
     case _:
-      print(f'Error: Unknown operation: {operation}')
+      print(f'Test: Error: Unknown operation `{operation}`')
       sys.exit(1)
 
-for operation in operations:
-  try:
-    operation()
-  except subprocess.CalledProcessError as e:
-    print(f'Error: Subprocess exited with code: {e.returncode}')
-    sys.exit(1)
+try:
+  for (name, func) in operations:
+    try:
+      func()
+    except subprocess.CalledProcessError as e:
+      print(f'Test: Warning: Operation subprocess `{name}` exited with code `{e.returncode}`')
+except KeyboardInterrupt:
+  print('Test: Interrupted')
+  sys.exit(1)

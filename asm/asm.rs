@@ -3,7 +3,7 @@ use std::collections::HashMap;
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() != 3 {
-    println!("Usage: asm <assembly file> <image file>");
+    println!("Asm: Usage: asm <assembly file> <image file>");
     std::process::exit(1);
   }
 
@@ -22,16 +22,16 @@ fn main() {
       let output = &args[2];
       std::fs::write(output, bytes.iter().map(|(_, b)| *b).collect::<Vec<u8>>()).unwrap();
 
-      println!("Done.");
+      println!("Asm: Done");
     }
     _ => {
       let errors = errors
         .iter()
-        .map(|error| format!("{}  {}", error.0, error.1))
+        .map(|error| format!("Asm: Error: {}: {}", error.0, error.1))
         .collect::<Vec<String>>()
         .join("\n");
 
-      println!("{}\n\nAborting.", errors);
+      println!("{}", errors);
       std::process::exit(1);
     }
   }
@@ -158,7 +158,7 @@ fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -
           scope: scope.unwrap_or("[bootstrap]").to_string(),
           index: 0,
         },
-        Error(format!("Unable to read file: {}", file)),
+        Error(format!("Unable to read file `{}`", file)),
       ));
       "".to_string()
     }
@@ -204,15 +204,15 @@ fn tokenize(source: String, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)>
         match e.kind() {
           InvalidDigit => errors.push((
             position.clone(),
-            Error(format!("Invalid digits in hexadecimal literal: {}", input)),
+            Error(format!("Invalid digits in hexadecimal literal `{}`", input)),
           )),
           Empty => errors.push((
             position.clone(),
-            Error(format!("Invalid empty hexadecimal literal")),
+            Error(format!("Invalid empty hexadecimal literal `{}`", input)),
           )),
           NegOverflow | PosOverflow => errors.push((
             position.clone(),
-            Error(format!("Hexadecimal literal out of range: {}", input)),
+            Error(format!("Hexadecimal literal `{}` out of range", input)),
           )),
           _ => panic!("Unexpected error parsing hexadecimal literal"),
         };
@@ -296,7 +296,7 @@ fn tokenize(source: String, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)>
         _ => {
           errors.push((
             position.clone(),
-            Error(format!("Unexpected token: {}", token)),
+            Error(format!("Unexpected token `{}`", token)),
           ));
           Token::Nop
         }
@@ -325,7 +325,7 @@ fn assemble(
         if macro_definitions.contains_key(&macro_) {
           errors.push((
             token.0.clone(),
-            Error(format!("Macro already defined: {}", macro_)),
+            Error(format!("Macro `{}` has already been defined", macro_)),
           ));
         }
         current_macro = Some(macro_.clone());
@@ -344,7 +344,7 @@ fn assemble(
         )),
         None => errors.push((
           token.0,
-          Error(format!("Orphan token encountered: {}", token.1)),
+          Error(format!("Orphan token `{}` encountered", token.1)),
         )),
       },
     }
@@ -382,10 +382,10 @@ fn assemble(
             errors.push((
               token.0.clone(),
               Error(format!(
-                "Macro self-reference: {} -> {}",
+                "Macro self-reference {} -> `{}`",
                 parents
                   .iter()
-                  .map(|macro_| format!("{}", macro_))
+                  .map(|macro_| format!("`{}`", macro_))
                   .collect::<Vec<String>>()
                   .join(" -> "),
                 macro_
@@ -398,7 +398,7 @@ fn assemble(
               None => {
                 errors.push((
                   token.0.clone(),
-                  Error(format!("Definition not found for macro: {}", macro_)),
+                  Error(format!("Definition for macro `{}` not found", macro_)),
                 ));
                 vec![]
               }
@@ -451,7 +451,7 @@ fn assemble(
       _ => {
         errors.push((
           position.clone(),
-          Error(format!("Invalid immediate operand: {:02X}", immediate)),
+          Error(format!("Invalid immediate operand `{:02X}`", immediate)),
         ));
         0b00000000
       }
@@ -464,7 +464,7 @@ fn assemble(
       _ => {
         errors.push((
           position.clone(),
-          Error(format!("Invalid size operand: {:02X}", size)),
+          Error(format!("Invalid size operand `{:02X}`", size)),
         ));
         0x01
       }
@@ -477,7 +477,7 @@ fn assemble(
       _ => {
         errors.push((
           position.clone(),
-          Error(format!("Invalid offset operand: {:02X}", offset)),
+          Error(format!("Invalid offset operand `{:02X}`", offset)),
         ));
         0b00000000
       }
@@ -941,7 +941,10 @@ fn assemble(
 
       Root::LabelDef(label) => {
         if label_definitions.contains_key(&label) {
-          errors.push((root.0, Error(format!("Label already defined: {}", label))));
+          errors.push((
+            root.0,
+            Error(format!("Label `{}` has already been defined", label)),
+          ));
         }
         label_definitions.insert(label, location_counter);
         vec![]
@@ -957,7 +960,7 @@ fn assemble(
             errors.push((
               root.0,
               Error(format!(
-                "Origin cannot move location counter backward from: {} to: {}",
+                "Origin cannot move location counter backward from `{}` to `{}`",
                 location_counter, value
               )),
             ));
@@ -968,7 +971,7 @@ fn assemble(
           errors.push((
             root.0,
             Error(format!(
-              "Origin argument contains currently unresolved label: {}",
+              "Origin argument contains currently unresolved label `{}`",
               label
             )),
           ));
@@ -1018,7 +1021,7 @@ fn assemble(
       Err(label) => {
         errors.push((
           node.0.clone(),
-          Error(format!("Definition not found for label: {}", label)),
+          Error(format!("Definition for label `{}` not found", label)),
         ));
         0x00
       }
@@ -1117,7 +1120,7 @@ fn codegen(
     errors.push((
       position,
       Error(format!(
-        "Program size: {:02X} exceeds available memory: {:02X}",
+        "Program size `{:02X}` exceeds available memory of size `{:02X}`",
         bytes.len(),
         available_memory
       )),

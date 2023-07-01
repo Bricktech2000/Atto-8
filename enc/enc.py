@@ -9,7 +9,7 @@ def pad_or_slice(L, n):
 
 
 if len(sys.argv) != 3:
-  print("Usage: enc.py <hex file> <image file>")
+  print("Enc: Usage: enc.py <hex file> <image file>")
   sys.exit(1)
 
 hex_file = sys.argv[1]

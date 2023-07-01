@@ -1,7 +1,7 @@
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() != 2 {
-    println!("Usage: emu <memory image file>");
+    println!("Emu: Usage: emu <memory image file>");
     std::process::exit(1);
   }
 
@@ -9,12 +9,15 @@ fn main() {
 
   let memory_image = std::fs::read(memory_image_file)
     .unwrap_or_else(|_| {
-      println!("Error: Unable to read file: {}", memory_image_file);
+      println!("Emu: Error: Unable to read file `{}`", memory_image_file);
       std::process::exit(1);
     })
     .try_into()
     .unwrap_or_else(|_| {
-      println!("Error: Memory image has incorrect size");
+      println!(
+        "Emu: Error: Memory image `{}` has incorrect size",
+        memory_image_file,
+      );
       std::process::exit(1);
     });
 
@@ -90,7 +93,7 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
             break 'until_valid;
           }
           Ok(' ') => {
-            status_line = "Single Stepped.".to_string();
+            status_line = "Single stepped".to_string();
             break 'until_valid;
           }
           _ => continue 'until_valid,
@@ -105,9 +108,9 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
     if let Some(tick_trap) = tick_trap {
       debug_mode = true;
       status_line = match tick_trap {
-        TickTrap::DebugRequest => format!("Debug Request."),
+        TickTrap::DebugRequest => format!("Debug request"),
         TickTrap::UnknownInstruction(instruction) => {
-          format!("Unknown instruction: {:#04X}", instruction)
+          format!("Unknown instruction `{:#04X}`", instruction)
         }
       };
     }
@@ -122,11 +125,11 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
     if !debug_mode {
       let realtime_tolerance = 0.01;
       status_line = if -realtime_ratio > realtime_tolerance {
-        format!("Emulation behind by {:.0}%.", -realtime_ratio * 100.0)
+        format!("Emulation behind by {:.0}%", -realtime_ratio * 100.0)
       } else if realtime_ratio > realtime_tolerance {
-        format!("Emulation ahead by {:.0}%.", realtime_ratio * 100.0)
+        format!("Emulation ahead by {:.0}%", realtime_ratio * 100.0)
       } else {
-        format!("Emulation on time.")
+        format!("Emulation on time")
       };
     }
 
