@@ -39,21 +39,20 @@ fn main() {
 
 #[derive(Clone, Eq, PartialEq, Hash)]
 struct Label {
-  parent_scope: Option<usize>,
+  scope_uid: Option<usize>,
   identifier: String,
 }
 
 #[derive(Clone, Eq, PartialEq, Hash)]
-struct Macro(String);
+struct Macro {
+  identifier: String,
+}
 
 #[derive(Clone, Eq, PartialEq)]
 struct Error(String);
 
 #[derive(Clone, Eq, PartialEq)]
-struct Pos {
-  scope: String,
-  index: usize,
-}
+struct Pos(String, usize);
 
 #[derive(Clone, Eq, PartialEq)]
 struct File {
@@ -154,10 +153,7 @@ fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -
     Ok(data) => data,
     Err(_) => {
       errors.push((
-        Pos {
-          scope: scope.unwrap_or("[bootstrap]").to_string(),
-          index: 0,
-        },
+        Pos(scope.unwrap_or("[bootstrap]").to_string(), 0),
         Error(format!("Unable to read file `{}`", file)),
       ));
       "".to_string()
@@ -196,23 +192,26 @@ fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -
 fn tokenize(source: String, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)> {
   // tokenize to valid tokens. tokens might be invalid instructions
 
-  fn parse_hex(input: &str, errors: &mut Vec<(Pos, Error)>, position: &Pos) -> u8 {
+  fn parse_hex(literal: &str, errors: &mut Vec<(Pos, Error)>, position: &Pos) -> u8 {
     use std::num::IntErrorKind::*;
-    match u8::from_str_radix(input, 16) {
+    match u8::from_str_radix(literal, 16) {
       Ok(value) => value,
       Err(e) => {
         match e.kind() {
           InvalidDigit => errors.push((
             position.clone(),
-            Error(format!("Invalid digits in hexadecimal literal `{}`", input)),
+            Error(format!(
+              "Invalid digits in hexadecimal literal `{}`",
+              literal
+            )),
           )),
           Empty => errors.push((
             position.clone(),
-            Error(format!("Invalid empty hexadecimal literal `{}`", input)),
+            Error(format!("Invalid empty hexadecimal literal `{}`", literal)),
           )),
           NegOverflow | PosOverflow => errors.push((
             position.clone(),
-            Error(format!("Hexadecimal literal `{}` out of range", input)),
+            Error(format!("Hexadecimal literal `{}` out of range", literal)),
           )),
           _ => panic!("Unexpected error parsing hexadecimal literal"),
         };
@@ -227,30 +226,31 @@ fn tokenize(source: String, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)>
     .into_iter()
     .enumerate()
     .map(|(index, token)| {
-      let position = Pos {
-        scope: "[token stream]".to_string(),
-        index,
-      };
+      let position = Pos("[token stream]".to_string(), index);
 
       let token = match token {
         _ if token.ends_with(":") => Token::LabelDef(Label {
-          parent_scope: None,
+          scope_uid: None,
           identifier: token[..token.len() - 1].to_string(),
         }),
         _ if token.starts_with(":") => Token::LabelRef(Label {
-          parent_scope: None,
+          scope_uid: None,
           identifier: token[1..].to_string(),
         }),
         _ if token.ends_with(".") => Token::LabelDef(Label {
-          parent_scope: Some(0),
+          scope_uid: Some(0),
           identifier: token[..token.len() - 1].to_string(),
         }),
         _ if token.starts_with(".") => Token::LabelRef(Label {
-          parent_scope: Some(0),
+          scope_uid: Some(0),
           identifier: token[1..].to_string(),
         }),
-        _ if token.ends_with("!") => Token::MacroDef(Macro(token[..token.len() - 1].to_string())),
-        _ if token.starts_with("!") => Token::MacroRef(Macro(token[1..].to_string())),
+        _ if token.ends_with("!") => Token::MacroDef(Macro {
+          identifier: token[..token.len() - 1].to_string(),
+        }),
+        _ if token.starts_with("!") => Token::MacroRef(Macro {
+          identifier: token[1..].to_string(),
+        }),
         "@const" => Token::AtConst,
         "@dyn" => Token::AtDyn,
         "@org" => Token::AtOrg,
@@ -336,10 +336,10 @@ fn assemble(
         .and_then(|macro_| macro_definitions.get_mut(&macro_))
       {
         Some(macro_tokens) => macro_tokens.push((
-          Pos {
-            scope: format!("{}", current_macro.as_ref().unwrap()),
-            index: macro_tokens.len(),
-          },
+          Pos(
+            format!("{}", current_macro.as_ref().unwrap()),
+            macro_tokens.len(),
+          ),
           token.1,
         )),
         None => errors.push((
@@ -351,39 +351,38 @@ fn assemble(
   }
 
   let entry_point = vec![(
-    Pos {
-      scope: "[bootstrap]".to_string(),
-      index: 0,
-    },
-    Token::MacroRef(Macro(entry_point.to_string())),
+    Pos("[bootstrap]".to_string(), 0),
+    Token::MacroRef(Macro {
+      identifier: entry_point.to_string(),
+    }),
   )];
-  let mut parent_scope: usize = 1;
-  let mut parents: Vec<Macro> = vec![];
+  let mut scope_uid: usize = 1;
+  let mut parent_macros: Vec<Macro> = vec![];
   let tokens: Vec<(Pos, Token)> = expand_macros(
-    &macro_definitions,
     &entry_point,
-    &mut parents,
-    &mut parent_scope,
+    &mut scope_uid,
+    &mut parent_macros,
+    &macro_definitions,
     errors,
   );
 
-  fn expand_macros<'a>(
-    macro_definitions: &HashMap<Macro, Vec<(Pos, Token)>>,
+  fn expand_macros(
     tokens: &Vec<(Pos, Token)>,
-    parents: &mut Vec<Macro>,
-    parent_scope: &mut usize,
+    scope_uid: &mut usize,
+    parent_macros: &mut Vec<Macro>,
+    macro_definitions: &HashMap<Macro, Vec<(Pos, Token)>>,
     errors: &mut Vec<(Pos, Error)>,
   ) -> Vec<(Pos, Token)> {
     tokens
       .into_iter()
       .flat_map(|token| match &token.1 {
         Token::MacroRef(macro_) => {
-          if parents.contains(macro_) {
+          if parent_macros.contains(macro_) {
             errors.push((
               token.0.clone(),
               Error(format!(
                 "Macro self-reference {} -> `{}`",
-                parents
+                parent_macros
                   .iter()
                   .map(|macro_| format!("`{}`", macro_))
                   .collect::<Vec<String>>()
@@ -408,22 +407,22 @@ fn assemble(
               .into_iter()
               .map(|token| match token.1 {
                 Token::LabelDef(Label {
-                  parent_scope: Some(_),
+                  scope_uid: Some(_),
                   identifier,
                 }) => (
                   token.0,
                   Token::LabelDef(Label {
-                    parent_scope: Some(*parent_scope),
+                    scope_uid: Some(*scope_uid),
                     identifier,
                   }),
                 ),
                 Token::LabelRef(Label {
-                  parent_scope: Some(_),
+                  scope_uid: Some(_),
                   identifier,
                 }) => (
                   token.0,
                   Token::LabelRef(Label {
-                    parent_scope: Some(*parent_scope),
+                    scope_uid: Some(*scope_uid),
                     identifier,
                   }),
                 ),
@@ -431,11 +430,16 @@ fn assemble(
               })
               .collect();
 
-            *parent_scope += 1;
-            parents.push(macro_.clone());
-            let expanded =
-              expand_macros(&macro_definitions, &tokens, parents, parent_scope, errors);
-            parents.pop();
+            *scope_uid += 1;
+            parent_macros.push(macro_.clone());
+            let expanded = expand_macros(
+              &tokens,
+              scope_uid,
+              parent_macros,
+              &macro_definitions,
+              errors,
+            );
+            parent_macros.pop();
             expanded
           }
         }
@@ -597,7 +601,7 @@ fn assemble(
   // a convenience function to replace slice patterns within a vector
   fn match_replace<const N: usize>(
     roots: &Vec<(Pos, Root)>,
-    func: fn(&[Root; N]) -> Option<Vec<Root>>,
+    replacer: fn(&[Root; N]) -> Option<Vec<Root>>,
   ) -> Vec<(Pos, Root)> {
     if roots.len() < N {
       return roots.clone();
@@ -605,12 +609,12 @@ fn assemble(
 
     let mut output: Vec<(Pos, Root)> = vec![];
 
-    let mut skip_next = 0;
+    let mut skip_next_n_roots = 0;
     for window in roots.windows(N) {
-      if skip_next > 0 {
-        skip_next -= 1;
+      if skip_next_n_roots > 0 {
+        skip_next_n_roots -= 1;
       } else {
-        match func(
+        match replacer(
           window
             .iter()
             .map(|(_, root)| root.clone())
@@ -626,13 +630,18 @@ fn assemble(
                 .map(|root| (window[0].0.clone(), root))
                 .collect::<Vec<(Pos, Root)>>(),
             );
-            skip_next = N - 1;
+            skip_next_n_roots = N - 1;
           }
           None => output.push(window[0].clone()),
         }
       }
     }
-    output.extend(roots.iter().skip(1 + roots.len() - N + skip_next).cloned());
+    output.extend(
+      roots
+        .iter()
+        .skip(1 + roots.len() - N + skip_next_n_roots)
+        .cloned(),
+    );
 
     output
   }
@@ -661,16 +670,10 @@ fn assemble(
         Some(vec![Root::Dyn(Some(instruction.clone()))])
       }
       [Root::Node(Node::Immediate(immediate)), Root::Dyn(None)] => Some(
-        make_push_instruction(
-          immediate.clone(),
-          &Pos {
-            scope: "".to_string(),
-            index: 0,
-          },
-        )
-        .iter()
-        .map(|(_, instruction)| Root::Dyn(Some(instruction.clone())))
-        .collect(),
+        make_push_instruction(immediate.clone(), &Pos("".to_string(), 0))
+          .iter()
+          .map(|(_, instruction)| Root::Dyn(Some(instruction.clone())))
+          .collect(),
       ),
       [Root::Node(node), Root::Org(None)] => Some(vec![Root::Org(Some(node.clone()))]),
       _ => None,
@@ -845,7 +848,7 @@ fn assemble(
 
   // assemble roots into instructions by computing the value of every node and resolving labels
 
-  fn eval<'a>(node: &'a Node, label_definitions: &HashMap<Label, u8>) -> Result<u8, Label> {
+  fn eval(node: &Node, label_definitions: &HashMap<Label, u8>) -> Result<u8, Label> {
     Ok(match node {
       Node::LabelRef(label) => *label_definitions.get(label).ok_or(label.clone())?,
       Node::Immediate(immediate) => *immediate,
@@ -935,7 +938,7 @@ fn assemble(
       },
 
       Root::LabelDef(Label {
-        parent_scope: Some(0),
+        scope_uid: Some(0),
         identifier: _,
       }) => panic!("Local label has no scope specified"),
 
@@ -1111,10 +1114,7 @@ fn codegen(
 
   let available_memory = 0x100;
   let mut bytes = bytes;
-  let position = Pos {
-    scope: "[codegen]".to_string(),
-    index: 0,
-  };
+  let position = Pos("[codegen]".to_string(), 0);
 
   if bytes.len() > available_memory {
     errors.push((
@@ -1134,7 +1134,7 @@ fn codegen(
 
 impl std::fmt::Display for Label {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    match self.parent_scope {
+    match self.scope_uid {
       Some(_) => write!(f, ".{}", self.identifier),
       None => write!(f, ":{}", self.identifier),
     }
@@ -1143,7 +1143,7 @@ impl std::fmt::Display for Label {
 
 impl std::fmt::Display for Macro {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    write!(f, "!{}", self.0)
+    write!(f, "!{}", self.identifier)
   }
 }
 
@@ -1155,7 +1155,7 @@ impl std::fmt::Display for Error {
 
 impl std::fmt::Display for Pos {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    write!(f, "{}#{}", self.scope, self.index)
+    write!(f, "{}#{}", self.0, self.1)
   }
 }
 
