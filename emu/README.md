@@ -10,22 +10,22 @@ Emulation will stop upon receiving `SIGINT` (Ctrl+C) or `SIGTERM` (kill). The em
 
 ## Debug Mode
 
-Unofficial instruction `0xBB` is treated as a debug request.
+Unofficial instruction `0xBB` is treated as a debug request. Debug mode can be entered forcefully by hitting `Escape` during emulation.
 
 In debug mode, the emulator will print the current state of the machine and wait for a command to be sent to `stdin`. The following commands are supported:
 
-- `' '` &mdash; Step one instruction.
-- `'\n'` &mdash; Continue execution.
+- `Tab` &mdash; Step one instruction.
+- `Escape` &mdash; Continue emulation.
 
 ## Input
 
 The Atto-8 microcomputer is equipped with a pair of D-pad controllers. The emulator reads input from `stdin` and maps it to the following controller buttons:
 
-- `w` &mdash; Primary Up
-- `s` &mdash; Primary Down
-- `a` &mdash; Primary Left
-- `d` &mdash; Primary Right
-- `i` &mdash; Secondary Up
-- `k` &mdash; Secondary Down
-- `j` &mdash; Secondary Left
-- `l` &mdash; Secondary Right
+- `ArrowUp` &mdash; Primary Up
+- `ArrowDown` &mdash; Primary Down
+- `ArrowLeft` &mdash; Primary Left
+- `ArrowRight` &mdash; Primary Right
+- `PageUp` &mdash; Secondary Up
+- `PageDown` &mdash; Secondary Down
+- `Home` &mdash; Secondary Left
+- `End` &mdash; Secondary Right

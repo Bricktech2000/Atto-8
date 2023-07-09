@@ -60,7 +60,7 @@ Primary  Secondary
    D         d
 ```
 
-Upon a button state change, the microcomputer will set or clear the corresponding bit in the input buffer, without affecting the other bits. The input buffer behaves as any other memory region and can therefore both be read from and written to by a program.
+Upon a button state change, the microcomputer will set or clear the corresponding bit in the input buffer without affecting the other bits. The input buffer behaves as any other memory region and can therefore both be read from and written to by a program.
 
 ## Conventions
 

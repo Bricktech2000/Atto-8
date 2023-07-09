@@ -58,48 +58,59 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
 
   print!("\x1B[2J"); // clear screen
 
-  // this call will switch termital to raw mode
+  // this call will switch the termital to raw mode
   let input_channel = spawn_input_channel();
 
   loop {
+    if debug_mode {
+      'until_valid: loop {
+        match input_channel.recv() {
+          Ok(console::Key::Escape) => {
+            debug_mode = false;
+            break 'until_valid;
+          }
+
+          Ok(console::Key::Tab) => {
+            status_line = "Single stepped".to_string();
+            break 'until_valid;
+          }
+
+          _ => continue 'until_valid,
+        }
+      }
+
+      // conceptually hacky but does the job
+      start_time = std::time::Instant::now();
+      current_clocks = 0;
+    }
+
     use std::sync::mpsc::TryRecvError;
     match input_channel.try_recv() {
-      Ok(character) => {
-        let lo_nibble: u8 = match character {
-          'w' => 0b0001,
-          's' => 0b0010,
-          'a' => 0b0100,
-          'd' => 0b1000,
+      Ok(console::Key::Escape) => {
+        debug_mode = true;
+        status_line = "Force debug".to_string();
+      }
+
+      Ok(key) => {
+        let lo_nibble = match key {
+          console::Key::ArrowUp => 0b0001,
+          console::Key::ArrowDown => 0b0010,
+          console::Key::ArrowLeft => 0b0100,
+          console::Key::ArrowRight => 0b1000,
           _ => 0b0000,
         };
-        let hi_nibble: u8 = match character {
-          'i' => 0b0001,
-          'k' => 0b0010,
-          'j' => 0b0100,
-          'l' => 0b1000,
+        let hi_nibble = match key {
+          console::Key::PageUp => 0b0001,
+          console::Key::PageDown => 0b0010,
+          console::Key::Home => 0b0100,
+          console::Key::End => 0b1000,
           _ => 0b0000,
         };
         mc.mem[0x00] |= lo_nibble | (hi_nibble << 4);
       }
+
       Err(TryRecvError::Empty) => (),
       Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
-    }
-
-    if debug_mode {
-      'until_valid: loop {
-        match input_channel.recv() {
-          Ok('\n') => {
-            debug_mode = false;
-            break 'until_valid;
-          }
-          Ok(' ') => {
-            status_line = "Single stepped".to_string();
-            break 'until_valid;
-          }
-          _ => continue 'until_valid,
-        }
-      }
-      start_time = std::time::Instant::now();
     }
 
     let (clocks, tick_trap) = tick(&mut mc);
@@ -503,13 +514,13 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
 
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
-fn spawn_input_channel() -> Receiver<char> {
+fn spawn_input_channel() -> Receiver<console::Key> {
   let stdout = console::Term::stdout();
 
-  let (tx, rx) = mpsc::channel::<char>();
+  let (tx, rx) = mpsc::channel::<console::Key>();
   std::thread::spawn(move || loop {
-    if let Ok(character) = stdout.read_char() {
-      tx.send(character).unwrap();
+    if let Ok(key) = stdout.read_key() {
+      tx.send(key).unwrap();
     }
   });
 
