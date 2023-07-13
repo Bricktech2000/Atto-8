@@ -12,6 +12,17 @@ prng! clc # seed = prng(seed)
 prng_minimal! clc # seed = prng_minimal(seed)
   shl x00 !prng_bits iff xor
 
+popcnt! # count = popcnt(a)
+  # count = a == 0 ? -1 : 0
+  buf @dyn x00 xFF iff
+  # do { count++ } while (a != 0)
+  while. inc
+    # a &= a - 1
+    ld1 dec an2
+  .while !bcc
+  # return* count
+  st0
+
 u8! # u8 n = u8(u8 n)
 u16! # u16 n = u16(u16 n)
 u32! # u32 n = u16(u32 n)
@@ -985,19 +996,21 @@ c8f8.st2+3! !i32.st2+3
 c8f8.st3!   !i32.st3
 
 u4f4.in! x04 rot x0F and # u8 integer_part = u4f4.in(u4f4 n)
-u4f4.fr! x0F and # u8 integer_part = u4f4.in(u4f4 n)
+u4f4.fr! x0F and # u8 fraction_part = u4f4.in(u4f4 n)
 u8f8.in! !u8.pop # u8 integer_part = u8f8.in(u8f8 n)
 u8f8.fr! !u8.st0 # u8 fraction_part = u8f8.fr(u8f8 n)
 i4f4.in! x04 rot x0F and # i8 integer_part = i4f4.in(i4f4 n)
-i4f4.fr! x0F and # u8 integer_part = i4f4.in(i4f4 n)
+i4f4.fr! x0F and # u8 fraction_part = i4f4.in(i4f4 n)
 i8f8.in! !u8.pop # i8 integer_part = i8f8.in(i8f8 n)
 i8f8.fr! !u8.st0 # u8 fraction_part = i8f8.fr(i8f8 n)
+c4f4.re! !u8.pop # i4f4 real_part = c4f4.re(c4f4 c)
+c4f4.im! !u8.st0 # i4f4 imaginary_part = c4f4.im(c4f4 c)
 c8f8.re! !u16.pop # i8f8 real_part = c8f8.re(c8f8 c)
 c8f8.im! !u16.st0 # i8f8 imaginary_part = c8f8.im(c8f8 c)
 
 u8.mul! :u8.mul !call # u16 product = u8.mul(u8 a, u8 b)
-i8.mul! :i8.mul !call # u16 product = u8.mul(u8 a, u8 b)
 u16.mul! :u16.mul !call # u32 product = u16.mul(u16 a, u16 b)
+i8.mul! :i8.mul !call # u16 product = u8.mul(u8 a, u8 b)
 i16.mul! :i16.mul !call # i32 product = i16.mul(i16 a, i16 b)
 u4f4.mul! :u4f4.mul !call # u4f4 product = u4f4.mul(u4f4 a, u4f4 b)
 u8f8.mul! :u8f8.mul !call # u8f8 product = u8f8.mul(u8f8 a, u8f8 b)
