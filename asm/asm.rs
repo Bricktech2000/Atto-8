@@ -686,11 +686,17 @@ fn assemble(
 
     roots =
       match_replace(&roots, |window| match window {
+        [Root::Node(Node::Immediate(0x01)), Root::Instruction(Instruction::Add(0x01))] => {
+          Some(vec![Root::Instruction(Instruction::Inc)])
+        }
+        [Root::Node(Node::Immediate(0x01)), Root::Instruction(Instruction::Sub(0x01))] => {
+          Some(vec![Root::Instruction(Instruction::Dec)])
+        }
         [Root::Node(node), Root::Instruction(Instruction::Inc)] => Some(vec![Root::Node(
-          Node::Add(Box::new(node.clone()), Box::new(Node::Immediate(1))),
+          Node::Add(Box::new(Node::Immediate(1)), Box::new(node.clone())),
         )]),
         [Root::Node(node), Root::Instruction(Instruction::Dec)] => Some(vec![Root::Node(
-          Node::Sub(Box::new(node.clone()), Box::new(Node::Immediate(1))),
+          Node::Sub(Box::new(Node::Immediate(1)), Box::new(node.clone())),
         )]),
         [Root::Node(node), Root::Instruction(Instruction::Neg)] => Some(vec![Root::Node(
           Node::Sub(Box::new(node.clone()), Box::new(Node::Immediate(0))),
