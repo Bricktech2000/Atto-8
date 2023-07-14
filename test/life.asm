@@ -1,4 +1,5 @@
 @ lib/microprocessor/core.asm
+@ lib/microprocessor/math.asm
 @ lib/microprocessor/memory.asm
 @ lib/microcomputer/display.asm
 
@@ -22,13 +23,13 @@ main!
     # copy back buffer to front buffer
     !front_buffer !back_buffer sub @const !back_buffer !front_buffer :memcpy !call
     # loop through every cell
-    x00 for_xy: dec
+    x00 !u4u4 for_xy: dec
       x00 # allocate neighbour count
 
       # count neighbours
       :neighbours_end :neighbours sub @const for_dxdy: dec
-        # neighbour_addr = *(neighbours + dxdy) ++ for_xy
-        !front_buffer :neighbours ld2 add lda ld4 !adn
+        # neighbour_addr = *(neighbours + dxdy) + for_xy
+        !front_buffer :neighbours ld2 add !i4i4.lda !u4u4.ld4 !i4i4.add
         # neighbour_value = load_bit(bit_addr(neighbour_addr, &FRONT_BUFFER))
         !bit_addr !load_bit clc
         # neighbour_count += neighbour_value
@@ -38,7 +39,7 @@ main!
       # apply rules outlined above
       ld0 x04 xor pop :ignore !bcs
       ld0 x03 xor pop x00 shl @dyn
-      !back_buffer ld3 !bit_addr !store_bit
+      !back_buffer !u4u4.ld3 !bit_addr !store_bit
       ignore:
 
       pop # pop neighbour count
@@ -46,7 +47,15 @@ main!
   :loop !jmp
 
   neighbours:
-    dFF dF0 dF1 d0F d00 d01 d1F d10 d11
+    dFF !i4i4
+    dF0 !i4i4
+    dF1 !i4i4
+    d0F !i4i4
+    d00 !i4i4
+    d01 !i4i4
+    d1F !i4i4
+    d10 !i4i4
+    d11 !i4i4
   neighbours_end:
 
   !memcpy_def

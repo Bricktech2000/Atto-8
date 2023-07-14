@@ -1,4 +1,5 @@
 @ lib/microprocessor/core.asm
+@ lib/microprocessor/math.asm
 @ lib/microprocessor/memory.asm
 @ lib/microcomputer/time.asm
 @ lib/microcomputer/input.asm
@@ -9,53 +10,56 @@
 main!
   pop !front_buffer sts
 
-  x07 # paddle_a
-  x07 # paddle_b
-  x70 # x_pos
-  x08 # x_vel
-  x70 # y_pos
-  x03 # y_vel
+  x07 !u8 # paddle_a
+  x07 !u8 # paddle_b
+  x70 !u4f4 # x_pos
+  x08 !i4f4 # x_vel
+  x70 !u4f4 # y_pos
+  x03 !i4f4 # y_vel
 
   loop:
     # erase pixel at (x_pos >> 4, y_pos >> 4)
-    !front_buffer ld4 xF0 and x04 !ror ld3 xF0 and orr !bit_addr !clear_bit
+    !front_buffer !u4f4.ld4 !u4f4.in !u4f4.ld3 !u4f4.in x04 rot orr !u4u4 !bit_addr !clear_bit
 
     # x_pos += x_vel
-    ld3 ld3 add st3
+    !u8u8.ld1 !u4f4.add !u4f4.st3
     # y_pos += y_vel
-    ld1 ld1 add st1
+    !u8u8.ld0 !u4f4.add !u4f4.st1
 
     # load (x_pos >> 4, y_pos >> 4) onto the stack
-    ld3 xF0 and x04 !ror ld2 xF0 and orr
+    !u4f4.ld3 !u4f4.in !u4f4.ld2 !u4f4.in x04 rot orr !u4u4
       # if (y_pos ^ y_pos << 1) & 0xE0 == 0 { y_vel = -y_vel }
       # this checks if y_pos & 0xF0 is either 0x00 of 0xF0
-      ld2 ld0 x01 rot xor xE0 and pop ld1 ld0 neg iff st1
+      !u4f4.ld2 !u4f4.ld0 x01 rot xor xE0 and pop !u4f4.ld1 !u4f4.ld0 !u4f4.neg !u4f4.iff !u4f4.st1
       # if (x_pos ^ x_pos << 1) & 0xE0 != 0 { goto ignore_check }
       # this only checks paddle bounces if the ball is on either side of the screen
-      ld4 ld0 x01 rot xor xE0 and pop :ignore_check !bcc
+      !u4f4.ld4 !u4f4.ld0 x01 rot xor xE0 and pop :ignore_check !bcc
       # if the byte in memory where the ball is not 0, game over
-      !front_buffer ld1 x03 !ror clc add lda buf pop :game_over !bcs
+      !front_buffer !u4u4.ld1 x03 !ror clc add lda buf pop :game_over !bcs
       # otherwise, x_vel = -x_vel
-      ld3 neg st3
+      !u4f4.ld3 !u4f4.neg !u4f4.st3
       ignore_check:
 
-      !front_buffer ld6 x01 rot clc add inc
+      # draw paddle centered at paddle_b
+      !front_buffer !u8.ld6 x01 rot clc add inc
       ld0 x04 sub x00 sta
       ld0 x02 sub x01 sta
       ld0         x01 sta
       ld0 x02 add x01 sta
       ld0 x04 add x00 sta
       pop
+
+      # check for input and move paddle_b
       !input_buffer lda
       ld0 x03 and pop :check_next !bcs
-      ld6 dec ld7 inc ld2 x01 and pop iff st6
+      !u8.ld6 x01 !u8.sub !u8.ld7 x01 !u8.add ld2 x01 and pop iff !u8.st6
       check_next:
       pop !reset_input
 
       # draw pixel at (x_pos >> 4, y_pos >> 4)
       !front_buffer ld1 !bit_addr !set_bit
     # pop (x_pos >> 4, y_pos >> 4) from the stack
-    pop
+    !u4u4.pop
 
     x7F !delay
 

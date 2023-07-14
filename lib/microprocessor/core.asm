@@ -7,7 +7,6 @@ dabs! ld0 neg ld1 shl @dyn pop iff
 cabs! ld0 x01 rot x01 and neg swp ld1 add xor @const
 min! ld1 ld1 sub @dyn pop flc iff
 max! ld1 ld1 sub @dyn pop iff
-adn! ld1 ld1 ld1 clc add x0F and st2 xF0 and clc add xF0 and orr
 
 jmp! sti
 bcc! @const .skip iff !jmp skip.

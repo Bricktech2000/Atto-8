@@ -18,8 +18,8 @@ tasks:
 - [x] buy components for computer
 - [x] fix assembler stack overflow with self-referencing macros
 - [x] get rid of `adn` instruction
-- [ ] create `u4` and `i4` pair types
-- [ ] update programs with new types
+- [x] create `u4` and `i4` pair types
+- [x] update programs with new types
 - [ ] build computer
 - [ ] come up with microcode
 

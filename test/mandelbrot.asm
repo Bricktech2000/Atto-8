@@ -9,11 +9,11 @@ main!
   pop !front_buffer x10 add sts
 
   loop:
-    x80 for_xy: dec
-      ld0 x0F and clc x03 rot x40 sub !i4f4 # c_re
+    x80 !u4u4 for_xy: dec
+      !u4u4.ld0 !u4u4.snd x03 rot clc x40 sub !i4f4 # c_re
       x00 !i4f4 # pos_re
       !i4f4.add
-      ld1 xF0 and clc x07 rot x40 sub !i4f4 # c_im
+      !u4u4.ld1 !u4u4.fst x03 rot clc x40 sub !i4f4 # c_im
       x07 !i4f4 # pos_im
       !i4f4.add
       !is_in_set x00 shl @dyn
@@ -26,7 +26,7 @@ main!
   !i8.mul_def
   !i4f4.mul_def
 
-is_in_set! clc # bool b = is_in_set(c4f4 c)
+is_in_set! clc # bool b = is_in_set(c4f4m4f4 c)
   !i4f4.0 # z_re
   !i4f4.0 # z_im
   x10 for_i: dec
@@ -35,8 +35,8 @@ is_in_set! clc # bool b = is_in_set(c4f4 c)
     !i4f4.ld1 !i4f4.ld1 !i4f4.add clc x20 !i4f4 !i4f4.sub !i4f4.pop :ret !bcc clc
     !i4f4.ld3+1 !i4f4.ld3+1 !i4f4.mul clc !i4f4.ld5+1 !i4f4.add clc x01 rot !i4f4.st2+1
     !i4f4.sub clc !i4f4.ld4+1 !i4f4.add !i4f4.st1+1
-    # !c4f4.ld0+1 !c4f4.norm x20 !i4f4 !i4f4.sub !i4f4.pop :ret !bcc
-    # !c4f4.ld0+1 !c4f4.ld0 !c4f4.mul !c4f4.ld1+1 !c4f4.add !c4f4.st0+1
+    # !c4f4m4f4.ld0+1 !c4f4.norm x20 !i4f4 !i4f4.sub !i4f4.pop :ret !bcc
+    # !c4f4m4f4.ld0+1 !c4f4.ld0 !c4f4.mul !c4f4.ld1+1 !c4f4.add !c4f4.st0+1
   buf :for_i !bcc
   x00 x00
 ret:

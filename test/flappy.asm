@@ -11,28 +11,28 @@ main!
 
   xF0 # prng_seed
 
-  x00 # x_pos
-  x02 # x_vel
-  x80 # y_pos
-  xF0 # y_vel
+  x00 !u4f4 # x_pos
+  x02 !i4f4 # x_vel
+  x80 !u4f4 # y_pos
+  xF0 !i4f4 # y_vel
 
   loop:
     # set y_vel to flap_vel if any button is pressed
-    !input_buffer lda buf pop !flap_vel ld1 iff st0 !reset_input
+    !input_buffer lda buf pop !flap_vel !i4f4.ld1 !i4f4.iff !i4f4.st0 !reset_input
     # compute bit_addr of (BIRD_POS, y_pos)
-    !front_buffer ld2 xF0 and x05 rot orr x07 !bird_pos sub @const
+    !front_buffer !u4f4.ld2 !u4f4.in clc !u4f4.shl orr x07 !bird_pos sub @const
     # clear pixel at (x_pos, y_pos)
     !clear_bit clc
 
     # x_pos += x_vel
-    !u16.ld1 add st3
+    !u8u8.ld1 !u4f4.add !u4f4.st3
     # y_vel += !y_accel
-    !y_accel add
+    !y_accel !u4f4.add
     # y_pos += y_vel
-    !u16.ld0 add st1
+    !u8u8.ld0 !u4f4.add !u4f4.st1
 
     # if x_pos % 0x10 == 0, rotate entire screen left by 1 pixel
-    ld3 x0F and pop :ignore_shift !bcc
+    !u4f4.ld3 x0F and pop :ignore_shift !bcc
       !front_buffer for_addr:
         ld0 inc lda shl pop # load carry
         ld0 ld0 lda shl sta inc
@@ -41,14 +41,14 @@ main!
     ignore_shift:
 
     # compute bit_addr of (BIRD_POS, y_pos)
-    !front_buffer ld2 xF0 and x05 rot orr x07 !bird_pos sub @const
+    !front_buffer !u4f4.ld2 !u4f4.in clc !u4f4.shl orr x07 !bird_pos sub @const
     # if pixel at (x_pos, y_pos) is set, game over
-    !u16.ld0 !load_bit buf pop :game_over !bcc
+    !u8u8.ld0 !load_bit buf pop :game_over !bcc
     # set pixel at (x_pos, y_pos)
     !set_bit
 
     # if x_pos % 0x80 == 0, generate a new pipe
-    ld3 x7F and pop :ignore_pipe !bcc
+    !u4f4.ld3 x7F and pop :ignore_pipe !bcc
       # fill right side of the screen with 0x01
       x0C for_i: dec
         !front_buffer ld1 x01 rot orr inc x01 sta
@@ -67,8 +67,8 @@ main!
   game_over:
     # blink pixel at (x_pos, y_pos)
     blink:
-    !u16.ld0 !flip_bit
-    xFF !delay
+      !u8u8.ld0 !flip_bit
+      xFF !delay
     :blink !jmp
 
   !front_buffer @org
@@ -77,8 +77,8 @@ main!
   # !dark ground
 
 bird_pos! x02 # from left edge of the screen
-y_accel! x01 # gravity
-flap_vel! xF8 # upward velocity when flapping
+y_accel! x01 !i4f4 # gravity
+flap_vel! xF8 !i4f4 # upward velocity when flapping
 
 void!
   d00 d00 d00 d00 d00 d00 d00 d00

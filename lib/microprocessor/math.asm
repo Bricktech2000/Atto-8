@@ -7,8 +7,8 @@ prng! clc # seed = prng(seed)
   xor xor
 
 # outputs every number in 0x01..=0xFF then repeats
-# will never output 0x00
-# seed must never be 0x00
+# will never output 0x00 (if and only if seed is not 0x00)
+# seed must never be 0x00 (otherwise will only output 0x00)
 prng_minimal! clc # seed = prng_minimal(seed)
   shl x00 !prng_bits iff xor
 
@@ -17,7 +17,7 @@ popcnt! # count = popcnt(a)
   buf @dyn x00 xFF iff
   # do { count++ } while (a != 0)
   while. inc
-    # a &= a - 1
+    # a &= a - 1 (unsets lowest set bit)
     ld1 dec an2
   .while !bcc
   # return* count
@@ -31,12 +31,16 @@ i8! !u8 # i8 n = i8(i8 n)
 i16! !u16 # i16 n = i16(i16 n)
 i32! !u32 # i32 n = i16(i32 n)
 i64! !u64 # i64 n = i16(u64 n)
+u4u4! !u8 # u4u4 n = u4u4(u4u4 n)
+u8u8! !u16 # u8u8 n = u8u8(u8u8 n)
+i4i4! !i8 # i4i4 n = i4i4(i4i4 n)
+i8i8! !i16 # i8i8 n = i8i8(i8i8 n)
 u4f4! !u8 # u4f4 n = u4f4(u4 fr, u4 in)
 u8f8! !u16 # u8f8 n = u8f8(u8 fr, u8 in)
 i4f4! !i8 # i4f4 n = i4f4(u4 fr, i4 in)
 i8f8! !i16 # i8f8 n = i8f8(u8 fr, i8 in)
-c4f4! !i16 # c4f4 n = c4f4(i4f4 im, i4f8 re)
-c8f8! !i32 # c8f8 n = c8f8(i8f8 im, i8f8 re)
+c4f4m4f4! !i16 # c4f4m4f4 n = c4f4m4f4(i4f4 im, i4f8 re)
+c8f8m8f8! !i32 # c8f8m8f8 n = c8f8m8f8(i8f8 im, i8f8 re)
 
 u8.0! x00
 u16.0! x00 x00
@@ -46,12 +50,16 @@ i8.0! !u8.0
 i16.0! !u16.0
 i32.0! !u32.0
 i64.0! !u64.0
+u4u4.0! !u8.0
+u8u8.0! !u16.0
+i4i4.0! !i8.0
+i8i8.0! !i16.0
 u4f4.0! !u8.0
 u8f8.0! !u16.0
 i4f4.0! !i8.0
 i8f8.0! !i16.0
-c4f4.0! !i16.0
-c8f8.0! !i32.0
+c4f4m4f4.0! !i16.0
+c8f8m8f8.0! !i32.0
 
 u8.add! add
 u16.add! ad2 ad2
@@ -61,12 +69,16 @@ i8.add! !u8.add
 i16.add! !u16.add
 i32.add! !u32.add
 i64.add! !u64.add
+u4u4.add! ld1 ld1 ld1 clc add x0F and st2 xF0 and clc add xF0 and orr
+u8u8.add! ad2 clc ad2
+i4i4.add! !u4u4.add
+i8i8.add! !u8u8.add
 u4f4.add! !u8.add
 u8f8.add! !u16.add
 i4f4.add! !i8.add
 i8f8.add! !i16.add
-c4f4.add! ad4 ad4 clc ad4 ad4
-c8f8.add! ad4 ad4 clc ad4 ad4
+c4f4m4f4.add! ad4 ad4 clc ad4 ad4
+c8f8m8f8.add! ad4 ad4 clc ad4 ad4
 
 u8.sub! sub
 u16.sub! su2 su2
@@ -76,12 +88,16 @@ i8.sub! !u8.sub
 i16.sub! !u16.sub
 i32.sub! !u32.sub
 i64.sub! !u64.sub
+u4u4.sub! ld1 ld1 ld1 clc sub x0F and st2 xF0 and clc sub xF0 and orr
+u8u8.sub! su2 clc su2
+i4i4.sub! !u4u4.sub
+i8i8.sub! !u8u8.sub
 u4f4.sub! !u8.sub
 u8f8.sub! !u16.sub
 i4f4.sub! !i8.sub
 i8f8.sub! !i16.sub
-c4f4.sub! su4 su4 clc su4 su4
-c8f8.sub! su4 su4 clc su4 su4
+c4f4m4f4.sub! su4 su4 clc su4 su4
+c8f8m8f8.sub! su4 su4 clc su4 su4
 
 u8.iff! iff
 u16.iff! if2 if2
@@ -91,12 +107,16 @@ i8.iff! !u8.iff
 i16.iff! !u16.iff
 i32.iff! !u32.iff
 i64.iff! !u64.iff
+u4u4.iff! !u8.iff
+u8u8.iff! !u16.iff
+i4i4.iff! !i8.iff
+i8i8.iff! !i16.iff
 u4f4.iff! !u8.iff
 u8f8.iff! !u16.iff
 i4f4.iff! !i8.iff
 i8f8.iff! !i16.iff
-c4f4.iff! !i16.iff
-c8f8.iff! !i32.iff
+c4f4m4f4.iff! !i16.iff
+c8f8m8f8.iff! !i32.iff
 
 u8.pop! pop
 u16.pop! pop pop
@@ -106,17 +126,23 @@ i8.pop! !u8.pop
 i16.pop! !u16.pop
 i32.pop! !u32.pop
 i64.pop! !u64.pop
+u4u4.pop! !u8.pop
+u8u8.pop! !u16.pop
+i4i4.pop! !i8.pop
+i8i8.pop! !i16.pop
 u4f4.pop! !u8.pop
 u8f8.pop! !u16.pop
 i4f4.pop! !i8.pop
 i8f8.pop! !i16.pop
-c4f4.pop! !i16.pop
-c8f8.pop! !i32.pop
+c4f4m4f4.pop! !i16.pop
+c8f8m8f8.pop! !i32.pop
 
 u8.shl! shl
 u16.shl! shl ld1 shl st1
 u32.shl! shl ld1 shl st1 ld2 shl st2 ld3 shl st3 ld4 shl st4
 u64.shl! shl ld1 shl st1 ld2 shl st2 ld3 shl st3 ld4 shl st4 ld5 shl st5 ld6 shl st6 ld7 shl st7
+u4u4.shl! !u8.shl xEF and
+u8u8.shl! !u16.shl xFE an2
 u4f4.shl! !u8.shl
 u8f8.shl! !u16.shl
 
@@ -124,8 +150,61 @@ u8.shr! shr
 u16.shr! ld1 shr st1 shr
 u32.shr! ld3 shr st3 ld2 shr st2 ld1 shr st1 shr
 u64.shr! ld7 shr st7 ld6 shr st6 ld5 shr st5 ld4 shr st4 ld3 shr st3 ld2 shr st2 ld1 shr st1 shr
+u4u4.shr! !u8.shr xF7 and
+u8u8.shr! !u16.shr x7F and
 u4f4.shr! !u8.shr
 u8f8.shr! !u16.shr
+
+u8.neg! neg
+u16.neg! neg ld1 neg st1
+u32.neg! neg ld1 neg st1 ld2 neg st2 ld3 neg st3 ld4 neg st4
+u64.neg! neg ld1 neg st1 ld2 neg st2 ld3 neg st3 ld4 neg st4 ld5 neg st5 ld6 neg st6 ld7 neg st7
+i8.neg! !u8.neg
+i16.neg! !u16.neg
+i32.neg! !u32.neg
+i64.neg! !u64.neg
+u4u4.neg! !u8.neg
+u8u8.neg! !u16.neg
+i4i4.neg! !i8.neg
+i8i8.neg! !i16.neg
+u4f4.neg! !u8.neg
+u8f8.neg! !u16.neg
+i4f4.neg! !i8.neg
+i8f8.neg! !i16.neg
+
+u8.lda! lda
+u16.lda! ld0 lda swp inc lda
+u32.lda! ld0 lda swp inc lda swp inc lda swp inc lda
+u64.lda! ld0 lda swp inc lda swp inc lda swp inc lda swp inc lda swp inc lda swp inc lda swp inc lda
+i8.lda! !u8.lda
+i16.lda! !u16.lda
+i32.lda! !u32.lda
+i64.lda! !u64.lda
+u4u4.lda! !u8.lda
+u8u8.lda! !u16.lda
+i4i4.lda! !i8.lda
+i8i8.lda! !i16.lda
+u4f4.lda! !u8.lda
+u8f8.lda! !u16.lda
+i4f4.lda! !i8.lda
+i8f8.lda! !i16.lda
+
+u8.sta! sta
+u16.sta! ld0 sta swp inc sta
+u32.sta! ld0 sta swp inc sta swp inc sta swp inc sta
+u64.sta! ld0 sta swp inc sta swp inc sta swp inc sta swp inc sta swp inc sta swp inc sta swp inc sta
+i8.sta! !u8.sta
+i16.sta! !u16.sta
+i32.sta! !u32.sta
+i64.sta! !u64.sta
+u4u4.sta! !u8.sta
+u8u8.sta! !u16.sta
+i4i4.sta! !i8.sta
+i8i8.sta! !i16.sta
+u4f4.sta! !u8.sta
+u8f8.sta! !u16.sta
+i4f4.sta! !i8.sta
+i8f8.sta! !i16.sta
 
 u8.ld0!   ld0
 u8.ld0+1! ld1
@@ -335,6 +414,190 @@ i64.ld0+1! ld8 ld8 ld8 ld8 ld8 ld8 ld8 ld8
 i64.ld0+2! ld9 ld9 ld9 ld9 ld9 ld9 ld9 ld9
 i64.ld0+3! ldA ldA ldA ldA ldA ldA ldA ldA
 i64.ld1!   ldF ldF ldF ldF ldF ldF ldF ldF
+u4u4.ld0!   !u8.ld0
+u4u4.ld0+1! !u8.ld0+1
+u4u4.ld0+2! !u8.ld0+2
+u4u4.ld0+3! !u8.ld0+3
+u4u4.ld1!   !u8.ld1
+u4u4.ld1+1! !u8.ld1+1
+u4u4.ld1+2! !u8.ld1+2
+u4u4.ld1+3! !u8.ld1+3
+u4u4.ld2!   !u8.ld2
+u4u4.ld2+1! !u8.ld2+1
+u4u4.ld2+2! !u8.ld2+2
+u4u4.ld2+3! !u8.ld2+3
+u4u4.ld3!   !u8.ld3
+u4u4.ld3+1! !u8.ld3+1
+u4u4.ld3+2! !u8.ld3+2
+u4u4.ld3+3! !u8.ld3+3
+u4u4.ld4!   !u8.ld4
+u4u4.ld4+1! !u8.ld4+1
+u4u4.ld4+2! !u8.ld4+2
+u4u4.ld4+3! !u8.ld4+3
+u4u4.ld5!   !u8.ld5
+u4u4.ld5+1! !u8.ld5+1
+u4u4.ld5+2! !u8.ld5+2
+u4u4.ld5+3! !u8.ld5+3
+u4u4.ld6!   !u8.ld6
+u4u4.ld6+1! !u8.ld6+1
+u4u4.ld6+2! !u8.ld6+2
+u4u4.ld6+3! !u8.ld6+3
+u4u4.ld7!   !u8.ld7
+u4u4.ld7+1! !u8.ld7+1
+u4u4.ld7+2! !u8.ld7+2
+u4u4.ld7+3! !u8.ld7+3
+u4u4.ld8!   !u8.ld8
+u4u4.ld8+1! !u8.ld8+1
+u4u4.ld8+2! !u8.ld8+2
+u4u4.ld8+3! !u8.ld8+3
+u4u4.ld9!   !u8.ld9
+u4u4.ld9+1! !u8.ld9+1
+u4u4.ld9+2! !u8.ld9+2
+u4u4.ld9+3! !u8.ld9+3
+u4u4.ldA!   !u8.ldA
+u4u4.ldA+1! !u8.ldA+1
+u4u4.ldA+2! !u8.ldA+2
+u4u4.ldA+3! !u8.ldA+3
+u4u4.ldB!   !u8.ldB
+u4u4.ldB+1! !u8.ldB+1
+u4u4.ldB+2! !u8.ldB+2
+u4u4.ldB+3! !u8.ldB+3
+u4u4.ldC!   !u8.ldC
+u4u4.ldC+1! !u8.ldC+1
+u4u4.ldC+2! !u8.ldC+2
+u4u4.ldC+3! !u8.ldC+3
+u4u4.ldD!   !u8.ldD
+u4u4.ldD+1! !u8.ldD+1
+u4u4.ldD+2! !u8.ldD+2
+u4u4.ldD+3! !u8.ldD+3
+u4u4.ldE!   !u8.ldE
+u4u4.ldE+1! !u8.ldE+1
+u4u4.ldE+2! !u8.ldE+2
+u4u4.ldE+3! !u8.ldE+3
+u4u4.ldF!   !u8.ldF
+u4u4.ldF+1! !u8.ldF+1
+u4u4.ldF+2! !u8.ldF+2
+u4u4.ldF+3! !u8.ldF+3
+u8u8.ld0!   !u16.ld0
+u8u8.ld0+1! !u16.ld0+1
+u8u8.ld0+2! !u16.ld0+2
+u8u8.ld0+3! !u16.ld0+3
+u8u8.ld1!   !u16.ld1
+u8u8.ld1+1! !u16.ld1+1
+u8u8.ld1+2! !u16.ld1+2
+u8u8.ld1+3! !u16.ld1+3
+u8u8.ld2!   !u16.ld2
+u8u8.ld2+1! !u16.ld2+1
+u8u8.ld2+2! !u16.ld2+2
+u8u8.ld2+3! !u16.ld2+3
+u8u8.ld3!   !u16.ld3
+u8u8.ld3+1! !u16.ld3+1
+u8u8.ld3+2! !u16.ld3+2
+u8u8.ld3+3! !u16.ld3+3
+u8u8.ld4!   !u16.ld4
+u8u8.ld4+1! !u16.ld4+1
+u8u8.ld4+2! !u16.ld4+2
+u8u8.ld4+3! !u16.ld4+3
+u8u8.ld5!   !u16.ld5
+u8u8.ld5+1! !u16.ld5+1
+u8u8.ld5+2! !u16.ld5+2
+u8u8.ld5+3! !u16.ld5+3
+u8u8.ld6!   !u16.ld6
+u8u8.ld6+1! !u16.ld6+1
+u8u8.ld6+2! !u16.ld6+2
+u8u8.ld7!   !u16.ld7
+i4i4.ld0!   !i8.ld0
+i4i4.ld0+1! !i8.ld0+1
+i4i4.ld0+2! !i8.ld0+2
+i4i4.ld0+3! !i8.ld0+3
+i4i4.ld1!   !i8.ld1
+i4i4.ld1+1! !i8.ld1+1
+i4i4.ld1+2! !i8.ld1+2
+i4i4.ld1+3! !i8.ld1+3
+i4i4.ld2!   !i8.ld2
+i4i4.ld2+1! !i8.ld2+1
+i4i4.ld2+2! !i8.ld2+2
+i4i4.ld2+3! !i8.ld2+3
+i4i4.ld3!   !i8.ld3
+i4i4.ld3+1! !i8.ld3+1
+i4i4.ld3+2! !i8.ld3+2
+i4i4.ld3+3! !i8.ld3+3
+i4i4.ld4!   !i8.ld4
+i4i4.ld4+1! !i8.ld4+1
+i4i4.ld4+2! !i8.ld4+2
+i4i4.ld4+3! !i8.ld4+3
+i4i4.ld5!   !i8.ld5
+i4i4.ld5+1! !i8.ld5+1
+i4i4.ld5+2! !i8.ld5+2
+i4i4.ld5+3! !i8.ld5+3
+i4i4.ld6!   !i8.ld6
+i4i4.ld6+1! !i8.ld6+1
+i4i4.ld6+2! !i8.ld6+2
+i4i4.ld6+3! !i8.ld6+3
+i4i4.ld7!   !i8.ld7
+i4i4.ld7+1! !i8.ld7+1
+i4i4.ld7+2! !i8.ld7+2
+i4i4.ld7+3! !i8.ld7+3
+i4i4.ld8!   !i8.ld8
+i4i4.ld8+1! !i8.ld8+1
+i4i4.ld8+2! !i8.ld8+2
+i4i4.ld8+3! !i8.ld8+3
+i4i4.ld9!   !i8.ld9
+i4i4.ld9+1! !i8.ld9+1
+i4i4.ld9+2! !i8.ld9+2
+i4i4.ld9+3! !i8.ld9+3
+i4i4.ldA!   !i8.ldA
+i4i4.ldA+1! !i8.ldA+1
+i4i4.ldA+2! !i8.ldA+2
+i4i4.ldA+3! !i8.ldA+3
+i4i4.ldB!   !i8.ldB
+i4i4.ldB+1! !i8.ldB+1
+i4i4.ldB+2! !i8.ldB+2
+i4i4.ldB+3! !i8.ldB+3
+i4i4.ldC!   !i8.ldC
+i4i4.ldC+1! !i8.ldC+1
+i4i4.ldC+2! !i8.ldC+2
+i4i4.ldC+3! !i8.ldC+3
+i4i4.ldD!   !i8.ldD
+i4i4.ldD+1! !i8.ldD+1
+i4i4.ldD+2! !i8.ldD+2
+i4i4.ldD+3! !i8.ldD+3
+i4i4.ldE!   !i8.ldE
+i4i4.ldE+1! !i8.ldE+1
+i4i4.ldE+2! !i8.ldE+2
+i4i4.ldE+3! !i8.ldE+3
+i4i4.ldF!   !i8.ldF
+i4i4.ldF+1! !i8.ldF+1
+i4i4.ldF+2! !i8.ldF+2
+i4i4.ldF+3! !i8.ldF+3
+i8i8.ld0!   !i16.ld0
+i8i8.ld0+1! !i16.ld0+1
+i8i8.ld0+2! !i16.ld0+2
+i8i8.ld0+3! !i16.ld0+3
+i8i8.ld1!   !i16.ld1
+i8i8.ld1+1! !i16.ld1+1
+i8i8.ld1+2! !i16.ld1+2
+i8i8.ld1+3! !i16.ld1+3
+i8i8.ld2!   !i16.ld2
+i8i8.ld2+1! !i16.ld2+1
+i8i8.ld2+2! !i16.ld2+2
+i8i8.ld2+3! !i16.ld2+3
+i8i8.ld3!   !i16.ld3
+i8i8.ld3+1! !i16.ld3+1
+i8i8.ld3+2! !i16.ld3+2
+i8i8.ld3+3! !i16.ld3+3
+i8i8.ld4!   !i16.ld4
+i8i8.ld4+1! !i16.ld4+1
+i8i8.ld4+2! !i16.ld4+2
+i8i8.ld4+3! !i16.ld4+3
+i8i8.ld5!   !i16.ld5
+i8i8.ld5+1! !i16.ld5+1
+i8i8.ld5+2! !i16.ld5+2
+i8i8.ld5+3! !i16.ld5+3
+i8i8.ld6!   !i16.ld6
+i8i8.ld6+1! !i16.ld6+1
+i8i8.ld6+2! !i16.ld6+2
+i8i8.ld7!   !i16.ld7
 u4f4.ld0!   !u8.ld0
 u4f4.ld0+1! !u8.ld0+1
 u4f4.ld0+2! !u8.ld0+2
@@ -519,47 +782,47 @@ i8f8.ld6!   !i16.ld6
 i8f8.ld6+1! !i16.ld6+1
 i8f8.ld6+2! !i16.ld6+2
 i8f8.ld7!   !i16.ld7
-c4f4.ld0!   !i16.ld0
-c4f4.ld0+1! !i16.ld0+1
-c4f4.ld0+2! !i16.ld0+2
-c4f4.ld0+3! !i16.ld0+3
-c4f4.ld1!   !i16.ld1
-c4f4.ld1+1! !i16.ld1+1
-c4f4.ld1+2! !i16.ld1+2
-c4f4.ld1+3! !i16.ld1+3
-c4f4.ld2!   !i16.ld2
-c4f4.ld2+1! !i16.ld2+1
-c4f4.ld2+2! !i16.ld2+2
-c4f4.ld2+3! !i16.ld2+3
-c4f4.ld3!   !i16.ld3
-c4f4.ld3+1! !i16.ld3+1
-c4f4.ld3+2! !i16.ld3+2
-c4f4.ld3+3! !i16.ld3+3
-c4f4.ld4!   !i16.ld4
-c4f4.ld4+1! !i16.ld4+1
-c4f4.ld4+2! !i16.ld4+2
-c4f4.ld4+3! !i16.ld4+3
-c4f4.ld5!   !i16.ld5
-c4f4.ld5+1! !i16.ld5+1
-c4f4.ld5+2! !i16.ld5+2
-c4f4.ld5+3! !i16.ld5+3
-c4f4.ld6!   !i16.ld6
-c4f4.ld6+1! !i16.ld6+1
-c4f4.ld6+2! !i16.ld6+2
-c4f4.ld7!   !i16.ld7
-c8f8.ld0!   !i32.ld0
-c8f8.ld0+1! !i32.ld0+1
-c8f8.ld0+2! !i32.ld0+2
-c8f8.ld0+3! !i32.ld0+3
-c8f8.ld1!   !i32.ld1
-c8f8.ld1+1! !i32.ld1+1
-c8f8.ld1+2! !i32.ld1+2
-c8f8.ld1+3! !i32.ld1+3
-c8f8.ld2!   !i32.ld2
-c8f8.ld2+1! !i32.ld2+1
-c8f8.ld2+2! !i32.ld2+2
-c8f8.ld2+3! !i32.ld2+3
-c8f8.ld3!   !i32.ld3
+c4f4m4f4.ld0!   !i16.ld0
+c4f4m4f4.ld0+1! !i16.ld0+1
+c4f4m4f4.ld0+2! !i16.ld0+2
+c4f4m4f4.ld0+3! !i16.ld0+3
+c4f4m4f4.ld1!   !i16.ld1
+c4f4m4f4.ld1+1! !i16.ld1+1
+c4f4m4f4.ld1+2! !i16.ld1+2
+c4f4m4f4.ld1+3! !i16.ld1+3
+c4f4m4f4.ld2!   !i16.ld2
+c4f4m4f4.ld2+1! !i16.ld2+1
+c4f4m4f4.ld2+2! !i16.ld2+2
+c4f4m4f4.ld2+3! !i16.ld2+3
+c4f4m4f4.ld3!   !i16.ld3
+c4f4m4f4.ld3+1! !i16.ld3+1
+c4f4m4f4.ld3+2! !i16.ld3+2
+c4f4m4f4.ld3+3! !i16.ld3+3
+c4f4m4f4.ld4!   !i16.ld4
+c4f4m4f4.ld4+1! !i16.ld4+1
+c4f4m4f4.ld4+2! !i16.ld4+2
+c4f4m4f4.ld4+3! !i16.ld4+3
+c4f4m4f4.ld5!   !i16.ld5
+c4f4m4f4.ld5+1! !i16.ld5+1
+c4f4m4f4.ld5+2! !i16.ld5+2
+c4f4m4f4.ld5+3! !i16.ld5+3
+c4f4m4f4.ld6!   !i16.ld6
+c4f4m4f4.ld6+1! !i16.ld6+1
+c4f4m4f4.ld6+2! !i16.ld6+2
+c4f4m4f4.ld7!   !i16.ld7
+c8f8m8f8.ld0!   !i32.ld0
+c8f8m8f8.ld0+1! !i32.ld0+1
+c8f8m8f8.ld0+2! !i32.ld0+2
+c8f8m8f8.ld0+3! !i32.ld0+3
+c8f8m8f8.ld1!   !i32.ld1
+c8f8m8f8.ld1+1! !i32.ld1+1
+c8f8m8f8.ld1+2! !i32.ld1+2
+c8f8m8f8.ld1+3! !i32.ld1+3
+c8f8m8f8.ld2!   !i32.ld2
+c8f8m8f8.ld2+1! !i32.ld2+1
+c8f8m8f8.ld2+2! !i32.ld2+2
+c8f8m8f8.ld2+3! !i32.ld2+3
+c8f8m8f8.ld3!   !i32.ld3
 
 u8.st0!   st0
 u8.st0+1! st1
@@ -769,6 +1032,190 @@ i64.st0+1! st8 st8 st8 st8 st8 st8 st8 st8
 i64.st0+2! st9 st9 st9 st9 st9 st9 st9 st9
 i64.st0+3! stA stA stA stA stA stA stA stA
 i64.st1!   stF stF stF stF stF stF stF stF
+u4u4.st0!   !u8.st0
+u4u4.st0+1! !u8.st0+1
+u4u4.st0+2! !u8.st0+2
+u4u4.st0+3! !u8.st0+3
+u4u4.st1!   !u8.st1
+u4u4.st1+1! !u8.st1+1
+u4u4.st1+2! !u8.st1+2
+u4u4.st1+3! !u8.st1+3
+u4u4.st2!   !u8.st2
+u4u4.st2+1! !u8.st2+1
+u4u4.st2+2! !u8.st2+2
+u4u4.st2+3! !u8.st2+3
+u4u4.st3!   !u8.st3
+u4u4.st3+1! !u8.st3+1
+u4u4.st3+2! !u8.st3+2
+u4u4.st3+3! !u8.st3+3
+u4u4.st4!   !u8.st4
+u4u4.st4+1! !u8.st4+1
+u4u4.st4+2! !u8.st4+2
+u4u4.st4+3! !u8.st4+3
+u4u4.st5!   !u8.st5
+u4u4.st5+1! !u8.st5+1
+u4u4.st5+2! !u8.st5+2
+u4u4.st5+3! !u8.st5+3
+u4u4.st6!   !u8.st6
+u4u4.st6+1! !u8.st6+1
+u4u4.st6+2! !u8.st6+2
+u4u4.st6+3! !u8.st6+3
+u4u4.st7!   !u8.st7
+u4u4.st7+1! !u8.st7+1
+u4u4.st7+2! !u8.st7+2
+u4u4.st7+3! !u8.st7+3
+u4u4.st8!   !u8.st8
+u4u4.st8+1! !u8.st8+1
+u4u4.st8+2! !u8.st8+2
+u4u4.st8+3! !u8.st8+3
+u4u4.st9!   !u8.st9
+u4u4.st9+1! !u8.st9+1
+u4u4.st9+2! !u8.st9+2
+u4u4.st9+3! !u8.st9+3
+u4u4.stA!   !u8.stA
+u4u4.stA+1! !u8.stA+1
+u4u4.stA+2! !u8.stA+2
+u4u4.stA+3! !u8.stA+3
+u4u4.stB!   !u8.stB
+u4u4.stB+1! !u8.stB+1
+u4u4.stB+2! !u8.stB+2
+u4u4.stB+3! !u8.stB+3
+u4u4.stC!   !u8.stC
+u4u4.stC+1! !u8.stC+1
+u4u4.stC+2! !u8.stC+2
+u4u4.stC+3! !u8.stC+3
+u4u4.stD!   !u8.stD
+u4u4.stD+1! !u8.stD+1
+u4u4.stD+2! !u8.stD+2
+u4u4.stD+3! !u8.stD+3
+u4u4.stE!   !u8.stE
+u4u4.stE+1! !u8.stE+1
+u4u4.stE+2! !u8.stE+2
+u4u4.stE+3! !u8.stE+3
+u4u4.stF!   !u8.stF
+u4u4.stF+1! !u8.stF+1
+u4u4.stF+2! !u8.stF+2
+u4u4.stF+3! !u8.stF+3
+u8u8.st0!   !u16.st0
+u8u8.st0+1! !u16.st0+1
+u8u8.st0+2! !u16.st0+2
+u8u8.st0+3! !u16.st0+3
+u8u8.st1!   !u16.st1
+u8u8.st1+1! !u16.st1+1
+u8u8.st1+2! !u16.st1+2
+u8u8.st1+3! !u16.st1+3
+u8u8.st2!   !u16.st2
+u8u8.st2+1! !u16.st2+1
+u8u8.st2+2! !u16.st2+2
+u8u8.st2+3! !u16.st2+3
+u8u8.st3!   !u16.st3
+u8u8.st3+1! !u16.st3+1
+u8u8.st3+2! !u16.st3+2
+u8u8.st3+3! !u16.st3+3
+u8u8.st4!   !u16.st4
+u8u8.st4+1! !u16.st4+1
+u8u8.st4+2! !u16.st4+2
+u8u8.st4+3! !u16.st4+3
+u8u8.st5!   !u16.st5
+u8u8.st5+1! !u16.st5+1
+u8u8.st5+2! !u16.st5+2
+u8u8.st5+3! !u16.st5+3
+u8u8.st6!   !u16.st6
+u8u8.st6+1! !u16.st6+1
+u8u8.st6+2! !u16.st6+2
+u8u8.st7!   !u16.st7
+i4i4.st0!   !i8.st0
+i4i4.st0+1! !i8.st0+1
+i4i4.st0+2! !i8.st0+2
+i4i4.st0+3! !i8.st0+3
+i4i4.st1!   !i8.st1
+i4i4.st1+1! !i8.st1+1
+i4i4.st1+2! !i8.st1+2
+i4i4.st1+3! !i8.st1+3
+i4i4.st2!   !i8.st2
+i4i4.st2+1! !i8.st2+1
+i4i4.st2+2! !i8.st2+2
+i4i4.st2+3! !i8.st2+3
+i4i4.st3!   !i8.st3
+i4i4.st3+1! !i8.st3+1
+i4i4.st3+2! !i8.st3+2
+i4i4.st3+3! !i8.st3+3
+i4i4.st4!   !i8.st4
+i4i4.st4+1! !i8.st4+1
+i4i4.st4+2! !i8.st4+2
+i4i4.st4+3! !i8.st4+3
+i4i4.st5!   !i8.st5
+i4i4.st5+1! !i8.st5+1
+i4i4.st5+2! !i8.st5+2
+i4i4.st5+3! !i8.st5+3
+i4i4.st6!   !i8.st6
+i4i4.st6+1! !i8.st6+1
+i4i4.st6+2! !i8.st6+2
+i4i4.st6+3! !i8.st6+3
+i4i4.st7!   !i8.st7
+i4i4.st7+1! !i8.st7+1
+i4i4.st7+2! !i8.st7+2
+i4i4.st7+3! !i8.st7+3
+i4i4.st8!   !i8.st8
+i4i4.st8+1! !i8.st8+1
+i4i4.st8+2! !i8.st8+2
+i4i4.st8+3! !i8.st8+3
+i4i4.st9!   !i8.st9
+i4i4.st9+1! !i8.st9+1
+i4i4.st9+2! !i8.st9+2
+i4i4.st9+3! !i8.st9+3
+i4i4.stA!   !i8.stA
+i4i4.stA+1! !i8.stA+1
+i4i4.stA+2! !i8.stA+2
+i4i4.stA+3! !i8.stA+3
+i4i4.stB!   !i8.stB
+i4i4.stB+1! !i8.stB+1
+i4i4.stB+2! !i8.stB+2
+i4i4.stB+3! !i8.stB+3
+i4i4.stC!   !i8.stC
+i4i4.stC+1! !i8.stC+1
+i4i4.stC+2! !i8.stC+2
+i4i4.stC+3! !i8.stC+3
+i4i4.stD!   !i8.stD
+i4i4.stD+1! !i8.stD+1
+i4i4.stD+2! !i8.stD+2
+i4i4.stD+3! !i8.stD+3
+i4i4.stE!   !i8.stE
+i4i4.stE+1! !i8.stE+1
+i4i4.stE+2! !i8.stE+2
+i4i4.stE+3! !i8.stE+3
+i4i4.stF!   !i8.stF
+i4i4.stF+1! !i8.stF+1
+i4i4.stF+2! !i8.stF+2
+i4i4.stF+3! !i8.stF+3
+i8i8.st0!   !i16.st0
+i8i8.st0+1! !i16.st0+1
+i8i8.st0+2! !i16.st0+2
+i8i8.st0+3! !i16.st0+3
+i8i8.st1!   !i16.st1
+i8i8.st1+1! !i16.st1+1
+i8i8.st1+2! !i16.st1+2
+i8i8.st1+3! !i16.st1+3
+i8i8.st2!   !i16.st2
+i8i8.st2+1! !i16.st2+1
+i8i8.st2+2! !i16.st2+2
+i8i8.st2+3! !i16.st2+3
+i8i8.st3!   !i16.st3
+i8i8.st3+1! !i16.st3+1
+i8i8.st3+2! !i16.st3+2
+i8i8.st3+3! !i16.st3+3
+i8i8.st4!   !i16.st4
+i8i8.st4+1! !i16.st4+1
+i8i8.st4+2! !i16.st4+2
+i8i8.st4+3! !i16.st4+3
+i8i8.st5!   !i16.st5
+i8i8.st5+1! !i16.st5+1
+i8i8.st5+2! !i16.st5+2
+i8i8.st5+3! !i16.st5+3
+i8i8.st6!   !i16.st6
+i8i8.st6+1! !i16.st6+1
+i8i8.st6+2! !i16.st6+2
+i8i8.st7!   !i16.st7
 u4f4.st0!   !u8.st0
 u4f4.st0+1! !u8.st0+1
 u4f4.st0+2! !u8.st0+2
@@ -953,60 +1400,68 @@ i8f8.st6!   !i16.st6
 i8f8.st6+1! !i16.st6+1
 i8f8.st6+2! !i16.st6+2
 i8f8.st7!   !i16.st7
-c4f4.st0!   !i16.st0
-c4f4.st0+1! !i16.st0+1
-c4f4.st0+2! !i16.st0+2
-c4f4.st0+3! !i16.st0+3
-c4f4.st1!   !i16.st1
-c4f4.st1+1! !i16.st1+1
-c4f4.st1+2! !i16.st1+2
-c4f4.st1+3! !i16.st1+3
-c4f4.st2!   !i16.st2
-c4f4.st2+1! !i16.st2+1
-c4f4.st2+2! !i16.st2+2
-c4f4.st2+3! !i16.st2+3
-c4f4.st3!   !i16.st3
-c4f4.st3+1! !i16.st3+1
-c4f4.st3+2! !i16.st3+2
-c4f4.st3+3! !i16.st3+3
-c4f4.st4!   !i16.st4
-c4f4.st4+1! !i16.st4+1
-c4f4.st4+2! !i16.st4+2
-c4f4.st4+3! !i16.st4+3
-c4f4.st5!   !i16.st5
-c4f4.st5+1! !i16.st5+1
-c4f4.st5+2! !i16.st5+2
-c4f4.st5+3! !i16.st5+3
-c4f4.st6!   !i16.st6
-c4f4.st6+1! !i16.st6+1
-c4f4.st6+2! !i16.st6+2
-c4f4.st7!   !i16.st7
-c8f8.st0!   !i32.st0
-c8f8.st0+1! !i32.st0+1
-c8f8.st0+2! !i32.st0+2
-c8f8.st0+3! !i32.st0+3
-c8f8.st1!   !i32.st1
-c8f8.st1+1! !i32.st1+1
-c8f8.st1+2! !i32.st1+2
-c8f8.st1+3! !i32.st1+3
-c8f8.st2!   !i32.st2
-c8f8.st2+1! !i32.st2+1
-c8f8.st2+2! !i32.st2+2
-c8f8.st2+3! !i32.st2+3
-c8f8.st3!   !i32.st3
+c4f4m4f4.st0!   !i16.st0
+c4f4m4f4.st0+1! !i16.st0+1
+c4f4m4f4.st0+2! !i16.st0+2
+c4f4m4f4.st0+3! !i16.st0+3
+c4f4m4f4.st1!   !i16.st1
+c4f4m4f4.st1+1! !i16.st1+1
+c4f4m4f4.st1+2! !i16.st1+2
+c4f4m4f4.st1+3! !i16.st1+3
+c4f4m4f4.st2!   !i16.st2
+c4f4m4f4.st2+1! !i16.st2+1
+c4f4m4f4.st2+2! !i16.st2+2
+c4f4m4f4.st2+3! !i16.st2+3
+c4f4m4f4.st3!   !i16.st3
+c4f4m4f4.st3+1! !i16.st3+1
+c4f4m4f4.st3+2! !i16.st3+2
+c4f4m4f4.st3+3! !i16.st3+3
+c4f4m4f4.st4!   !i16.st4
+c4f4m4f4.st4+1! !i16.st4+1
+c4f4m4f4.st4+2! !i16.st4+2
+c4f4m4f4.st4+3! !i16.st4+3
+c4f4m4f4.st5!   !i16.st5
+c4f4m4f4.st5+1! !i16.st5+1
+c4f4m4f4.st5+2! !i16.st5+2
+c4f4m4f4.st5+3! !i16.st5+3
+c4f4m4f4.st6!   !i16.st6
+c4f4m4f4.st6+1! !i16.st6+1
+c4f4m4f4.st6+2! !i16.st6+2
+c4f4m4f4.st7!   !i16.st7
+c8f8m8f8.st0!   !i32.st0
+c8f8m8f8.st0+1! !i32.st0+1
+c8f8m8f8.st0+2! !i32.st0+2
+c8f8m8f8.st0+3! !i32.st0+3
+c8f8m8f8.st1!   !i32.st1
+c8f8m8f8.st1+1! !i32.st1+1
+c8f8m8f8.st1+2! !i32.st1+2
+c8f8m8f8.st1+3! !i32.st1+3
+c8f8m8f8.st2!   !i32.st2
+c8f8m8f8.st2+1! !i32.st2+1
+c8f8m8f8.st2+2! !i32.st2+2
+c8f8m8f8.st2+3! !i32.st2+3
+c8f8m8f8.st3!   !i32.st3
 
-u4f4.in! x04 rot x0F and # u8 integer_part = u4f4.in(u4f4 n)
-u4f4.fr! x0F and # u8 fraction_part = u4f4.in(u4f4 n)
+u4u4.fst! xF0 and x04 rot # u8 first = u4u4.fst(u4u4 n)
+u4u4.snd! x0F and # u8 second = u4u4.snd(u4u4 n)
+u8u8.fst! !u8.pop # u8 first = u8u8.fst(u8u8 n)
+u8u8.snd! !u8.st0 # u8 second = u8u8.snd(u8u8 n)
+i4i4.fst! !u4u4.fst # i8 first = i4i4.fst(i4i4 n)
+i4i4.snd! !u4u4.snd # i8 second = i4i4.snd(i4i4 n)
+i8i8.fst! !u8u8.fst # i8 first = i8i8.fst(i8i8 n)
+i8i8.snd! !u8u8.snd # i8 second = i8i8.snd(i8i8 n)
+u4f4.in! !u4u4.fst # u8 integer_part = u4f4.in(u4f4 n)
+u4f4.fr! !u4u4.snd # u8 fraction_part = u4f4.fr(u4f4 n)
 u8f8.in! !u8.pop # u8 integer_part = u8f8.in(u8f8 n)
 u8f8.fr! !u8.st0 # u8 fraction_part = u8f8.fr(u8f8 n)
-i4f4.in! x04 rot x0F and # i8 integer_part = i4f4.in(i4f4 n)
-i4f4.fr! x0F and # u8 fraction_part = i4f4.in(i4f4 n)
-i8f8.in! !u8.pop # i8 integer_part = i8f8.in(i8f8 n)
-i8f8.fr! !u8.st0 # u8 fraction_part = i8f8.fr(i8f8 n)
-c4f4.re! !u8.pop # i4f4 real_part = c4f4.re(c4f4 c)
-c4f4.im! !u8.st0 # i4f4 imaginary_part = c4f4.im(c4f4 c)
-c8f8.re! !u16.pop # i8f8 real_part = c8f8.re(c8f8 c)
-c8f8.im! !u16.st0 # i8f8 imaginary_part = c8f8.im(c8f8 c)
+i4f4.in! !i4i4.fst # i8 integer_part = i4f4.in(i4f4 n)
+i4f4.fr! !i4i4.snd # i8 fraction_part = i4f4.fr(i4f4 n)
+i8f8.in! !i8.pop # i8 integer_part = i8f8.in(i8f8 n)
+i8f8.fr! !i8.st0 # u8 fraction_part = i8f8.fr(i8f8 n)
+c4f4m4f4.re! !u8.pop # i4f4 real_part = c4f4m4f4.re(c4f4m4f4 c)
+c4f4m4f4.im! !u8.st0 # i4f4 imaginary_part = c4f4m4f4.im(c4f4m4f4 c)
+c8f8m8f8.re! !u16.pop # i8f8 real_part = c8f8m8f8.re(c8f8m8f8 c)
+c8f8m8f8.im! !u16.st0 # i8f8 imaginary_part = c8f8m8f8.im(c8f8m8f8 c)
 
 u8.mul! :u8.mul !call # u16 product = u8.mul(u8 a, u8 b)
 u16.mul! :u16.mul !call # u32 product = u16.mul(u16 a, u16 b)
@@ -1016,17 +1471,17 @@ u4f4.mul! :u4f4.mul !call # u4f4 product = u4f4.mul(u4f4 a, u4f4 b)
 u8f8.mul! :u8f8.mul !call # u8f8 product = u8f8.mul(u8f8 a, u8f8 b)
 i4f4.mul! :i4f4.mul !call # i4f4 product = i4f4.mul(i4f4 a, i4f4 b)
 i8f8.mul! :i8f8.mul !call # i8f8 product = i8f8.mul(i8f8 a, i8f8 b)
-c4f4.mul! # c4f4 product = c4f4.mul(c4f4 a, c4f4 b)
+c4f4m4f4.mul! # c4f4m4f4 product = c4f4m4f4.mul(c4f4m4f4 a, c4f4m4f4 b)
   !i4f4.ld3 !i4f4.ld2 !i4f4.mul !i4f4.ld3 !i4f4.ld2 !i4f4.mul !i4f4.sub # real part
   !i4f4.ld4 !i4f4.ld2 !i4f4.mul !i4f4.ld4 !i4f4.ld4 !i4f4.mul !i4f4.add # imaginary part
   !i16.st1 !i16.pop
-c8f8.mul! # c8f8 product = c8f8.mul(c8f8 a, c8f8 b)
+c8f8m8f8.mul! # c8f8m8f8 product = c8f8m8f8.mul(c8f8m8f8 a, c8f8m8f8 b)
   !i8f8.ld3 !i8f8.ld2 !i8f8.mul !i8f8.ld3 !i8f8.ld2 !i8f8.mul !i8f8.sub # real part
   !i8f8.ld4 !i8f8.ld2 !i8f8.mul !i8f8.ld4 !i8f8.ld4 !i8f8.mul !i8f8.add # imaginary part
   !i32.st1 !i32.pop
 
-c4f4.norm! !i4f4.ld1 !i4f4.ld0 !i4f4.mul !i4f4.st1 !i4f4.ld0 !i4f4.mul !i4f4.add # i4f4 norm = c4f4.norm(c4f4 c)
-c8f8.norm! !i8f8.ld1 !i8f8.ld0 !i8f8.mul !i8f8.st1 !i8f8.ld0 !i8f8.mul !i4f4.add # i8f8 norm = c8f8.norm(c8f8 c)
+c4f4m4f4.norm! !i4f4.ld1 !i4f4.ld0 !i4f4.mul !i4f4.st1 !i4f4.ld0 !i4f4.mul !i4f4.add # i4f4 norm = c4f4m4f4.norm(c4f4m4f4 c)
+c8f8m8f8.norm! !i8f8.ld1 !i8f8.ld0 !i8f8.mul !i8f8.st1 !i8f8.ld0 !i8f8.mul !i4f4.add # i8f8 norm = c8f8m8f8.norm(c8f8m8f8 c)
 
 u8.mul_def!
   u8.mul: clc # u16 product = u8.mul(u8 a, u8 b)

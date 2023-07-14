@@ -1,5 +1,5 @@
 strlen_def!
-  strlen: # u8 len = strlen(u8 *str)
+  strlen: # len = strlen(*str)
     ld1 for_c:
       ld0 lda buf pop
     inc :for_c !bcc
@@ -9,7 +9,7 @@ strlen_def!
     st1 !rt0
 
 strcmp_def!
-  strcmp: clc # u8 strcmp(u8 *str1, u8 *str2)
+  strcmp: clc # strcmp(*str1, *str2)
     ld2 ld2 while:
       # break if *str1 != *str2
       ld1 lda ld1 lda xor pop :break !bcc
