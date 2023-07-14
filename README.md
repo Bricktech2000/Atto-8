@@ -24,7 +24,7 @@ This project is a [work in progress](TODO.md). Try it out by running any of the 
 # completed programs
 python3 test.py asm emu draw.asm
 python3 test.py asm emu random.asm
-python3 test.py asm emu memory.asm
+python3 test.py asm emu hllowrld.asm
 python3 test.py asm emu counter.asm
 python3 test.py asm emu mushroom.asm
 python3 test.py asm emu flappy.asm
