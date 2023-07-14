@@ -805,6 +805,12 @@ fn assemble(
           Root::Node(node1.clone()),
         ])
       }
+      [Root::Node(node1), Root::Instruction(Instruction::Rot(0x01)), Root::Node(node2), Root::Instruction(Instruction::Rot(0x01))] => {
+        Some(vec![
+          Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
+          Root::Instruction(Instruction::Rot(0x01)),
+        ])
+      }
       _ => None,
     });
   }
