@@ -4,7 +4,7 @@ _Optimizing assembler for Atto-8 microprocessor_
 
 ## Overview
 
-The assembler loads an assembly file from `argv[1]` and outputs an image file to `argv[2]` which is exactly `0x100` bytes in size. Code generation adheres to microprocessor specification as defined in [/spec/microprocessor.md](../spec/microprocessor.md).
+The assembler loads an assembly file from `argv[1]` and outputs a memory image file to `argv[2]` which is exactly `0x100` bytes in size. Code generation adheres to microprocessor specification as defined in [/spec/microprocessor.md](../spec/microprocessor.md).
 
 Assembly consists of the following process:
 

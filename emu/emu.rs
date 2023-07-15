@@ -7,7 +7,7 @@ fn main() {
 
   let memory_image_file: &String = &args[1];
 
-  let memory_image = std::fs::read(memory_image_file)
+  let image = std::fs::read(memory_image_file)
     .unwrap_or_else(|_| {
       println!("Emu: Error: Unable to read file `{}`", memory_image_file);
       std::process::exit(1);
@@ -22,7 +22,7 @@ fn main() {
     });
 
   let mc = Microcomputer {
-    mem: memory_image,
+    mem: image,
     mp: Microprocessor {
       sp: 0x00,
       ip: 0x00,

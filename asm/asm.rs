@@ -3,24 +3,28 @@ use std::collections::HashMap;
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() != 3 {
-    println!("Asm: Usage: asm <assembly file> <image file>");
+    println!("Asm: Usage: asm <assembly source file> <memory image file>");
     std::process::exit(1);
   }
 
   let mut errors: Vec<(Pos, Error)> = vec![];
-  let file: File = File {
+  let memory_image_file = &args[2];
+  let assembly_source_file: File = File {
     path: args[1].clone(),
   };
 
-  let preprocessed: String = preprocess(file, &mut errors, None);
+  let preprocessed: String = preprocess(assembly_source_file, &mut errors, None);
   let tokens: Vec<(Pos, Token)> = tokenize(preprocessed, &mut errors);
   let instructions: Vec<(Pos, Instruction)> = assemble(tokens, &mut errors, "main");
   let bytes: Vec<(Pos, u8)> = codegen(instructions, &mut errors);
 
   match errors[..] {
     [] => {
-      let output = &args[2];
-      std::fs::write(output, bytes.iter().map(|(_, b)| *b).collect::<Vec<u8>>()).unwrap();
+      std::fs::write(
+        memory_image_file,
+        bytes.iter().map(|(_, b)| *b).collect::<Vec<u8>>(),
+      )
+      .unwrap();
 
       println!("Asm: Done");
     }
