@@ -17,6 +17,7 @@ main!
   :future @org future:
   dyn: :dyn @dyn
   !self
+  @err
 
   !row !row !row !row !row !row !row !row !row !row !row !row !row !row !row !row
 row! d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00

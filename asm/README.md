@@ -36,6 +36,7 @@ Labels are global by default; local labels are local to a macro. Macros are glob
 | `@const` | Assert that preceding expression is constant      |
 | `@dyn`   | Inhibit optimization of preceding instruction     |
 | `@org`   | Set location counter to preceding expression      |
+| `@err`   | Emit error and terminate compilation              |
 | `dDD`    | Insert `DD` in binary at current address          |
 | `xXX`    | Push `XX` through `psh` and `phn` instructions    |
 | `add`    | Instruction `add 0x01`                            |

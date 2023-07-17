@@ -9,7 +9,7 @@ syntax match atto8Instruction "\<\(ad\|su\|if\|ro\|or\|an\|xo\|xn\)[1248]\{1\}\>
 syntax match atto8Instruction "\<\(ld\|st\)[0-9A-F]\{1\}\>"
 syntax match atto8XXX "\<x[0-9A-F]\{2\}\>"
 syntax match atto8DDD "\<d[0-9A-F]\{2\}\>"
-syntax match atto8Directive "@\<\(const\|dyn\|org\)\>"
+syntax match atto8Directive "@\<\(const\|dyn\|org\|err\)\>"
 syntax match atto8MacroRef "!\<[^! ]\+\>"
 syntax match atto8MacroDef "\<[^! ]\+\>!"
 syntax match atto8LabelRef ":\<[^: ]\+\>\|\.\<[^\. ]\+\>"

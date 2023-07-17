@@ -72,6 +72,7 @@ enum Token {
   AtConst,
   AtDyn,
   AtOrg,
+  AtErr,
   DDD(u8),
   XXX(u8),
   Add,
@@ -258,6 +259,7 @@ fn tokenize(source: String, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)>
         "@const" => Token::AtConst,
         "@dyn" => Token::AtDyn,
         "@org" => Token::AtOrg,
+        "@err" => Token::AtErr,
         "add" => Token::Add,
         "sub" => Token::Sub,
         "iff" => Token::Iff,
@@ -447,6 +449,16 @@ fn assemble(
             expanded
           }
         }
+        Token::AtErr => {
+          errors.push((
+            token.0.clone(),
+            Error(format!(
+              "`{}` directive encountered during macro expansion",
+              token.1
+            )),
+          ));
+          vec![]
+        }
         _ => vec![token.clone()],
       })
       .collect()
@@ -532,6 +544,7 @@ fn assemble(
         Token::AtConst => Root::Const,
         Token::AtDyn => Root::Dyn(None),
         Token::AtOrg => Root::Org(None),
+        Token::AtErr => panic!("Error directive found in intermediate representation"),
         Token::XXX(immediate) => Root::Node(Node::Immediate(assert_immediate(
           immediate, errors, &position,
         ))),
@@ -979,8 +992,10 @@ fn assemble(
             errors.push((
               root.0,
               Error(format!(
-                "Origin cannot move location counter backward from `{}` to `{}`",
-                location_counter, value
+                "`{}` cannot move location counter backward from `{}` to `{}`",
+                Token::AtOrg,
+                location_counter,
+                value
               )),
             ));
             vec![]
@@ -990,7 +1005,8 @@ fn assemble(
           errors.push((
             root.0,
             Error(format!(
-              "Origin argument contains currently unresolved label `{}`",
+              "`{}` argument contains currently unresolved label `{}`",
+              Token::AtOrg,
               label
             )),
           ));
@@ -1002,7 +1018,8 @@ fn assemble(
         errors.push((
           root.0,
           Error(format!(
-            "Origin argument could not be reduced to a constant expression"
+            "`{}` argument could not be reduced to a constant expression",
+            Token::AtOrg,
           )),
         ));
         vec![]
@@ -1012,7 +1029,8 @@ fn assemble(
         errors.push((
           root.0,
           Error(format!(
-            "Constant argument could not be reduced to a constant expression"
+            "`{}` argument could not be reduced to a constant expression",
+            Token::AtConst,
           )),
         ));
         vec![]
@@ -1022,7 +1040,8 @@ fn assemble(
         errors.push((
           root.0,
           Error(format!(
-            "Dynamic argument could not be reduced to an instruction"
+            "`{}` argument could not be reduced to an instruction",
+            Token::AtDyn,
           )),
         ));
         vec![]
@@ -1197,6 +1216,7 @@ impl std::fmt::Display for Token {
       Token::AtConst => write!(f, "@const"),
       Token::AtDyn => write!(f, "@dyn"),
       Token::AtOrg => write!(f, "@org"),
+      Token::AtErr => write!(f, "@err"),
       Token::DDD(n) => write!(f, "d{:02X}", n),
       Token::XXX(n) => write!(f, "x{:02X}", n),
       Token::Add => write!(f, "add"),
