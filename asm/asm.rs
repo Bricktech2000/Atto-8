@@ -1056,8 +1056,12 @@ fn assemble(
       })
       .collect();
 
-    // poke into `instructions` and evaluate the nodes that couldn't be evaluated before
+    // abort brute force if errors were found
+    if errors.len() > 0 {
+      break 'bruteforce;
+    }
 
+    // poke into `instructions` and evaluate the nodes that couldn't be evaluated before
     'poke: {
       for (location_counter, node) in unevaluated_nodes.iter() {
         let immediate = match eval(&node.1, &label_definitions) {
