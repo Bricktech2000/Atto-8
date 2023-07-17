@@ -973,7 +973,7 @@ fn assemble(
         Ok(value) => {
           if value >= location_counter {
             let difference = value - location_counter;
-            location_counter = location_counter.wrapping_sub(difference);
+            location_counter += difference;
             vec![(root.0, Instruction::Raw(0x00)); difference as usize]
           } else {
             errors.push((
