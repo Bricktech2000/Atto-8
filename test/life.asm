@@ -27,7 +27,7 @@ main!
       x00 # allocate neighbour count
 
       # count neighbours
-      :neighbours_end :neighbours sub @const for_dxdy: dec
+      !neighbours_len for_dxdy: dec
         # neighbour_addr = *(neighbours + dxdy) + for_xy
         !front_buffer :neighbours ld2 add !i4i4.lda !u4u4.ld4 !i4i4.add
         # neighbour_value = load_bit(bit_addr(neighbour_addr, &FRONT_BUFFER))
@@ -68,6 +68,8 @@ main!
   # !copperhead
   # !diehard
   # !compact_pulsar
+
+neighbours_len! :neighbours_end :neighbours sub @const
 
 
 blinker!

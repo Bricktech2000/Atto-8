@@ -274,7 +274,7 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
               mc.mem[mp.sp as usize] = 0x00;
               mp.sp = mp.sp.wrapping_add(1);
 
-              mc.mem[size_pointer as usize] = 0;
+              mc.mem[size_pointer as usize] = 0x00;
               mp.cf = mc.mem[size_pointer as usize] == 0x00;
               (0x04, None)
             }
@@ -307,7 +307,7 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
                 let a = mc.mem[mp.sp as usize];
 
                 mc.mem[mp.sp as usize] = a.wrapping_shl(1) | (mp.cf as u8);
-                mp.cf = a & 0b10000000 != 0;
+                mp.cf = a & 0b10000000 != 0x00;
                 (0x04, None)
               }
 
@@ -316,7 +316,7 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
                 let a = mc.mem[mp.sp as usize];
 
                 mc.mem[mp.sp as usize] = a.wrapping_shr(1) | ((mp.cf as u8) << 7);
-                mp.cf = a & 0b00000001 != 0;
+                mp.cf = a & 0b00000001 != 0x00;
                 (0x04, None)
               }
 
@@ -554,7 +554,7 @@ impl std::fmt::Display for Microcomputer {
           0b01 => "\u{2580}",
           0b10 => "\u{2584}",
           0b11 => "\u{2588}",
-          _ => "?",
+          _ => unreachable!(),
         };
       }
       fmt += &col_right;
@@ -597,7 +597,24 @@ impl std::fmt::Display for Microcomputer {
 
     for y in 0..0x10 {
       for x in 0..0x10 {
-        fmt += &format!("{:02X} ", self.mem[(y << 0x04 | x) as usize]);
+        let address: u8 = (y << 0x04 | x) as u8;
+        fmt += &format!(
+          "{:02X}{}",
+          self.mem[address as usize],
+          if address == self.mp.sp.wrapping_sub(1) {
+            if self.mp.cf {
+              "/"
+            } else {
+              "|"
+            }
+          } else if address == self.mp.ip.wrapping_sub(1) {
+            "["
+          } else if address == self.mp.ip {
+            "]"
+          } else {
+            " "
+          }
+        );
       }
       fmt += "\r\n";
     }

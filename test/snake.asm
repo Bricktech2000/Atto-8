@@ -55,7 +55,7 @@ main!
     buf :for_head_twice !bcc clc pop
 
     # figure out where the tail is headed
-    :directions_end :directions sub @const for_dir: dec
+    !directions_len for_dir: dec
       :directions ld1 add !i4i4.lda !i4i4.ld3
         !front_buffer !u4u4.ld6 !i4i4.ld3 !i4i4.add !bit_addr !load_bit
       buf pop !i4i4.iff !i4i4.st2
@@ -81,3 +81,4 @@ main!
     d10 !i4i4
     dF0 !i4i4
   directions_end:
+directions_len! :directions_end :directions sub @const

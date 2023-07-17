@@ -13,7 +13,9 @@ main!
     !display_data_len x00 !front_buffer :memset !call
     !wait_input
   :loop !jmp
-  !hlt
+
+  !memset_def
+  !memcpy_def
 
   display_data:
     # dEA dE6 d4E d44 d4A dEC d00 d00 # THIS
@@ -26,8 +28,4 @@ main!
     dA8 d8E dE8 d8A dAE dEE d00 d00 # HLLO
     dAE d8C dEC d8A dEA dEC d00 d00 # WRLD
   display_data_end:
-
-  !memset_def
-  !memcpy_def
-
 display_data_len! :display_data_end :display_data sub @const
