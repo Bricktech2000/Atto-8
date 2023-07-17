@@ -5,7 +5,7 @@ getchar! !stdin lda
 gets_def!
   gets: # *str = gets()
     @err # to be implemented
-putchar! !stdout swp @const sta
+putchar! !stdout swp sta
 puts_def!
   puts: # puts(*str)
     swp for_char.

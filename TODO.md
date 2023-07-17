@@ -20,8 +20,8 @@ tasks:
 - [x] get rid of `adn` instruction
 - [x] create `u4` and `i4` pair types
 - [x] update programs with new types
-- [ ] build computer
 - [ ] come up with microcode
+- [ ] build computer
 
 - potentially remove: neg, not, sub, xnd, clc, sec, flc
 - only flappy and prng use `shf` with carry
@@ -42,6 +42,43 @@ constituents:
 - [ ] microcode
 - [ ] schematics
 - [ ] circuits
+
+---
+
+terminal IO:
+
+reads to `0x00`:
+
+```
+if joystick engaged:
+  return joystick state
+elif stdin not empty:
+  return then clear stdin
+else:
+  return memory at 0x00
+```
+
+writes to `0x00`:
+
+```
+write to memory at 0x00
+write to stdout
+```
+
+todos:
+
+- [x] show SP and IP in MEM
+- [x] make `emu.rs` not overwrite on pop
+- [x] rename `input_buffer` in `emu.rs`
+- [ ] implement `gets`
+- [x] figure out `emu.rs` printout
+- [ ] implement reads to `0x00` as described above and fix the following programs:
+  - [ ] hllwrld
+  - [ ] random
+  - [ ] pong
+  - [ ] flappy
+
+---
 
 microcode:
 

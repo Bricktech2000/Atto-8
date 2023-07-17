@@ -38,8 +38,9 @@ python3 test.py asm emu mandelbrot.asm
 
 # test programs
 python3 test.py asm emu ore.asm
-python3 test.py asm emu multiply.asm
+python3 test.py asm emu terminal.asm
 python3 test.py asm emu errors.asm
+python3 test.py asm emu multiply.asm
 python3 test.py asm emu optimization.asm
 python3 test.py enc emu nop.hex
 python3 test.py enc emu addition.hex

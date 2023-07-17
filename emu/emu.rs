@@ -23,6 +23,8 @@ fn main() {
 
   let mc = Microcomputer {
     mem: image,
+    stdin: 0x00,
+    stdout: 0x00,
     mp: Microprocessor {
       sp: 0x00,
       ip: 0x00,
@@ -35,6 +37,8 @@ fn main() {
 
 struct Microcomputer {
   mem: [u8; 0x100],   // memory
+  stdin: u8,          // stdin
+  stdout: u8,         // stdout
   mp: Microprocessor, // microprocessor
 }
 
@@ -54,9 +58,8 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
   let mut next_print_time = std::time::Instant::now();
   let mut current_clocks = 0;
   let mut status_line = "".to_string();
+  let mut stdout = "".to_string();
   let mut debug_mode = false;
-
-  print!("\x1B[2J"); // clear screen
 
   // this call will switch the termital to raw mode
   let input_channel = spawn_input_channel();
@@ -92,21 +95,31 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
       }
 
       Ok(key) => {
-        let lo_nibble = match key {
+        let keyboard = match key {
+          console::Key::Char(c) => c as u8,
+          console::Key::Enter => 0x0A,
+          console::Key::Backspace => 0x08,
+          _ => 0x00,
+        };
+        let d_pad_lo = match key {
           console::Key::ArrowUp => 0b0001,
           console::Key::ArrowDown => 0b0010,
           console::Key::ArrowLeft => 0b0100,
           console::Key::ArrowRight => 0b1000,
           _ => 0b0000,
         };
-        let hi_nibble = match key {
+        let d_pad_hi = match key {
           console::Key::PageUp => 0b0001,
           console::Key::PageDown => 0b0010,
           console::Key::Home => 0b0100,
           console::Key::End => 0b1000,
           _ => 0b0000,
         };
-        mc.mem[0x00] |= lo_nibble | (hi_nibble << 4);
+        mc.stdin = if keyboard != 0x00 {
+          keyboard
+        } else {
+          d_pad_lo | (d_pad_hi << 4)
+        };
       }
 
       Err(TryRecvError::Empty) => (),
@@ -144,14 +157,25 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
       };
     }
 
+    if mc.stdout != 0x00 {
+      stdout.push(mc.stdout as char);
+      mc.stdout = 0x00;
+    }
+
     // print at most 30 times per second
     if next_print_time <= std::time::Instant::now() || debug_mode {
       next_print_time += std::time::Duration::from_millis(1000 / 30);
 
+      print!("\x1B[2J"); // clear screen
       print!("\x1B[1;1H"); // move cursor to top left
       print!("{}", mc);
       print!("\r\n");
       print!("{:32}\r\n", status_line);
+      print!("\r\n");
+      print!("_______________________________________________\r\n");
+      print!("{}", stdout);
+      use std::io::Write;
+      std::io::stdout().flush().unwrap();
     }
   }
 }
@@ -162,13 +186,55 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
   let instruction: u8 = mc.mem[mp.ip as usize];
   mp.ip = mp.ip.wrapping_add(1);
 
+  macro_rules! mem_read {
+    ($address:expr) => {{
+      let address = $address;
+      if address == 0x00 {
+        if mc.stdin != 0x00 {
+          let stdin = mc.stdin;
+          mc.stdin = 0x00;
+          stdin
+        } else {
+          mc.mem[address as usize]
+        }
+      } else {
+        mc.mem[address as usize]
+      }
+    }};
+  }
+
+  macro_rules! mem_write {
+    ($address:expr, $value:expr) => {{
+      let address = $address;
+      let value = $value;
+      mc.mem[address as usize] = value;
+      if address == 0x00 {
+        mc.stdout = value;
+      }
+    }};
+  }
+
+  macro_rules! push {
+    ($value:expr) => {{
+      let value = $value;
+      mp.sp = mp.sp.wrapping_sub(1);
+      mem_write!(mp.sp, value);
+    }};
+  }
+
+  macro_rules! pop {
+    () => {{
+      let value = mem_read!(mp.sp);
+      mp.sp = mp.sp.wrapping_add(1);
+      value
+    }};
+  }
+
   match (instruction & 0b10000000) >> 7 {
     0b0 => {
       // psh
       let immediate = instruction; // decode_immediate
-      mp.sp = mp.sp.wrapping_sub(1);
-
-      mc.mem[mp.sp as usize] = immediate;
+      push!(immediate);
       (0x04, None)
     }
 
@@ -183,99 +249,75 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
           match opcode {
             0x0 => {
               // add
-              let a = mc.mem[mp.sp as usize];
-              mc.mem[mp.sp as usize] = 0x00;
-              mp.sp = mp.sp.wrapping_add(1);
-              let b = mc.mem[size_pointer as usize];
-
-              mc.mem[size_pointer as usize] = (b as u16 + a as u16 + mp.cf as u16) as u8;
+              let a = pop!();
+              let b = mem_read!(size_pointer);
+              mem_write!(size_pointer, (b as u16 + a as u16 + mp.cf as u16) as u8);
               mp.cf = (b as u16 + a as u16 + mp.cf as u16) > 0xFF;
               (0x04, None)
             }
 
             0x1 => {
               // sub
-              let a = mc.mem[mp.sp as usize];
-              mc.mem[mp.sp as usize] = 0x00;
-              mp.sp = mp.sp.wrapping_add(1);
-              let b = mc.mem[size_pointer as usize];
-
-              mc.mem[size_pointer as usize] = (b as i16 - a as i16 - mp.cf as i16) as u8;
+              let a = pop!();
+              let b = mem_read!(size_pointer);
+              mem_write!(size_pointer, (b as i16 - a as i16 - mp.cf as i16) as u8);
               mp.cf = (b as i16 - a as i16 - mp.cf as i16) < 0x00;
               (0x04, None)
             }
 
             0x4 => {
               // iff
-              let a = mc.mem[mp.sp as usize];
-              mc.mem[mp.sp as usize] = 0x00;
-              mp.sp = mp.sp.wrapping_add(1);
-              let b = mc.mem[size_pointer as usize];
-
-              mc.mem[size_pointer as usize] = if mp.cf { a } else { b };
+              let a = pop!();
+              let b = mem_read!(size_pointer);
+              mem_write!(size_pointer, if mp.cf { a } else { b });
               (0x04, None)
             }
 
             0x5 => {
               // rot
-              let a = mc.mem[mp.sp as usize];
-              mc.mem[mp.sp as usize] = 0x00;
-              mp.sp = mp.sp.wrapping_add(1);
-              let b = mc.mem[size_pointer as usize];
-
+              let a = pop!();
+              let b = mem_read!(size_pointer);
               let shifted = if a as i8 >= 0 {
                 (b as u16).wrapping_shl(a as u32)
               } else {
                 (b as u16).wrapping_shr(a.wrapping_neg() as u32)
               };
-
-              mc.mem[size_pointer as usize] = (shifted & 0xFF) as u8 | (shifted >> 8) as u8;
+              mem_write!(size_pointer, (shifted & 0xFF) as u8 | (shifted >> 8) as u8);
               (0x04, None)
             }
 
             0x8 => {
               // orr
-              let a = mc.mem[mp.sp as usize];
-              mc.mem[mp.sp as usize] = 0x00;
-              mp.sp = mp.sp.wrapping_add(1);
-              let b = mc.mem[size_pointer as usize];
-
-              mc.mem[size_pointer as usize] = a | b;
-              mp.cf = mc.mem[size_pointer as usize] == 0x00;
+              let a = pop!();
+              let b = mem_read!(size_pointer);
+              mem_write!(size_pointer, a | b);
+              mp.cf = mem_read!(size_pointer) == 0x00;
               (0x04, None)
             }
 
             0x9 => {
               // and
-              let a = mc.mem[mp.sp as usize];
-              mc.mem[mp.sp as usize] = 0x00;
-              mp.sp = mp.sp.wrapping_add(1);
-              let b = mc.mem[size_pointer as usize];
-
-              mc.mem[size_pointer as usize] = a & b;
-              mp.cf = mc.mem[size_pointer as usize] == 0x00;
+              let a = pop!();
+              let b = mem_read!(size_pointer);
+              mem_write!(size_pointer, a & b);
+              mp.cf = mem_read!(size_pointer) == 0x00;
               (0x04, None)
             }
 
             0xA => {
               // xor
-              let a = mc.mem[mp.sp as usize];
-              mc.mem[mp.sp as usize] = 0x00;
-              mp.sp = mp.sp.wrapping_add(1);
-              let b = mc.mem[size_pointer as usize];
-
-              mc.mem[size_pointer as usize] = a ^ b;
-              mp.cf = mc.mem[size_pointer as usize] == 0x00;
+              let a = pop!();
+              let b = mem_read!(size_pointer);
+              mem_write!(size_pointer, a ^ b);
+              mp.cf = mem_read!(size_pointer) == 0x00;
               (0x04, None)
             }
 
             0xB => {
               // xnd
-              mc.mem[mp.sp as usize] = 0x00;
-              mp.sp = mp.sp.wrapping_add(1);
-
-              mc.mem[size_pointer as usize] = 0x00;
-              mp.cf = mc.mem[size_pointer as usize] == 0x00;
+              let _ = pop!();
+              mem_write!(size_pointer, 0x00);
+              mp.cf = mem_read!(size_pointer) == 0x00;
               (0x04, None)
             }
 
@@ -283,58 +325,49 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
               // (size used as part of opcode)
               (0xC, 0b00) => {
                 // inc
-                let a = mc.mem[mp.sp as usize];
-                mc.mem[mp.sp as usize] = a.wrapping_add(1);
+                push!(pop!().wrapping_add(1));
                 (0x04, None)
               }
 
               (0xC, 0b01) => {
                 // dec
-                let a = mc.mem[mp.sp as usize];
-                mc.mem[mp.sp as usize] = a.wrapping_sub(1);
+                push!(pop!().wrapping_sub(1));
                 (0x04, None)
               }
 
               (0xC, 0b10) => {
                 // neg
-                let a = mc.mem[mp.sp as usize];
-                mc.mem[mp.sp as usize] = a.wrapping_neg();
+                push!(pop!().wrapping_neg());
                 (0x04, None)
               }
 
               (0xD, 0b00) => {
                 // shl
-                let a = mc.mem[mp.sp as usize];
-
-                mc.mem[mp.sp as usize] = a.wrapping_shl(1) | (mp.cf as u8);
+                let a = pop!();
+                push!(a.wrapping_shl(1) | (mp.cf as u8));
                 mp.cf = a & 0b10000000 != 0x00;
                 (0x04, None)
               }
 
               (0xD, 0b01) => {
                 // shr
-                let a = mc.mem[mp.sp as usize];
-
-                mc.mem[mp.sp as usize] = a.wrapping_shr(1) | ((mp.cf as u8) << 7);
+                let a = pop!();
+                push!(a.wrapping_shr(1) | (mp.cf as u8) << 7);
                 mp.cf = a & 0b00000001 != 0x00;
                 (0x04, None)
               }
 
               (0xD, 0b10) => {
                 // not
-                let a = mc.mem[mp.sp as usize];
-
-                mc.mem[mp.sp as usize] = !a;
-                mp.cf = mc.mem[mp.sp as usize] == 0x00;
+                push!(!pop!());
+                mp.cf = mem_read!(mp.sp) == 0x00;
                 (0x04, None)
               }
 
               (0xD, 0b11) => {
                 // buf
-                let a = mc.mem[mp.sp as usize];
-
-                mc.mem[mp.sp as usize] = a;
-                mp.cf = mc.mem[mp.sp as usize] == 0x00;
+                push!(pop!());
+                mp.cf = mem_read!(mp.sp) == 0x00;
                 (0x04, None)
               }
 
@@ -357,24 +390,15 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
                   // ldo
                   let offset = instruction & 0b00001111; // decode_offset
                   let offset_pointer = mp.sp.wrapping_add(offset);
-
-                  mp.sp = mp.sp.wrapping_sub(1);
-                  let a = mc.mem[offset_pointer as usize];
-
-                  mc.mem[mp.sp as usize] = a;
+                  push!(mem_read!(offset_pointer));
                   (0x04, None)
                 }
 
                 0b1 => {
                   // sto
-                  let a = mc.mem[mp.sp as usize];
-                  mc.mem[mp.sp as usize] = 0x00;
-                  mp.sp = mp.sp.wrapping_add(1);
-
                   let offset = instruction & 0b00001111; // decode_offset
-                  let offset_pointer = mp.sp.wrapping_add(offset);
-
-                  mc.mem[offset_pointer as usize] = a;
+                  let offset_pointer = mp.sp.wrapping_add(offset).wrapping_add(1);
+                  mem_write!(offset_pointer, pop!());
                   (0x04, None)
                 }
 
@@ -389,55 +413,39 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
                   match instruction & 0b00001111 {
                     0x0 => {
                       // lda
-                      let a = mc.mem[mp.sp as usize];
-
-                      mc.mem[mp.sp as usize] = mc.mem[a as usize];
+                      push!(mem_read!(pop!()));
                       (0x04, None)
                     }
 
                     0x1 => {
                       // sta
-                      let a = mc.mem[mp.sp as usize];
-                      mc.mem[mp.sp as usize] = 0x00;
-                      mp.sp = mp.sp.wrapping_add(1);
-                      let b = mc.mem[mp.sp as usize];
-                      mc.mem[mp.sp as usize] = 0x00;
-                      mp.sp = mp.sp.wrapping_add(1);
-
-                      mc.mem[b as usize] = a;
+                      let a = pop!();
+                      let b = pop!();
+                      mem_write!(b, a);
                       (0x04, None)
                     }
 
                     0x2 => {
                       // ldi
-                      mp.sp = mp.sp.wrapping_sub(1);
-                      mc.mem[mp.sp as usize] = mp.ip;
+                      push!(mp.ip);
                       (0x04, None)
                     }
 
                     0x3 => {
                       // sti
-                      mp.ip = mc.mem[mp.sp as usize];
-                      mc.mem[mp.sp as usize] = 0x00;
-                      mp.sp = mp.sp.wrapping_add(1);
+                      mp.ip = pop!();
                       (0x04, None)
                     }
 
                     0x4 => {
                       // lds
-                      let a = mp.sp;
-                      mp.sp = mp.sp.wrapping_sub(1);
-
-                      mc.mem[mp.sp as usize] = a;
+                      push!(mp.sp);
                       (0x04, None)
                     }
 
                     0x5 => {
                       // sts
-                      let a = mc.mem[mp.sp as usize];
-                      mc.mem[mp.sp as usize] = 0x00;
-
-                      mp.sp = a;
+                      mp.sp = pop!();
                       (0x04, None)
                     }
 
@@ -466,20 +474,16 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
 
                     0xC => {
                       // swp
-                      let a = mc.mem[mp.sp as usize];
-                      mp.sp = mp.sp.wrapping_add(1);
-                      let b = mc.mem[mp.sp as usize];
-
-                      mc.mem[mp.sp as usize] = a;
-                      mp.sp = mp.sp.wrapping_sub(1);
-                      mc.mem[mp.sp as usize] = b;
+                      let a = pop!();
+                      let b = pop!();
+                      push!(a);
+                      push!(b);
                       (0x04, None)
                     }
 
                     0xD => {
                       // pop
-                      mc.mem[mp.sp as usize] = 0x00;
-                      mp.sp = mp.sp.wrapping_add(1);
+                      let _ = pop!();
                       (0x04, None)
                     }
 
@@ -490,9 +494,7 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
                 0b1 => {
                   // phn
                   let immediate = instruction; // decode_immediate
-                  mp.sp = mp.sp.wrapping_sub(1);
-
-                  mc.mem[mp.sp as usize] = immediate;
+                  push!(immediate);
                   (0x04, None)
                 }
 
@@ -564,10 +566,8 @@ impl std::fmt::Display for Microcomputer {
     fmt += &line_bottom;
     fmt += "\r\n";
 
-    let input_buffer: &[u8; 0x01] = &self.mem[0x00..0x01].try_into().unwrap();
-
-    fn bit_to_str(input_buffer: &[u8; 0x01], bit: u8) -> &str {
-      match input_buffer[0] >> bit & 0x01 {
+    fn bit_to_str(stdin: u8, bit: u8) -> &'static str {
+      match stdin >> bit & 0x01 {
         0b0 => "\u{2591}\u{2591}",
         0b1 => "\u{2588}\u{2588}",
         _ => unreachable!(),
@@ -576,20 +576,20 @@ impl std::fmt::Display for Microcomputer {
 
     fmt += &format!(
       "    {}      {}    \r\n",
-      bit_to_str(input_buffer, 0),
-      bit_to_str(input_buffer, 4),
+      bit_to_str(self.stdin, 0),
+      bit_to_str(self.stdin, 4),
     );
     fmt += &format!(
       "  {}  {}  {}  {}  \r\n",
-      bit_to_str(input_buffer, 2),
-      bit_to_str(input_buffer, 3),
-      bit_to_str(input_buffer, 6),
-      bit_to_str(input_buffer, 7),
+      bit_to_str(self.stdin, 2),
+      bit_to_str(self.stdin, 3),
+      bit_to_str(self.stdin, 6),
+      bit_to_str(self.stdin, 7),
     );
     fmt += &format!(
       "    {}      {}    \r\n",
-      bit_to_str(input_buffer, 1),
-      bit_to_str(input_buffer, 5),
+      bit_to_str(self.stdin, 1),
+      bit_to_str(self.stdin, 5),
     );
 
     fmt += "\r\n";

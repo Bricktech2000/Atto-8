@@ -28,3 +28,5 @@ popcnt! # count = popcnt(a)
   .while !bcc
   # return* count
   st0
+
+null! x00
