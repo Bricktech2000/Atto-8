@@ -1,6 +1,6 @@
 @ lib/microprocessor/core.asm
-@ lib/microprocessor/memory.asm
-@ lib/microcomputer/input.asm
+@ lib/microprocessor/string.asm
+@ lib/microcomputer/stdio.asm
 @ lib/microcomputer/display.asm
 
 main!

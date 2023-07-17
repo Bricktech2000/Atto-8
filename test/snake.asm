@@ -1,8 +1,7 @@
 @ lib/microprocessor/core.asm
-@ lib/microprocessor/math.asm
-@ lib/microprocessor/memory.asm
-@ lib/microcomputer/time.asm
-@ lib/microcomputer/input.asm
+@ lib/microprocessor/types.asm
+@ lib/microprocessor/stdlib.asm
+@ lib/microcomputer/stdio.asm
 @ lib/microcomputer/display.asm
 
 # a few bytes short, but was working before removing `adn`s and having to add `clc`s.
@@ -26,8 +25,8 @@ main!
     # draw food at food_ps
     !front_buffer ld1 x11 orr !bit_addr !set_bit
 
-    # input = *INPUT_BUFFER
-    !input_buffer lda
+    # input = getchar()
+    !getchar
     # ignore if input is empty
     x0F and :ignore !bcs
       # vel = (input & 0b1010) ? 0x0F : 0x01

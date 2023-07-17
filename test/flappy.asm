@@ -1,8 +1,7 @@
 @ lib/microprocessor/core.asm
-@ lib/microprocessor/math.asm
-@ lib/microprocessor/memory.asm
-@ lib/microcomputer/time.asm
-@ lib/microcomputer/input.asm
+@ lib/microprocessor/types.asm
+@ lib/microprocessor/stdlib.asm
+@ lib/microcomputer/stdio.asm
 @ lib/microcomputer/display.asm
 
 main!
@@ -18,7 +17,7 @@ main!
 
   loop:
     # set y_vel to flap_vel if any button is pressed
-    !input_buffer lda buf pop !flap_vel !i4f4.ld1 !i4f4.iff !i4f4.st0 !reset_input
+    !getchar buf pop !flap_vel !i4f4.ld1 !i4f4.iff !i4f4.st0 !reset_input
     # compute bit_addr of (BIRD_POS, y_pos)
     !front_buffer !u4f4.ld2 !u4f4.in clc !u4f4.shl orr x07 !bird_pos sub @const
     # clear pixel at (x_pos, y_pos)
@@ -61,14 +60,14 @@ main!
       x00 sta
     ignore_pipe:
 
-    x60 !delay
+    x60 !stall
   :loop !jmp
 
   game_over:
     # blink pixel at (x_pos, y_pos)
     blink:
       !u8u8.ld0 !flip_bit
-      xFF !delay
+      xFF !stall
     :blink !jmp
 
   !front_buffer @org

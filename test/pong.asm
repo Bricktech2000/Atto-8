@@ -1,8 +1,7 @@
 @ lib/microprocessor/core.asm
-@ lib/microprocessor/math.asm
-@ lib/microprocessor/memory.asm
-@ lib/microcomputer/time.asm
-@ lib/microcomputer/input.asm
+@ lib/microprocessor/types.asm
+@ lib/microprocessor/stdlib.asm
+@ lib/microcomputer/stdio.asm
 @ lib/microcomputer/display.asm
 
 # missing second paddle, paddle bounds checks and ball bounce randomization
@@ -50,7 +49,7 @@ main!
       pop
 
       # check for input and move paddle_b
-      !input_buffer lda
+      !getchar
       ld0 x03 and pop :check_next !bcs
       !u8.ld6 x01 !u8.sub !u8.ld7 x01 !u8.add ld2 x01 and pop iff !u8.st6
       check_next:
@@ -61,7 +60,7 @@ main!
     # pop (x_pos >> 4, y_pos >> 4) from the stack
     !u4u4.pop
 
-    x7F !delay
+    x7F !stall
 
   :loop !jmp
 

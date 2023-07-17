@@ -9,7 +9,7 @@ strlen_def!
     st1 !rt0
 
 strcmp_def!
-  strcmp: clc # strcmp(*str1, *str2)
+  strcmp: clc # cpm = strcmp(*str1, *str2)
     ld2 ld2 while:
       # break if *str1 != *str2
       ld1 lda ld1 lda xor pop :break !bcc
@@ -20,3 +20,19 @@ strcmp_def!
     lda swp lda clc sub
     # return*
     st2 !rt1
+
+memset_def!
+  memset: # memset(ptr, val, len)
+    ld3 for_i. dec
+      ld0 ld3 add ld4 sta
+    buf .for_i !bcc pop
+  !rt3
+
+memcpy_def!
+  memcpy: clc # memcpy(dst, src, len)
+    ld3 for_i. dec
+      ld0 ld3 add
+      ld1 ld5 add
+      lda sta
+    buf .for_i !bcc pop
+  !rt3

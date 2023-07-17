@@ -1,8 +1,7 @@
 @ lib/microprocessor/core.asm
-@ lib/microprocessor/math.asm
-@ lib/microprocessor/memory.asm
-@ lib/microcomputer/time.asm
-@ lib/microcomputer/input.asm
+@ lib/microprocessor/types.asm
+@ lib/microprocessor/stdlib.asm
+@ lib/microcomputer/stdio.asm
 @ lib/microcomputer/display.asm
 
 main!
@@ -20,7 +19,7 @@ main!
 
   loop:
     # set y_vel to jump_vel if any button is pressed and y_pos > GROUND_POS
-    !input_buffer lda buf pop !jump_vel !i4f4.ld1 !i4f4.iff !u4f4.ld2 !ground_pos sub pop !i4f4.ld1 !i4f4.iff !i4f4.st0 !reset_input
+    !getchar buf pop !jump_vel !i4f4.ld1 !i4f4.iff !u4f4.ld2 !ground_pos sub pop !i4f4.ld1 !i4f4.iff !i4f4.st0 !reset_input
     # compute bit_addr of (DINO_POS, y_pos)
     !front_buffer !u4f4.ld2 !u4f4.in !u4f4.shl orr x07 !dino_pos sub @const
     # clear pixel at (x_pos, y_pos - 2)
@@ -72,7 +71,7 @@ main!
       !u16.lda !u16.st2
     ignore_cactus:
 
-    x60 !delay
+    x60 !stall
   :loop !jmp
 
   game_over:

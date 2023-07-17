@@ -1,8 +1,7 @@
 @ lib/microprocessor/core.asm
-@ lib/microprocessor/math.asm
-@ lib/microprocessor/memory.asm
-@ lib/microcomputer/time.asm
-@ lib/microcomputer/input.asm
+@ lib/microprocessor/types.asm
+@ lib/microprocessor/stdlib.asm
+@ lib/microcomputer/stdio.asm
 @ lib/microcomputer/display.asm
 
 main!
@@ -19,9 +18,9 @@ main!
     # invert pixel at xy_pos
     !front_buffer !u4u4.ld2 !bit_addr !flip_bit
     # sleep
-    x03 !delay_long
-    # input = *INPUT_BUFFER
-    !input_buffer lda
+    x02 !stall_long
+    # input = getchar()
+    !getchar
     # input = (1 << prng()) & 0x0F
     # ld2 !prng_minimal st2 x01 ld3 rot x0F and
     # ignore if input is empty
