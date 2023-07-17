@@ -516,7 +516,7 @@ fn assemble(
     Org(Option<Node>),
   }
 
-  #[derive(Clone, Eq, PartialEq)]
+  #[derive(Clone, Eq, PartialEq, Hash)]
   enum Node {
     LabelRef(Label),
     Immediate(u8),
@@ -934,139 +934,159 @@ fn assemble(
   }
 
   // if every label a node depends on could be resolved, we can replace it with an immediate.
-  // if not, assume the worst case and reserve two bytes for pushing an immediate later
+  // if not, start by allocating one byte for pushing the node later. if pushing the node turns
+  // out to require more than one byte, iteratively `'bruteforce` allocation sizes until we
+  // find one that works. repeat for every node.
 
-  let mut label_definitions: HashMap<Label, u8> = HashMap::new();
-  let mut unevaluated_nodes: HashMap<u8, (Pos, Node)> = HashMap::new();
+  let mut instructions: Vec<(Pos, Instruction)>;
+  let mut allocation_sizes: HashMap<Node, usize> = HashMap::new();
 
-  let mut location_counter: u8 = 0;
-  let instructions: Vec<(Pos, Instruction)> = roots
-    .into_iter()
-    .flat_map(|root| match root.1 {
-      Root::Instruction(instruction) | Root::Dyn(Some(instruction)) => {
-        let instructions = vec![(root.0, instruction)];
-        location_counter = location_counter.wrapping_add(instructions.len() as u8);
-        instructions
-      }
+  'bruteforce: loop {
+    let mut location_counter: u8 = 0;
+    let mut label_definitions: HashMap<Label, u8> = HashMap::new();
+    let mut unevaluated_nodes: HashMap<u8, (Pos, Node)> = HashMap::new();
 
-      Root::Node(node) => match eval(&node, &label_definitions) {
-        Ok(value) => {
-          let instructions = make_push_instruction(value, &root.0);
-          location_counter = location_counter.wrapping_add(instructions.len() as u8);
-          instructions
+    instructions = roots
+      .clone()
+      .into_iter()
+      .flat_map(|root| match root.1 {
+        Root::Instruction(instruction) | Root::Dyn(Some(instruction)) => {
+          let instructions_ = vec![(root.0, instruction)];
+          location_counter = location_counter.wrapping_add(instructions_.len() as u8);
+          instructions_
         }
-        Err(_) => {
-          let instructions = vec![
-            (root.0.clone(), Instruction::Nop),
-            (root.0.clone(), Instruction::Nop),
-          ];
-          unevaluated_nodes.insert(location_counter, (root.0, node));
-          location_counter = location_counter.wrapping_add(instructions.len() as u8);
-          instructions
+
+        Root::Node(node) => match eval(&node, &label_definitions) {
+          Ok(value) => {
+            let instructions_ = make_push_instruction(value, &root.0);
+            location_counter = location_counter.wrapping_add(instructions_.len() as u8);
+            instructions_
+          }
+          Err(_) => {
+            let instructions_ = vec![
+              (root.0.clone(), Instruction::Nop);
+              allocation_sizes.get(&node).copied().unwrap_or(1)
+            ];
+            unevaluated_nodes.insert(location_counter, (root.0, node));
+            location_counter = location_counter.wrapping_add(instructions_.len() as u8);
+            instructions_
+          }
+        },
+
+        Root::LabelDef(Label {
+          scope_uid: Some(0),
+          identifier: _,
+        }) => panic!("Local label has no scope specified"),
+
+        Root::LabelDef(label) => {
+          if label_definitions.contains_key(&label) {
+            errors.push((
+              root.0,
+              Error(format!("Label `{}` has already been defined", label)),
+            ));
+          }
+          label_definitions.insert(label, location_counter);
+          vec![]
         }
-      },
 
-      Root::LabelDef(Label {
-        scope_uid: Some(0),
-        identifier: _,
-      }) => panic!("Local label has no scope specified"),
-
-      Root::LabelDef(label) => {
-        if label_definitions.contains_key(&label) {
-          errors.push((
-            root.0,
-            Error(format!("Label `{}` has already been defined", label)),
-          ));
-        }
-        label_definitions.insert(label, location_counter);
-        vec![]
-      }
-
-      Root::Org(Some(node)) => match eval(&node, &label_definitions) {
-        Ok(value) => {
-          if value >= location_counter {
-            let difference = value - location_counter;
-            location_counter += difference;
-            vec![(root.0, Instruction::Raw(0x00)); difference as usize]
-          } else {
+        Root::Org(Some(node)) => match eval(&node, &label_definitions) {
+          Ok(value) => {
+            if value >= location_counter {
+              let difference = value - location_counter;
+              location_counter += difference;
+              vec![(root.0, Instruction::Raw(0x00)); difference as usize]
+            } else {
+              errors.push((
+                root.0,
+                Error(format!(
+                  "`{}` cannot move location counter backward from `{}` to `{}`",
+                  Token::AtOrg,
+                  location_counter,
+                  value
+                )),
+              ));
+              vec![]
+            }
+          }
+          Err(label) => {
             errors.push((
               root.0,
               Error(format!(
-                "`{}` cannot move location counter backward from `{}` to `{}`",
+                "`{}` argument contains currently unresolved label `{}`",
                 Token::AtOrg,
-                location_counter,
-                value
+                label
               )),
             ));
             vec![]
           }
-        }
-        Err(label) => {
+        },
+
+        Root::Org(None) => {
           errors.push((
             root.0,
             Error(format!(
-              "`{}` argument contains currently unresolved label `{}`",
+              "`{}` argument could not be reduced to a constant expression",
               Token::AtOrg,
-              label
             )),
           ));
           vec![]
         }
-      },
 
-      Root::Org(None) => {
-        errors.push((
-          root.0,
-          Error(format!(
-            "`{}` argument could not be reduced to a constant expression",
-            Token::AtOrg,
-          )),
-        ));
-        vec![]
+        Root::Const => {
+          errors.push((
+            root.0,
+            Error(format!(
+              "`{}` argument could not be reduced to a constant expression",
+              Token::AtConst,
+            )),
+          ));
+          vec![]
+        }
+
+        Root::Dyn(None) => {
+          errors.push((
+            root.0,
+            Error(format!(
+              "`{}` argument could not be reduced to an instruction",
+              Token::AtDyn,
+            )),
+          ));
+          vec![]
+        }
+      })
+      .collect();
+
+    // poke into `instructions` and evaluate the nodes that couldn't be evaluated before
+
+    'poke: {
+      for (location_counter, node) in unevaluated_nodes.iter() {
+        let immediate = match eval(&node.1, &label_definitions) {
+          Ok(value) => value,
+          Err(label) => {
+            errors.push((
+              node.0.clone(),
+              Error(format!("Definition for label `{}` not found", label)),
+            ));
+            0x00
+          }
+        };
+
+        // if the evaluated node doesn't fit in the allocated memory, note down the right amount of
+        // memory to allocate on the next iteration of `'bruteforce` and try again
+
+        let instructions_ = make_push_instruction(immediate, &node.0);
+        if instructions_.len() > allocation_sizes.get(&node.1).copied().unwrap_or(1) {
+          allocation_sizes.insert(node.1.clone(), instructions_.len());
+          break 'poke;
+        }
+
+        for (index, instruction) in instructions_.into_iter().enumerate() {
+          instructions[*location_counter as usize + index] = instruction.clone();
+        }
       }
 
-      Root::Const => {
-        errors.push((
-          root.0,
-          Error(format!(
-            "`{}` argument could not be reduced to a constant expression",
-            Token::AtConst,
-          )),
-        ));
-        vec![]
-      }
-
-      Root::Dyn(None) => {
-        errors.push((
-          root.0,
-          Error(format!(
-            "`{}` argument could not be reduced to an instruction",
-            Token::AtDyn,
-          )),
-        ));
-        vec![]
-      }
-    })
-    .collect();
-
-  // poke into the instructions and evaluate all nodes that couldn't be evaluated before
-
-  let mut instructions = instructions;
-
-  for (location_counter, node) in unevaluated_nodes.iter() {
-    let immediate = match eval(&node.1, &label_definitions) {
-      Ok(value) => value,
-      Err(label) => {
-        errors.push((
-          node.0.clone(),
-          Error(format!("Definition for label `{}` not found", label)),
-        ));
-        0x00
-      }
-    };
-
-    for (index, instruction) in make_push_instruction(immediate, &node.0).iter().enumerate() {
-      instructions[*location_counter as usize + index] = instruction.clone();
+      // all unevaluated nodes have been evaluated, break out of the bruteforce loop
+      break 'bruteforce;
     }
   }
 
