@@ -27,9 +27,11 @@ python3 test.py asm emu random.asm
 python3 test.py asm emu hllowrld.asm
 python3 test.py asm emu counter.asm
 python3 test.py asm emu mushroom.asm
+python3 test.py asm emu terminal.asm
 python3 test.py asm emu flappy.asm
 python3 test.py asm emu life.asm
 python3 test.py asm emu dino.asm
+python3 test.py asm emu ctf.asm
 
 # incomplete programs
 python3 test.py asm emu pong.asm
@@ -38,7 +40,6 @@ python3 test.py asm emu mandelbrot.asm
 
 # test programs
 python3 test.py asm emu ore.asm
-python3 test.py asm emu terminal.asm
 python3 test.py asm emu errors.asm
 python3 test.py asm emu multiply.asm
 python3 test.py asm emu optimization.asm

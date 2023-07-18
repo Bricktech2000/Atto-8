@@ -71,13 +71,13 @@ todos:
 - [x] make `emu.rs` not overwrite on pop
 - [x] rename `input_buffer` in `emu.rs`
 - [x] figure out `emu.rs` printout
-- [ ] get rid of "input" voccabulary
-- [ ] implement reads to `0x00` as described above and fix the following programs:
+- [x] implement reads to `0x00` as described above and fix the following programs:
   - [x] hllwrld
   - [x] random
-  - [ ] pong
+  - [x] pong
   - [x] flappy
 - [ ] write documentation
+- [ ] get rid of "input" voccabulary
 
 ---
 
