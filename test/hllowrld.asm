@@ -4,14 +4,13 @@
 @ lib/microcomputer/display.asm
 
 main!
-  pop !front_buffer sts
-  !reset_input
+  pop pop !front_buffer sts
 
   loop:
-    !display_data_len :display_data !front_buffer :memcpy !call
-    !wait_input
     !display_data_len x00 !front_buffer :memset !call
-    !wait_input
+    !here !wait_char
+    !display_data_len :display_data !front_buffer :memcpy !call
+    !here !wait_null
   :loop !jmp
 
   !memset_def

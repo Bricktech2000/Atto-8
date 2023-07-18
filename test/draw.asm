@@ -5,7 +5,7 @@
 @ lib/microcomputer/display.asm
 
 main!
-  pop !front_buffer sts
+  pop pop !front_buffer sts
 
   # xF0 # prng_seed
 
@@ -31,8 +31,6 @@ main!
       ld1 x03 and pop x04 x00 iff
       # xy_vel = vel << rot
       rot !i4i4.st1
-      # reset the input buffer
-      !reset_input
     # pop input
     ignore: pop
   :loop !jmp

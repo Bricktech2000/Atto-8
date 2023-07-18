@@ -7,7 +7,7 @@
 # missing second paddle, paddle bounds checks and ball bounce randomization
 
 main!
-  pop !front_buffer sts
+  pop pop !front_buffer sts
 
   x07 !u8 # paddle_a
   x07 !u8 # paddle_b
@@ -52,8 +52,7 @@ main!
       !getchar
       ld0 x03 and pop :check_next !bcs
       !u8.ld6 x01 !u8.sub !u8.ld7 x01 !u8.add ld2 x01 and pop iff !u8.st6
-      check_next:
-      pop !reset_input
+      check_next: pop
 
       # draw pixel at (x_pos >> 4, y_pos >> 4)
       !front_buffer ld1 !bit_addr !set_bit

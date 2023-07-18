@@ -20,6 +20,7 @@ tasks:
 - [x] get rid of `adn` instruction
 - [x] create `u4` and `i4` pair types
 - [x] update programs with new types
+- [ ] implement `gets`
 - [ ] come up with microcode
 - [ ] build computer
 
@@ -47,21 +48,20 @@ constituents:
 
 terminal IO:
 
+`stdin` initialized with `mem[0x00]`
+
 reads to `0x00`:
 
 ```
-if joystick engaged:
-  return joystick state
-elif stdin not empty:
+if stdin not empty:
   return then clear stdin
 else:
-  return memory at 0x00
+  return joystick state
 ```
 
 writes to `0x00`:
 
 ```
-write to memory at 0x00
 write to stdout
 ```
 
@@ -70,13 +70,14 @@ todos:
 - [x] show SP and IP in MEM
 - [x] make `emu.rs` not overwrite on pop
 - [x] rename `input_buffer` in `emu.rs`
-- [ ] implement `gets`
 - [x] figure out `emu.rs` printout
+- [ ] get rid of "input" voccabulary
 - [ ] implement reads to `0x00` as described above and fix the following programs:
-  - [ ] hllwrld
-  - [ ] random
+  - [x] hllwrld
+  - [x] random
   - [ ] pong
-  - [ ] flappy
+  - [x] flappy
+- [ ] write documentation
 
 ---
 

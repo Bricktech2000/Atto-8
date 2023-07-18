@@ -37,8 +37,8 @@ fn main() {
 
 struct Microcomputer {
   mem: [u8; 0x100],   // memory
-  stdin: u8,          // stdin
-  stdout: u8,         // stdout
+  stdin: u8,          // standard input
+  stdout: u8,         // standard output
   mp: Microprocessor, // microprocessor
 }
 
@@ -63,6 +63,9 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
 
   // this call will switch the termital to raw mode
   let input_channel = spawn_input_channel();
+
+  mc.stdin = mc.mem[0x00];
+  mc.mem[0x00] = 0x00; // d-pad
 
   loop {
     if debug_mode {
@@ -95,12 +98,6 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
       }
 
       Ok(key) => {
-        let keyboard = match key {
-          console::Key::Char(c) => c as u8,
-          console::Key::Enter => 0x0A,
-          console::Key::Backspace => 0x08,
-          _ => 0x00,
-        };
         let d_pad_lo = match key {
           console::Key::ArrowUp => 0b0001,
           console::Key::ArrowDown => 0b0010,
@@ -115,10 +112,13 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
           console::Key::End => 0b1000,
           _ => 0b0000,
         };
-        mc.stdin = if keyboard != 0x00 {
-          keyboard
-        } else {
-          d_pad_lo | (d_pad_hi << 4)
+
+        mc.mem[0x00] = d_pad_lo | (d_pad_hi << 4);
+        mc.stdin = match key {
+          console::Key::Char(c) => c as u8,
+          console::Key::Enter => 0x0A,
+          console::Key::Backspace => 0x08,
+          _ => 0x00,
         };
       }
 
@@ -183,9 +183,6 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
 fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
   let mp = &mut mc.mp;
 
-  let instruction: u8 = mc.mem[mp.ip as usize];
-  mp.ip = mp.ip.wrapping_add(1);
-
   macro_rules! mem_read {
     ($address:expr) => {{
       let address = $address;
@@ -195,7 +192,7 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
           mc.stdin = 0x00;
           stdin
         } else {
-          mc.mem[address as usize]
+          mc.mem[0x00] // d-pad
         }
       } else {
         mc.mem[address as usize]
@@ -207,9 +204,10 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
     ($address:expr, $value:expr) => {{
       let address = $address;
       let value = $value;
-      mc.mem[address as usize] = value;
       if address == 0x00 {
         mc.stdout = value;
+      } else {
+        mc.mem[address as usize] = value;
       }
     }};
   }
@@ -229,6 +227,9 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
       value
     }};
   }
+
+  let instruction = mem_read!(mp.ip);
+  mp.ip = mp.ip.wrapping_add(1);
 
   match (instruction & 0b10000000) >> 7 {
     0b0 => {
@@ -566,30 +567,32 @@ impl std::fmt::Display for Microcomputer {
     fmt += &line_bottom;
     fmt += "\r\n";
 
-    fn bit_to_str(stdin: u8, bit: u8) -> &'static str {
-      match stdin >> bit & 0x01 {
+    fn bit_to_str(d_pad: u8, bit: u8) -> &'static str {
+      match d_pad >> bit & 0x01 {
         0b0 => "\u{2591}\u{2591}",
         0b1 => "\u{2588}\u{2588}",
         _ => unreachable!(),
       }
     }
 
+    let d_pad = self.mem[0x00];
+
     fmt += &format!(
       "    {}      {}    \r\n",
-      bit_to_str(self.stdin, 0),
-      bit_to_str(self.stdin, 4),
+      bit_to_str(d_pad, 0),
+      bit_to_str(d_pad, 4),
     );
     fmt += &format!(
       "  {}  {}  {}  {}  \r\n",
-      bit_to_str(self.stdin, 2),
-      bit_to_str(self.stdin, 3),
-      bit_to_str(self.stdin, 6),
-      bit_to_str(self.stdin, 7),
+      bit_to_str(d_pad, 2),
+      bit_to_str(d_pad, 3),
+      bit_to_str(d_pad, 6),
+      bit_to_str(d_pad, 7),
     );
     fmt += &format!(
       "    {}      {}    \r\n",
-      bit_to_str(self.stdin, 1),
-      bit_to_str(self.stdin, 5),
+      bit_to_str(d_pad, 1),
+      bit_to_str(d_pad, 5),
     );
 
     fmt += "\r\n";

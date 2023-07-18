@@ -5,7 +5,7 @@
 # using display buffer as extra memory. missing `size` and `pos` from C implementation
 
 main!
-  pop !front_buffer x10 add sts
+  pop pop !front_buffer x10 add @const sts
 
   loop:
     x80 !u4u4 for_xy: dec

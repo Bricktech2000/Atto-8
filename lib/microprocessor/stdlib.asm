@@ -29,4 +29,10 @@ popcnt! # count = popcnt(a)
   # return* count
   st0
 
+char.is_u4! x30 xor xF0 and pop
+char.to_u4! x0F and
+
+u4.is_char! xF0 and pop
+u4.to_char! x30 orr
+
 null! x00

@@ -35,8 +35,6 @@ main!
       ld1 x03 and pop x04 x00 iff
       # head_vel = vel << rot
       rot !i4i4.st4
-      # reset the input buffer
-      !reset_input
     # pop input
     ignore: pop
 

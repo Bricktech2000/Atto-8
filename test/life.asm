@@ -17,7 +17,7 @@
 # ```
 
 main!
-  pop !back_buffer sts
+  pop pop !back_buffer sts
 
   loop:
     # copy back buffer to front buffer

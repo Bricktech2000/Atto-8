@@ -4,18 +4,17 @@
 @ lib/microcomputer/display.asm
 
 main!
-  pop !front_buffer sts
-  !reset_input
+  pop pop !front_buffer sts
 
   x00 # prng_seed
 
   # seed prng by incrementing until keypress
-  wait: inc :wait !branch_input !reset_input
+  wait: inc :wait !wait_char
 
   loop:
     !prng x13 ld1 :print_byte !call
     !prng x12 ld1 :print_byte !call
-    !wait_input
+    !here !wait_char
   :loop !jmp
 
   !hex_chars_minimal_def

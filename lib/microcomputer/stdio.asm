@@ -13,6 +13,5 @@ puts_def!
     .for_char !bcc
     pop !ret
 
-branch_input! .skip swp @const !getchar buf pop iff !jmp skip.
-reset_input! !stdin x00 sta
-wait_input! !here !branch_input !reset_input
+wait_char! .skip swp @const !getchar buf pop iff !jmp skip.
+wait_null! @const .skip !getchar buf pop iff !jmp skip.

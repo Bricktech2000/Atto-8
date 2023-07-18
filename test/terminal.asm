@@ -6,7 +6,6 @@ main!
   :str_prompt :puts !call
 
   loop:
-    !null !putchar
     !getchar x01 ld1 x0A xor iff x0D sta !putchar
   :loop !jmp
 

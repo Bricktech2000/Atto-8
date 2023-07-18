@@ -5,8 +5,8 @@
 @ lib/microcomputer/display.asm
 
 main!
-  pop !front_buffer sts
-  !reset_input
+  pop pop !front_buffer sts
+  x00 # previous char
 
   xF0 # prng_seed
 
@@ -16,8 +16,8 @@ main!
   xF0 !i4f4 # y_vel
 
   loop:
-    # set y_vel to flap_vel if any button is pressed
-    !getchar buf pop !flap_vel !i4f4.ld1 !i4f4.iff !i4f4.st0 !reset_input
+    # set y_vel to flap_vel if no button was pressed previously but some button is pressed now
+    !getchar buf !i4f4.ld1 !flap_vel !i4f4.ld3 !i4f4.iff ld8 buf pop !i4f4.iff !i4f4.st1 st5
     # compute bit_addr of (BIRD_POS, y_pos)
     !front_buffer !u4f4.ld2 !u4f4.in clc !u4f4.shl orr x07 !bird_pos sub @const
     # clear pixel at (x_pos, y_pos)
