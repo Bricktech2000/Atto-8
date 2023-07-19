@@ -78,6 +78,19 @@ todos:
   - [x] flappy
 - [ ] write documentation
 - [ ] get rid of "input" voccabulary
+- [x] get rid of `to_char` and others in `stdlib.asm`
+
+monitor:
+
+- `XX:` set head to `XX`
+- `XX?` print from head to `XX`
+- `XX.` write `XX` to head and increment head
+
+on error, writes character then `'\b'`
+
+on `'\n'`, writes `'\r'` then `'\n'` then writes `XX: `
+
+on ok, writes `' '`
 
 ---
 
