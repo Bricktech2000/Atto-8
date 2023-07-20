@@ -663,7 +663,7 @@ fn assemble(
     output
   }
 
-  // returns `true` if the given root effectively just pushes a value onto the stack
+  // convenience function, returns `true` if the given root effectively just pushes a value onto the stack
   fn just_pushes(root: &Root) -> bool {
     match root {
       Root::Instruction(Instruction::Ldo(_)) => true,
@@ -718,6 +718,7 @@ fn assemble(
         [Root::Node(node), Root::Instruction(Instruction::Neg)] => Some(vec![Root::Node(
           Node::Sub(Box::new(node.clone()), Box::new(Node::Immediate(0))),
         )]),
+        [Root::Instruction(Instruction::Neg), Root::Instruction(Instruction::Neg)] => Some(vec![]),
         [Root::Node(node), Root::Instruction(Instruction::Shl)] => {
           Some(vec![Root::Node(Node::Shl(Box::new(node.clone())))])
         }
@@ -727,12 +728,23 @@ fn assemble(
         [Root::Node(node), Root::Instruction(Instruction::Not)] => {
           Some(vec![Root::Node(Node::Not(Box::new(node.clone())))])
         }
+        [Root::Instruction(Instruction::Not), Root::Instruction(Instruction::Not)] => Some(vec![]),
         [Root::Node(node), Root::Instruction(Instruction::Buf)] => {
           Some(vec![Root::Node(node.clone())])
+        }
+        [Root::Instruction(Instruction::Buf), Root::Instruction(Instruction::Buf)] => {
+          Some(vec![Root::Instruction(Instruction::Buf)])
         }
         [Root::Node(node), Root::Instruction(Instruction::Ldo(0x00))] => {
           Some(vec![Root::Node(node.clone()), Root::Node(node.clone())])
         }
+        [Root::Instruction(Instruction::Clc), Root::Instruction(Instruction::Clc)] => {
+          Some(vec![Root::Instruction(Instruction::Clc)])
+        }
+        [Root::Instruction(Instruction::Sec), Root::Instruction(Instruction::Sec)] => {
+          Some(vec![Root::Instruction(Instruction::Sec)])
+        }
+        [Root::Instruction(Instruction::Flc), Root::Instruction(Instruction::Flc)] => Some(vec![]),
         [Root::Node(_), Root::Instruction(Instruction::Pop)] => Some(vec![]),
         _ => None,
       });
@@ -812,6 +824,48 @@ fn assemble(
     });
 
     roots = match_replace(&roots, |window| match window {
+      [Root::Node(node1), Root::Instruction(Instruction::Add(0x01)), Root::Node(node2), Root::Instruction(Instruction::Add(0x01))] => {
+        Some(vec![
+          Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
+          Root::Instruction(Instruction::Add(0x01)),
+        ])
+      }
+      [Root::Node(node1), Root::Instruction(Instruction::Sub(0x01)), Root::Node(node2), Root::Instruction(Instruction::Sub(0x01))] => {
+        Some(vec![
+          Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
+          Root::Instruction(Instruction::Sub(0x01)),
+        ])
+      }
+      [Root::Node(node1), Root::Instruction(Instruction::Rot(0x01)), Root::Node(node2), Root::Instruction(Instruction::Rot(0x01))] => {
+        Some(vec![
+          Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
+          Root::Instruction(Instruction::Rot(0x01)),
+        ])
+      }
+      [Root::Node(node1), Root::Instruction(Instruction::Orr(0x01)), Root::Node(node2), Root::Instruction(Instruction::Orr(0x01))] => {
+        Some(vec![
+          Root::Node(Node::Orr(Box::new(node2.clone()), Box::new(node1.clone()))),
+          Root::Instruction(Instruction::Orr(0x01)),
+        ])
+      }
+      [Root::Node(node1), Root::Instruction(Instruction::And(0x01)), Root::Node(node2), Root::Instruction(Instruction::And(0x01))] => {
+        Some(vec![
+          Root::Node(Node::And(Box::new(node2.clone()), Box::new(node1.clone()))),
+          Root::Instruction(Instruction::And(0x01)),
+        ])
+      }
+      [Root::Node(node1), Root::Instruction(Instruction::Xor(0x01)), Root::Node(node2), Root::Instruction(Instruction::Xor(0x01))] => {
+        Some(vec![
+          Root::Node(Node::Xor(Box::new(node2.clone()), Box::new(node1.clone()))),
+          Root::Instruction(Instruction::Xor(0x01)),
+        ])
+      }
+      [Root::Node(node1), Root::Instruction(Instruction::Xnd(0x01)), Root::Node(node2), Root::Instruction(Instruction::Xnd(0x01))] => {
+        Some(vec![
+          Root::Node(Node::Xnd(Box::new(node2.clone()), Box::new(node1.clone()))),
+          Root::Instruction(Instruction::Xnd(0x01)),
+        ])
+      }
       [Root::Node(node1), root1, root2, Root::Instruction(Instruction::Ldo(0x02))]
         if just_pushes(root1) && just_pushes(root2) =>
       {
@@ -820,12 +874,6 @@ fn assemble(
           root1.clone(),
           root2.clone(),
           Root::Node(node1.clone()),
-        ])
-      }
-      [Root::Node(node1), Root::Instruction(Instruction::Rot(0x01)), Root::Node(node2), Root::Instruction(Instruction::Rot(0x01))] => {
-        Some(vec![
-          Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Rot(0x01)),
         ])
       }
       _ => None,
