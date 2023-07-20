@@ -10,7 +10,7 @@
 # - typing `':'` copies the byte from `buffer` to `head`
 # - typing `'.'` writes `buffer` to `*head` and increments `head`
 # - typing `'?'` prints the byte at `head` and increments `head`
-# - typing `'!'` jumps program execution to `head`
+# - typing `'!'` jumps program execution to `buffer`
 # - typing `'\n'` prints `"\r\n"` then prints `head`
 # - typing any other character prints `'\b'`
 # 
@@ -29,36 +29,40 @@
 main!
   pop pop !user_buffer !jmp # begin execution in `user_buffer` to save memory
 
-  line_feed:
-    ld2 st1 # copy head to buffer for `init`
-    !carriage_return !putchar # `'\n'` was just printed, print `'\r'`
-  :init !jmp # carry will be set for `init`
-
-  colon:
-    ld1 st2
+  got_colon:
+    ld1 st2 # copy `buffer` to `head`
   !space :stall_print !jmp
 
-  full_stop:
-    ld2 x00 ad4 ld2 sta
+  got_full_stop:
+    ld2 x00 ad4 ld2 sta # write `buffer` to `*head` and increment `head`
   !space :stall_print !jmp
 
-  question_mark:
-    ld2 x00 ad4 lda st1 # copy *head to buffer for `init`
-  clc :init !jmp # carry will be cleared for `init`
+  got_semi_colon:
+    !null x00 su4 pop # decrement `head`
+  got_question_mark:
+    ld2 x00 ad4 lda st1 # copy `*head` to `buffer` for `buffer_print` and increment `head`
+  :buffer_print !jmp
 
-  hex:
+  got_hex:
     x0F and # maps 0xFA..0xFF to 0x0A..0x0F
-    x0F an2 x04 ro2 orr x00 # rotate 4 bits into `buffer`
+    x04 rot x0F an2 orr # copy into most significant nibble of `buffer`
+    !null # push dummy character
+  got_backspace:
+    x04 ro2 # swap `buffer` nibbles
   :loop !jmp
 
+  got_line_feed:
+    !carriage_return !putchar # `'\n'` was just printed, print `'\r'`
+    !dollar_sign !putchar
+  got_dollar_sign:
+    ld2 st1 # copy `head` to `buffer` for `buffer_print`
+  # fall through to `buffer_print`
 
   # print `buffer` followed by an optional pipe then by a space and fall through
-  init:
-    !null !vertical_line iff # if `CF` print `null` else print `vertical_line`
+  buffer_print:
     x00 for_n:
-      x04 ro4 ld3 x0F and clc !u4.to_char !putchar_dyn
+      x0F x04 ro4 ld3 and clc !u4.to_char !putchar_dyn
     not :for_n !bcc pop
-    !putchar_dyn
     !space
 
   # print the character at the top of the stack and fall through
@@ -74,16 +78,18 @@ main!
     # print `stdin` to `stdout`
     ld0 !putchar_dyn
 
-    ld0 !backspace xor pop :loop !bcs
-    ld0 !line_feed xor pop :line_feed !bcs
-    ld0 !colon xor pop :colon !bcs
-    ld0 !full_stop xor pop :full_stop !bcs
-    ld0 !question_mark xor pop :question_mark !bcs
-    ld0 !exclamation_mark xor pop ld1 !bcs_dyn
+    !colon xor :got_colon !bcs !colon xor
+    !full_stop xor :got_full_stop !bcs !full_stop xor
+    !semi_colon xor :got_semi_colon !bcs !semi_colon xor
+    !question_mark xor :got_question_mark !bcs !question_mark xor
+    !backspace xor :got_backspace !bcs !backspace xor
+    !line_feed xor :got_line_feed !bcs !line_feed xor
+    !dollar_sign xor :got_dollar_sign !bcs !dollar_sign xor
+    !exclamation_mark xor ld1 !bcs_dyn !exclamation_mark xor
     xC6 add clc # map '0'..'9' to 0xF6..0xFF
-    x0A add :hex !bcs # branch if adding 0x0A wrapped around
+    x0A add :got_hex !bcs # branch if adding 0x0A wrapped around
     x11 sub clc # map 'A'..'F' to 0x00..0x05
-    x06 sub :hex !bcs # branch if subtracting 0x06 wrapped around
+    x06 sub :got_hex !bcs # branch if subtracting 0x06 wrapped around
     !backspace :stall_print !jmp # invalid character, print `'\b'`
 
   !user_buffer @org # memory writeable by user
@@ -93,7 +99,7 @@ main!
     !user_buffer # allocate buffer
     x00          # allocate char
     :str_AttoMon :puts !call
-    :init !jmp # carry will be set for `init`
+    :got_line_feed !jmp
     !user_buffer x10 add @org !puts_def
     # "\r\n=AttoMon=\r\n\0"
     !user_buffer x20 add @org str_AttoMon: d0D d0A d0D d0A d3D d41 d74 d74 d6F d4D d6F d6E d3D d0D d0A d00
@@ -108,5 +114,7 @@ question_mark! x3F
 carriage_return! x0D
 exclamation_mark! x21
 vertical_line! x7C
+dollar_sign! x24
+semi_colon! x3B
 
 user_buffer! xB0
