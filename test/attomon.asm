@@ -23,10 +23,11 @@
 # - `00:????????????????` prints the first 16 bytes of memory
 # - `D5:4F.B0!` restarts AttoMon but prints `OttoMon` instead
 # - `E0:CC....33....CC....33....` displays a checkerboard pattern
-# - `E0:4E.EE.E4.4A.A4.4E.` renders the text `ATTO` on the display
+# - `E0:4E.EE.E4.4A.A4.4E.` renders the text _ATTO_ on the display
+# - `E0:18.B6.4F.B6.3F.B6.E3.20.41.74.74.6F.2D.38.00.E0!` prints _Atto-8_ and returns to AttoMon
 
 main!
-  !user_buffer !jmp # start execution at `user_buffer` to save memory
+  pop pop !user_buffer !jmp # begin execution in `user_buffer` to save memory
 
   line_feed:
     ld2 st1 # copy head to buffer for `init`
@@ -85,12 +86,6 @@ main!
     x06 sub :hex !bcs # branch if subtracting 0x06 wrapped around
     !backspace :stall_print !jmp # invalid character, print `'\b'`
 
-    # x10 for_c: dec
-    #   ld0 !to_char
-    #   ld2 xor pop :hex !bcs
-    # buf :for_c !bcc pop
-    # !backspace :stall_print !jmp
-
   !user_buffer @org # memory writeable by user
     # initialization code is here to save memory
     !user_buffer sts # put stack right above user buffer
@@ -99,9 +94,9 @@ main!
     x00          # allocate char
     :str_AttoMon :puts !call
     :init !jmp # carry will be set for `init`
-    !puts_def
+    !user_buffer x10 add @org !puts_def
     # "\r\n=AttoMon=\r\n\0"
-    xD0 @org str_AttoMon: d0D d0A d0D d0A d3D d41 d74 d74 d6F d4D d6F d6E d3D d0D d0A d00
+    !user_buffer x20 add @org str_AttoMon: d0D d0A d0D d0A d3D d41 d74 d74 d6F d4D d6F d6E d3D d0D d0A d00
 
 # ASCII character codes
 space! x20
