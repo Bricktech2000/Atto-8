@@ -46,7 +46,7 @@ constituents:
 
 ---
 
-terminal IO:
+standard I/O:
 
 `stdin` initialized with `mem[0x00]`
 

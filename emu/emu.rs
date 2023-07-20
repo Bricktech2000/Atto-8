@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() != 2 {
@@ -58,26 +60,33 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
   let mut next_print_time = std::time::Instant::now();
   let mut current_clocks = 0;
   let mut status_line = "".to_string();
-  let mut stdout = "".to_string();
+  let mut stdout_string = "".to_string();
+  let mut stdin_queue = VecDeque::new();
   let mut debug_mode = false;
+  let mut show_state = false;
 
   // this call will switch the termital to raw mode
   let input_channel = spawn_input_channel();
 
   mc.stdin = mc.mem[0x00];
-  mc.mem[0x00] = 0x00; // d-pad
+  mc.mem[0x00] = 0x00; // controller
 
   loop {
     if debug_mode {
       'until_valid: loop {
         match input_channel.recv() {
-          Ok(console::Key::Escape) => {
-            debug_mode = false;
+          Ok(console::Key::Del) => {
+            stdout_string = "".to_string();
             break 'until_valid;
           }
 
           Ok(console::Key::Tab) => {
             status_line = "Single stepped".to_string();
+            break 'until_valid;
+          }
+
+          Ok(console::Key::Escape) => {
+            debug_mode = !debug_mode;
             break 'until_valid;
           }
 
@@ -92,20 +101,28 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
 
     use std::sync::mpsc::TryRecvError;
     match input_channel.try_recv() {
+      Ok(console::Key::Del) => {
+        stdout_string = "".to_string();
+      }
+
+      Ok(console::Key::Tab) => {
+        show_state = !show_state;
+      }
+
       Ok(console::Key::Escape) => {
-        debug_mode = true;
+        debug_mode = !debug_mode;
         status_line = "Force debug".to_string();
       }
 
       Ok(key) => {
-        let d_pad_lo = match key {
+        let controller_lo = match key {
           console::Key::ArrowUp => 0b0001,
           console::Key::ArrowDown => 0b0010,
           console::Key::ArrowLeft => 0b0100,
           console::Key::ArrowRight => 0b1000,
           _ => 0b0000,
         };
-        let d_pad_hi = match key {
+        let controller_hi = match key {
           console::Key::PageUp => 0b0001,
           console::Key::PageDown => 0b0010,
           console::Key::Home => 0b0100,
@@ -113,13 +130,15 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
           _ => 0b0000,
         };
 
-        mc.mem[0x00] = d_pad_lo | (d_pad_hi << 4);
-        mc.stdin = match key {
+        mc.mem[0x00] = controller_lo | (controller_hi << 4);
+        stdin_queue.push_back(match key {
           console::Key::Char(c) => c as u8,
-          console::Key::Enter => 0x0A,
           console::Key::Backspace => 0x08,
+          console::Key::Enter => 0x0A,
+          console::Key::Tab => 0x09,
+          console::Key::Del => 0x7F,
           _ => 0x00,
-        };
+        });
       }
 
       Err(TryRecvError::Empty) => (),
@@ -158,8 +177,12 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
     }
 
     if mc.stdout != 0x00 {
-      stdout.push(mc.stdout as char);
+      stdout_string.push(mc.stdout as char);
       mc.stdout = 0x00;
+    }
+
+    if mc.stdin == 0x00 {
+      mc.stdin = stdin_queue.pop_front().unwrap_or(0x00);
     }
 
     // print at most 30 times per second
@@ -168,12 +191,16 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
 
       print!("\x1B[2J"); // clear screen
       print!("\x1B[1;1H"); // move cursor to top left
-      print!("{}", mc);
-      print!("\r\n");
       print!("{:32}\r\n", status_line);
       print!("\r\n");
-      print!("_______________________________________________\r\n");
-      print!("{}", stdout);
+      if show_state || debug_mode {
+        print!("{}", mc);
+      }
+      print!(
+        "{}",
+        render_display_buffer(&mc.mem[0xE0..0x100].try_into().unwrap())
+      );
+      print!("{}", stdout_string);
       use std::io::Write;
       std::io::stdout().flush().unwrap();
     }
@@ -192,7 +219,7 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
           mc.stdin = 0x00;
           stdin
         } else {
-          mc.mem[0x00] // d-pad
+          mc.mem[0x00] // controller
         }
       } else {
         mc.mem[address as usize]
@@ -534,68 +561,6 @@ impl std::fmt::Display for Microcomputer {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     let mut fmt: String = "".to_string();
 
-    let display_buffer: &[u8; 0x20] = &self.mem[0xE0..0x100].try_into().unwrap();
-
-    // https://en.wikipedia.org/wiki/Block_Elements
-    let line_top: &str = "\u{25aa}                \u{25aa}\r\n";
-    let line_bottom: &str = "\u{25aa}                \u{25aa}\r\n";
-    let col_left: &str = " ";
-    let col_right: &str = " ";
-
-    fmt += &line_top;
-    for y in (0..0x10).step_by(2) {
-      fmt += &col_left;
-      for x in 0..0x10 {
-        let mut pixel_pair = 0;
-        for y2 in 0..2 {
-          let address: u8 = (x >> 0x03) | ((y + y2) << 0x01);
-          let pixel = display_buffer[address as usize] >> (0x07 - (x & 0x07)) & 0x01;
-          pixel_pair |= pixel << y2;
-        }
-        fmt += match pixel_pair {
-          0b00 => " ",
-          0b01 => "\u{2580}",
-          0b10 => "\u{2584}",
-          0b11 => "\u{2588}",
-          _ => unreachable!(),
-        };
-      }
-      fmt += &col_right;
-      fmt += "\r\n";
-    }
-
-    fmt += &line_bottom;
-    fmt += "\r\n";
-
-    fn bit_to_str(d_pad: u8, bit: u8) -> &'static str {
-      match d_pad >> bit & 0x01 {
-        0b0 => "\u{2591}\u{2591}",
-        0b1 => "\u{2588}\u{2588}",
-        _ => unreachable!(),
-      }
-    }
-
-    let d_pad = self.mem[0x00];
-
-    fmt += &format!(
-      "    {}      {}    \r\n",
-      bit_to_str(d_pad, 0),
-      bit_to_str(d_pad, 4),
-    );
-    fmt += &format!(
-      "  {}  {}  {}  {}  \r\n",
-      bit_to_str(d_pad, 2),
-      bit_to_str(d_pad, 3),
-      bit_to_str(d_pad, 6),
-      bit_to_str(d_pad, 7),
-    );
-    fmt += &format!(
-      "    {}      {}    \r\n",
-      bit_to_str(d_pad, 1),
-      bit_to_str(d_pad, 5),
-    );
-
-    fmt += "\r\n";
     fmt += "MEM\r\n";
 
     for y in 0..0x10 {
@@ -624,6 +589,7 @@ impl std::fmt::Display for Microcomputer {
 
     fmt += "\r\n";
     fmt += &format!("{}", self.mp);
+    fmt += "\r\n";
 
     write!(f, "{}", fmt)
   }
@@ -637,4 +603,73 @@ impl std::fmt::Display for Microprocessor {
       self.ip, self.sp, self.cf as u8,
     )
   }
+}
+
+fn render_display_buffer(display_buffer: &[u8; 0x20]) -> String {
+  let mut fmt = "".to_string();
+
+  // https://en.wikipedia.org/wiki/Block_Elements
+  let line_top: &str = "\u{25aa}                \u{25aa}\r\n";
+  let line_bottom: &str = "\u{25aa}                \u{25aa}\r\n";
+  let col_left: &str = " ";
+  let col_right: &str = " ";
+
+  fmt += &line_top;
+  for y in (0..0x10).step_by(2) {
+    fmt += &col_left;
+    for x in 0..0x10 {
+      let mut pixel_pair = 0;
+      for y2 in 0..2 {
+        let address: u8 = (x >> 0x03) | ((y + y2) << 0x01);
+        let pixel = display_buffer[address as usize] >> (0x07 - (x & 0x07)) & 0x01;
+        pixel_pair |= pixel << y2;
+      }
+      fmt += match pixel_pair {
+        0b00 => " ",
+        0b01 => "\u{2580}",
+        0b10 => "\u{2584}",
+        0b11 => "\u{2588}",
+        _ => unreachable!(),
+      };
+    }
+    fmt += &col_right;
+    fmt += "\r\n";
+  }
+
+  fmt += &line_bottom;
+  fmt += "\r\n";
+
+  fmt
+}
+
+fn _render_controller(controller: u8) -> String {
+  let mut fmt = "".to_string();
+
+  fn bit_to_str(controller: u8, bit: u8) -> &'static str {
+    match controller >> bit & 0x01 {
+      0b0 => "\u{2591}\u{2591}",
+      0b1 => "\u{2588}\u{2588}",
+      _ => unreachable!(),
+    }
+  }
+
+  fmt += &format!(
+    "    {}      {}    \r\n",
+    bit_to_str(controller, 0),
+    bit_to_str(controller, 4),
+  );
+  fmt += &format!(
+    "  {}  {}  {}  {}  \r\n",
+    bit_to_str(controller, 2),
+    bit_to_str(controller, 3),
+    bit_to_str(controller, 6),
+    bit_to_str(controller, 7),
+  );
+  fmt += &format!(
+    "    {}      {}    \r\n",
+    bit_to_str(controller, 1),
+    bit_to_str(controller, 5),
+  );
+
+  fmt
 }
