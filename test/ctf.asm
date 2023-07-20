@@ -1,6 +1,7 @@
 @ lib/microprocessor/core.asm
 @ lib/microprocessor/string.asm
 @ lib/microprocessor/stdlib.asm
+@ lib/microcomputer/display.asm
 @ lib/microcomputer/stdio.asm
 
 # Challenge Description
@@ -13,6 +14,8 @@
 # `paload!` below and use some Vim magic to format it so it assembles correctly
 
 main!
+  pop pop !front_buffer sts
+
   xF0 # prng_seed
 
   # loop through payload
@@ -57,4 +60,4 @@ source!
   exit:
 
 payload!
- dB2 d52 d1D dFF d68 dB5 d6E d24 d64 dF3 dF9 d35 dA0 d1E d71 d95 d4C d8D dDA d76 d82 d2E d70 dD1 d30 dE6 d92 d8F d96 dA5 dB7 d09 dCA dFA dA2 d8E d4A d5B dD4 d99 d50 dD1 dB2 d94 d0A dC7 d81 dD5 d1D d77 dEF d49 dE4 d3A dD0 d3A d40 dF4 d2A d88 d20 d45 d35 dF7 d27 d44 dBE d27 dCC dA8 d08 d99 d51 d24 d5E dF1 dEC d07 d43 dE7 dA0 d8D d04 d48 dB3 dB3 d85 d91 d0F d1E d6F dF3 dA1 d00 dCF dB1 d05 d14 d73 d7E dA8 d33 d4D d63 dED d2A dC1 dBE dC2 d10 dC5 d7B dCA dB1 d95 d9B d11 dD5 dB3 d0F d95 dDE dED dFD 
+  dB7 d57 d12 dFF d6F dB5 d6E d24 d64 dF3 dF9 d35 dA0 d1E d7C d90 d4C d8D dDA d76 d82 d2E d70 dD1 d30 dE6 d92 d8F d96 dA5 dB7 d09 dCA dFA dA2 d8E d4A d5B dD4 d99 d50 dD1 dB2 d94 d0A dC7 d81 dD5 d1D d77 dEF d49 dE4 d3A dD0 d3A d40 dF4 d2A d88 d20 d45 d35 dF7 d27 d44 dBE d27 dCC dA8 d08 d99 d51 d24 d5E dF1 dEC d07 d43 dE7 dA0 d8D d04 d48 dB3 dB3 d85 d91 d0F d1E d6F dF3 dA1 d00 dCF dB1 d05 d14 d73 d7E dA8 d33 d4D d63 dED d2A dC1 dBE dC2 d10 dC5 d7B dCA dB1 d95 d9B d11 dD5 dB3 d0F d95 dDE dED dFD
