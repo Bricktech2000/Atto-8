@@ -32,6 +32,7 @@ python3 test.py asm emu flappy.asm
 python3 test.py asm emu life.asm
 python3 test.py asm emu dino.asm
 python3 test.py asm emu ctf.asm
+python3 test.py asm emu fade.asm
 
 # incomplete programs
 python3 test.py asm emu pong.asm
