@@ -4,14 +4,16 @@
 
 # AttoMon, the Atto-8 hex monitor
 #
-# `head` is a pointer. it can be thought of as a "read/write head"
-# commands are as follows:
-# - typing `/[0-9A-F]{2}/` saves the byte to `buffer`, a one-byte buffer
-# - typing `':'` copies the byte from `buffer` to `head`
-# - typing `'.'` writes `buffer` to `*head` and increments `head`
-# - typing `'?'` prints the byte at `head` and increments `head`
-# - typing `'!'` jumps program execution to `buffer`
+# `head` is a pointer; it can be thought of as a "read/write head".
+# `buffer` is a one-byte buffer. commands are as follows:
+# - typing `/[0-9A-F]{2}/` saves the byte to `buffer`
+# - typing `':'` copies the byte from `buffer` into `head`
+# - typing `'.'` writes `buffer` to `*head` then increments `head`
+# - typing `';'` decrements `head` then prints the byte at `head`
+# - typing `'?'` prints the byte at `head` then increments `head`
+# - typing `'\b'` swaps the nibbles in `buffer`
 # - typing `'\n'` prints `"\r\n"` then prints `head`
+# - typing `'!'` jumps program execution to `buffer`
 # - typing any other character prints `'\b'`
 # 
 #
@@ -30,38 +32,39 @@ main!
   pop pop !user_buffer !jmp # begin execution in `user_buffer` to save memory
 
   got_colon:
-    ld1 st2 # copy `buffer` to `head`
+    ld2 st1 # copy `buffer` to `head`
   !space :stall_print !jmp
 
   got_full_stop:
-    ld2 x00 ad4 ld2 sta # write `buffer` to `*head` and increment `head`
+    ld1 ld3 sta x00 ad2 # write `buffer` to `*head` and increment `head`
   !space :stall_print !jmp
 
   got_semi_colon:
-    !null x00 su4 pop # decrement `head`
+    x00 su2 # decrement `head`, which clears the carry flag
   got_question_mark:
-    ld2 x00 ad4 lda st1 # copy `*head` to `buffer` for `buffer_print` and increment `head`
+    ld1 lda st2 x00 ad2 # copy `*head` to `buffer` for `buffer_print` and increment `head`
   :buffer_print !jmp
 
   got_hex:
     x0F and # maps 0xFA..0xFF to 0x0A..0x0F
-    x04 rot x0F an2 orr # copy into most significant nibble of `buffer`
-    !null # push dummy character
+    x04 x0F an4 rot or2 # copy into most significant nibble of `buffer`
+    !null # previous character was consumed, push dummy character
   got_backspace:
+    pop # pop previous character
     x04 ro2 # swap `buffer` nibbles
-  :loop !jmp
+  :getchar_loop !jmp # do not pop previous character again
 
+  # fall through to `buffer_print`
   got_line_feed:
     !carriage_return !putchar # `'\n'` was just printed, print `'\r'`
     !dollar_sign !putchar
   got_dollar_sign:
-    ld2 st1 # copy `head` to `buffer` for `buffer_print`
-  # fall through to `buffer_print`
+    ld1 st2 # copy `head` to `buffer` for `buffer_print`
 
-  # print `buffer` followed by an optional pipe then by a space and fall through
+  # print `buffer` followed by a space and fall through
   buffer_print:
     x00 for_n:
-      x0F x04 ro4 ld3 and clc !u4.to_char !putchar_dyn
+      x04 ro4 ld3 x0F and clc !u4.to_char !putchar_dyn
     not :for_n !bcc pop
     !space
 
@@ -70,33 +73,36 @@ main!
     xFF !stall # small delay for visual feedback to user
     !putchar_dyn
 
-  loop:
-    # pop previous character and poll `stdin`
-    pop !getchar
+  # pop previous character and fall through
+  pop_loop:
+    pop
+
+  getchar_loop:
+    !getchar
     # ignore empty `stdin`
-    buf :loop !bcs
+    buf :pop_loop !bcs
     # print `stdin` to `stdout`
     ld0 !putchar_dyn
 
     !colon xor :got_colon !bcs !colon xor
     !full_stop xor :got_full_stop !bcs !full_stop xor
     !semi_colon xor :got_semi_colon !bcs !semi_colon xor
-    !question_mark xor :got_question_mark !bcs !question_mark xor
+    !question_mark xor :got_question_mark !bcs !question_mark xor # TODO
     !backspace xor :got_backspace !bcs !backspace xor
     !line_feed xor :got_line_feed !bcs !line_feed xor
     !dollar_sign xor :got_dollar_sign !bcs !dollar_sign xor
-    !exclamation_mark xor ld1 !bcs_dyn !exclamation_mark xor
-    xC6 add clc # map '0'..'9' to 0xF6..0xFF
+    !exclamation_mark xor ld2 !bcs_dyn !exclamation_mark xor
+    x3A sub clc # map '0'..='9' to 0xF6..=0xFF
     x0A add :got_hex !bcs # branch if adding 0x0A wrapped around
-    x11 sub clc # map 'A'..'F' to 0x00..0x05
+    x11 sub clc # map 'A'..='F' to 0x00..=0x05
     x06 sub :got_hex !bcs # branch if subtracting 0x06 wrapped around
     !backspace :stall_print !jmp # invalid character, print `'\b'`
 
   !user_buffer @org # memory writeable by user
     # initialization code is here to save memory
     !user_buffer sts # put stack right above user buffer
-    !user_buffer # allocate head
     !user_buffer # allocate buffer
+    !user_buffer # allocate head
     x00          # allocate char
     :str_AttoMon :puts !call
     :got_line_feed !jmp
