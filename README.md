@@ -27,6 +27,7 @@ python3 test.py asm emu random.asm
 python3 test.py asm emu hllowrld.asm
 python3 test.py asm emu counter.asm
 python3 test.py asm emu mushroom.asm
+python3 test.py asm emu bad\ apple.asm
 python3 test.py asm emu attomon.asm
 python3 test.py asm emu flappy.asm
 python3 test.py asm emu life.asm
