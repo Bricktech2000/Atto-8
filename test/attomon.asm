@@ -16,7 +16,7 @@
 # - typing `'\n'` prints `"\r\n"` then prints `head`
 # - typing `'!'` jumps program execution to `buffer`
 # - typing any other character prints `'\b'`
-# 
+#
 #
 # thing to try:
 # - `00:45.` prints `E` to `stdout`
@@ -83,7 +83,7 @@ main!
     # ignore empty `stdin`
     !char.null xor :pop_loop !bcs
     # print `stdin` to `stdout`
-    ld0 !putchar_dyn
+    !char.ld0 !putchar_dyn
 
     !char.colon xor :got_colon !bcs !char.colon xor
     !char.full_stop xor :got_full_stop !bcs !char.full_stop xor
@@ -93,10 +93,10 @@ main!
     !char.line_feed xor :got_line_feed !bcs !char.line_feed xor
     !char.dollar_sign xor :got_dollar_sign !bcs !char.dollar_sign xor
     !char.exclamation_mark xor ld2 !bcs_dyn !char.exclamation_mark xor
-    x3A sub clc # map '0'..='9' to 0xF6..=0xFF
-    x0A add :got_hex !bcs # branch if adding 0x0A wrapped around
-    x11 sub clc # map 'A'..='F' to 0x00..=0x05
-    x06 sub :got_hex !bcs # branch if subtracting 0x06 wrapped around
+    x3A !char.sub clc # map '0'..='9' to 0xF6..=0xFF
+    x0A !char.add :got_hex !bcs # branch if adding 0x0A wrapped around
+    x11 !char.sub clc # map 'A'..='F' to 0x00..=0x05
+    x06 !char.sub :got_hex !bcs # branch if subtracting 0x06 wrapped around
     !char.backspace :stall_print !jmp # invalid character, print `'\b'`
 
   !user_buffer @org # memory writeable by user

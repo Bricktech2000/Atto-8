@@ -10,12 +10,12 @@ strlen_def!
 
 strcmp_def!
   strcmp: clc # cpm = strcmp(*str1, *str2)
-    ld2 ld2 while.
+    ld2 ld2 loop.
       # break if *str1 == '\0'
       ld1 lda !char.null xor .break !bcs
       # break if *str1 != *str2
       ld1 lda xor .break !bcc pop
-    swp inc swp inc .while !jmp break.
+    swp inc swp inc .loop !jmp break.
     # compute and store *str1 - *str2
     pop lda swp lda clc sub
   # return*

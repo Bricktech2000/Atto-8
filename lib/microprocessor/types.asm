@@ -16,6 +16,7 @@ i4f4! !i8 # i4f4 n = i4f4(u4 fr, i4 in)
 i8f8! !i16 # i8f8 n = i8f8(u8 fr, i8 in)
 c4f4m4f4! !i16 # c4f4m4f4 n = c4f4m4f4(i4f4 im, i4f8 re)
 c8f8m8f8! !i32 # c8f8m8f8 n = c8f8m8f8(i8f8 im, i8f8 re)
+char! # char n = char(u8 n)
 
 u8.0! x00
 u16.0! x00 x00
@@ -182,6 +183,7 @@ i4f4.add! !i8.add
 i8f8.add! !i16.add
 c4f4m4f4.add! ad4 ad4 clc ad4 ad4
 c8f8m8f8.add! ad4 ad4 clc ad4 ad4
+char.add! !u8.add
 
 u8.sub! sub
 u16.sub! su2 su2
@@ -201,6 +203,7 @@ i4f4.sub! !i8.sub
 i8f8.sub! !i16.sub
 c4f4m4f4.sub! su4 su4 clc su4 su4
 c8f8m8f8.sub! su4 su4 clc su4 su4
+char.sub! !u8.sub
 
 u8.iff! iff
 u16.iff! if2 if2
@@ -220,6 +223,7 @@ i4f4.iff! !i8.iff
 i8f8.iff! !i16.iff
 c4f4m4f4.iff! !i16.iff
 c8f8m8f8.iff! !i32.iff
+char.iff! !u8.iff
 
 u8.pop! pop
 u16.pop! pop pop
@@ -239,6 +243,7 @@ i4f4.pop! !i8.pop
 i8f8.pop! !i16.pop
 c4f4m4f4.pop! !i16.pop
 c8f8m8f8.pop! !i32.pop
+char.pop! !u8.pop
 
 u8.shl! shl
 u16.shl! shl ld1 shl st1
@@ -291,6 +296,7 @@ u4f4.lda! !u8.lda
 u8f8.lda! !u16.lda
 i4f4.lda! !i8.lda
 i8f8.lda! !i16.lda
+char.lda! !u8.lda
 
 u8.sta! sta
 u16.sta! ld0 sta swp inc sta
@@ -308,6 +314,7 @@ u4f4.sta! !u8.sta
 u8f8.sta! !u16.sta
 i4f4.sta! !i8.sta
 i8f8.sta! !i16.sta
+char.sta! !u8.sta
 
 u8.ld0!   ld0
 u8.ld0+1! ld1
@@ -926,6 +933,70 @@ c8f8m8f8.ld2+1! !i32.ld2+1
 c8f8m8f8.ld2+2! !i32.ld2+2
 c8f8m8f8.ld2+3! !i32.ld2+3
 c8f8m8f8.ld3!   !i32.ld3
+char.ld0!   !u8.ld0
+char.ld0+1! !u8.ld0+1
+char.ld0+2! !u8.ld0+2
+char.ld0+3! !u8.ld0+3
+char.ld1!   !u8.ld1
+char.ld1+1! !u8.ld1+1
+char.ld1+2! !u8.ld1+2
+char.ld1+3! !u8.ld1+3
+char.ld2!   !u8.ld2
+char.ld2+1! !u8.ld2+1
+char.ld2+2! !u8.ld2+2
+char.ld2+3! !u8.ld2+3
+char.ld3!   !u8.ld3
+char.ld3+1! !u8.ld3+1
+char.ld3+2! !u8.ld3+2
+char.ld3+3! !u8.ld3+3
+char.ld4!   !u8.ld4
+char.ld4+1! !u8.ld4+1
+char.ld4+2! !u8.ld4+2
+char.ld4+3! !u8.ld4+3
+char.ld5!   !u8.ld5
+char.ld5+1! !u8.ld5+1
+char.ld5+2! !u8.ld5+2
+char.ld5+3! !u8.ld5+3
+char.ld6!   !u8.ld6
+char.ld6+1! !u8.ld6+1
+char.ld6+2! !u8.ld6+2
+char.ld6+3! !u8.ld6+3
+char.ld7!   !u8.ld7
+char.ld7+1! !u8.ld7+1
+char.ld7+2! !u8.ld7+2
+char.ld7+3! !u8.ld7+3
+char.ld8!   !u8.ld8
+char.ld8+1! !u8.ld8+1
+char.ld8+2! !u8.ld8+2
+char.ld8+3! !u8.ld8+3
+char.ld9!   !u8.ld9
+char.ld9+1! !u8.ld9+1
+char.ld9+2! !u8.ld9+2
+char.ld9+3! !u8.ld9+3
+char.ldA!   !u8.ldA
+char.ldA+1! !u8.ldA+1
+char.ldA+2! !u8.ldA+2
+char.ldA+3! !u8.ldA+3
+char.ldB!   !u8.ldB
+char.ldB+1! !u8.ldB+1
+char.ldB+2! !u8.ldB+2
+char.ldB+3! !u8.ldB+3
+char.ldC!   !u8.ldC
+char.ldC+1! !u8.ldC+1
+char.ldC+2! !u8.ldC+2
+char.ldC+3! !u8.ldC+3
+char.ldD!   !u8.ldD
+char.ldD+1! !u8.ldD+1
+char.ldD+2! !u8.ldD+2
+char.ldD+3! !u8.ldD+3
+char.ldE!   !u8.ldE
+char.ldE+1! !u8.ldE+1
+char.ldE+2! !u8.ldE+2
+char.ldE+3! !u8.ldE+3
+char.ldF!   !u8.ldF
+char.ldF+1! !u8.ldF+1
+char.ldF+2! !u8.ldF+2
+char.ldF+3! !u8.ldF+3
 
 u8.st0!   st0
 u8.st0+1! st1
@@ -1544,6 +1615,70 @@ c8f8m8f8.st2+1! !i32.st2+1
 c8f8m8f8.st2+2! !i32.st2+2
 c8f8m8f8.st2+3! !i32.st2+3
 c8f8m8f8.st3!   !i32.st3
+char.st0!   !u8.st0
+char.st0+1! !u8.st0+1
+char.st0+2! !u8.st0+2
+char.st0+3! !u8.st0+3
+char.st1!   !u8.st1
+char.st1+1! !u8.st1+1
+char.st1+2! !u8.st1+2
+char.st1+3! !u8.st1+3
+char.st2!   !u8.st2
+char.st2+1! !u8.st2+1
+char.st2+2! !u8.st2+2
+char.st2+3! !u8.st2+3
+char.st3!   !u8.st3
+char.st3+1! !u8.st3+1
+char.st3+2! !u8.st3+2
+char.st3+3! !u8.st3+3
+char.st4!   !u8.st4
+char.st4+1! !u8.st4+1
+char.st4+2! !u8.st4+2
+char.st4+3! !u8.st4+3
+char.st5!   !u8.st5
+char.st5+1! !u8.st5+1
+char.st5+2! !u8.st5+2
+char.st5+3! !u8.st5+3
+char.st6!   !u8.st6
+char.st6+1! !u8.st6+1
+char.st6+2! !u8.st6+2
+char.st6+3! !u8.st6+3
+char.st7!   !u8.st7
+char.st7+1! !u8.st7+1
+char.st7+2! !u8.st7+2
+char.st7+3! !u8.st7+3
+char.st8!   !u8.st8
+char.st8+1! !u8.st8+1
+char.st8+2! !u8.st8+2
+char.st8+3! !u8.st8+3
+char.st9!   !u8.st9
+char.st9+1! !u8.st9+1
+char.st9+2! !u8.st9+2
+char.st9+3! !u8.st9+3
+char.stA!   !u8.stA
+char.stA+1! !u8.stA+1
+char.stA+2! !u8.stA+2
+char.stA+3! !u8.stA+3
+char.stB!   !u8.stB
+char.stB+1! !u8.stB+1
+char.stB+2! !u8.stB+2
+char.stB+3! !u8.stB+3
+char.stC!   !u8.stC
+char.stC+1! !u8.stC+1
+char.stC+2! !u8.stC+2
+char.stC+3! !u8.stC+3
+char.stD!   !u8.stD
+char.stD+1! !u8.stD+1
+char.stD+2! !u8.stD+2
+char.stD+3! !u8.stD+3
+char.stE!   !u8.stE
+char.stE+1! !u8.stE+1
+char.stE+2! !u8.stE+2
+char.stE+3! !u8.stE+3
+char.stF!   !u8.stF
+char.stF+1! !u8.stF+1
+char.stF+2! !u8.stF+2
+char.stF+3! !u8.stF+3
 
 u4u4.fst! xF0 and x04 rot # u8 first = u4u4.fst(u4u4 n)
 u4u4.snd! x0F and # u8 second = u4u4.snd(u4u4 n)
