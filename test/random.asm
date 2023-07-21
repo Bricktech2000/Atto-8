@@ -1,10 +1,11 @@
 @ lib/microprocessor/core.asm
+@ lib/microprocessor/types.asm
 @ lib/microprocessor/stdlib.asm
 @ lib/microcomputer/stdio.asm
 @ lib/microcomputer/display.asm
 
 main!
-  pop pop !front_buffer sts
+  pop pop !display_buffer sts
 
   x00 # prng_seed
 
@@ -22,7 +23,7 @@ main!
 
   seed: d00
 
-  !front_buffer @org
+  !display_buffer @org
     # dEE dEC dEC dAA d8A dAE # PRNG
     dE4 dEC dCE dAA dAA dAC # RAND
     d00 d00 dFF dFF         # ----

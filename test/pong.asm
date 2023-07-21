@@ -7,7 +7,7 @@
 # missing second paddle, paddle bounds checks and ball bounce randomization
 
 main!
-  pop pop !front_buffer sts
+  pop pop !display_buffer sts
 
   x07 !u8 # paddle_a
   x07 !u8 # paddle_b
@@ -18,7 +18,7 @@ main!
 
   loop:
     # erase pixel at (x_pos >> 4, y_pos >> 4)
-    !front_buffer !u4f4.ld4 !u4f4.in !u4f4.ld3 !u4f4.in x04 rot orr !u4u4 !bit_addr !clear_bit
+    !display_buffer !u4f4.ld4 !u4f4.in !u4f4.ld3 !u4f4.in x04 rot orr !u4u4 !bit_addr !clear_bit
 
     # x_pos += x_vel
     !u8u8.ld1 !u4f4.add !u4f4.st3
@@ -34,13 +34,13 @@ main!
       # this only checks paddle bounces if the ball is on either side of the screen
       !u4f4.ld4 !u4f4.ld0 x01 rot xor xE0 and pop :ignore_check !bcc
       # if the byte in memory where the ball is not 0, game over
-      !front_buffer !u4u4.ld1 x03 !ror clc add lda buf pop :game_over !bcs
+      !display_buffer !u4u4.ld1 x03 !ror clc add lda buf pop :game_over !bcs
       # otherwise, x_vel = -x_vel
       !u4f4.ld3 !u4f4.neg !u4f4.st3
       ignore_check:
 
       # draw paddle centered at paddle_b
-      !front_buffer !u8.ld6 x01 rot clc add inc
+      !display_buffer !u8.ld6 x01 rot clc add inc
       ld0 x04 sub x00 sta
       ld0 x02 sub x01 sta
       ld0         x01 sta
@@ -55,7 +55,7 @@ main!
       check_next: pop
 
       # draw pixel at (x_pos >> 4, y_pos >> 4)
-      !front_buffer ld1 !bit_addr !set_bit
+      !display_buffer ld1 !bit_addr !set_bit
     # pop (x_pos >> 4, y_pos >> 4) from the stack
     !u4u4.pop
 
@@ -66,7 +66,7 @@ main!
   game_over:
     !hlt
 
-  # !front_buffer @org
+  # !display_buffer @org
   # d80 d00
   # d80 d00
   # d80 d00

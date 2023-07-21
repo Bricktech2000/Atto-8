@@ -1,15 +1,16 @@
 @ lib/microprocessor/core.asm
+@ lib/microprocessor/types.asm
 @ lib/microprocessor/string.asm
 @ lib/microcomputer/stdio.asm
 @ lib/microcomputer/display.asm
 
 main!
-  pop pop !front_buffer sts
+  pop pop !display_buffer sts
 
   loop:
-    !display_data_len x00 !front_buffer :memset !call
+    !display_data_len x00 !display_buffer :memset !call
     !here !wait_char
-    !display_data_len :display_data !front_buffer :memcpy !call
+    !display_data_len :display_data !display_buffer :memcpy !call
     !here !wait_null
   :loop !jmp
 

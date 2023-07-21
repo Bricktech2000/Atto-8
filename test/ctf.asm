@@ -14,7 +14,7 @@
 # `paload!` below and use some Vim magic to format it so it assembles correctly
 
 main!
-  pop pop !front_buffer sts
+  pop pop !display_buffer sts
 
   xF0 # prng_seed
 

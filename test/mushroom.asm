@@ -4,7 +4,7 @@
 main!
   pop pop !hlt
 
-  !front_buffer @org
+  !display_buffer @org
   d07 dE0
   d18 d78
   d38 d7C

@@ -3,7 +3,7 @@
 @ lib/microcomputer/display.asm
 
 main!
-  pop pop !front_buffer sts
+  pop pop !display_buffer sts
 
   !u64.0 loop:
     x00 ld8 :print_byte !call

@@ -1,4 +1,5 @@
 @ lib/microprocessor/core.asm
+@ lib/microprocessor/types.asm
 @ lib/microprocessor/string.asm
 
 main!

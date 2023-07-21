@@ -5,7 +5,7 @@
 # using display buffer as extra memory. missing `size` and `pos` from C implementation
 
 main!
-  pop pop !front_buffer x10 add @const sts
+  pop pop !display_buffer x10 add @const sts
 
   loop:
     x80 !u4u4 for_xy: dec
@@ -16,7 +16,7 @@ main!
       x07 !i4f4 # pos_im
       !i4f4.add
       !is_in_set x00 shl @dyn
-      !front_buffer x10 add ld2 !bit_addr !store_bit
+      !display_buffer x10 add ld2 !bit_addr !store_bit
     buf :for_xy !bcc pop
   :loop !jmp
 

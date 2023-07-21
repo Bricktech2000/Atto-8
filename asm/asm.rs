@@ -331,7 +331,7 @@ fn assemble(
         if macro_definitions.contains_key(&macro_) {
           errors.push((
             token.0.clone(),
-            Error(format!("Macro `{}` has already been defined", macro_)),
+            Error(format!("Duplicate macro definition `{}`", macro_)),
           ));
         }
         current_macro = Some(macro_.clone());
@@ -703,8 +703,17 @@ fn assemble(
 
     roots =
       match_replace(&roots, |window| match window {
+        [Root::Node(Node::Immediate(0x00)), Root::Instruction(Instruction::Xor(0x01))] => {
+          Some(vec![Root::Instruction(Instruction::Buf)])
+        }
+        [Root::Node(Node::Immediate(0x00)), Root::Instruction(Instruction::Add(0x01))] => {
+          Some(vec![])
+        }
         [Root::Node(Node::Immediate(0x01)), Root::Instruction(Instruction::Add(0x01))] => {
           Some(vec![Root::Instruction(Instruction::Inc)])
+        }
+        [Root::Node(Node::Immediate(0x00)), Root::Instruction(Instruction::Sub(0x01))] => {
+          Some(vec![])
         }
         [Root::Node(Node::Immediate(0x01)), Root::Instruction(Instruction::Sub(0x01))] => {
           Some(vec![Root::Instruction(Instruction::Dec)])
@@ -728,7 +737,9 @@ fn assemble(
         [Root::Node(node), Root::Instruction(Instruction::Not)] => {
           Some(vec![Root::Node(Node::Not(Box::new(node.clone())))])
         }
-        [Root::Instruction(Instruction::Not), Root::Instruction(Instruction::Not)] => Some(vec![]),
+        [Root::Instruction(Instruction::Not), Root::Instruction(Instruction::Not)] => {
+          Some(vec![Root::Instruction(Instruction::Buf)])
+        }
         [Root::Node(node), Root::Instruction(Instruction::Buf)] => {
           Some(vec![Root::Node(node.clone())])
         }
@@ -1030,7 +1041,7 @@ fn assemble(
           if label_definitions.contains_key(&label) {
             errors.push((
               root.0,
-              Error(format!("Label `{}` has already been defined", label)),
+              Error(format!("Duplicate label definition `{}`", label)),
             ));
           }
           label_definitions.insert(label, location_counter);

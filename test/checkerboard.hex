@@ -2,7 +2,7 @@
 #   nop @dyn
 #   start:
 #     x55 ld0 ld0 not ld0
-#   lds !front_buffer xor pop :start :stop iff !jmp
+#   lds !display_buffer xor pop :start :stop iff !jmp
 #
 #   stop:
 #     !hlt

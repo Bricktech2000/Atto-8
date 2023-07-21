@@ -1,5 +1,4 @@
-front_buffer! xE0 @const
-back_buffer! xC0 @const
+display_buffer! xE0 @const
 
 bit_addr! clc # (rot, addr) = bit_addr(index, buffer)
   # addr = index // 8 + buffer
@@ -106,8 +105,8 @@ print_char_def!
       ld4 swp !nibble_addr !load_nibble
       # dst = i * 4 + pos // 4 * 16 + pos % 4
       ld1 x02 rot ld6 x02 rot xF0 and clc add ld6 x03 and clc add
-      # store_nibble(nibble_addr(dst, &FRONT_BUFFER), nibble)
-      !front_buffer swp !nibble_addr !store_nibble
+      # store_nibble(nibble_addr(dst, &DISPLAY_BUFFER), nibble)
+      !display_buffer swp !nibble_addr !store_nibble
     buf .for_i !bcc pop
   # return*
   !rt3
@@ -131,12 +130,10 @@ print_byte_minimal_def!
       swp ld4 x04 !ror x0F and !nibble_addr !load_nibble
       # row = (MSN << 4) | LSN
       x04 rot orr
-      # dst = &FRONT_BUFFER + addr + row * 2
-      ld4 !front_buffer add ld2 x01 rot add
+      # dst = &DISPLAY_BUFFER + addr + row * 2
+      ld4 !display_buffer add ld2 x01 rot add
       # *dst = row
       swp sta
     buf .for_row !bcc pop
   # return*
   !rt2
-
-

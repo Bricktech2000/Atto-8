@@ -1,25 +1,25 @@
 strlen_def!
   strlen: # len = strlen(*str)
-    ld1 for_c:
-      ld0 lda buf pop
-    inc :for_c !bcc
+    ld1 for_c.
+      ld0 lda !char.null xor pop
+    inc .for_c !bcc
     # compute and store length
     ld2 sub
-    # return*
-    st1 !rt0
+  # return*
+  st1 !rt0
 
 strcmp_def!
   strcmp: clc # cpm = strcmp(*str1, *str2)
-    ld2 ld2 while:
+    ld2 ld2 while.
+      # break if *str1 == '\0'
+      ld1 lda !char.null xor .break !bcs
       # break if *str1 != *str2
-      ld1 lda ld1 lda xor pop :break !bcc
-      # break if *str1 == 0
-      ld1 lda buf pop :break !bcs
-    swp inc swp inc :while !jmp break:
+      ld1 lda xor .break !bcc pop
+    swp inc swp inc .while !jmp break.
     # compute and store *str1 - *str2
-    lda swp lda clc sub
-    # return*
-    st2 !rt1
+    pop lda swp lda clc sub
+  # return*
+  st2 !rt1
 
 memset_def!
   memset: # memset(ptr, val, len)

@@ -28,10 +28,3 @@ popcnt! # count = popcnt(a)
   .while !bcc
   # return* count
   st0
-
-# converts `0x0..0xF` to `'0'..'9', 'A'..'F'`. undefined for other values
-u4.to_char! x0A sub @dyn x41 @const x0A x30 add dec @const iff add
-# converts `'0'..'9', 'A'..'F'` to `0x0..0xF`. undefined for other values
-char.to_u4! x41 sub @dyn x0A @const x41 x30 sub dec @const iff add
-
-null! x00

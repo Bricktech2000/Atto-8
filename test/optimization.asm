@@ -5,8 +5,8 @@ main!
   x50 x05 orr @const
   xF5 x5F and @const
   xAB neg @const
-  ld0 !cabs @const
-  xAB !cabs @const
+  ld0 !abs @const
+  xAB !abs @const
   xAA x01 rot @const
   x01 x55 swp pop @const
 

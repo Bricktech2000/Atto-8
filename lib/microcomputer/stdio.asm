@@ -2,17 +2,20 @@ stdin! x00 @const
 stdout! x00 @const
 
 getchar! !stdin lda
+
 gets_def!
-  gets: # *str = gets()
+  gets: # gets(*str)
     @err # to be implemented
-putchar_dyn! !stdout swp sta
+
 putchar! @const !putchar_dyn
+putchar_dyn! !stdout swp sta
+
 puts_def!
   puts: # puts(*str)
     swp for_char.
-      !stdout ld1 lda buf sta inc
+      !stdout ld1 lda !char.null xor sta inc
     .for_char !bcc pop
     !ret
 
-wait_char! .skip swp @const !getchar buf pop iff !jmp skip.
-wait_null! @const .skip !getchar buf pop iff !jmp skip.
+wait_char! .skip swp @const !getchar !char.null xor pop iff !jmp skip.
+wait_null! @const .skip !getchar !char.null xor pop iff !jmp skip.

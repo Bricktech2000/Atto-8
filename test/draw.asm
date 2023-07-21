@@ -5,7 +5,7 @@
 @ lib/microcomputer/display.asm
 
 main!
-  pop pop !front_buffer sts
+  pop pop !display_buffer sts
 
   # xF0 # prng_seed
 
@@ -16,7 +16,7 @@ main!
     # xy_pos += xy_vel
     !u8u8.ld0 !u4u4.add !u4u4.st1
     # invert pixel at xy_pos
-    !front_buffer !u4u4.ld2 !bit_addr !flip_bit
+    !display_buffer !u4u4.ld2 !bit_addr !flip_bit
     # sleep
     x02 !stall_long
     # input = getchar()

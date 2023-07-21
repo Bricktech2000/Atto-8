@@ -35,6 +35,134 @@ i4f4.0! !i8.0
 i8f8.0! !i16.0
 c4f4m4f4.0! !i16.0
 c8f8m8f8.0! !i32.0
+char.null! x00
+char.start_of_heading! x01
+char.start_of_text! x02
+char.end_of_text! x03
+char.end_of_transmission! x04
+char.enquiry! x05
+char.acknowledge! x06
+char.bell! x07
+char.backspace! x08
+char.horizontal_tab! x09
+char.line_feed! x0A
+char.vertical_tab! x0B
+char.form_feed! x0C
+char.carriage_return! x0D
+char.shift_out! x0E
+char.shift_in! x0F
+char.data_link_escape! x10
+char.device_control_1! x11
+char.device_control_2! x12
+char.device_control_3! x13
+char.device_control_4! x14
+char.negative_acknowledge! x15
+char.synchronous_idle! x16
+char.end_of_transmission_block! x17
+char.cancel! x18
+char.end_of_medium! x19
+char.substitute! x1A
+char.escape! x1B
+char.file_separator! x1C
+char.group_separator! x1D
+char.record_separator! x1E
+char.unit_separator! x1F
+char.space! x20
+char.exclamation_mark! x21
+char.quotation_mark! x22
+char.number_sign! x23
+char.dollar_sign! x24
+char.percent_sign! x25
+char.ampersand! x26
+char.apostrophe! x27
+char.left_parenthesis! x28
+char.right_parenthesis! x29
+char.asterisk! x2A
+char.plus_sign! x2B
+char.comma! x2C
+char.hyphen_minus! x2D
+char.full_stop! x2E
+char.solidus! x2F
+char.digit_zero! x30
+char.digit_one! x31
+char.digit_two! x32
+char.digit_three! x33
+char.digit_four! x34
+char.digit_five! x35
+char.digit_six! x36
+char.digit_seven! x37
+char.digit_eight! x38
+char.digit_nine! x39
+char.colon! x3A
+char.semicolon! x3B
+char.less_than_sign! x3C
+char.equals_sign! x3D
+char.greater_than_sign! x3E
+char.question_mark! x3F
+char.commercial_at! x40
+char.latin_capital_letter_a! x41
+char.latin_capital_letter_b! x42
+char.latin_capital_letter_c! x43
+char.latin_capital_letter_d! x44
+char.latin_capital_letter_e! x45
+char.latin_capital_letter_f! x46
+char.latin_capital_letter_g! x47
+char.latin_capital_letter_h! x48
+char.latin_capital_letter_i! x49
+char.latin_capital_letter_j! x4A
+char.latin_capital_letter_k! x4B
+char.latin_capital_letter_l! x4C
+char.latin_capital_letter_m! x4D
+char.latin_capital_letter_n! x4E
+char.latin_capital_letter_o! x4F
+char.latin_capital_letter_p! x50
+char.latin_capital_letter_q! x51
+char.latin_capital_letter_r! x52
+char.latin_capital_letter_s! x53
+char.latin_capital_letter_t! x54
+char.latin_capital_letter_u! x55
+char.latin_capital_letter_v! x56
+char.latin_capital_letter_w! x57
+char.latin_capital_letter_x! x58
+char.latin_capital_letter_y! x59
+char.latin_capital_letter_z! x5A
+char.left_square_bracket! x5B
+char.reverse_solidus! x5C
+char.right_square_bracket! x5D
+char.circumflex_accent! x5E
+char.low_line! x5F
+char.grave_accent! x60
+char.latin_small_letter_a! x61
+char.latin_small_letter_b! x62
+char.latin_small_letter_c! x63
+char.latin_small_letter_d! x64
+char.latin_small_letter_e! x65
+char.latin_small_letter_f! x66
+char.latin_small_letter_g! x67
+char.latin_small_letter_h! x68
+char.latin_small_letter_i! x69
+char.latin_small_letter_j! x6A
+char.latin_small_letter_k! x6B
+char.latin_small_letter_l! x6C
+char.latin_small_letter_m! x6D
+char.latin_small_letter_n! x6E
+char.latin_small_letter_o! x6F
+char.latin_small_letter_p! x70
+char.latin_small_letter_q! x71
+char.latin_small_letter_r! x72
+char.latin_small_letter_s! x73
+char.latin_small_letter_t! x74
+char.latin_small_letter_u! x75
+char.latin_small_letter_v! x76
+char.latin_small_letter_w! x77
+char.latin_small_letter_x! x78
+char.latin_small_letter_y! x79
+char.latin_small_letter_z! x7A
+char.left_curly_bracket! x7B
+char.vertical_line! x7C
+char.right_curly_bracket! x7D
+char.tilde! x7E
+char.delete! x7F
 
 u8.add! add
 u16.add! ad2 ad2
@@ -1457,6 +1585,11 @@ c8f8m8f8.mul! # c8f8m8f8 product = c8f8m8f8.mul(c8f8m8f8 a, c8f8m8f8 b)
 
 c4f4m4f4.norm! !i4f4.ld1 !i4f4.ld0 !i4f4.mul !i4f4.st1 !i4f4.ld0 !i4f4.mul !i4f4.add # i4f4 norm = c4f4m4f4.norm(c4f4m4f4 c)
 c8f8m8f8.norm! !i8f8.ld1 !i8f8.ld0 !i8f8.mul !i8f8.st1 !i8f8.ld0 !i8f8.mul !i4f4.add # i8f8 norm = c8f8m8f8.norm(c8f8m8f8 c)
+
+# converts `0x0..0xF` to `'0'..'9', 'A'..'F'`. undefined for other values
+u4.to_char! x0A sub @dyn x41 @const x0A x30 add dec @const iff add
+# converts `'0'..'9', 'A'..'F'` to `0x0..0xF`. undefined for other values
+char.to_u4! x41 sub @dyn x0A @const x41 x30 sub dec @const iff add
 
 u8.mul_def!
   u8.mul: clc # u16 product = u8.mul(u8 a, u8 b)

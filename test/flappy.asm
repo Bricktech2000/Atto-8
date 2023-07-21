@@ -5,7 +5,7 @@
 @ lib/microcomputer/display.asm
 
 main!
-  pop pop !front_buffer sts
+  pop pop !display_buffer sts
   x00 # previous char
 
   xF0 # prng_seed
@@ -19,7 +19,7 @@ main!
     # set y_vel to flap_vel if no button was pressed previously but some button is pressed now
     !getchar buf !i4f4.ld1 !flap_vel !i4f4.ld3 !i4f4.iff ld8 buf pop !i4f4.iff !i4f4.st1 st5
     # compute bit_addr of (BIRD_POS, y_pos)
-    !front_buffer !u4f4.ld2 !u4f4.in clc !u4f4.shl orr x07 !bird_pos sub @const
+    !display_buffer !u4f4.ld2 !u4f4.in clc !u4f4.shl orr x07 !bird_pos sub @const
     # clear pixel at (x_pos, y_pos)
     !clear_bit clc
 
@@ -32,7 +32,7 @@ main!
 
     # if x_pos % 0x10 == 0, rotate entire screen left by 1 pixel
     !u4f4.ld3 x0F and pop :ignore_shift !bcc
-      !front_buffer for_addr:
+      !display_buffer for_addr:
         ld0 inc lda shl pop # load carry
         ld0 ld0 lda shl sta inc
         ld0 ld0 lda shl sta inc
@@ -40,7 +40,7 @@ main!
     ignore_shift:
 
     # compute bit_addr of (BIRD_POS, y_pos)
-    !front_buffer !u4f4.ld2 !u4f4.in clc !u4f4.shl orr x07 !bird_pos sub @const
+    !display_buffer !u4f4.ld2 !u4f4.in clc !u4f4.shl orr x07 !bird_pos sub @const
     # if pixel at (x_pos, y_pos) is set, game over
     !u8u8.ld0 !load_bit buf pop :game_over !bcc
     # set pixel at (x_pos, y_pos)
@@ -50,11 +50,11 @@ main!
     !u4f4.ld3 x7F and pop :ignore_pipe !bcc
       # fill right side of the screen with 0x01
       x0C for_i: dec
-        !front_buffer ld1 x01 rot orr inc x01 sta
+        !display_buffer ld1 x01 rot orr inc x01 sta
       buf :for_i !bcc pop
       # remove a few pixels at a random height
       ld4 !prng_minimal st4 ld4
-      x01 orr x0F and !front_buffer x04 add add
+      x01 orr x0F and !display_buffer x04 add add
       ld0 x02 add x00 sta
       ld0 x02 sub x00 sta
       x00 sta
@@ -70,7 +70,7 @@ main!
       xFF !stall
     :blink !jmp
 
-  !front_buffer @org
+  !display_buffer @org
   !void
   !light_ground
   # !dark ground

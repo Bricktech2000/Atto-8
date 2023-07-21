@@ -9,12 +9,12 @@ min! ld1 ld1 sub @dyn pop flc iff
 max! ld1 ld1 sub @dyn pop iff
 
 jmp! sti
-bcc_dyn! .skip iff !jmp skip.
 bcc! @const !bcc_dyn
-bcs_dyn! .skip swp iff !jmp skip.
+bcc_dyn! .skip iff !jmp skip.
 bcs! @const !bcs_dyn
-call_dyn! .ret swp !jmp ret.
+bcs_dyn! .skip swp iff !jmp skip.
 call! @const !call_dyn
+call_dyn! .ret swp !jmp ret.
 ret! !jmp
 rt0! !ret
 rt1! st0 !ret
