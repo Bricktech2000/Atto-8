@@ -21,6 +21,8 @@ tasks:
 - [x] create `u4` and `i4` pair types
 - [x] update programs with new types
 - [ ] implement `gets`
+- [ ] rename `dyn` `min` `def` to use `.` instead of `_`
+- [ ] document `dyn` `min` `def`
 - [x] swap `sta` argument order
 - [ ] come up with microcode
 - [ ] build computer

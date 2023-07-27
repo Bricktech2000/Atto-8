@@ -756,6 +756,7 @@ fn assemble(
           Some(vec![Root::Instruction(Instruction::Sec)])
         }
         [Root::Instruction(Instruction::Flc), Root::Instruction(Instruction::Flc)] => Some(vec![]),
+        [Root::Instruction(Instruction::Swp), Root::Instruction(Instruction::Swp)] => Some(vec![]),
         [Root::Node(_), Root::Instruction(Instruction::Pop)] => Some(vec![]),
         _ => None,
       });

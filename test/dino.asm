@@ -18,7 +18,7 @@ main!
 
   loop:
     # set y_vel to jump_vel if any button is pressed and y_pos > GROUND_POS
-    !getchar buf pop !jump_vel !i4f4.ld1 !i4f4.iff !u4f4.ld2 !ground_pos sub pop !i4f4.ld1 !i4f4.iff !i4f4.st0
+    !getc buf pop !jump_vel !i4f4.ld1 !i4f4.iff !u4f4.ld2 !ground_pos sub pop !i4f4.ld1 !i4f4.iff !i4f4.st0
     # compute bit_addr of (DINO_POS, y_pos)
     !display_buffer !u4f4.ld2 !u4f4.in !u4f4.shl orr x07 !dino_pos sub @const
     # clear pixel at (x_pos, y_pos - 2)
@@ -65,7 +65,7 @@ main!
       # generate a pointer to a random cactus
       # the x06 (0b00000110) below requires 4 cacti
       # x0E (0x00001110) could be used for 8 cacti
-      ld6 !prng_minimal st6 ld6
+      ld6 !prng_min st6 ld6
       x06 and clc :cacti add
       # copy cactus data to cactus_top and cactus_bot
       !u16.lda !u16.st2

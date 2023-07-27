@@ -74,26 +74,6 @@ flip_nibble! # flip_nibble(rot, addr)
   ld0 lda xo2 sta
   # return*
 
-hex_chars_def!
-  hex_chars:
-  # t m b t m b
-    dEA dEC d4E # 0 1
-    dC4 d6E d6E # 2 3
-    dAE d26 d4C # 4 5
-    d8E dEE d22 # 6 7
-    d6E dEE dE2 # 8 9
-    d4E dAC dEE # A B
-    dE8 dEC dAC # C D
-    dEC dEE dC8 # E F
-
-hex_chars_minimal_def!
-  hex_chars_minimal:
-  # 0 1 2 3 4 5 6 7 8 9 A B C D E F
-    dEC dCE dA6 d8E d6E d4C dEC dEE # top row
-    dA4 d46 dE4 dE2 dEE dEE d8A dCC # middle row
-    dEE d6E d2C dE2 dE2 dAE dEC dE8 # bottom row
-
-
 print_char_def!
   print_char: # print_char(index, buffer, pos)
     x03 for_i. dec
@@ -110,18 +90,33 @@ print_char_def!
   !rt3
 
 print_byte_def!
+  hex_chars.
+  # t m b t m b
+    dEA dEC d4E # 0 1
+    dC4 d6E d6E # 2 3
+    dAE d26 d4C # 4 5
+    d8E dEE d22 # 6 7
+    d6E dEE dE2 # 8 9
+    d4E dAC dEE # A B
+    dE8 dEC dAC # C D
+    dEC dEE dC8 # E F
   print_byte: # print_byte(byte, pos)
-    ld2 inc :hex_chars ld3 !u4u4.snd :print_char !call
-    ld2 :hex_chars ld3 !u4u4.fst :print_char !call
+    ld2 inc .hex_chars ld3 !u4u4.snd :print_char !call
+    ld2 .hex_chars ld3 !u4u4.fst :print_char !call
   # return*
   !rt2
 
-print_byte_minimal_def!
+print_byte_min_def!
+  hex_chars.
+  # 0 1 2 3 4 5 6 7 8 9 A B C D E F
+    dEC dCE dA6 d8E d6E d4C dEC dEE # top row
+    dA4 d46 dE4 dE2 dEE dEE d8A dCC # middle row
+    dEE d6E d2C dE2 dE2 dAE dEC dE8 # bottom row
   print_byte: clc # print_byte(byte, addr)
     # loop through rows
     x03 for_row. dec
-      # nth_row = hex_chars_minimal + row * 8
-      ld0 x03 rot :hex_chars_minimal add
+      # nth_row = hex_chars_min + row * 8
+      ld0 x03 rot .hex_chars add
       # LSN = load_nibble(nibble_addr(nth_row, u4u4.snd(byte))
       ld3 !u4u4.snd ld1 !nibble_addr !load_nibble
       # MSN = load_nibble(nibble_addr(nth_row, u4u4.fst(byte))

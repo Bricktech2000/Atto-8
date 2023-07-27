@@ -17,5 +17,4 @@ main!
   # :print_byte sets the carry flag
   !u64.0 !u64.add :loop !jmp
 
-  !hex_chars_minimal_def
-  !print_byte_minimal_def
+  !print_byte_min_def

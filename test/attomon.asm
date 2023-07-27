@@ -53,37 +53,37 @@ main!
   got_backspace:
     pop # pop previous character
     x04 ro2 # swap `buffer` nibbles
-  :getchar_loop !jmp # do not pop previous character again
+  :getc_loop !jmp # do not pop previous character again
 
   # fall through to `buffer_print`
   got_line_feed:
-    !char.carriage_return !putchar # `'\n'` was just printed, print `'\r'`
-    !char.dollar_sign !putchar
+    !char.carriage_return !putc # `'\n'` was just printed, print `'\r'`
+    !char.dollar_sign !putc
   got_dollar_sign:
     ld1 st2 # copy `head` to `buffer` for `buffer_print`
 
   # print `buffer` followed by a space and fall through
   buffer_print:
     x00 for_n:
-      x04 ro4 ld3 x0F and clc !u4.to_char !putchar
+      x04 ro4 ld3 x0F and clc !u4.to_char !putc
     not :for_n !bcc pop
     !char.space
 
   # print the character at the top of the stack and fall through
   stall_print:
     xFF !stall # small delay for visual feedback to user
-    !putchar
+    !putc
 
   # pop previous character and fall through
   pop_loop:
     pop
 
-  getchar_loop:
-    !getchar
+  getc_loop:
+    !getc
     # ignore empty `stdin`
     !char.null xor :pop_loop !bcs
     # print `stdin` to `stdout`
-    !char.ld0 !putchar
+    !char.ld0 !putc
 
     !char.colon xor :got_colon !bcs !char.colon xor
     !char.full_stop xor :got_full_stop !bcs !char.full_stop xor
@@ -105,9 +105,9 @@ main!
     !user_buffer # allocate buffer
     !user_buffer # allocate head
     x00          # allocate char
-    :str_AttoMon :puts !call
+    :str_AttoMon :puts_min !call
     :got_line_feed !jmp
-    !user_buffer x10 add @org !puts_def
+    !user_buffer x10 add @org !puts_min_def
     # "\r\n=AttoMon=\r\n\0"
     !user_buffer x20 add @org str_AttoMon: d0D d0A d0D d0A d3D d41 d74 d74 d6F d4D d6F d6E d3D d0D d0A d00
 

@@ -10,7 +10,7 @@ main!
   pop pop !display_buffer sts
 
   # wait and consume first two nibbles
-  !here !wait_char !getchar !char.pop
+  !here !wait_char !getc !char.pop
   # offset to start of video
   x30 !stall_long
 
@@ -18,9 +18,9 @@ main!
     !display_buffer for_byte:
       # assume input never empty
       # assume input always well-formed
-      !getchar buf :done !bcs
+      !getc buf :done !bcs
       !char.to_u4 x04 rot
-      !getchar buf :done !bcs
+      !getc buf :done !bcs
       !char.to_u4 orr !u8
       # write byte to display buffer
       ld1 !u8.sta

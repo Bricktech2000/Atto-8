@@ -9,7 +9,7 @@ prng! clc # seed = prng(seed)
 # outputs every number in 0x01..=0xFF then repeats
 # will never output 0x00 (if and only if seed is not 0x00)
 # seed must never be 0x00 (otherwise will only output 0x00)
-prng_minimal! clc # seed = prng_minimal(seed)
+prng_min! clc # seed = prng_min(seed)
   shl x00 !prng_bits iff xor
 
 stall! # stall(iterations)

@@ -19,10 +19,10 @@ main!
     !u4u4.ld1 !display_buffer !bit_addr !flip_bit
     # sleep
     x02 !stall_long
-    # input = getchar()
-    !getchar
+    # input = getc()
+    !getc
     # input = (1 << prng()) & 0x0F
-    # ld2 !prng_minimal st2 x01 ld3 rot x0F and
+    # ld2 !prng_min st2 x01 ld3 rot x0F and
     # ignore if input is empty
     x0F and :ignore !bcs
       # vel = (input & 0b1010) ? 0x0F : 0x01

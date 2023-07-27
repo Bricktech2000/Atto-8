@@ -5,8 +5,8 @@ xnorr! xor not
 xnand! xnd not
 abs! ld0 x01 rot x01 and neg swp ld1 add xor @const
 abs_dyn! ld0 neg ld1 shl @dyn pop iff
-min! ld1 ld1 sub @dyn pop flc iff
-max! ld1 ld1 sub @dyn pop iff
+min_dyn! ld1 ld1 sub @dyn pop flc iff
+max_dyn! ld1 ld1 sub @dyn pop iff
 
 jmp! sti
 bcc! @const !bcc_dyn

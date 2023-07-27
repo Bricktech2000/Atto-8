@@ -19,14 +19,14 @@ main!
       # food_pos = prng_seed | 0x11
 
   x00 food: pop
-    !prng_minimal
+    !prng_min
 
   loop:
     # draw food at food_ps
     ld0 x11 orr !display_buffer !bit_addr !set_bit
 
-    # input = getchar()
-    !getchar
+    # input = getc()
+    !getc
     # ignore if input is empty
     x0F and :ignore !bcs
       # vel = (input & 0b1010) ? 0x0F : 0x01

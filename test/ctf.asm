@@ -24,7 +24,7 @@ main!
     # load byte
     :payload ld1 add lda
     # generate random number
-    ld2 !prng_minimal st2 ld2
+    ld2 !prng_min st2 ld2
     # xor byte with random number
     xor clc
     # store byte
@@ -49,10 +49,10 @@ payload_len! :payload_end :payload sub @const
 
 
 source!
-  :str_message :puts !call
+  :str_message :puts_min !call
   :exit !jmp
 
-  !puts_def
+  !puts_min_def
 
   # "FLAG{MIliTAry-Gr4dE_3ncrypT1oN}\0"
   str_api_key: d46 d4C d41 d47 d7B d4D d49 d6C d69 d54 d41 d72 d79 d2D d47 d72 d34 d64 d45 d5F d33 d6E d63 d72 d79 d70 d54 d31 d6F d4E d7D d00
