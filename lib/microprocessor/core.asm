@@ -4,17 +4,17 @@ nand! and not
 xnorr! xor not
 xnand! xnd not
 abs! ld0 x01 rot x01 and neg swp ld1 add xor @const
-abs_dyn! ld0 neg ld1 shl @dyn pop iff
-min_dyn! ld1 ld1 sub @dyn pop flc iff
-max_dyn! ld1 ld1 sub @dyn pop iff
+abs.dyn! ld0 neg ld1 shl @dyn pop iff
+min.dyn! ld1 ld1 sub @dyn pop flc iff
+max.dyn! ld1 ld1 sub @dyn pop iff
 
 jmp! sti
-bcc! @const !bcc_dyn
-bcc_dyn! .skip iff !jmp skip.
-bcs! @const !bcs_dyn
-bcs_dyn! .skip swp iff !jmp skip.
-call! @const !call_dyn
-call_dyn! .ret swp !jmp ret.
+bcc! @const !bcc.dyn
+bcc.dyn! .skip iff !jmp skip.
+bcs! @const !bcs.dyn
+bcs.dyn! .skip swp iff !jmp skip.
+call! @const !call.dyn
+call.dyn! .ret swp !jmp ret.
 ret! !jmp
 rt0! !ret
 rt1! st0 !ret

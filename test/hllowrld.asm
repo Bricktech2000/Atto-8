@@ -14,8 +14,8 @@ main!
     !here !wait_null
   :loop !jmp
 
-  !memset_def
-  !memcpy_def
+  !memset.def
+  !memcpy.def
 
   display_data:
     # dEA dE6 d4E d44 d4A dEC d00 d00 # THIS

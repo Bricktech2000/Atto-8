@@ -21,9 +21,9 @@ main!
   :loop !jmp
 
 
-  !u8.mul_def
-  !i8.mul_def
-  !i4f4.mul_def
+  !u8.mul.def
+  !i8.mul.def
+  !i4f4.mul.def
 
 is_in_set! clc # bool b = is_in_set(c4f4m4f4 c)
   !i4f4.0 # z_re

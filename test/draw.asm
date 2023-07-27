@@ -7,7 +7,7 @@
 main!
   pop pop !display_buffer sts
 
-  # xF0 # prng_seed
+  # xF0 # rand_seed
 
   x77 !u4u4 # xy_pos
   x00 !i4i4 # xy_vel
@@ -21,8 +21,8 @@ main!
     x02 !stall_long
     # input = getc()
     !getc
-    # input = (1 << prng()) & 0x0F
-    # ld2 !prng_min st2 x01 ld3 rot x0F and
+    # input = (1 << rand()) & 0x0F
+    # ld2 !rand.min st2 x01 ld3 rot x0F and
     # ignore if input is empty
     x0F and :ignore !bcs
       # vel = (input & 0b1010) ? 0x0F : 0x01

@@ -1726,7 +1726,7 @@ u4.to_char! x0A sub @dyn x41 @const x0A x30 add dec @const iff add
 # converts `'0'..='9', 'A'..='F'` to `0x0..=0xF`. undefined for other values
 char.to_u4! x41 sub @dyn x0A @const x41 x30 sub dec @const iff add
 
-u8.mul_def!
+u8.mul.def!
   u8.mul: clc # u16 product = u8.mul(u8 a, u8 b)
     !u16.0 # product
     x08 for_bit. dec
@@ -1739,7 +1739,7 @@ u8.mul_def!
     buf .for_bit !bcc pop
   # return* product
   !u16.st0+1 !rt0
-i8.mul_def!
+i8.mul.def!
   i8.mul: clc # i16 product = i8.mul(i8 a, i8 b)
     # u16 product = (u8)a * (u8)b
     !u16.ld0+1 !u8.mul
@@ -1749,7 +1749,7 @@ i8.mul_def!
     ld4 shl pop !u16.0 !u8.ld4+1 !u8.0 !u16.iff clc !u16.sub
   # return* product
   !u16.st0+1 !rt0
-u16.mul_def!
+u16.mul.def!
   u16.mul: clc # u32 product = u16.mul(u16 a, u16 b)
     !u32.0 # product
     x10 for_bit. dec
@@ -1762,7 +1762,7 @@ u16.mul_def!
     buf .for_bit !bcc pop
   # return* product
   !u32.st0+1 !rt0
-i16.mul_def!
+i16.mul.def!
   i16.mul: clc # i32 product = i16.mul(i16 a, i16 b)
     # u32 product = (u16)a * (u16)b
     !u32.ld0+1 !u16.mul
@@ -1772,7 +1772,7 @@ i16.mul_def!
     ld8 shl pop !u32.0 !u16.ld4+1 !u16.0 !u32.iff clc !u32.sub
   # return* product
   !u32.st0+1 !rt0
-u4f4.mul_def!
+u4f4.mul.def!
   u4f4.mul: clc # u4f4 product = u4f4.mul(u4f4 a, u4f4 b)
     # product = (u8)a * (u8)b
     !u16.ld0+1 !u8.mul
@@ -1780,7 +1780,7 @@ u4f4.mul_def!
     x0F xF0 an2 an2 orr x04 rot !u8.st1+1
   # return* product
   !rt1
-u8f8.mul_def!
+u8f8.mul.def!
   u8f8.mul: clc # u8f8 product = u8f8.mul(u8f8 a, u8f8 b)
     # product = (u16)a * (u16)b
     !u32.ld0+1 !u16.mul
@@ -1788,7 +1788,7 @@ u8f8.mul_def!
     pop !u8.st4+1 !u8.st4+1 pop
   # return* product
   !rt2
-i4f4.mul_def!
+i4f4.mul.def!
   i4f4.mul: clc # i4f4 product = i4f4.mul(i4f4 a, i4f4 b)
     # product = (i8)a * (i8)b
     !i16.ld0+1 !i8.mul
@@ -1796,7 +1796,7 @@ i4f4.mul_def!
     x0F xF0 an2 an2 orr x04 rot !i8.st1+1
   # return* product
   !rt1
-i8f8.mul_def!
+i8f8.mul.def!
   i8f8.mul: clc # i8f8 product = i8f8.mul(i8f8 a, i8f8 b)
     # product = (i16)a * (i16)b
     !i32.ld0+1 !i16.mul

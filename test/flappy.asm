@@ -8,7 +8,7 @@ main!
   pop pop !display_buffer sts
   x00 # previous char
 
-  xF0 # prng_seed
+  xF0 # rand_seed
 
   x00 !u4f4 # x_pos
   x02 !i4f4 # x_vel
@@ -53,7 +53,7 @@ main!
         x01 !display_buffer ld2 x01 rot orr inc sta
       buf :for_i !bcc pop
       # remove a few pixels at a random height
-      ld4 !prng_min st4 ld4
+      ld4 !rand.min st4 ld4
       x00 swp # for `sta` below
       x01 orr x0F and !display_buffer x04 add @const add
       x00 ld1 x02 add sta

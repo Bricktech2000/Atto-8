@@ -21,14 +21,14 @@ tasks:
 - [x] create `u4` and `i4` pair types
 - [x] update programs with new types
 - [ ] implement `gets`
-- [ ] rename `dyn` `min` `def` to use `.` instead of `_`
-- [ ] document `dyn` `min` `def`
+- [x] rename `dyn` `min` `def` to use `.` instead of `_`
+- [x] document `dyn` `min` `def`
 - [x] swap `sta` argument order
 - [ ] come up with microcode
 - [ ] build computer
 
 - potentially remove: neg, not, sub, xnd, clc, sec, flc
-- only flappy and prng use `shf` with carry
+- only flappy and rand use `shf` with carry
 - instructions removed: adc, sbc, shf, sfc
 
 moving forward:

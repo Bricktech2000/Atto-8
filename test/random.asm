@@ -7,18 +7,18 @@
 main!
   pop pop !display_buffer sts
 
-  x00 # prng_seed
+  x00 # rand_seed
 
-  # seed prng by incrementing until keypress
+  # seed rand by incrementing until keypress
   wait: inc :wait !wait_char
 
   loop:
-    !prng x13 ld1 :print_byte !call
-    !prng x12 ld1 :print_byte !call
+    !rand x13 ld1 :print_byte.min !call
+    !rand x12 ld1 :print_byte.min !call
     !here !wait_char
   :loop !jmp
 
-  !print_byte_min_def
+  !print_byte.min.def
 
   seed: d00
 

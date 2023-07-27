@@ -58,7 +58,7 @@ main!
     d11 !i4i4
   neighbours_end:
 
-  !memcpy_def
+  !memcpy.def
 
   # !glider
   # !blinker

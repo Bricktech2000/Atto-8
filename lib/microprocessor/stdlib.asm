@@ -1,16 +1,16 @@
-prng_bits! x1D
+rand_bits! x1D
 
 # outputs every number in 0x00..=0xFF then repeats
-prng! clc # seed = prng(seed)
-  shl x00 !prng_bits iff swp
-  buf x00 !prng_bits iff
+rand! clc # seed = rand(seed)
+  shl x00 !rand_bits iff swp
+  buf x00 !rand_bits iff
   xor xor
 
 # outputs every number in 0x01..=0xFF then repeats
 # will never output 0x00 (if and only if seed is not 0x00)
 # seed must never be 0x00 (otherwise will only output 0x00)
-prng_min! clc # seed = prng_min(seed)
-  shl x00 !prng_bits iff xor
+rand.min! clc # seed = rand.min(seed)
+  shl x00 !rand_bits iff xor
 
 stall! # stall(iterations)
   loop. x01 sub @dyn .loop !bcc pop

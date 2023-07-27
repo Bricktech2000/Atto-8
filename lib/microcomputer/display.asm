@@ -74,7 +74,7 @@ flip_nibble! # flip_nibble(rot, addr)
   ld0 lda xo2 sta
   # return*
 
-print_char_def!
+print_char.def!
   print_char: # print_char(index, buffer, pos)
     x03 for_i. dec
       # src = i + index * 3
@@ -89,7 +89,7 @@ print_char_def!
   # return*
   !rt3
 
-print_byte_def!
+print_byte.def!
   hex_chars.
   # t m b t m b
     dEA dEC d4E # 0 1
@@ -106,16 +106,16 @@ print_byte_def!
   # return*
   !rt2
 
-print_byte_min_def!
+print_byte.min.def!
   hex_chars.
   # 0 1 2 3 4 5 6 7 8 9 A B C D E F
     dEC dCE dA6 d8E d6E d4C dEC dEE # top row
     dA4 d46 dE4 dE2 dEE dEE d8A dCC # middle row
     dEE d6E d2C dE2 dE2 dAE dEC dE8 # bottom row
-  print_byte: clc # print_byte(byte, addr)
+  print_byte.min: clc # print_byte.min(byte, addr)
     # loop through rows
     x03 for_row. dec
-      # nth_row = hex_chars_min + row * 8
+      # nth_row = hex_chars + row * 8
       ld0 x03 rot .hex_chars add
       # LSN = load_nibble(nibble_addr(nth_row, u4u4.snd(byte))
       ld3 !u4u4.snd ld1 !nibble_addr !load_nibble

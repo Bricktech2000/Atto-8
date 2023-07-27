@@ -15,11 +15,11 @@ main!
   x77 !u4u4 # tail_pos
   xF0 !i4i4 # tail_vel
 
-  xF0 # prng_seed
-      # food_pos = prng_seed | 0x11
+  xF0 # rand_seed
+      # food_pos = rand_seed | 0x11
 
   x00 food: pop
-    !prng_min
+    !rand.min
 
   loop:
     # draw food at food_ps

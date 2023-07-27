@@ -17,14 +17,14 @@
 main!
   pop pop !display_buffer sts
 
-  xF0 # prng_seed
+  xF0 # rand_seed
 
   # loop through payload
   !payload_len for_i: dec
     # load byte
     :payload ld1 add lda
     # generate random number
-    ld2 !prng_min st2 ld2
+    ld2 !rand.min st2 ld2
     # xor byte with random number
     xor clc
     # store byte
@@ -32,7 +32,7 @@ main!
   buf :for_i !bcc pop
 
   # !dbg
-  pop # pop prng_seed
+  pop # pop rand_seed
 
   payload:
     # !source
@@ -43,16 +43,16 @@ main!
   !payload_len x00 :payload :memcpy !call
   !hlt
 
-  !memcpy_def
+  !memcpy.def
 
 payload_len! :payload_end :payload sub @const
 
 
 source!
-  :str_message :puts_min !call
+  :str_message :puts.min !call
   :exit !jmp
 
-  !puts_min_def
+  !puts.min.def
 
   # "FLAG{MIliTAry-Gr4dE_3ncrypT1oN}\0"
   str_api_key: d46 d4C d41 d47 d7B d4D d49 d6C d69 d54 d41 d72 d79 d2D d47 d72 d34 d64 d45 d5F d33 d6E d63 d72 d79 d70 d54 d31 d6F d4E d7D d00

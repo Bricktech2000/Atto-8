@@ -92,7 +92,7 @@ main!
     !char.backspace xor :got_backspace !bcs !char.backspace xor
     !char.line_feed xor :got_line_feed !bcs !char.line_feed xor
     !char.dollar_sign xor :got_dollar_sign !bcs !char.dollar_sign xor
-    !char.exclamation_mark xor ld2 !bcs_dyn !char.exclamation_mark xor
+    !char.exclamation_mark xor ld2 !bcs.dyn !char.exclamation_mark xor
     x3A !char.sub clc # map '0'..='9' to 0xF6..=0xFF
     x0A !char.add :got_hex !bcs # branch if adding 0x0A wrapped around
     x11 !char.sub clc # map 'A'..='F' to 0x00..=0x05
@@ -104,10 +104,10 @@ main!
     !user_buffer sts # put stack right above user buffer
     !user_buffer # allocate buffer
     !user_buffer # allocate head
-    x00          # allocate char
-    :str_AttoMon :puts_min !call
+    !char.null   # allocate char
+    :str_AttoMon :puts.min !call
     :got_line_feed !jmp
-    !user_buffer x10 add @org !puts_min_def
+    !user_buffer x10 add @org !puts.min.def
     # "\r\n=AttoMon=\r\n\0"
     !user_buffer x20 add @org str_AttoMon: d0D d0A d0D d0A d3D d41 d74 d74 d6F d4D d6F d6E d3D d0D d0A d00
 

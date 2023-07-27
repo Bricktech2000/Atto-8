@@ -5,9 +5,9 @@
 main!
   pop pop !display_buffer sts
 
-  xF0 # prng_seed
+  xF0 # rand_seed
 
   loop:
-    !prng ld0 !display_buffer !bit_addr !flip_bit
+    !rand ld0 !display_buffer !bit_addr !flip_bit
     x10 !stall
   :loop !jmp

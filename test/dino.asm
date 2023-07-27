@@ -7,7 +7,7 @@
 main!
   pop pop !display_buffer sts
 
-  xF0 # prng_seed
+  xF0 # rand_seed
 
   !u8u8.0 # cactus_top, cactus_bot
 
@@ -65,7 +65,7 @@ main!
       # generate a pointer to a random cactus
       # the x06 (0b00000110) below requires 4 cacti
       # x0E (0x00001110) could be used for 8 cacti
-      ld6 !prng_min st6 ld6
+      ld6 !rand.min st6 ld6
       x06 and clc :cacti add
       # copy cactus data to cactus_top and cactus_bot
       !u16.lda !u16.st2

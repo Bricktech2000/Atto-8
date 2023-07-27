@@ -18,8 +18,8 @@ main!
   str_abc: d61 d62 d63 d00
   str_abcdef: d61 d62 d63 d64 d65 d66 d00
 
-  !strlen_def
-  !strcmp_def
+  !strlen.def
+  !strcmp.def
 
   fib: clc # u8 f = fib(u8 n)
     x00 x01 # initial values
