@@ -66,7 +66,7 @@ Negative values are represented in two's complement.
 | `ldo O`     | Load from Offset              | `*(SP + O) -> *(--SP);`                                               | `0b1100OOOO` (`0xCO`) |
 | `sto O`     | Store to Offset               | `*SP++ -> *(SP + O);`                                                 | `0b1101OOOO` (`0xDO`) |
 | `lda`       | Load from Address             | `*(*(SP++)) -> *(--SP);`                                              | `0b11101000` (`0xE0`) |
-| `sta`       | Store to Address              | `*(SP++) -> *(*(SP++));`                                              | `0b11101001` (`0xE1`) |
+| `sta`       | Store to Address              | `*(SP++ + 1) -> *(*(SP++ - 1));`                                      | `0b11101001` (`0xE1`) |
 | `ldi`       | Load from Instruction Pointer | `IP -> *(--SP);`                                                      | `0b11101010` (`0xE2`) |
 | `sti`       | Store to Instruction Pointer  | `*(SP++) -> IP;`                                                      | `0b11101011` (`0xE3`) |
 | `lds`       | Load from Stack Pointer       | `SP -> *(--SP);`                                                      | `0b11101100` (`0xE4`) |

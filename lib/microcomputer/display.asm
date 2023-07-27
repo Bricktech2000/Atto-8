@@ -1,79 +1,77 @@
 display_buffer! xE0 @const
 
-bit_addr! clc # (rot, addr) = bit_addr(index, buffer)
+bit_addr! clc # (rot, addr) = bit_addr(buffer, index)
   # addr = index // 8 + buffer
-  swp ld1 x03 !ror add
+  ld1 x03 !ror add
   # rot = ~index % 8
   swp not x07 and
   # return* (rot, addr)
 load_bit! # bit = load_bit(rot, addr)
   # bit = (*addr >> rot) & 0x01
-  swp lda swp !ror x01 and
-  # return* bin
+  ld1 lda st1 !ror x01 and
+  # return* bit
 store_bit! # store_bit(rot, addr, bit)
-  # rest = *addr & ~(0x01 << rot)
-  ld1 lda x01 ld2 rot not and
-  # new = rest | (bit << rot)
-  swp ld3 swp rot orr
-  # *addr = new
-  sta
+  # bit <<= rot
+  x01 ld1 ro4
+  # rest = ~(0x01 << rot) & *addr
+  swp rot not ld1 lda and
+  # *addr = rest | bit
+  or2 sta
   # return*
-  pop
 set_bit! # set_bit(rot, addr)
-  # new = *addr | (0x01 << rot)
-  x01 swp rot ld1 lda orr
-  # *addr = new
-  sta
+  # mask = 0x01 << rot
+  x01 swp rot swp
+  # *addr |= mask
+  ld0 lda or2 sta
   # return*
 clear_bit! # clear_bit(rot, addr)
-  # new = *addr & ~(0x01 << rot)
-  x01 swp rot not ld1 lda and
-  # *addr = new
-  sta
+  # mask = ~0x01 << rot
+  x01 not swp rot swp
+  # *addr &= mask
+  ld0 lda an2 sta
   # return*
 flip_bit! # flip_bit(rot, addr)
-  # new = *addr ^ (0x01 << rot)
-  x01 swp rot ld1 lda xor
-  # *addr = new
-  sta
+  # mask = 0x01 << rot
+  x01 swp rot swp
+  # *addr ^= mask
+  ld0 lda xo2 sta
   # return*
 
-nibble_addr! clc # (rot, addr) = nibble_addr(index, buffer)
+nibble_addr! clc # (rot, addr) = nibble_addr(buffer, index)
   # addr = index // 2 + buffer
-  swp ld1 x01 !ror add
+  ld1 x01 !ror add
   # rot = 4 * (~index % 2)
   swp not x01 and x02 rot
   # return*
 load_nibble! # nibble = load_nibble(rot, addr)
   # nibble = (*addr >> rot) & 0x0F
-  swp lda swp !ror x0F and
+  ld1 lda st1 !ror x0F and
   # return* nibble
 store_nibble! # store_nibble(rot, addr, nibble)
-  # rest = *addr & ~(0x0F << rot)
-  ld1 lda x0F ld2 rot not and
-  # new = rest | (nibble << rot)
-  swp ld3 swp rot orr
-  # *addr = new
-  sta
+  # nibble <<= rot
+  x0F ld1 ro4
+  # rest = ~(0x0F << rot) & *addr
+  swp rot not ld1 lda and
+  # *addr = rest | nibble
+  or2 sta
   # return*
-  pop
 set_nibble! # set_nibble(rot, addr)
-  # new = *addr | (0x0F << rot)
-  x0F swp rot ld1 lda orr
-  # *addr = new
-  sta
+  # mask = 0x0F << rot
+  x0F swp rot swp
+  # *addr |= mask
+  ld0 lda or2 sta
   # return*
 clear_nibble! # clear_nibble(rot, addr)
-  # new = *addr & ~(0x0F << rot)
-  x0F swp rot not ld1 lda and
-  # *addr = new
-  sta
+  # mask = ~0x0F << rot
+  x0F not swp rot swp
+  # *addr &= mask
+  ld0 lda an2 sta
   # return*
 flip_nibble! # flip_nibble(rot, addr)
-  # new = *addr ^ (0x0F << rot)
-  x0F swp rot ld1 lda xor
-  # *addr = new
-  sta
+  # mask = 0x0F << rot
+  x0F swp rot swp
+  # *addr ^= mask
+  ld0 lda xo2 sta
   # return*
 
 hex_chars_def!
@@ -101,20 +99,20 @@ print_char_def!
     x03 for_i. dec
       # src = i + index * 3
       ld0 ld3 ld0 x01 rot clc add clc add
-      # nibble = load_nibble(nibble_addr(src, buffer))
-      ld4 swp !nibble_addr !load_nibble
+      # nibble = load_nibble(nibble_addr(buffer, src))
+      ld4 !nibble_addr !load_nibble
       # dst = i * 4 + pos // 4 * 16 + pos % 4
       ld1 x02 rot ld6 x02 rot xF0 and clc add ld6 x03 and clc add
-      # store_nibble(nibble_addr(dst, &DISPLAY_BUFFER), nibble)
-      !display_buffer swp !nibble_addr !store_nibble
+      # store_nibble(nibble_addr(&DISPLAY_BUFFER, dst), nibble)
+      !display_buffer !nibble_addr !store_nibble
     buf .for_i !bcc pop
   # return*
   !rt3
 
 print_byte_def!
   print_byte: # print_byte(byte, pos)
-    ld2 inc :hex_chars ld3 x0F and :print_char !call
-    ld2 :hex_chars ld3 x04 !ror x0F and :print_char !call
+    ld2 inc :hex_chars ld3 !u4u4.snd :print_char !call
+    ld2 :hex_chars ld3 !u4u4.fst :print_char !call
   # return*
   !rt2
 
@@ -124,16 +122,16 @@ print_byte_minimal_def!
     x03 for_row. dec
       # nth_row = hex_chars_minimal + row * 8
       ld0 x03 rot :hex_chars_minimal add
-      # MSN = load_nibble(nibble_addr(byte & 0x0F, nth_row))
-      ld0 ld4 x0F and !nibble_addr !load_nibble
-      # LSN = load_nibble(nibble_addr((byte >> 4) & 0x0F, nth_row))
-      swp ld4 x04 !ror x0F and !nibble_addr !load_nibble
+      # LSN = load_nibble(nibble_addr(nth_row, u4u4.snd(byte))
+      ld3 !u4u4.snd ld1 !nibble_addr !load_nibble
+      # MSN = load_nibble(nibble_addr(nth_row, u4u4.fst(byte))
+      ld4 !u4u4.fst ld2 !nibble_addr !load_nibble
       # row = (MSN << 4) | LSN
-      x04 rot orr
+      x04 rot orr st0
       # dst = &DISPLAY_BUFFER + addr + row * 2
-      ld4 !display_buffer add ld2 x01 rot add
+      !display_buffer ld5 add ld2 x01 rot add
       # *dst = row
-      swp sta
+      sta
     buf .for_row !bcc pop
   # return*
   !rt2

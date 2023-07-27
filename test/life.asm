@@ -29,9 +29,9 @@ main!
       # count neighbours
       !neighbours_len for_dxdy: dec
         # neighbour_addr = *(neighbours + dxdy) + for_xy
-        !display_buffer :neighbours ld2 add !i4i4.lda !u4u4.ld4 !i4i4.add
-        # neighbour_value = load_bit(bit_addr(neighbour_addr, &DISPLAY_BUFFER))
-        !bit_addr !load_bit clc
+        :neighbours ld1 add !i4i4.lda !u4u4.ld3 !i4i4.add
+        # neighbour_value = load_bit(bit_addr(&DISPLAY_BUFFER, neighbour_addr))
+        !display_buffer !bit_addr !load_bit clc
         # neighbour_count += neighbour_value
         ad2
       buf :for_dxdy !bcc pop
@@ -39,7 +39,7 @@ main!
       # apply rules outlined above
       x04 xor :ignore !bcs x04 xor
       x03 xor x00 shl @dyn
-      !back_buffer !u4u4.ld3 !bit_addr !store_bit
+      !u4u4.ld2 !back_buffer !bit_addr !store_bit
       ignore:
 
       pop # pop neighbour count

@@ -34,8 +34,8 @@ main!
     !u4f4.ld3 x0F and pop :ignore_shift !bcc
       !display_buffer for_addr:
         ld0 inc lda shl pop # load carry
-        ld0 ld0 lda shl sta inc
-        ld0 ld0 lda shl sta inc
+        ld0 lda shl ld1 sta inc
+        ld0 lda shl ld1 sta inc
       buf :for_addr !bcc pop
     ignore_shift:
 
@@ -50,14 +50,15 @@ main!
     !u4f4.ld3 x7F and pop :ignore_pipe !bcc
       # fill right side of the screen with 0x01
       x0C for_i: dec
-        !display_buffer ld1 x01 rot orr inc x01 sta
+        x01 !display_buffer ld2 x01 rot orr inc sta
       buf :for_i !bcc pop
       # remove a few pixels at a random height
       ld4 !prng_minimal st4 ld4
-      x01 orr x0F and !display_buffer x04 add add
-      ld0 x02 add x00 sta
-      ld0 x02 sub x00 sta
-      x00 sta
+      x00 swp # for `sta` below
+      x01 orr x0F and !display_buffer x04 add @const add
+      x00 ld1 x02 add sta
+      x00 ld1 x02 sub sta
+      sta
     ignore_pipe:
 
     x60 !stall

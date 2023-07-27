@@ -23,7 +23,7 @@ main!
 
   loop:
     # draw food at food_ps
-    !display_buffer ld1 x11 orr !bit_addr !set_bit
+    ld0 x11 orr !display_buffer !bit_addr !set_bit
 
     # input = getchar()
     !getchar
@@ -44,7 +44,7 @@ main!
       # if head_pos == food_pos, spawn a new food
       ld1 x11 orr !u4u4.ld6 xor pop :food !bcs
       # compute bit_addr of head_pos
-      !display_buffer !u4u4.ld6 !bit_addr
+      !u4u4.ld5 !display_buffer !bit_addr
       # game over if pixel at head_pos is set
       !u8u8.ld0 !load_bit buf pop :game_over !bcc
       # set pixel at head_pos
@@ -54,7 +54,7 @@ main!
     # figure out where the tail is headed
     !directions_len for_dir: dec
       :directions ld1 add !i4i4.lda !i4i4.ld3
-        !display_buffer !u4u4.ld6 !i4i4.ld3 !i4i4.add !bit_addr !load_bit
+        !u4u4.ld5 !i4i4.ld2 !i4i4.add !display_buffer !bit_addr !load_bit
       buf pop !i4i4.iff !i4i4.st2
     buf :for_dir !bcc pop
 
@@ -62,7 +62,7 @@ main!
       # tail_pas += tail_vel
       !u8u8.ld1 !i4i4.add !u4u4.st3
       # clear pixel at tail_pos
-      !display_buffer !u4u4.ld4 !bit_addr !clear_bit
+      !u4u4.ld3 !display_buffer !bit_addr !clear_bit
     buf :for_tail_twice !bcc pop
 
     # sleep

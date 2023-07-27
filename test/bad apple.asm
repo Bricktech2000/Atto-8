@@ -23,11 +23,11 @@ main!
       !getchar buf :done !bcs
       !char.to_u4 orr !u8
       # write byte to display buffer
-      ld1 swp !u8.sta
+      ld1 !u8.sta
     inc buf :for_byte !bcc pop
 
     # stall until next frame
-    x4B !stall !nop !nop !nop
+    x50 !stall !nop !nop !nop !nop !nop
   :frame_loop !jmp
 
   done: !hlt

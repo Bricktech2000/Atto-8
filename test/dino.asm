@@ -39,16 +39,17 @@ main!
     # regardless of x_vel because we're out of memory
     !display_buffer x10 add @const for_addr:
       ld0 inc lda shl pop # load carry
-      ld0 ld0 lda shl sta inc
-      ld0 ld0 lda shl sta inc
+      ld0 lda shl ld1 sta inc
+      ld0 lda shl ld1 sta inc
     buf :for_addr !bcc pop
 
     # shift in cactus from cactus_top and cactus_bot
-    !display_buffer x17 add @const
-    ld0 ld0 lda shr clc
-    !u8.ld7 !u8.shl !u8.st7 shl sta
-    dec dec ld0 lda shr clc
-    !u8.ld7 !u8.shl !u8.st7 shl sta
+    !display_buffer x17 add @const lda
+    shr clc !u8.ld5 !u8.shl !u8.st5 shl
+    !display_buffer x17 add @const sta
+    !display_buffer x15 add @const lda
+    shr clc !u8.ld6 !u8.shl !u8.st6 shl
+    !display_buffer x15 add @const sta
 
     # compute bit_addr of (DINO_POS, y_pos)
     !display_buffer !u4f4.ld2 !u4f4.in !u4f4.shl orr x07 !dino_pos sub @const

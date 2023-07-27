@@ -24,15 +24,14 @@ strcmp_def!
 memset_def!
   memset: # memset(ptr, val, len)
     ld3 for_i. dec
-      ld0 ld3 add ld4 sta
+      ld3 ld1 ld4 add sta
     buf .for_i !bcc pop
   !rt3
 
 memcpy_def!
   memcpy: clc # memcpy(dst, src, len)
     ld3 for_i. dec
-      ld0 ld3 add
-      ld1 ld5 add
-      lda sta
+      ld0 ld4 add lda
+      ld1 ld4 add sta
     buf .for_i !bcc pop
   !rt3

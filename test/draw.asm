@@ -16,7 +16,7 @@ main!
     # xy_pos += xy_vel
     !u8u8.ld0 !u4u4.add !u4u4.st1
     # invert pixel at xy_pos
-    !display_buffer !u4u4.ld2 !bit_addr !flip_bit
+    !u4u4.ld1 !display_buffer !bit_addr !flip_bit
     # sleep
     x02 !stall_long
     # input = getchar()

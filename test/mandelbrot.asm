@@ -16,7 +16,7 @@ main!
       x07 !i4f4 # pos_im
       !i4f4.add
       !is_in_set x00 shl @dyn
-      !display_buffer x10 add ld2 !bit_addr !store_bit
+      ld1 !display_buffer x10 add !bit_addr !store_bit
     buf :for_xy !bcc pop
   :loop !jmp
 

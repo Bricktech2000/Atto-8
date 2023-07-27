@@ -21,7 +21,7 @@ tasks:
 - [x] create `u4` and `i4` pair types
 - [x] update programs with new types
 - [ ] implement `gets`
-- [ ] swap `sta` argument order
+- [x] swap `sta` argument order
 - [ ] come up with microcode
 - [ ] build computer
 

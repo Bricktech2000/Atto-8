@@ -37,7 +37,7 @@ main!
   !char.space :stall_print !jmp
 
   got_full_stop:
-    ld1 ld3 sta x00 ad2 # write `buffer` to `*head` and increment `head`
+    ld2 ld2 sta x00 ad2 # write `buffer` to `*head` and increment `head`
   !char.space :stall_print !jmp
 
   got_semicolon:
@@ -65,14 +65,14 @@ main!
   # print `buffer` followed by a space and fall through
   buffer_print:
     x00 for_n:
-      x04 ro4 ld3 x0F and clc !u4.to_char !putchar_dyn
+      x04 ro4 ld3 x0F and clc !u4.to_char !putchar
     not :for_n !bcc pop
     !char.space
 
   # print the character at the top of the stack and fall through
   stall_print:
     xFF !stall # small delay for visual feedback to user
-    !putchar_dyn
+    !putchar
 
   # pop previous character and fall through
   pop_loop:
@@ -83,7 +83,7 @@ main!
     # ignore empty `stdin`
     !char.null xor :pop_loop !bcs
     # print `stdin` to `stdout`
-    !char.ld0 !putchar_dyn
+    !char.ld0 !putchar
 
     !char.colon xor :got_colon !bcs !char.colon xor
     !char.full_stop xor :got_full_stop !bcs !char.full_stop xor

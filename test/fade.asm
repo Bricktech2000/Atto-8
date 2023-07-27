@@ -8,6 +8,6 @@ main!
   xF0 # prng_seed
 
   loop:
-    !prng !display_buffer ld1 !bit_addr !flip_bit
+    !prng ld0 !display_buffer !bit_addr !flip_bit
     x10 !stall
   :loop !jmp

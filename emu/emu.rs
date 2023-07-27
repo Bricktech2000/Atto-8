@@ -447,9 +447,7 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
 
                     0x1 => {
                       // sta
-                      let a = pop!();
-                      let b = pop!();
-                      mem_write!(b, a);
+                      mem_write!(pop!(), pop!());
                       (0x04, None)
                     }
 

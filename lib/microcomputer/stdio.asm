@@ -7,13 +7,12 @@ gets_def!
   gets: # gets(*str)
     @err # to be implemented
 
-putchar! @const !putchar_dyn
-putchar_dyn! !stdout swp sta
+putchar! !stdout sta
 
 puts_def!
   puts: # puts(*str)
     swp for_char.
-      !stdout ld1 lda !char.null xor sta inc
+      ld0 lda !char.null xor !putchar inc
     .for_char !bcc pop
     !ret
 
