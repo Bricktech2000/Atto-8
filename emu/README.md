@@ -8,7 +8,7 @@ The emulator loads a memory image file from `argv[1]`, which must be exactly `0x
 
 Emulation will stop upon receiving `SIGINT` (Ctrl+C) or `SIGTERM` (kill). The emulator will enter debug mode upon encountering an invalid instruction.
 
-## Standard I/O
+## Standard Input/Output
 
 The emulator sends most characters received from `stdin` to the Atto-8's standard input and sends most characters received from the Atto-8's standard output to `stdout`. The following characters are exceptions:
 

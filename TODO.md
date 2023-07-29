@@ -52,7 +52,7 @@ constituents:
 
 ---
 
-standard I/O:
+standard input/output:
 
 `stdin` initialized with `mem[0x00]`
 
@@ -82,7 +82,7 @@ todos:
   - [x] random
   - [x] pong
   - [x] flappy
-- [ ] write documentation for stdio
+- [x] write documentation for stdio
 - [x] get rid of "input" voccabulary
 - [x] get rid of `to_char` and others in `stdlib.asm`
 

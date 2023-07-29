@@ -70,7 +70,7 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
   let input_channel = spawn_input_channel();
 
   mc.stdin = mc.mem[0x00];
-  mc.mem[0x00] = 0x00; // controller
+  mc.mem[0x00] = 0x00; // controller input
 
   loop {
     if debug_mode {
@@ -196,11 +196,13 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
       };
     }
 
+    // was stdout written to?
     if mc.stdout != 0x00 {
       stdout_string.push(mc.stdout as char);
       mc.stdout = 0x00;
     }
 
+    // was stdin read from?
     if mc.stdin == 0x00 {
       mc.stdin = stdin_queue.pop_front().unwrap_or(0x00);
     }
@@ -235,12 +237,13 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
     ($address:expr) => {{
       let address = $address;
       if address == 0x00 {
+        // was stdin written to?
         if mc.stdin != 0x00 {
           let stdin = mc.stdin;
           mc.stdin = 0x00;
           stdin
         } else {
-          mc.mem[0x00] // controller
+          mc.mem[0x00] // controller input
         }
       } else {
         mc.mem[address as usize]
@@ -253,7 +256,12 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
       let address = $address;
       let value = $value;
       if address == 0x00 {
-        mc.stdout = value;
+        // was stdout read from?
+        if mc.stdout == 0x00 {
+          mc.stdout = value;
+        } else {
+          panic!("attempt to write to `stdout` more than once within one tick");
+        }
       } else {
         mc.mem[address as usize] = value;
       }

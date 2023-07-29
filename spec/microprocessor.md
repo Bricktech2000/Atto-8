@@ -59,8 +59,8 @@ Negative values are represented in two's complement.
 | `inc`       | Increment                     | `*SP + 1 -> *SP;`                                                     | `0b10110000`          |
 | `dec`       | Decrement                     | `*SP - 1 -> *SP;`                                                     | `0b10110001`          |
 | `neg`       | Negate                        | `-*SP -> *SP`                                                         | `0b10110010`          |
-| `shl`       | Shift Left                    | `(*SP & 0x80) -> CF;  (*SP << 1) -> *SP;`                             | `0b10110100`          |
-| `shr`       | Shift Right                   | `(*SP & 0x01) -> CF;  (*SP >> 1) -> *SP;`                             | `0b10110101`          |
+| `shl`       | Shift Left with Carry         | `(*SP & 0x80) -> CF;  (*SP << 1) -> *SP;`                             | `0b10110100`          |
+| `shr`       | Shift Right with Carry        | `(*SP & 0x01) -> CF;  (*SP >> 1) -> *SP;`                             | `0b10110101`          |
 | `not`       | Bitwise NOT                   | `!*SP -> *SP; *SP == 0 -> CF;`                                        | `0b10110110`          |
 | `buf`       | Bitwise Buffer                | `*SP -> *SP; *SP == 0 -> CF;`                                         | `0b10110111`          |
 | `ldo O`     | Load from Offset              | `*(SP + O) -> *(--SP);`                                               | `0b1100OOOO` (`0xCO`) |
@@ -81,7 +81,7 @@ Negative values are represented in two's complement.
 
 ## Initial State
 
-The Atto-8 is initialized with the following state:
+The Atto-8 microprocessor is initialized with the following state:
 
 | Item | Value  |
 | ---- | ------ |
@@ -89,7 +89,7 @@ The Atto-8 is initialized with the following state:
 | `SP` | `0x00` |
 | `CF` | `0b0`  |
 
-This implies the following:
+This implies that:
 
 - Execution starts at address `0x00`.
 - The first item to be pushed onto the stack will located be at address `0xFF`.

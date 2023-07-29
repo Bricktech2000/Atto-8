@@ -2,14 +2,21 @@
 
 ## Overview
 
-The Atto-8 microcomputer is a minimalist computer based on the Atto-8 microprocessor, as defined in [/spec/microprocessor.md](../spec/microprocessor.md). It equips the processor with a clock, memory, a display, and a pair of D-pad controllers. It is designed to be a simple system that takes full advantage of the Atto-8 microprocessor. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex computers.
+The Atto-8 microcomputer is a minimalist computer based on the Atto-8 microprocessor, as defined in [/spec/microprocessor.md](../spec/microprocessor.md). It equips the processor with a clock, memory, standard input/output, a display, and a pair of D-pad controllers. It is designed to be a simple system that takes full advantage of the Atto-8 microprocessor. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex computers.
 
 ## Features
 
 - 100kHz clock
 - 256 bytes of memory
+- Standard input/output
 - 16x16 pixel display
 - Two D-pad controllers
+
+## Standard Input/Output
+
+The Atto-8 supports standard input/output through the _input buffer_, a byte located at address `0x00`. Standard input and standard output are buffered in hardware; reading from the input buffer will return the next byte from `stdin`, and writing to the input buffer will send the byte to `stdout`. If `stdin` is empty, reading from the input buffer will fall back to returning controller states. Writes and reads to to address `0x00` are intercepted by the microcomputer, and, therefore, the input buffer does not behave like other memory regions.
+
+On startup, `stdin` is initialized with the contents of memory address `0x00`. That is, the first read from address `0x00` will return the byte located at address `0x00`, and subsequent reads will return either bytes from standard input or controller states.
 
 ## Display
 
@@ -36,9 +43,9 @@ The Atto-8 is equipped with a 16x16 pixel monochrome display. It fetches rows of
 
 The display buffer behaves as any other memory region and can therefore both be read from and written to by a program.
 
-## Input
+## Controller Input
 
-The Atto-8 is equipped with a pair of memory-mapped 4-button D-pad controllers. The _input buffer_ is a byte located at address `0x00`, the lower 4 bits of which represent the state of the buttons on the primary controller, and the upper 4 bits of which represent the state of the buttons on the secondary controller. It is bit-mapped as follows, where `0` represents the least significant bit:
+The Atto-8 is equipped with a pair of memory-mapped 4-button D-pad controllers. If `stdin` is empty, reading from the _input buffer_, a byte located at address `0x00`, will fall back to returning controller states. In that event, the lower 4 bits of the input buffer represent the state of the buttons on the primary controller, and its upper 4 bits represent the state of the buttons on the secondary controller. It is bit-mapped as follows, where `0` represents the least significant bit:
 
 ```
 7 6 5 4 3 2 1 0
@@ -59,8 +66,6 @@ Primary  Secondary
  L + R     l + r
    D         d
 ```
-
-Upon a button state change, the microcomputer will set or clear the corresponding bit in the input buffer without affecting the other bits. The input buffer behaves as any other memory region and can therefore both be read from and written to by a program.
 
 ## Conventions
 
