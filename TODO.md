@@ -20,10 +20,13 @@ tasks:
 - [x] get rid of `adn` instruction
 - [x] create `u4` and `i4` pair types
 - [x] update programs with new types
-- [ ] implement `gets`
+- [ ] implement `gets` and friends
 - [x] rename `dyn` `min` `def` to use `.` instead of `_`
 - [x] document `dyn` `min` `def`
 - [x] swap `sta` argument order
+- [ ] finish `pong.asm`
+- [ ] finish `snake.asm`
+- [ ] finish `mandelbrot.asm`
 - [ ] come up with microcode
 - [ ] build computer
 
@@ -33,7 +36,7 @@ tasks:
 
 moving forward:
 
-- [ ] command line interface
+- [x] command line interface
 - [ ] text editor
 - [ ] file system
 - [ ] native assembler
@@ -79,8 +82,8 @@ todos:
   - [x] random
   - [x] pong
   - [x] flappy
-- [ ] write documentation
-- [ ] get rid of "input" voccabulary
+- [ ] write documentation for stdio
+- [x] get rid of "input" voccabulary
 - [x] get rid of `to_char` and others in `stdlib.asm`
 
 monitor:

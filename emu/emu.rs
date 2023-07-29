@@ -62,6 +62,7 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
   let mut status_line = "".to_string();
   let mut stdout_string = "".to_string();
   let mut stdin_queue = VecDeque::new();
+  let mut controller_input = [None; 8];
   let mut debug_mode = false;
   let mut show_state = false;
 
@@ -115,22 +116,26 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
       }
 
       Ok(key) => {
-        let controller_lo = match key {
-          console::Key::ArrowUp => 0b0001,
-          console::Key::ArrowDown => 0b0010,
-          console::Key::ArrowLeft => 0b0100,
-          console::Key::ArrowRight => 0b1000,
-          _ => 0b0000,
-        };
-        let controller_hi = match key {
-          console::Key::PageUp => 0b0001,
-          console::Key::PageDown => 0b0010,
-          console::Key::Home => 0b0100,
-          console::Key::End => 0b1000,
-          _ => 0b0000,
-        };
+        let keys = [
+          console::Key::ArrowUp,
+          console::Key::ArrowDown,
+          console::Key::ArrowLeft,
+          console::Key::ArrowRight,
+          console::Key::PageUp,
+          console::Key::PageDown,
+          console::Key::Home,
+          console::Key::End,
+        ];
 
-        mc.mem[0x00] = controller_lo | (controller_hi << 4);
+        controller_input = keys
+          .iter()
+          .map(|k| (k == &key).then_some(std::time::Instant::now()))
+          .zip(controller_input.iter())
+          .map(|(next, curr)| next.or(*curr))
+          .collect::<Vec<_>>()
+          .try_into()
+          .unwrap();
+
         stdin_queue.push_back(match key {
           console::Key::Char(c) => c as u8,
           console::Key::Backspace => 0x08,
@@ -157,6 +162,21 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
         }
       };
     }
+
+    let timestamp_threshold = std::time::Duration::from_millis(200);
+    controller_input = controller_input
+      .iter()
+      .map(|timestamp| timestamp.and_then(|t| (t.elapsed() < timestamp_threshold).then_some(t)))
+      .collect::<Vec<_>>()
+      .try_into()
+      .unwrap();
+
+    mc.mem[0x00] = controller_input
+      .iter()
+      .enumerate()
+      .fold(0x00, |acc, (index, timestamp)| {
+        acc | ((timestamp.is_some() as u8) << index)
+      });
 
     let realtime = std::cmp::max(start_time.elapsed().as_millis(), 1); // prevent division by zero
     let realtime_offset = (1000 * current_clocks / clock_speed) as i128 - realtime as i128;
@@ -197,8 +217,9 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
         print!("{}", mc);
       }
       print!(
-        "{}",
-        render_display_buffer(&mc.mem[0xE0..0x100].try_into().unwrap())
+        "{}{}",
+        render_display_buffer(&mc.mem[0xE0..0x100].try_into().unwrap()),
+        render_controller_input(&mc.mem[0x00..0x01].try_into().unwrap())
       );
       print!("{}", stdout_string);
       use std::io::Write;
@@ -640,11 +661,11 @@ fn render_display_buffer(display_buffer: &[u8; 0x20]) -> String {
   fmt
 }
 
-fn _render_controller(controller: u8) -> String {
+fn render_controller_input(controller_input: &[u8; 0x01]) -> String {
   let mut fmt = "".to_string();
 
-  fn bit_to_str(controller: u8, bit: u8) -> &'static str {
-    match controller >> bit & 0x01 {
+  fn bit_to_str(controller_input: &[u8; 0x01], bit: u8) -> &'static str {
+    match controller_input[0x00] >> bit & 0x01 {
       0b0 => "\u{2591}\u{2591}",
       0b1 => "\u{2588}\u{2588}",
       _ => unreachable!(),
@@ -653,20 +674,20 @@ fn _render_controller(controller: u8) -> String {
 
   fmt += &format!(
     "    {}      {}    \r\n",
-    bit_to_str(controller, 0),
-    bit_to_str(controller, 4),
+    bit_to_str(controller_input, 0),
+    bit_to_str(controller_input, 4),
   );
   fmt += &format!(
     "  {}  {}  {}  {}  \r\n",
-    bit_to_str(controller, 2),
-    bit_to_str(controller, 3),
-    bit_to_str(controller, 6),
-    bit_to_str(controller, 7),
+    bit_to_str(controller_input, 2),
+    bit_to_str(controller_input, 3),
+    bit_to_str(controller_input, 6),
+    bit_to_str(controller_input, 7),
   );
   fmt += &format!(
     "    {}      {}    \r\n",
-    bit_to_str(controller, 1),
-    bit_to_str(controller, 5),
+    bit_to_str(controller_input, 1),
+    bit_to_str(controller_input, 5),
   );
 
   fmt
