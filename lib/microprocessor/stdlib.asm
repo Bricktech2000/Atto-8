@@ -23,8 +23,72 @@ popcnt! # count = popcnt(a)
   buf @dyn x00 xFF iff
   # do { count++ } while (a != 0)
   while. inc
-    # a &= a - 1 (unsets lowest set bit)
-    ld1 dec an2
+    # a &= a - 1
+    ld1 dec an2 # unsets lowest set bit
   .while !bcc
   # return* count
   st0
+
+# `free` only sets the `is_free` bit of the corresponding header
+# `malloc` searches linearly from `HEAP_START` and coalesces free blocks as it goes
+#
+# the following must be defined by the user:
+# -  `HEAP_START` -- start of heap memory
+# - `*HEAP_START` -- length of heap memory but with the most significant bit set
+#
+# struct header {
+#   u7 size; // excludes header
+#   bool is_free; // most significant bit
+# }
+#
+# struct block {
+#   header header;
+#   u8 data[header.size];
+# }
+#
+# struct heap {
+#   block blocks[];
+# }
+
+heap_unlimited! xFF # header for free block of size 0x7F
+is_free_mask! x80 @const
+
+malloc.def!
+  malloc: # void* p = malloc(size)
+    !heap_start for_block. # loop as `curr_block`
+      # offset `size` so allocated blocks are considered too small
+      ld2 !is_free_mask orr
+      # check if `curr_block` is large enough
+      # a block being large enough implies it is free
+      ld1 lda sub .block_found !bcs pop
+      # next_block = (curr_block.header & ~IS_FREE_MASK) + curr_block + 1
+      ld0 lda !is_free_mask not and ld1 add inc swp # swap curr_block and next_block
+      # next_header = next_block.header
+      ld1 lda swp # swap curr_block and next_header
+      # coalesced_header = next_header + curr_header + 1
+      ld1 ld1 lda add inc # if addition overflows then both blocks are free
+      # stack (top down): coalesced_header, curr_block, next_header, next_block, ret_addr, size
+      # working_header = both_free ? coalesced_header | IS_FREE_MASK : next_header
+      # working_block  = both_free ? curr_block : next_block
+      if2 if2 x00 shr @dyn orr
+      # working_block.header = working_header
+      ld1 sta # block for next iteration will be working_block
+    .for_block !jmp
+    block_found.
+      # create free_header with correct size
+      neg dec !is_free_mask orr # clears carry
+      # next_block = size + curr_block + 1
+      ld3 ld2 add inc
+      # next_block.header = free_header
+      sta
+      # curr_block.header = size
+      ld2 ld1 sta
+  # return* curr_block + 1
+  inc st1 !rt0
+
+free.def!
+  free: # free(*p)
+    !is_free_mask ld2 dec
+    ld0 lda or2 sta
+  # return*
+  !rt1

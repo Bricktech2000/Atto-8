@@ -9,7 +9,7 @@ This library provides utilities and convenience macros for the Atto-8 microproce
 - [/lib/microprocessor/](microprocessor/) &mdash; Utilities for to the Atto-8 microprocessor as defined in [/spec/microprocessor.md](../spec/microprocessor.md)
   - [/lib/microprocessor/core.asm](microprocessor/core.asm) &mdash; Core instruction-like macros such as `!call` and `!hlt`
   - [/lib/microprocessor/types.asm](microprocessor/types.asm) &mdash; Type definitions and operations such as fixed-point arithmetic and integer multiplication
-  - [/lib/microprocessor/stdlib.asm](microprocessor/stdlib.asm) &mdash; Standard library functions inspired by the C header `stdlib.h` such as `popcnt` and `rand`
+  - [/lib/microprocessor/stdlib.asm](microprocessor/stdlib.asm) &mdash; Standard library functions inspired by the C header `stdlib.h` such as `malloc` and `rand`
   - [/lib/microprocessor/string.asm](microprocessor/string.asm) &mdash; String operations inspired by the C header `string.h` such as `strlen` and `memcpy`
 - [/lib/microcomputer/](microcomputer/) &mdash; Utilities for to the Atto-8 microcomputer as defined in [/spec/microcomputer.md](../spec/microcomputer.md)
   - [/lib/microcomputer/stdio.asm](microcomputer/stdio.asm) &mdash; Standard input/output functions inspired by the C header `stdio.h` such as `getc` and `puts`

@@ -42,8 +42,9 @@ python3 test.py asm emu mandelbrot.asm
 
 # test programs
 python3 test.py asm emu ore.asm
-python3 test.py asm emu multiply.asm
+python3 test.py asm emu allocation.asm
 python3 test.py asm emu optimization.asm
+python3 test.py asm emu multiplication.asm
 python3 test.py enc emu nop.hex
 python3 test.py enc emu addition.hex
 python3 test.py enc emu checkerboard.hex
