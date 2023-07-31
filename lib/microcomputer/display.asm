@@ -1,8 +1,8 @@
 display_buffer! xE0 @const
 
-bit_addr! clc # (rot, addr) = bit_addr(buffer, index)
+bit_addr! # (rot, addr) = bit_addr(buffer, index)
   # addr = index // 8 + buffer
-  ld1 x03 !ror add
+  ld1 x07 not and clc x05 rot add
   # rot = ~index % 8
   swp not x07 and
   # return* (rot, addr)
@@ -37,9 +37,9 @@ flip_bit! # flip_bit(rot, addr)
   ld0 lda xo2 sta
   # return*
 
-nibble_addr! clc # (rot, addr) = nibble_addr(buffer, index)
+nibble_addr! # (rot, addr) = nibble_addr(buffer, index)
   # addr = index // 2 + buffer
-  ld1 x01 !ror add
+  clc ld1 shr clc add
   # rot = 4 * (~index % 2)
   swp not x01 and x02 rot
   # return*

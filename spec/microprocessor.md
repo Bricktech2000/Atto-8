@@ -51,7 +51,7 @@ Negative values are represented in two's complement.
 | `add S`     | Add with Carry                | `*(SP++) + *(SP + 2 ** S) + CF -> *(SP + 2 ** S); *SP > 0xFF -> CF;`  | `0b100000SS`          |
 | `sub S`     | Subtract with Carry           | `-*(SP++) + *(SP + 2 ** S) - CF -> *(SP + 2 ** S); *SP < 0x00 -> CF;` | `0b100001SS`          |
 | `iff S`     | Conditional with Carry        | `CF ? *((SP++)++) : *((++SP)++ + 2 ** S) -> *(--SP);`                 | `0b100100SS`          |
-| `rot S`     | Rotate                        | `(*SP << S) \| ((*SP << S) >> 8) -> *SP;`                             | `0b100101SS`          |
+| `rot S`     | Rotate                        | `(*SP << S % 8) \| ((*SP << S % 8) >> 8) -> *SP;`                     | `0b100101SS`          |
 | `orr S`     | Bitwise OR                    | `*(SP++) \| *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`        | `0b101000SS`          |
 | `and S`     | Bitwise AND                   | `*(SP++) & *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`         | `0b101001SS`          |
 | `xor S`     | Bitwise XOR                   | `*(SP++) ^ *(SP + 2 ** S) -> *(SP + 2 ** S); *SP == 0 -> CF;`         | `0b101010SS`          |

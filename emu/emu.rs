@@ -334,11 +334,7 @@ fn tick(mc: &mut Microcomputer) -> (u128, Option<TickTrap>) {
               // rot
               let a = pop!();
               let b = mem_read!(size_pointer);
-              let shifted = if a as i8 >= 0 {
-                (b as u16).wrapping_shl(a as u32)
-              } else {
-                (b as u16).wrapping_shr(a.wrapping_neg() as u32)
-              };
+              let shifted = (b as u16) << a % 8;
               mem_write!(size_pointer, (shifted & 0xFF) as u8 | (shifted >> 8) as u8);
               (0x04, None)
             }

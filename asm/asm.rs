@@ -950,13 +950,7 @@ fn assemble(
       Node::Rot(node1, node2) => {
         let a = eval(node1, label_definitions)? as u16;
         let b = eval(node2, label_definitions)? as u16;
-
-        let shifted = if a as i8 >= 0 {
-          (b as u16).wrapping_shl(a as u32)
-        } else {
-          (b as u16).wrapping_shr(a.wrapping_neg() as u32)
-        } as u16;
-
+        let shifted = (b as u16) << a % 8;
         (shifted & 0xFF) as u8 | (shifted >> 8) as u8
       }
       Node::Orr(node1, node2) => eval(node2, label_definitions)? | eval(node1, label_definitions)?,
