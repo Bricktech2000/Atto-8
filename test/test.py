@@ -15,7 +15,7 @@ def rel_path(*args):
   return os.path.relpath(os.path.join(os.path.dirname(__file__), *args), os.getcwd())
 
 
-run_cargo = functools.partial(run, 'cargo')
+run_cargo = functools.partial(run, 'cargo', '--quiet')
 run_python = functools.partial(run, 'python3')
 
 
