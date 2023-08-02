@@ -282,8 +282,8 @@ i8f8.neg! !i16.neg
 
 u8.lda! lda
 u16.lda! ld0 lda swp inc lda
-u32.lda! ld0 lda swp inc lda swp inc lda swp inc lda
-u64.lda! ld0 lda swp inc lda swp inc lda swp inc lda swp inc lda swp inc lda swp inc lda swp inc lda
+u32.lda! ld0 lda swp inc ld0 lda swp inc ld0 lda swp inc lda
+u64.lda! ld0 lda swp inc ld0 lda swp inc ld0 lda swp inc ld0 lda swp inc ld0 lda swp inc ld0 lda swp inc ld0 lda swp inc lda
 i8.lda! !u8.lda
 i16.lda! !u16.lda
 i32.lda! !u32.lda
@@ -299,9 +299,9 @@ i8f8.lda! !i16.lda
 char.lda! !u8.lda
 
 u8.sta! sta
-u16.sta! ld0 sta swp inc sta
-u32.sta! ld0 sta swp inc sta swp inc sta swp inc sta
-u64.sta! ld0 sta swp inc sta swp inc sta swp inc sta swp inc sta swp inc sta swp inc sta swp inc sta
+u16.sta! swp ld1 sta inc sta
+u32.sta! swp ld1 sta inc swp ld1 sta inc swp ld1 sta inc sta
+u64.sta! swp ld1 sta inc swp ld1 sta inc swp ld1 sta inc swp ld1 sta inc swp ld1 sta inc swp ld1 sta inc swp ld1 sta inc sta
 i8.sta! !u8.sta
 i16.sta! !u16.sta
 i32.sta! !u32.sta
