@@ -4,9 +4,11 @@ nop
 main!
 main!
   @ foo.asm
-  dZZ
-  xF00
   x
+  dZZ
+  xca
+  xF00
+  #comment
   :label
   !macro
   foobar

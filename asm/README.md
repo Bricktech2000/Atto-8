@@ -18,10 +18,10 @@ Labels are global by default; local labels are local to a macro. Macros are glob
 
 ## Preprocessing
 
-| Pattern      | Operation                                    |
-| ------------ | -------------------------------------------- |
-| `/#( .*)?$/` | Textually replace with `""`                  |
-| `/@( .*)?$/` | Textually replace with contents of file `$1` |
+| Pattern                | Operation                                    |
+| ---------------------- | -------------------------------------------- |
+| `/# (.*)$/` and `/#$/` | Textually replace with `""`                  |
+| `/@ (.*)$/`            | Textually replace with contents of file `$1` |
 
 ## Tokens
 
@@ -38,7 +38,7 @@ Labels are global by default; local labels are local to a macro. Macros are glob
 | `@org`   | Set location counter to preceding expression      |
 | `@err`   | Emit error and terminate compilation              |
 | `dDD`    | Insert `DD` in binary at current address          |
-| `xXX`    | Push `XX` through `psh` and `phn` instructions    |
+| `xXX`    | Push hexadecimal `XX` through `psh` and `phn`     |
 | `add`    | Instruction `add 0x01`                            |
 | `adS`    | Instruction `add S`                               |
 | `sub`    | Instruction `sub 0x01`                            |

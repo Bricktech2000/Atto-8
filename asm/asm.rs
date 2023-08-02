@@ -167,7 +167,8 @@ fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -
 
   let source: String = source
     .lines()
-    .map(|line| line.split("#").next().unwrap())
+    .map(|line| line.strip_suffix("#").unwrap_or(line))
+    .map(|line| line.split("# ").next().unwrap_or(line))
     .map(|line| match line.find("@ ") {
       Some(i) => {
         line[..i].to_owned()
@@ -176,7 +177,7 @@ fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -
               path: Path::new(&file.path)
                 .parent()
                 .unwrap()
-                .join(&line[i..][2..])
+                .join(&line[i..]["@ ".len()..])
                 .to_str()
                 .unwrap()
                 .to_string(),
@@ -199,27 +200,22 @@ fn tokenize(source: String, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)>
 
   fn parse_hex(literal: &str, errors: &mut Vec<(Pos, Error)>, position: &Pos) -> u8 {
     use std::num::IntErrorKind::*;
-    match u8::from_str_radix(literal, 16) {
+    match (literal.to_uppercase() == literal)
+      .then_some(literal)
+      .ok_or(InvalidDigit)
+      .and(u8::from_str_radix(literal, 16).map_err(|e| e.kind().clone()))
+    {
       Ok(value) => value,
-      Err(e) => {
-        match e.kind() {
-          InvalidDigit => errors.push((
-            position.clone(),
-            Error(format!(
-              "Invalid digits in hexadecimal literal `{}`",
-              literal
-            )),
-          )),
-          Empty => errors.push((
-            position.clone(),
-            Error(format!("Invalid empty hexadecimal literal `{}`", literal)),
-          )),
-          NegOverflow | PosOverflow => errors.push((
-            position.clone(),
-            Error(format!("Hexadecimal literal `{}` out of range", literal)),
-          )),
-          _ => panic!("Unexpected error parsing hexadecimal literal"),
-        };
+      Err(kind) => {
+        errors.push((
+          position.clone(),
+          Error(match kind {
+            Empty => format!("Invalid empty hexadecimal literal `x{}`", literal),
+            InvalidDigit => format!("Invalid digits in hexadecimal literal `x{}`", literal),
+            NegOverflow | PosOverflow => format!("Out-of-range hexadecimal literal `x{}`", literal),
+            _ => panic!("Unexpected error parsing hexadecimal literal"),
+          }),
+        ));
         0x00
       }
     }
