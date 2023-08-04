@@ -794,6 +794,18 @@ fn assemble(
           Box::new(node1.clone()),
         ))])
       }
+      [Root::Instruction(Instruction::Swp), Root::Instruction(Instruction::Inc), Root::Instruction(Instruction::Swp)] => {
+        Some(vec![
+          Root::Node(Node::Immediate(0x01)),
+          Root::Instruction(Instruction::Add(0x02)),
+        ])
+      }
+      [Root::Instruction(Instruction::Swp), Root::Instruction(Instruction::Dec), Root::Instruction(Instruction::Swp)] => {
+        Some(vec![
+          Root::Node(Node::Immediate(0x01)),
+          Root::Instruction(Instruction::Sub(0x02)),
+        ])
+      }
       [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Xnd(0x01))] => {
         Some(vec![Root::Node(Node::Xnd(
           Box::new(node2.clone()),
