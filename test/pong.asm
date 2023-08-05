@@ -50,7 +50,7 @@ main!
 
       # check for input and move paddle_b
       !getc
-      ld0 x03 and pop :check_next !bcs
+      ld0 !primary_up !primary_down orr and pop :check_next !bcs
       !u8.ld6 x01 !u8.sub !u8.ld7 x01 !u8.add ld2 x01 and pop iff !u8.st6
       check_next: pop
 

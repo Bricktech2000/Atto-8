@@ -18,9 +18,9 @@ main!
     !display_buffer for_byte:
       # assume input never empty
       # assume input always well-formed
-      !getc buf :done !bcs
+      !getc !char.null xor :done !bcs
       !char.to_u4 x04 rot
-      !getc buf :done !bcs
+      !getc !char.null xor :done !bcs
       !char.to_u4 orr !u8
       # write byte to display buffer
       ld1 !u8.sta

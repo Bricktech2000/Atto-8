@@ -1,6 +1,15 @@
 stdin! x00 @const
 stdout! x00 @const
 
+primary_up! x01 @const
+primary_down! x02 @const
+primary_left! x04 @const
+primary_right! x08 @const
+secondary_up! x10 @const
+secondary_down! x20 @const
+secondary_left! x40 @const
+secondary_right! x80 @const
+
 fgetc! lda # char = fgetc(stream)
 getc! !stdin !fgetc # char = getc()
 fgets! @err # to be implemented

@@ -26,9 +26,9 @@ main!
     # ignore if input is empty
     x0F and :ignore !bcs
       # vel = (input & 0b1010) ? 0x0F : 0x01
-      ld0 x0A and pop x01 x0F iff !i4i4
+      ld0 !primary_down !primary_right orr and pop x01 x0F iff !i4i4
       # rot = (input & 0b0011) ? 0x04 : 0x00
-      ld1 x03 and pop x04 x00 iff
+      ld1 !primary_up !primary_down orr and pop x04 x00 iff
       # xy_vel = vel << rot
       rot !i4i4.st1
     # pop input

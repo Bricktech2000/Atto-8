@@ -17,7 +17,7 @@ main!
 
   loop:
     # set y_vel to flap_vel if no button was pressed previously but some button is pressed now
-    !getc buf !i4f4.ld1 !flap_vel !i4f4.ld3 !i4f4.iff ld8 buf pop !i4f4.iff !i4f4.st1 st5
+    !getc !char.null xor !i4f4.ld1 !flap_vel !i4f4.ld3 !i4f4.iff ld8 buf pop !i4f4.iff !i4f4.st1 st5
     # compute bit_addr of (BIRD_POS, y_pos)
     !display_buffer !u4f4.ld2 !u4f4.in clc !u4f4.shl orr x07 !bird_pos sub @const
     # clear pixel at (x_pos, y_pos)

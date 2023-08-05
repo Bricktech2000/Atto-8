@@ -18,7 +18,7 @@ main!
 
   loop:
     # set y_vel to jump_vel if any button is pressed and y_pos > GROUND_POS
-    !getc buf pop !jump_vel !i4f4.ld1 !i4f4.iff !u4f4.ld2 !ground_pos sub pop !i4f4.ld1 !i4f4.iff !i4f4.st0
+    !getc !char.null xor pop !jump_vel !i4f4.ld1 !i4f4.iff !u4f4.ld2 !ground_pos sub pop !i4f4.ld1 !i4f4.iff !i4f4.st0
     # compute bit_addr of (DINO_POS, y_pos)
     !display_buffer !u4f4.ld2 !u4f4.in !u4f4.shl orr x07 !dino_pos sub @const
     # clear pixel at (x_pos, y_pos - 2)
