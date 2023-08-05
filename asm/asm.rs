@@ -844,46 +844,60 @@ fn assemble(
     });
 
     roots = match_replace(&roots, |window| match window {
-      [Root::Node(node1), Root::Instruction(Instruction::Add(0x01)), Root::Node(node2), Root::Instruction(Instruction::Add(0x01))] => {
+      [Root::Node(node1), Root::Instruction(Instruction::Add(s1)), Root::Node(node2), Root::Instruction(Instruction::Add(s2))]
+        if s1 == s2 =>
+      {
         Some(vec![
           Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Add(0x01)),
+          Root::Instruction(Instruction::Add(*s1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::Sub(0x01)), Root::Node(node2), Root::Instruction(Instruction::Sub(0x01))] => {
+      [Root::Node(node1), Root::Instruction(Instruction::Sub(s1)), Root::Node(node2), Root::Instruction(Instruction::Sub(s2))]
+        if s1 == s2 =>
+      {
         Some(vec![
           Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Sub(0x01)),
+          Root::Instruction(Instruction::Sub(*s1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::Rot(0x01)), Root::Node(node2), Root::Instruction(Instruction::Rot(0x01))] => {
+      [Root::Node(node1), Root::Instruction(Instruction::Rot(s1)), Root::Node(node2), Root::Instruction(Instruction::Rot(s2))]
+        if s1 == s2 =>
+      {
         Some(vec![
           Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Rot(0x01)),
+          Root::Instruction(Instruction::Rot(*s1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::Orr(0x01)), Root::Node(node2), Root::Instruction(Instruction::Orr(0x01))] => {
+      [Root::Node(node1), Root::Instruction(Instruction::Orr(s1)), Root::Node(node2), Root::Instruction(Instruction::Orr(s2))]
+        if s1 == s2 =>
+      {
         Some(vec![
           Root::Node(Node::Orr(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Orr(0x01)),
+          Root::Instruction(Instruction::Orr(*s1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::And(0x01)), Root::Node(node2), Root::Instruction(Instruction::And(0x01))] => {
+      [Root::Node(node1), Root::Instruction(Instruction::And(s1)), Root::Node(node2), Root::Instruction(Instruction::And(s2))]
+        if s1 == s2 =>
+      {
         Some(vec![
           Root::Node(Node::And(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::And(0x01)),
+          Root::Instruction(Instruction::And(*s1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::Xor(0x01)), Root::Node(node2), Root::Instruction(Instruction::Xor(0x01))] => {
+      [Root::Node(node1), Root::Instruction(Instruction::Xor(s1)), Root::Node(node2), Root::Instruction(Instruction::Xor(s2))]
+        if s1 == s2 =>
+      {
         Some(vec![
           Root::Node(Node::Xor(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Xor(0x01)),
+          Root::Instruction(Instruction::Xor(*s1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::Xnd(0x01)), Root::Node(node2), Root::Instruction(Instruction::Xnd(0x01))] => {
+      [Root::Node(node1), Root::Instruction(Instruction::Xnd(s1)), Root::Node(node2), Root::Instruction(Instruction::Xnd(s2))]
+        if s1 == s2 =>
+      {
         Some(vec![
           Root::Node(Node::Xnd(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Xnd(0x01)),
+          Root::Instruction(Instruction::Xnd(*s1)),
         ])
       }
       [Root::Node(node1), root1, root2, Root::Instruction(Instruction::Ldo(0x02))]
