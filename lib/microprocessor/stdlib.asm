@@ -29,10 +29,10 @@ popcnt! # count = popcnt(a)
   # return* count
   st0
 
-# `free` only sets the `is_free` bit of the corresponding header
+# `free` solely sets the `is_free` bit of the corresponding header
 # `malloc` searches linearly from `HEAP_START` and coalesces free blocks as it goes
 #
-# the following must be defined by the user:
+# the following must be supplied by the user:
 # -  `HEAP_START` -- start of heap memory
 # - `*HEAP_START` -- length of heap memory but with the most significant bit set
 #
