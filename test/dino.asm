@@ -75,7 +75,10 @@ main!
   :loop !jmp
 
   game_over:
-    !hlt
+    # invert screen
+    !display_buffer for_i:
+      ld0 lda not ld1 sta
+    inc buf !here :for_i swp iff !jmp
 
   cacti:
   # top bot
