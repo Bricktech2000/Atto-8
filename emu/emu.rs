@@ -28,8 +28,8 @@ fn main() {
     stdin: 0x00,
     stdout: 0x00,
     mp: Microprocessor {
-      sp: 0x00,
       ip: 0x00,
+      sp: 0x00,
       cf: false,
     },
   };
@@ -47,8 +47,8 @@ struct Microcomputer {
 }
 
 struct Microprocessor {
-  sp: u8,   // stack pointer
   ip: u8,   // instruction pointer
+  sp: u8,   // stack pointer
   cf: bool, // carry flag
 }
 
