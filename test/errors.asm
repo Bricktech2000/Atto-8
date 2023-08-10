@@ -8,6 +8,8 @@ main!
   dZZ
   xca
   xF00
+  ad10
+  ld11
   #comment
   :label
   !macro

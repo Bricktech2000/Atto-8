@@ -32,7 +32,9 @@ fn main() {
   };
 }
 
-fn disassemble(memory: [u8; 0x100], entry_point: &str) -> String {
+const MEM_SIZE: usize = 0x100;
+
+fn disassemble(memory: [u8; MEM_SIZE], entry_point: &str) -> String {
   format!(
     "{}!\n{}",
     entry_point,
@@ -41,8 +43,9 @@ fn disassemble(memory: [u8; 0x100], entry_point: &str) -> String {
       .map(|instruction| {
         match (instruction & 0b10000000) >> 7 {
           0b0 => {
-            let immediate = instruction; // decode_immediate
-            format!("x{:02X} @dyn", immediate)
+            let imm = instruction; // decode_imm
+            let value = imm;
+            format!("x{:02X} @dyn", value)
           }
 
           0b1 => {
@@ -110,13 +113,13 @@ fn disassemble(memory: [u8; 0x100], entry_point: &str) -> String {
                     // (offset operations)
                     match (instruction & 0b00010000) >> 4 {
                       0b0 => {
-                        let offset = instruction & 0b00001111; // decode_offset
-                        format!("ld{:01X} @dyn", offset)
+                        let ofst = instruction & 0b00001111; // decode_ofst
+                        format!("ld{:01X} @dyn", ofst)
                       }
 
                       0b1 => {
-                        let offset = instruction & 0b00001111; // decode_offset
-                        format!("st{:01X} @dyn", offset)
+                        let ofst = instruction & 0b00001111; // decode_ofst
+                        format!("st{:01X} @dyn", ofst)
                       }
 
                       _ => unreachable!(),
@@ -159,8 +162,9 @@ fn disassemble(memory: [u8; 0x100], entry_point: &str) -> String {
                       }
 
                       0b1 => {
-                        let immediate = instruction; // decode_immediate
-                        format!("x{:02X} @dyn", immediate)
+                        let imm = instruction; // decode_imm
+                        let value = imm;
+                        format!("x{:02X} @dyn", value)
                       }
 
                       _ => unreachable!(),

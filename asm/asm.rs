@@ -20,9 +20,14 @@ fn main() {
 
   match errors[..] {
     [] => {
-      std::fs::write(
+      std::fs::write::<&String, [u8; MEM_SIZE]>(
         memory_image_file,
-        bytes.iter().map(|(_, b)| *b).collect::<Vec<u8>>(),
+        bytes
+          .iter()
+          .map(|(_, b)| *b)
+          .collect::<Vec<u8>>()
+          .try_into()
+          .unwrap(),
       )
       .unwrap();
 
@@ -40,6 +45,8 @@ fn main() {
     }
   }
 }
+
+const MEM_SIZE: usize = 0x100;
 
 #[derive(Clone, Eq, PartialEq, Hash)]
 struct Label {
@@ -460,14 +467,14 @@ fn assemble(
       .collect()
   }
 
-  fn assert_immediate(immediate: u8, errors: &mut Vec<(Pos, Error)>, position: &Pos) -> u8 {
-    match immediate {
-      0b00000000..=0b11111111 => immediate,
-      #[allow(unreachable_patterns)]
+  #[allow(dead_code)]
+  fn assert_imm(imm: u8, errors: &mut Vec<(Pos, Error)>, position: &Pos) -> u8 {
+    match imm {
+      0b00000000..=0b01111111 => imm,
       _ => {
         errors.push((
           position.clone(),
-          Error(format!("Invalid immediate operand `{:02X}`", immediate)),
+          Error(format!("Invalid IMM operand `{:02X}`", imm)),
         ));
         0b00000000
       }
@@ -480,20 +487,20 @@ fn assemble(
       _ => {
         errors.push((
           position.clone(),
-          Error(format!("Invalid size operand `{:02X}`", size)),
+          Error(format!("Invalid SIZE operand `{:02X}`", size)),
         ));
         0x01
       }
     }
   }
 
-  fn assert_offset(offset: u8, errors: &mut Vec<(Pos, Error)>, position: &Pos) -> u8 {
-    match offset {
-      0b00000000..=0b00001111 => offset,
+  fn assert_ofst(ofst: u8, errors: &mut Vec<(Pos, Error)>, position: &Pos) -> u8 {
+    match ofst {
+      0b00000000..=0b00001111 => ofst,
       _ => {
         errors.push((
           position.clone(),
-          Error(format!("Invalid offset operand `{:02X}`", offset)),
+          Error(format!("Invalid OFST operand `{:02X}`", ofst)),
         ));
         0b00000000
       }
@@ -515,7 +522,7 @@ fn assemble(
   #[derive(Clone, Eq, PartialEq, Hash)]
   enum Node {
     LabelRef(Label),
-    Immediate(u8),
+    Value(u8),
     Add(Box<Node>, Box<Node>),
     Sub(Box<Node>, Box<Node>),
     Rot(Box<Node>, Box<Node>),
@@ -541,9 +548,7 @@ fn assemble(
         Token::AtDyn => Root::Dyn(None),
         Token::AtOrg => Root::Org(None),
         Token::AtErr => panic!("Error directive found in intermediate representation"),
-        Token::XXX(immediate) => Root::Node(Node::Immediate(assert_immediate(
-          immediate, errors, &position,
-        ))),
+        Token::XXX(value) => Root::Node(Node::Value(value)),
         Token::Add => Root::Instruction(Instruction::Add(assert_size(0x01, errors, &position))),
         Token::AdS(size) => {
           Root::Instruction(Instruction::Add(assert_size(size, errors, &position)))
@@ -583,11 +588,11 @@ fn assemble(
         Token::Shr => Root::Instruction(Instruction::Shr),
         Token::Not => Root::Instruction(Instruction::Not),
         Token::Buf => Root::Instruction(Instruction::Buf),
-        Token::LdO(offset) => {
-          Root::Instruction(Instruction::Ldo(assert_offset(offset, errors, &position)))
+        Token::LdO(ofst) => {
+          Root::Instruction(Instruction::Ldo(assert_ofst(ofst, errors, &position)))
         }
-        Token::StO(offset) => {
-          Root::Instruction(Instruction::Sto(assert_offset(offset, errors, &position)))
+        Token::StO(ofst) => {
+          Root::Instruction(Instruction::Sto(assert_ofst(ofst, errors, &position)))
         }
         Token::Lda => Root::Instruction(Instruction::Lda),
         Token::Sta => Root::Instruction(Instruction::Sta),
@@ -601,7 +606,7 @@ fn assemble(
         Token::Flc => Root::Instruction(Instruction::Flc),
         Token::Swp => Root::Instruction(Instruction::Swp),
         Token::Pop => Root::Instruction(Instruction::Pop),
-        Token::DDD(immediate) => Root::Instruction(Instruction::Raw(immediate)),
+        Token::DDD(value) => Root::Instruction(Instruction::Raw(value)),
       };
 
       (position, token)
@@ -682,8 +687,8 @@ fn assemble(
       [Root::Instruction(instruction), Root::Dyn(None)] => {
         Some(vec![Root::Dyn(Some(instruction.clone()))])
       }
-      [Root::Node(Node::Immediate(immediate)), Root::Dyn(None)] => Some(
-        make_push_instruction(immediate.clone(), &Pos("".to_string(), 0))
+      [Root::Node(Node::Value(value)), Root::Dyn(None)] => Some(
+        make_push_instruction(value.clone(), &Pos("".to_string(), 0))
           .iter()
           .map(|(_, instruction)| Root::Dyn(Some(instruction.clone())))
           .collect(),
@@ -699,29 +704,25 @@ fn assemble(
 
     roots =
       match_replace(&roots, |window| match window {
-        [Root::Node(Node::Immediate(0x00)), Root::Instruction(Instruction::Xor(0x01))] => {
+        [Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Xor(0x01))] => {
           Some(vec![Root::Instruction(Instruction::Buf)])
         }
-        [Root::Node(Node::Immediate(0x00)), Root::Instruction(Instruction::Add(0x01))] => {
-          Some(vec![])
-        }
-        [Root::Node(Node::Immediate(0x01)), Root::Instruction(Instruction::Add(0x01))] => {
+        [Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Add(0x01))] => Some(vec![]),
+        [Root::Node(Node::Value(0x01)), Root::Instruction(Instruction::Add(0x01))] => {
           Some(vec![Root::Instruction(Instruction::Inc)])
         }
-        [Root::Node(Node::Immediate(0x00)), Root::Instruction(Instruction::Sub(0x01))] => {
-          Some(vec![])
-        }
-        [Root::Node(Node::Immediate(0x01)), Root::Instruction(Instruction::Sub(0x01))] => {
+        [Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sub(0x01))] => Some(vec![]),
+        [Root::Node(Node::Value(0x01)), Root::Instruction(Instruction::Sub(0x01))] => {
           Some(vec![Root::Instruction(Instruction::Dec)])
         }
         [Root::Node(node), Root::Instruction(Instruction::Inc)] => Some(vec![Root::Node(
-          Node::Add(Box::new(Node::Immediate(1)), Box::new(node.clone())),
+          Node::Add(Box::new(Node::Value(1)), Box::new(node.clone())),
         )]),
         [Root::Node(node), Root::Instruction(Instruction::Dec)] => Some(vec![Root::Node(
-          Node::Sub(Box::new(Node::Immediate(1)), Box::new(node.clone())),
+          Node::Sub(Box::new(Node::Value(1)), Box::new(node.clone())),
         )]),
         [Root::Node(node), Root::Instruction(Instruction::Neg)] => Some(vec![Root::Node(
-          Node::Sub(Box::new(node.clone()), Box::new(Node::Immediate(0))),
+          Node::Sub(Box::new(node.clone()), Box::new(Node::Value(0))),
         )]),
         [Root::Instruction(Instruction::Neg), Root::Instruction(Instruction::Neg)] => Some(vec![]),
         [Root::Node(node), Root::Instruction(Instruction::Shl)] => {
@@ -796,13 +797,13 @@ fn assemble(
       }
       [Root::Instruction(Instruction::Swp), Root::Instruction(Instruction::Inc), Root::Instruction(Instruction::Swp)] => {
         Some(vec![
-          Root::Node(Node::Immediate(0x01)),
+          Root::Node(Node::Value(0x01)),
           Root::Instruction(Instruction::Add(0x02)),
         ])
       }
       [Root::Instruction(Instruction::Swp), Root::Instruction(Instruction::Dec), Root::Instruction(Instruction::Swp)] => {
         Some(vec![
-          Root::Node(Node::Immediate(0x01)),
+          Root::Node(Node::Value(0x01)),
           Root::Instruction(Instruction::Sub(0x02)),
         ])
       }
@@ -822,28 +823,28 @@ fn assemble(
       [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Swp)] => {
         Some(vec![Root::Node(node2.clone()), Root::Node(node1.clone())])
       }
-      [Root::Instruction(Instruction::Ldo(offset)), Root::Node(node2), Root::Instruction(Instruction::Swp)]
-        if *offset < 0b00001111 =>
+      [Root::Instruction(Instruction::Ldo(ofst)), Root::Node(node2), Root::Instruction(Instruction::Swp)]
+        if *ofst < 0b00001111 =>
       {
         Some(vec![
           Root::Node(node2.clone()),
-          Root::Instruction(Instruction::Ldo(*offset + 1)),
+          Root::Instruction(Instruction::Ldo(*ofst + 1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::Ldo(offset)), Root::Instruction(Instruction::Swp)]
-        if *offset > 0b00000000 =>
+      [Root::Node(node1), Root::Instruction(Instruction::Ldo(ofst)), Root::Instruction(Instruction::Swp)]
+        if *ofst > 0b00000000 =>
       {
         Some(vec![
-          Root::Instruction(Instruction::Ldo(*offset - 1)),
+          Root::Instruction(Instruction::Ldo(*ofst - 1)),
           Root::Node(node1.clone()),
         ])
       }
-      [Root::Instruction(Instruction::Ldo(offset1)), Root::Instruction(Instruction::Ldo(offset2)), Root::Instruction(Instruction::Swp)]
-        if *offset1 < 0b00001111 && *offset2 > 0b00000000 =>
+      [Root::Instruction(Instruction::Ldo(ofst1)), Root::Instruction(Instruction::Ldo(ofst2)), Root::Instruction(Instruction::Swp)]
+        if *ofst1 < 0b00001111 && *ofst2 > 0b00000000 =>
       {
         Some(vec![
-          Root::Instruction(Instruction::Ldo(*offset2 - 1)),
-          Root::Instruction(Instruction::Ldo(*offset1 + 1)),
+          Root::Instruction(Instruction::Ldo(*ofst2 - 1)),
+          Root::Instruction(Instruction::Ldo(*ofst1 + 1)),
         ])
       }
       _ => None,
@@ -968,7 +969,7 @@ fn assemble(
   fn eval(node: &Node, label_definitions: &HashMap<Label, u8>) -> Result<u8, Label> {
     Ok(match node {
       Node::LabelRef(label) => *label_definitions.get(label).ok_or(label.clone())?,
-      Node::Immediate(immediate) => *immediate,
+      Node::Value(value) => *value,
       Node::Add(node1, node2) => {
         eval(node2, label_definitions)?.wrapping_add(eval(node1, label_definitions)?)
       }
@@ -991,23 +992,23 @@ fn assemble(
     })
   }
 
-  fn make_push_instruction(immediate: u8, position: &Pos) -> Vec<(Pos, Instruction)> {
+  fn make_push_instruction(value: u8, position: &Pos) -> Vec<(Pos, Instruction)> {
     // the `Psh` instruction allows us to push arbitrary 7-bit immediates onto the stack.
     // we then optionally use `Neg` and `Inc` to get the ability to push arbitrary 8-bit
-    // immediates. we also use `Phn` as a shorthand when possible.
+    // values. we also use `Phn` as a shorthand when possible.
 
-    if immediate & 0b11110000 == 0b11110000 {
-      vec![(position.clone(), Instruction::Phn(immediate & 0b00001111))]
-    } else if immediate == 0b10000000 {
+    if value & 0b11110000 == 0b11110000 {
+      vec![(position.clone(), Instruction::Phn(value & 0b00001111))]
+    } else if value == 0b10000000 {
       vec![
         (position.clone(), Instruction::Psh(0b01111111)),
         (position.clone(), Instruction::Inc),
       ]
     } else {
-      match immediate & 0b10000000 {
-        0b00000000 => vec![(position.clone(), Instruction::Psh(immediate & 0b01111111))],
+      match value & 0b10000000 {
+        0b00000000 => vec![(position.clone(), Instruction::Psh(value & 0b01111111))],
         0b10000000 => vec![
-          (position.clone(), Instruction::Psh(immediate.wrapping_neg())),
+          (position.clone(), Instruction::Psh(value.wrapping_neg())),
           (position.clone(), Instruction::Neg),
         ],
         _ => unreachable!(),
@@ -1015,7 +1016,7 @@ fn assemble(
     }
   }
 
-  // if every label a node depends on could be resolved, we can replace it with an immediate.
+  // if every label a node depends on could be resolved, we can replace it with a value.
   // if not, start by allocating one byte for pushing the node later. if pushing the node turns
   // out to require more than one byte, iteratively `'bruteforce` allocation sizes until we
   // find one that works. repeat for every node.
@@ -1146,7 +1147,7 @@ fn assemble(
     // poke into `instructions` and evaluate the nodes that couldn't be evaluated before
     'poke: {
       for (location_counter, node) in unevaluated_nodes.iter() {
-        let immediate = match eval(&node.1, &label_definitions) {
+        let value = match eval(&node.1, &label_definitions) {
           Ok(value) => value,
           Err(label) => {
             errors.push((
@@ -1160,7 +1161,7 @@ fn assemble(
         // if the evaluated node doesn't fit in the allocated memory, note down the right amount of
         // memory to allocate on the next iteration of `'bruteforce` and try again
 
-        let instructions_ = make_push_instruction(immediate, &node.0);
+        let instructions_ = make_push_instruction(value, &node.0);
         if instructions_.len() > allocation_sizes.get(&node.1).copied().unwrap_or(1) {
           allocation_sizes.insert(node.1.clone(), instructions_.len());
           break 'poke;
@@ -1179,15 +1180,14 @@ fn assemble(
   instructions
 }
 
-#[allow(unused)]
 fn codegen(
   instructions: Vec<(Pos, Instruction)>,
   errors: &mut Vec<(Pos, Error)>,
 ) -> Vec<(Pos, u8)> {
-  fn encode_immediate(immediate: u8) -> u8 {
-    match immediate {
-      0b00000000..=0b01111111 => immediate,
-      _ => panic!("Invalid immediate in codegen stage"),
+  fn encode_imm(imm: u8) -> u8 {
+    match imm {
+      0b00000000..=0b01111111 => imm,
+      _ => panic!("Invalid IMM in codegen stage"),
     }
   }
 
@@ -1197,14 +1197,14 @@ fn codegen(
       0x02 => 0x01,
       0x04 => 0x02,
       0x08 => 0x03,
-      _ => panic!("Invalid size in codegen stage"),
+      _ => panic!("Invalid SIZE in codegen stage"),
     }
   }
 
-  fn encode_offset(offset: u8) -> u8 {
-    match offset {
-      0b00000000..=0b00001111 => offset,
-      _ => panic!("Invalid offset in codegen stage"),
+  fn encode_ofst(ofst: u8) -> u8 {
+    match ofst {
+      0b00000000..=0b00001111 => ofst,
+      _ => panic!("Invalid OFST in codegen stage"),
     }
   }
 
@@ -1215,7 +1215,7 @@ fn codegen(
     .map(|instruction| {
       let position = instruction.0;
       let instruction = match instruction.1 {
-        Instruction::Psh(immediate) => 0b00000000 | encode_immediate(immediate),
+        Instruction::Psh(imm) => 0b00000000 | encode_imm(imm),
         Instruction::Add(size) => 0b10000000 | encode_size(size),
         Instruction::Sub(size) => 0b10000100 | encode_size(size),
         Instruction::Iff(size) => 0b10010000 | encode_size(size),
@@ -1231,8 +1231,8 @@ fn codegen(
         Instruction::Shr => 0b10110101,
         Instruction::Not => 0b10110110,
         Instruction::Buf => 0b10110111,
-        Instruction::Ldo(offset) => 0b11000000 | encode_offset(offset),
-        Instruction::Sto(offset) => 0b11010000 | encode_offset(offset),
+        Instruction::Ldo(ofst) => 0b11000000 | encode_ofst(ofst),
+        Instruction::Sto(ofst) => 0b11010000 | encode_ofst(ofst),
         Instruction::Lda => 0b11100000,
         Instruction::Sta => 0b11100001,
         Instruction::Ldi => 0b11100010,
@@ -1245,29 +1245,28 @@ fn codegen(
         Instruction::Flc => 0b11101011,
         Instruction::Swp => 0b11101100,
         Instruction::Pop => 0b11101101,
-        Instruction::Phn(immediate) => 0b11110000 | encode_offset(immediate),
-        Instruction::Raw(data) => data,
+        Instruction::Phn(imm) => 0b11110000 | encode_ofst(imm),
+        Instruction::Raw(value) => value,
       };
 
       (position, instruction)
     })
     .collect();
 
-  let available_memory = 0x100;
   let mut bytes = bytes;
   let position = Pos("[codegen]".to_string(), 0);
 
-  if bytes.len() > available_memory {
+  if bytes.len() > MEM_SIZE {
     errors.push((
       position,
       Error(format!(
         "Program size `{:02X}` exceeds available memory of size `{:02X}`",
         bytes.len(),
-        available_memory
+        MEM_SIZE
       )),
     ));
   } else {
-    bytes.extend(vec![(position, 0x00); available_memory - bytes.len()]);
+    bytes.extend(vec![(position, 0x00); MEM_SIZE - bytes.len()]);
   }
 
   bytes
@@ -1323,24 +1322,24 @@ impl std::fmt::Display for Token {
       Token::AtDyn => write!(f, "@dyn"),
       Token::AtOrg => write!(f, "@org"),
       Token::AtErr => write!(f, "@err"),
-      Token::DDD(n) => write!(f, "d{:02X}", n),
-      Token::XXX(n) => write!(f, "x{:02X}", n),
+      Token::DDD(value) => write!(f, "d{:02X}", value),
+      Token::XXX(value) => write!(f, "x{:02X}", value),
       Token::Add => write!(f, "add"),
-      Token::AdS(n) => write!(f, "ad{:01X}", n),
+      Token::AdS(size) => write!(f, "ad{:01X}", size),
       Token::Sub => write!(f, "sub"),
-      Token::SuS(n) => write!(f, "su{:01X}", n),
+      Token::SuS(size) => write!(f, "su{:01X}", size),
       Token::Iff => write!(f, "iff"),
-      Token::IfS(n) => write!(f, "if{:01X}", n),
+      Token::IfS(size) => write!(f, "if{:01X}", size),
       Token::Rot => write!(f, "rot"),
-      Token::RoS(n) => write!(f, "ro{:01X}", n),
+      Token::RoS(size) => write!(f, "ro{:01X}", size),
       Token::Orr => write!(f, "orr"),
-      Token::OrS(n) => write!(f, "or{:01X}", n),
+      Token::OrS(size) => write!(f, "or{:01X}", size),
       Token::And => write!(f, "and"),
-      Token::AnS(n) => write!(f, "an{:01X}", n),
+      Token::AnS(size) => write!(f, "an{:01X}", size),
       Token::Xor => write!(f, "xor"),
-      Token::XoS(n) => write!(f, "xo{:01X}", n),
+      Token::XoS(size) => write!(f, "xo{:01X}", size),
       Token::Xnd => write!(f, "xnd"),
-      Token::XnS(n) => write!(f, "xn{:01X}", n),
+      Token::XnS(size) => write!(f, "xn{:01X}", size),
       Token::Inc => write!(f, "inc"),
       Token::Dec => write!(f, "dec"),
       Token::Neg => write!(f, "neg"),
@@ -1348,8 +1347,8 @@ impl std::fmt::Display for Token {
       Token::Shr => write!(f, "shr"),
       Token::Not => write!(f, "not"),
       Token::Buf => write!(f, "buf"),
-      Token::LdO(n) => write!(f, "ld{:01X}", n),
-      Token::StO(n) => write!(f, "st{:01X}", n),
+      Token::LdO(ofst) => write!(f, "ld{:01X}", ofst),
+      Token::StO(ofst) => write!(f, "st{:01X}", ofst),
       Token::Lda => write!(f, "lda"),
       Token::Sta => write!(f, "sta"),
       Token::Ldi => write!(f, "ldi"),
