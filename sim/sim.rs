@@ -39,16 +39,11 @@ fn main() {
 
   let microcode_image = build_microcode_image();
 
-  let mc = Microcomputer {
+  let mut mc = Microcomputer {
     mem: memory_image,
-    clk: Clock::Low,
-    rst: Reset::Asserted, // reset microcomputer on startup
-    addr: 0x00,
-    data: 0x00,
-    read: Signal::Inactive,
-    wrt: Signal::Inactive,
+    stdin: 0x00,
+    stdout: 0x00,
     mp: Microprocessor {
-      rom: microcode_image,
       ip: 0x00,
       sp: 0x00,
       cf: false,
@@ -58,16 +53,32 @@ fn main() {
       xl: 0x00,
       yl: 0x00,
       zl: 0x00,
+
       ctrl: ControlWord::default(),
       imm: 0x00,
       size: 0x00,
       ofst: 0x00,
       sum: 0x00,
       nand: 0x00,
+
+      rom: microcode_image,
     },
+
+    clk: Clock::Low,
+    rst: Reset::Asserted, // reset microcomputer on startup
+    addr: 0x00,
+    data: 0x00,
+    read: Signal::Inactive,
+    wrt: Signal::Inactive,
   };
 
-  simulate(mc);
+  tick(&mut mc).unwrap_or_else(|_| {
+    println!("Sim: Error: Tick trap during reset sequence");
+    std::process::exit(1);
+  });
+  mc.rst = Reset::Deasserted;
+
+  simulate(mc, 100000);
 }
 
 const MAX_STEPS: usize = 0x20;
@@ -77,33 +88,45 @@ type MicrocodeImage = [[[Result<ControlWord, TickTrap>; MAX_STEPS]; MEM_SIZE]; 2
 #[derive(Clone, Copy, Debug)]
 struct Microcomputer {
   mem: [u8; MEM_SIZE], // memory
-  clk: Clock,          // clock state
-  rst: Reset,          // reset state
-  addr: u8,            // address bus
-  data: u8,            // data bus
-  read: Signal,        // memory read
-  wrt: Signal,         // memory write
+  stdin: u8,           // standard input
+  stdout: u8,          // standard output
   mp: Microprocessor,  // microprocessor
+
+  clk: Clock,   // clock state
+  rst: Reset,   // reset state
+  addr: u8,     // address bus
+  data: u8,     // data bus
+  read: Signal, // memory read
+  wrt: Signal,  // memory write
 }
 
 #[derive(Clone, Copy, Debug)]
 struct Microprocessor {
+  ip: u8,   // instruction pointer
+  sp: u8,   // stack pointer
+  cf: bool, // carry flag
+  il: u8,   // instruction latch
+  sc: u8,   // step counter
+  al: u8,   // address latch
+  xl: u8,   // X latch
+  yl: u8,   // Y latch
+  zl: u8,   // Z latch
+
+  ctrl: ControlWord, // control word
+  imm: u8,           // immediate derivation
+  size: u8,          // size derivation
+  ofst: u8,          // offset derivation
+  sum: u8,           // sum derivation
+  nand: u8,          // not-and derivation
+
   rom: MicrocodeImage, // microcode read-only memory
-  ip: u8,              // instruction pointer
-  sp: u8,              // stack pointer
-  cf: bool,            // carry flag
-  il: u8,              // instruction latch
-  sc: u8,              // step counter
-  al: u8,              // address latch
-  xl: u8,              // X latch
-  yl: u8,              // Y latch
-  zl: u8,              // Z latch
-  ctrl: ControlWord,   // control word
-  imm: u8,             // immediate derivation
-  size: u8,            // size derivation
-  ofst: u8,            // offset derivation
-  sum: u8,             // sum derivation
-  nand: u8,            // not-and derivation
+}
+
+#[derive(Clone, Copy, Debug)]
+enum TickTrap {
+  MicrocodeFault,
+  DebugRequest,
+  IllegalOpcode(u8),
 }
 
 #[derive(Clone, Copy, Default, Debug)]
@@ -134,14 +157,6 @@ struct ControlWord {
 }
 
 #[derive(Clone, Copy, Debug)]
-enum TickTrap {
-  Todo, // TODO remove
-  StepOverflow,
-  DebugRequest,
-  IllegalOpcode(u8),
-}
-
-#[derive(Clone, Copy, Debug)]
 enum Clock {
   Rising,
   High,
@@ -162,38 +177,271 @@ enum Signal {
   Inactive,
 }
 
-fn simulate(mut mc: Microcomputer) {
+// TODO copied from `emu.rs`
+
+fn simulate(mut mc: Microcomputer, clock_speed: u128) {
+  // let mut dbg = false;
+  //
+  // loop {
+  //   println!("{}", mc);
+  //   for _ in 0..100 {
+  //     match tick(&mut mc) {
+  //       Ok(_clocks) => (), // TODO use meaningfully
+  //       Err(tick_trap) => {
+  //         println!("{}", mc);
+  //         match tick_trap {
+  //           TickTrap::MicrocodeFault => {
+  //             panic!("Microcode fault")
+  //           }
+  //           TickTrap::DebugRequest => {
+  //             mc.mp.sc += 1;
+  //             dbg = true;
+  //           }
+  //           TickTrap::IllegalOpcode(opcode) => {
+  //             panic!("Illegal opcode `0x{:02X}`", opcode)
+  //           }
+  //         }
+  //       }
+  //     }
+  //     mc.rst = Reset::Deasserted; // reset is only active for one cycle
+  //   }
+  //
+  //   if dbg {
+  //     let mut input = String::new();
+  //     std::io::stdin().read_line(&mut input).unwrap();
+  //     if input != "\n" {
+  //       dbg = false;
+  //     }
+  //   }
+  //
+  //   std::thread::sleep(std::time::Duration::from_millis(1));
+  // }
+
+  use std::collections::VecDeque;
+
+  let mut start_time = std::time::Instant::now();
+  let mut next_print_time = std::time::Instant::now();
+  let mut current_clocks = 0;
+  let mut status_line = "".to_string();
+  let mut stdout_string = "".to_string();
+  let mut stdin_queue = VecDeque::new();
+  let mut controller_input = [None; 8];
+  let mut debug_mode = false;
+  let mut show_state = false;
+
+  // this call will switch the termital to raw mode
+  let input_channel = spawn_input_channel();
+
+  mc.stdin = mc.mem[0x00];
+  mc.mem[0x00] = 0x00; // controller input
+
   loop {
-    println!("{}", mc);
-    match tick(&mut mc) {
-      Ok(_clocks) => (), // TODO use meaningfully
-      Err(tick_trap) => match tick_trap {
-        TickTrap::Todo => {
-          panic!("Unimplemented instruction")
+    if debug_mode {
+      'until_valid: loop {
+        match input_channel.recv() {
+          Ok(console::Key::Del) => {
+            stdout_string = "".to_string();
+            break 'until_valid;
+          }
+
+          Ok(console::Key::Tab) => {
+            status_line = "Single stepped".to_string();
+            break 'until_valid;
+          }
+
+          Ok(console::Key::Escape) => {
+            debug_mode = !debug_mode;
+            break 'until_valid;
+          }
+
+          _ => continue 'until_valid,
         }
-        TickTrap::StepOverflow => {
-          panic!("Step counter overflow")
-        }
-        TickTrap::DebugRequest => {
-          panic!("Debug request")
-        }
-        TickTrap::IllegalOpcode(opcode) => {
-          panic!("Illegal opcode `0x{:02X}`", opcode)
-        }
-      },
+      }
+
+      // conceptually hacky but does the job
+      start_time = std::time::Instant::now();
+      current_clocks = 0;
     }
-    mc.rst = Reset::Deasserted; // reset is only active for one cycle
 
-    // let mut input = String::new();
-    // std::io::stdin().read_line(&mut input).unwrap();
-    // assert_eq!(input, "\n");
+    use std::sync::mpsc::TryRecvError;
+    match input_channel.try_recv() {
+      Ok(console::Key::Del) => {
+        stdout_string = "".to_string();
+      }
 
-    std::thread::sleep(std::time::Duration::from_millis(5));
+      Ok(console::Key::Tab) => {
+        show_state = !show_state;
+      }
+
+      Ok(console::Key::Escape) => {
+        debug_mode = !debug_mode;
+        status_line = "Force debug".to_string();
+      }
+
+      Ok(key) => {
+        let keys = [
+          console::Key::ArrowUp,
+          console::Key::ArrowDown,
+          console::Key::ArrowLeft,
+          console::Key::ArrowRight,
+          console::Key::PageUp,
+          console::Key::PageDown,
+          console::Key::Home,
+          console::Key::End,
+        ];
+
+        controller_input = keys
+          .iter()
+          .map(|k| (k == &key).then_some(std::time::Instant::now()))
+          .zip(controller_input.iter())
+          .map(|(next, curr)| next.or(*curr))
+          .collect::<Vec<_>>()
+          .try_into()
+          .unwrap();
+
+        stdin_queue.push_back(match key {
+          console::Key::Char(c) => c as u8,
+          console::Key::Backspace => 0x08,
+          console::Key::Enter => 0x0A,
+          console::Key::Tab => 0x09,
+          console::Key::Del => 0x7F,
+          _ => 0x00,
+        });
+      }
+
+      Err(TryRecvError::Empty) => (),
+      Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
+    }
+
+    match tick(&mut mc) {
+      Ok(clocks) => {
+        current_clocks += clocks;
+      }
+      Err(tick_trap) => {
+        debug_mode = true;
+        status_line = match tick_trap {
+          TickTrap::DebugRequest => format!("Debug request"),
+          TickTrap::MicrocodeFault => format!("Microcode fault"),
+          TickTrap::IllegalOpcode(instruction) => {
+            format!("Illegal opcode `{:02X}`", instruction)
+          }
+        }
+      }
+    };
+
+    let timestamp_threshold = std::time::Duration::from_millis(200);
+    controller_input = controller_input
+      .iter()
+      .map(|timestamp| timestamp.and_then(|t| (t.elapsed() < timestamp_threshold).then_some(t)))
+      .collect::<Vec<_>>()
+      .try_into()
+      .unwrap();
+
+    mc.mem[0x00] = controller_input
+      .iter()
+      .enumerate()
+      .fold(0x00, |acc, (index, timestamp)| {
+        acc | ((timestamp.is_some() as u8) << index)
+      });
+
+    let realtime = std::cmp::max(start_time.elapsed().as_millis(), 1); // prevent division by zero
+    let realtime_offset = (1000 * current_clocks / clock_speed) as i128 - realtime as i128;
+    let realtime_ratio = realtime_offset as f64 / realtime as f64;
+    std::thread::sleep(std::time::Duration::from_millis(
+      std::cmp::max(realtime_offset, 0) as u64,
+    ));
+
+    if !debug_mode {
+      let realtime_tolerance = 0.01;
+      status_line = if -realtime_ratio > realtime_tolerance {
+        format!("Emulation behind by {:.0}%", -realtime_ratio * 100.0)
+      } else if realtime_ratio > realtime_tolerance {
+        format!("Emulation ahead by {:.0}%", realtime_ratio * 100.0)
+      } else {
+        format!("Emulation on time")
+      };
+    }
+
+    // was stdout written to?
+    if mc.stdout != 0x00 {
+      stdout_string.push(mc.stdout as char);
+      mc.stdout = 0x00;
+    }
+
+    // was stdin read from?
+    if mc.stdin == 0x00 {
+      mc.stdin = stdin_queue.pop_front().unwrap_or(0x00);
+    }
+
+    // print at most 30 times per second
+    if next_print_time <= std::time::Instant::now() || debug_mode {
+      next_print_time += std::time::Duration::from_millis(1000 / 30);
+
+      print!("\x1B[2J"); // clear screen
+      print!("\x1B[1;1H"); // move cursor to top left
+      print!("{}\r\n", status_line);
+      print!("\r\n");
+      if show_state || debug_mode {
+        print!("{}", mc);
+      } else {
+        print!(
+          "{}\r\n{}\r\n",
+          render_display_buffer(&mc.mem[0xE0..0x100].try_into().unwrap()),
+          render_controller_input(&mc.mem[0x00..0x01].try_into().unwrap())
+        );
+      }
+      print!("{}", stdout_string);
+      use std::io::Write;
+      std::io::stdout().flush().unwrap();
+    }
   }
 }
 
 fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
   let mp = &mut mc.mp;
+
+  // TODO copied from `emu.rs`
+  macro_rules! mem_read {
+    ($address:expr) => {{
+      let address = $address;
+      if address == 0x00 {
+        // was stdin written to?
+        if mc.stdin != 0x00 {
+          let stdin = mc.stdin;
+          // TODO move somewhere better
+          if let Clock::Rising = mc.clk {
+            mc.stdin = 0x00;
+          }
+          stdin
+        } else {
+          mc.mem[0x00] // controller input
+        }
+      } else {
+        mc.mem[address as usize]
+      }
+    }};
+  }
+
+  // TODO copied from `emu.rs`
+  macro_rules! mem_write {
+    ($address:expr, $value:expr) => {{
+      let address = $address;
+      let value = $value;
+      if address == 0x00 {
+        // was stdout read from?
+        if mc.stdout == 0x00 {
+          // TODO move somewhere better
+          if let Clock::Rising = mc.clk {
+            mc.stdout = value;
+          }
+        } else {
+          panic!("attempt to write to `stdout` more than once within one tick");
+        }
+      } else {
+        mc.mem[address as usize] = value;
+      }
+    }};
+  }
 
   // control logic
   mp.ctrl = mp.rom[mp.cf as usize][mp.il as usize][mp.sc as usize]?;
@@ -288,7 +536,13 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
   if let Clock::Rising = mc.clk {
     if let Signal::Active = mp.ctrl.cout_cf {
       if let Signal::Active = mp.ctrl.sum_data {
-        mp.cf = mp.sum == 0x00; // TODO
+        mp.cf = (mp.xl as u16
+          + mp.yl as u16
+          + match mp.ctrl.cin_sum {
+            Signal::Active => 1,
+            Signal::Inactive => 0,
+          })
+          > 0xFF;
       }
       if let Signal::Active = mp.ctrl.nand_data {
         mp.cf = mp.nand == 0x00;
@@ -309,23 +563,28 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
     }
   }
   if let Signal::Active = mc.wrt {
-    mc.mem[mc.addr as usize] = mc.data; // asynchronous
+    mem_write!(mc.addr, mc.data); // asynchronous
+
+    // TODO remove
+    // mc.mem[mc.addr as usize] = mc.data; // asynchronous
   }
   if let Signal::Active = mc.read {
-    mc.data = mc.mem[mc.addr as usize];
+    mc.data = mem_read!(mc.addr);
+
+    // TODO remove
+    // mc.data = mc.mem[mc.addr as usize];
   }
   if let Reset::Asserted = mc.rst {
     mp.al = 0x00;
   }
 
   // X latch and Y latch and Z latch
-  mp.sum = mp
-    .xl
-    .wrapping_add(mp.yl)
-    .wrapping_add(match mp.ctrl.cin_sum {
-      Signal::Active => 0x01,
-      Signal::Inactive => 0x00,
-    });
+  mp.sum = (mp.xl as u16
+    + mp.yl as u16
+    + match mp.ctrl.cin_sum {
+      Signal::Active => 1,
+      Signal::Inactive => 0,
+    }) as u8;
   mp.nand = !(mp.yl & mp.zl);
   if let Clock::Rising = mc.clk {
     if let Signal::Active = mp.ctrl.data_xl {
@@ -351,8 +610,8 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
   }
 
   Ok(match mc.clk {
-    Clock::Rising => 0x01,
-    _ => 0x00,
+    Clock::Rising => 1,
+    _ => 0,
   })
 }
 
@@ -374,12 +633,15 @@ fn build_microcode_image() -> MicrocodeImage {
     };
   }
 
+  // TODO document why every instruction must end with YL = 0x00
+
   // TODO order
+  let default = ControlWord! {};
   let sp_xl = ControlWord! {sp_data, data_xl};
   let ofst_yl = ControlWord! {ofst_data, data_yl};
   let size_yl = ControlWord! {size_data, data_yl};
   let ip_alxl = ControlWord! {ip_data, data_al, data_xl};
-  let mem_il = ControlWord! {mem_data, data_il};
+  let mem_ilzl = ControlWord! {mem_data, data_il, data_zl};
   let nand_ylzl = ControlWord! {nand_data, data_yl, data_zl};
   let sum_spal = ControlWord! {sum_data, data_sp, data_al};
   let cinsum_ip = ControlWord! {cin_sum, sum_data, data_ip};
@@ -403,12 +665,44 @@ fn build_microcode_image() -> MicrocodeImage {
   let mem_ip = ControlWord! {mem_data, data_ip};
   let cinsum_sp = ControlWord! {cin_sum, sum_data, data_sp};
   let nand_memcf = ControlWord! {nand_data, data_mem, cout_cf};
-  let cinsum_spal = ControlWord! {cin_sum, sum_data, data_sp, data_al};
+  let mem_sp = ControlWord! {mem_data, data_sp};
+  let nand_ylcf = ControlWord! {nand_data, data_yl, cout_cf};
+  let mem_xlyl = ControlWord! {mem_data, data_xl, data_yl};
+  let nand_al = ControlWord! {nand_data, data_al};
+  let cinsum_spxl = ControlWord! {cin_sum, sum_data, data_sp, data_xl};
+  let cinsum_al = ControlWord! {cin_sum, sum_data, data_al};
+  let nand_zlcf = ControlWord! {nand_data, data_zl, cout_cf};
+  let cinsum_xlcf = ControlWord! {cin_sum, sum_data, data_xl, cout_cf};
+  let sum_xlcf = ControlWord! {sum_data, data_xl, cout_cf};
+  let cinsum_xlylcf = ControlWord! {cin_sum, sum_data, data_xl, data_yl, cout_cf};
+  let sum_xlylcf = ControlWord! {sum_data, data_xl, data_yl, cout_cf};
 
-  // assumes YL = 0x00
-  let fetch = seq![ip_alxl, mem_il, cinsum_ip];
+  // TODO assumes YL = 0x00
+  let fetch = seq![ip_alxl, mem_ilzl, cinsum_ip];
   let zero_yl = seq![ones_ylzl, nand_yl];
   let zero_sc = seq![ControlWord! {zero_sc}];
+  let psh = seq![
+    fetch, //
+    // instruction is in ZL
+    sp_xl, ones_yl, sum_spal, // SP-- -> AL
+    nand_zl, nand_mem, // IL -> *AL
+    zero_yl, zero_sc //
+  ];
+  let pop = seq![
+    fetch, //
+    sp_xl, cinsum_sp, // SP++
+    zero_sc    //
+  ];
+  let sec = seq![
+    fetch, //
+    ones_ylzl, ones_ylzl, nand_ylcf, // 1 -> CF
+    zero_sc    //
+  ];
+  let clc = seq![
+    fetch, //
+    ones_ylzl, nand_ylzl, nand_zlcf, // 0 -> CF
+    zero_sc    //
+  ];
 
   [[[(); MAX_STEPS]; MEM_SIZE]; 2]
     .iter()
@@ -422,13 +716,7 @@ fn build_microcode_image() -> MicrocodeImage {
         .map(|(instruction, _)| match (instruction & 0b10000000) >> 7 {
           0b0 => {
             // psh
-            seq![
-              fetch,  //
-              mem_zl, // save IL
-              sp_xl, ones_yl, sum_spal, // SP-- -> AL
-              nand_zl, nand_mem, // IL -> *AL
-              zero_yl, zero_sc //
-            ]
+            seq![psh]
           }
           0b1 => match (instruction & 0b01000000) >> 6 {
             0b0 => {
@@ -438,49 +726,79 @@ fn build_microcode_image() -> MicrocodeImage {
               match opcode {
                 0x0 => {
                   // add
-                  // TODO carry
                   seq![
                     fetch, //
-                    sp_alxl, cinsum_sp, // SP++
+                    sp_alxl,
+                    cinsum_sp, // SP++
                     mem_zl,    // *SP -> ZL
-                    size_yl, sum_al, // SP + S -> AL
-                    ones_yl, nand_zl, nand_yl, // ZL -> YL
+                    size_yl,
+                    sum_al, // SP + SIZE -> AL
+                    ones_yl,
+                    nand_zl,
+                    nand_yl, // ZL -> YL
                     mem_xl,  // *AL -> XL
-                    sum_mem, // XL SUM YL -> *AL
-                    zero_yl, zero_sc //
+                    match carry {
+                      true => seq![cinsum_xlcf], // XL + YL -> XL
+                      false => seq![sum_xlcf],   // XL + YL -> XL
+                    },
+                    ones_ylzl,
+                    cinsum_mem, // XL -> *AL
+                    nand_yl,
+                    zero_sc //
                   ]
                 }
 
                 0x1 => {
                   // sub
-                  seq![fetch, vec![Err(TickTrap::Todo)]]
+                  seq![
+                    fetch, //
+                    sp_alxl,
+                    cinsum_sp, // SP++
+                    mem_zl,    // *SP -> ZL
+                    size_yl,
+                    sum_al, // SP + SIZE -> AL
+                    ones_yl,
+                    nand_yl, // ~ZL -> YL
+                    mem_xl,  // *AL -> XL
+                    match carry {
+                      true => seq![sum_xlcf],     // XL - YL -> XL
+                      false => seq![cinsum_xlcf], // XL - YL -> XL
+                    },
+                    ones_ylzl,
+                    cinsum_mem, // XL -> *AL
+                    match carry {
+                      true => seq![nand_ylzl, nand_zlcf], // 0 -> CF
+                      false => seq![default, nand_ylcf],  // 1 -> CF
+                    },
+                    zero_sc //
+                  ]
                 }
 
                 0x4 => {
                   // iff
-                  match carry {
-                    true => seq![
-                      fetch, //
-                      sp_alxl,
-                      mem_zl,      // *SP -> ZL
-                      cinsum_spal, // SP++
-                      ones_yl,
-                      nand_zl,
-                      nand_mem, // ZL -> *AL
-                      zero_yl,
-                      zero_sc //
-                    ],
-                    false => seq![
-                      fetch, //
-                      sp_alxl, cinsum_sp, // SP++
-                      zero_sc    //
-                    ],
-                  }
+                  seq![
+                    fetch, //
+                    sp_alxl,
+                    cinsum_sp, // SP++
+                    mem_zl,    // *SP -> ZL
+                    size_yl,
+                    sum_al, // SP + SIZE -> AL
+                    mem_xl, // *AL -> XL
+                    ones_yl,
+                    match carry {
+                      true => seq![nand_zl, nand_xl],  // ZL -> xL
+                      false => seq![default, default], // no-op
+                    },
+                    cinsum_mem, // XL -> *AL
+                    zero_yl,
+                    zero_sc //
+                  ]
                 }
 
                 0x5 => {
                   // rot
-                  seq![fetch, vec![Err(TickTrap::Todo)]]
+                  // TODO
+                  seq![fetch, vec![Err(TickTrap::MicrocodeFault)]]
                 }
 
                 0x8 => {
@@ -489,18 +807,28 @@ fn build_microcode_image() -> MicrocodeImage {
                     fetch, //
                     sp_alxl, cinsum_sp, // SP++
                     mem_zl,    // *SP -> ZL
-                    size_yl, sum_al, // SP + S -> AL
+                    size_yl, sum_al, // SP + SIZE -> AL
                     ones_yl, nand_xl, // ~ZL -> XL
-                    mem_zl, nand_zl,   // ~*AL -> ZL
-                    cinsum_yl, // XL -> YL
-                    nand_mem,  // YL NAND ZL -> *AL
+                    mem_zl, nand_zl,    // ~*AL -> ZL
+                    cinsum_yl,  // XL -> YL
+                    nand_memcf, // YL NAND ZL -> *AL
                     zero_yl, zero_sc //
                   ]
                 }
 
                 0x9 => {
                   // and
-                  seq![fetch, vec![Err(TickTrap::Todo)]]
+                  seq![
+                    fetch, //
+                    sp_alxl, cinsum_sp, // SP++
+                    mem_zl,    // *SP -> ZL
+                    size_yl, sum_al, // SP + SIZE -> AL
+                    ones_yl, nand_zl, nand_xl,   // ZL -> XL
+                    mem_zl,    // *AL -> ZL
+                    cinsum_yl, // XL -> YL
+                    nand_ylzl, nand_memcf, // ~(YL NAND ZL) -> *AL
+                    zero_yl, zero_sc //
+                  ]
                 }
 
                 0xA => {
@@ -509,7 +837,7 @@ fn build_microcode_image() -> MicrocodeImage {
                     fetch, //
                     sp_alxl, cinsum_sp, // SP++
                     mem_zl,    // *SP -> ZL
-                    size_yl, sum_al, // SP + S -> AL
+                    size_yl, sum_al, // SP + SIZE -> AL
                     ones_yl, nand_zl, nand_xl, // ZL -> XL
                     mem_zl, nand_zl,   // ~*AL -> ZL
                     cinsum_yl, // XL -> YL
@@ -526,7 +854,8 @@ fn build_microcode_image() -> MicrocodeImage {
 
                 0xB => {
                   // xnd
-                  seq![fetch, vec![Err(TickTrap::Todo)]]
+                  // TODO
+                  seq![fetch, vec![Err(TickTrap::MicrocodeFault)]]
                 }
 
                 _ => match (opcode, instruction & 0b00000011) {
@@ -553,24 +882,59 @@ fn build_microcode_image() -> MicrocodeImage {
 
                   (0xC, 0b10) => {
                     // neg
-                    seq![fetch, vec![Err(TickTrap::Todo)]]
+                    seq![
+                      fetch, //
+                      ones_ylzl, nand_xl, // 0x00 -> XL
+                      sp_al, mem_ylzl, nand_ylzl, cinsum_mem, // 0x00 - *SP -> *SP
+                      zero_yl, zero_sc //
+                    ]
                   }
 
                   (0xD, 0b00) => {
                     // shl
-                    seq![fetch, vec![Err(TickTrap::Todo)]]
+                    seq![
+                      fetch, //
+                      sp_al,
+                      mem_xlyl, // *SP -> XL; *SP -> YL
+                      match carry {
+                        true => seq![cinsum_xlcf], // XL + XL -> XL
+                        false => seq![sum_xlcf],   // XL + XL -> XL
+                      },
+                      ones_ylzl,
+                      cinsum_mem, // XL -> *SP
+                      nand_yl,
+                      zero_sc //
+                    ]
                   }
 
                   (0xD, 0b01) => {
                     // shr
-                    seq![fetch, vec![Err(TickTrap::Todo)]]
+                    seq![
+                      fetch, //
+                      sp_al,
+                      mem_xlyl, // *SP -> XL; *SP -> YL
+                      match carry {
+                        true => std::iter::repeat(seq![cinsum_xlylcf])
+                          .take(8)
+                          .flatten()
+                          .collect::<Vec<_>>(), // XL + XL -> XL; XL + XL -> YL
+                        false => std::iter::repeat(seq![sum_xlylcf])
+                          .take(8)
+                          .flatten()
+                          .collect::<Vec<_>>(), // XL + XL -> XL; XL + XL -> YL
+                      },
+                      ones_ylzl,
+                      cinsum_mem, // XL -> *SP
+                      nand_yl,
+                      zero_sc //
+                    ]
                   }
 
                   (0xD, 0b10) => {
                     // not
                     seq![
                       fetch, //
-                      sp_al, mem_ylzl, nand_mem, // ~*SP -> *SP
+                      sp_al, mem_ylzl, nand_memcf, // ~*SP -> *SP
                       zero_yl, zero_sc //
                     ]
                   }
@@ -579,17 +943,17 @@ fn build_microcode_image() -> MicrocodeImage {
                     // buf
                     seq![
                       fetch, //
-                      sp_al, mem_ylzl, nand_ylzl, // *SP -> TODO carry
+                      sp_al, mem_ylzl, nand_ylzl, nand_memcf, // *SP -> *SP
                       zero_yl, zero_sc //
                     ]
                   }
 
                   (0b1110, 0b11) => {
                     // dbg
-                    seq![fetch, vec![Err(TickTrap::Todo)]]
+                    seq![fetch, vec![Err(TickTrap::DebugRequest)], zero_sc]
                   }
 
-                  _ => vec![Err(TickTrap::IllegalOpcode(instruction))],
+                  _ => seq![fetch, vec![Err(TickTrap::IllegalOpcode(instruction))]],
                 },
               }
             }
@@ -603,7 +967,7 @@ fn build_microcode_image() -> MicrocodeImage {
                       // ldo
                       seq![
                         fetch, //
-                        sp_xl, ofst_yl, sum_al, // SP + O -> AL
+                        sp_xl, ofst_yl, sum_al, // SP + OFST -> AL
                         mem_zl, // *AL -> ZL
                         sp_xl, ones_yl, sum_spal, // SP-- -> AL
                         nand_zl, nand_mem, // ZL -> *AL
@@ -613,7 +977,19 @@ fn build_microcode_image() -> MicrocodeImage {
 
                     0b1 => {
                       // sto
-                      seq![fetch, vec![Err(TickTrap::Todo)]]
+                      seq![
+                        fetch, //
+                        sp_alxl,
+                        mem_zl, // *SP -> ZL
+                        cinsum_spxl,
+                        ofst_yl,
+                        sum_al, // ++SP + OFST -> AL
+                        ones_yl,
+                        nand_zl,
+                        nand_mem, // ZL -> *AL
+                        zero_yl,
+                        zero_sc //
+                      ]
                     }
 
                     _ => unreachable!(),
@@ -627,17 +1003,31 @@ fn build_microcode_image() -> MicrocodeImage {
                       match instruction & 0b00001111 {
                         0x0 => {
                           // lda
-                          seq![fetch, vec![Err(TickTrap::Todo)]]
+                          seq![
+                            fetch, //
+                            sp_al, mem_xl, // *SP -> XL
+                            sum_al, mem_xl, // *XL -> XL
+                            sp_al, sum_mem, // XL -> *SP
+                            zero_sc  //
+                          ]
                         }
 
                         0x1 => {
                           // sta
-                          seq![fetch, vec![Err(TickTrap::Todo)]]
+                          seq![
+                            fetch, //
+                            sp_alxl, cinsum_sp, mem_zl, // *SP++ -> ZL
+                            sp_alxl, cinsum_sp, mem_xl, // *SP++ -> XL
+                            ones_yl, nand_zl, nand_al, // ZL -> AL
+                            zero_yl, sum_mem, // ZL -> *AL
+                            zero_sc  //
+                          ]
                         }
 
                         0x2 => {
                           // ldi
-                          seq![fetch, vec![Err(TickTrap::Todo)]]
+                          // TODO
+                          seq![fetch, vec![Err(TickTrap::MicrocodeFault)]]
                         }
 
                         0x3 => {
@@ -662,7 +1052,11 @@ fn build_microcode_image() -> MicrocodeImage {
 
                         0x5 => {
                           // sts
-                          seq![fetch, vec![Err(TickTrap::Todo)]]
+                          seq![
+                            fetch, //
+                            sp_al, mem_sp,  // *SP -> SP
+                            zero_sc  //
+                          ]
                         }
 
                         0x8 => {
@@ -675,40 +1069,46 @@ fn build_microcode_image() -> MicrocodeImage {
 
                         0x9 => {
                           // clc
-                          seq![fetch, vec![Err(TickTrap::Todo)]]
+                          seq![clc]
                         }
 
                         0xA => {
                           // sec
-                          seq![fetch, vec![Err(TickTrap::Todo)]]
+                          seq![sec]
                         }
 
                         0xB => {
                           // flc
-                          seq![fetch, vec![Err(TickTrap::Todo)]]
+                          match carry {
+                            true => seq![clc],
+                            false => seq![sec],
+                          }
                         }
 
                         0xC => {
                           // swp
-                          seq![fetch, vec![Err(TickTrap::Todo)]]
+                          seq![
+                            fetch, //
+                            sp_al, mem_zl, // *SP -> ZL
+                            sp_xl, cinsum_al, mem_xl, // *(SP + 1) -> *XL
+                            sp_al, sum_mem, // XL -> *SP
+                            sp_xl, cinsum_al, ones_yl, nand_zl, nand_mem, // ZL -> *(SP + 1)
+                            zero_yl, zero_sc //
+                          ]
                         }
 
                         0xD => {
                           // pop
-                          seq![
-                            fetch, //
-                            sp_xl, cinsum_sp, // SP++
-                            zero_sc    //
-                          ]
+                          seq![pop]
                         }
 
-                        _ => vec![Err(TickTrap::IllegalOpcode(instruction))],
+                        _ => seq![fetch, vec![Err(TickTrap::IllegalOpcode(instruction))]],
                       }
                     }
 
                     0b1 => {
                       // phn
-                      seq![fetch, vec![Err(TickTrap::Todo)]]
+                      seq![psh]
                     }
 
                     _ => unreachable!(),
@@ -727,7 +1127,7 @@ fn build_microcode_image() -> MicrocodeImage {
         .map(|control_sequence| {
           control_sequence
             .iter()
-            .chain(std::iter::repeat(&Err(TickTrap::StepOverflow)))
+            .chain(std::iter::repeat(&Err(TickTrap::MicrocodeFault)))
             .take(MAX_STEPS)
             .copied()
             .collect::<Vec<_>>()
@@ -745,87 +1145,70 @@ fn build_microcode_image() -> MicrocodeImage {
 
 impl std::fmt::Display for Microcomputer {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    writeln!(f, "MC:")?;
-    writeln!(f, "  MEM:")?;
-    let mut fmt: String = "".to_string();
-    for y in 0..0x10 {
-      fmt += "    ";
-      for x in 0..0x10 {
-        let address: u8 = (y << 0x04 | x) as u8;
-        fmt += &format!(
-          "{:02X}{}",
-          self.mem[address as usize],
-          if address == self.mp.sp.wrapping_sub(1) {
-            if self.mp.cf {
-              "/"
-            } else {
-              "|"
-            }
-          } else if address == self.mp.ip.wrapping_sub(1) {
-            "["
-          } else if address == self.mp.ip {
-            "]"
-          } else {
-            " "
-          }
-        );
-      }
-      fmt += "\r\n";
-    }
-    write!(f, "{}", fmt)?;
-    writeln!(f, "  CLK: {}", self.clk)?;
-    writeln!(f, "  RST: {}", self.rst)?;
-    writeln!(f, "  ADDR: {:02X}", self.addr)?;
-    writeln!(f, "  DATA: {:02X}", self.data)?;
-    writeln!(f, "  READ: {}", self.read)?;
-    writeln!(f, "  WRT: {}", self.wrt)?;
-    writeln!(f, "  MP:")?;
-    writeln!(f, "    ROM:")?;
-    writeln!(f, "      [...]")?;
-    writeln!(f, "    IP: {:02X}", self.mp.ip)?;
-    writeln!(f, "    SP: {:02X}", self.mp.sp)?;
-    writeln!(f, "    CF: {:01X}", self.mp.cf as u8)?;
-    writeln!(f, "    IL: {:02X}", self.mp.il)?;
-    writeln!(f, "    SC: {:02X}", self.mp.sc)?;
-    writeln!(f, "    AL: {:02X}", self.mp.al)?;
-    writeln!(f, "    XL: {:02X}", self.mp.xl)?;
-    writeln!(f, "    YL: {:02X}", self.mp.yl)?;
-    writeln!(f, "    ZL: {:02X}", self.mp.zl)?;
-    writeln!(f, "    CTRL:")?;
-    writeln!(f, "      CIN_SUM: {}", self.mp.ctrl.cin_sum)?;
-    writeln!(f, "      COUT_CF: {}", self.mp.ctrl.cout_cf)?;
-    writeln!(f, "      DATA_IL: {}", self.mp.ctrl.data_il)?;
-    writeln!(f, "      ZERO_SC: {}", self.mp.ctrl.zero_sc)?;
-    writeln!(f, "      SIZE_DATA: {}", self.mp.ctrl.size_data)?;
-    writeln!(f, "      OFST_DATA: {}", self.mp.ctrl.ofst_data)?;
-    writeln!(f, "      IP_DATA: {}", self.mp.ctrl.ip_data)?;
-    writeln!(f, "      DATA_IP: {}", self.mp.ctrl.data_ip)?;
-    writeln!(f, "      SP_DATA: {}", self.mp.ctrl.sp_data)?;
-    writeln!(f, "      DATA_SP: {}", self.mp.ctrl.data_sp)?;
-    writeln!(f, "      DATA_AL: {}", self.mp.ctrl.data_al)?;
-    writeln!(f, "      MEM_DATA: {}", self.mp.ctrl.mem_data)?;
-    writeln!(f, "      DATA_MEM: {}", self.mp.ctrl.data_mem)?;
-    writeln!(f, "      DATA_XL: {}", self.mp.ctrl.data_xl)?;
-    writeln!(f, "      DATA_YL: {}", self.mp.ctrl.data_yl)?;
-    writeln!(f, "      DATA_ZL: {}", self.mp.ctrl.data_zl)?;
-    writeln!(f, "      SUM_DATA: {}", self.mp.ctrl.sum_data)?;
-    writeln!(f, "      NAND_DATA: {}", self.mp.ctrl.nand_data)?;
-    writeln!(f, "    IMM: {:02X}", self.mp.imm)?;
-    writeln!(f, "    SIZE: {:02X}", self.mp.size)?;
-    writeln!(f, "    OFST: {:02X}", self.mp.ofst)?;
-    writeln!(f, "    SUM: {:02X}", self.mp.sum)?;
-    writeln!(f, "    NAND: {:02X}", self.mp.nand)?;
-    Ok(())
+    write!(
+      f,
+      "{}\r\n{}\r\n{}\r\n{}\r\n{}",
+      self.mp,
+      format!(
+        "CLK  RST  ADDR  DATA READ  WRT\r\n{}  {}  {:02X}    {:02X}   {}    {}\r\n",
+        self.clk, self.rst, self.addr, self.data, self.read, self.wrt
+      ),
+      render_memory(&self.mem, self.mp.ip, self.mp.sp, self.mp.cf),
+      render_display_buffer(self.mem[0xE0..0x100].try_into().unwrap()),
+      render_controller_input(self.mem[0x00..0x01].try_into().unwrap())
+    )
+  }
+}
+
+impl std::fmt::Display for Microprocessor {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "{}\r\n{}\r\n{}",
+      format!(
+        "IP  SP  CF  IL  SC  AL  XL  YL  ZL\r\n{:02X}  {:02X}  {:01X}   {:02X}  {:02X}  {:02X}  {:02X}  {:02X}  {:02X}\r\n",
+        self.ip, self.sp, self.cf as u8, self.il, self.sc, self.al, self.xl, self.yl, self.zl
+      ),
+      format!(
+        "IMM  SIZE  OFST  SUM  NAND\r\n{:02X}   {:02X}    {:02X}    {:02X}   {:02X}\r\n", 
+        self.imm, self.size, self.ofst, self.sum, self.nand
+      ),
+      format!(
+        "CTRL  {} {} {} {} {} {} {} {} {}\r\nWORD  {} {} {} {} {} {} {} {} {}\r\n",
+        self.ctrl.cin_sum,
+        self.ctrl.cout_cf,
+        self.ctrl.data_il,
+        self.ctrl.zero_sc,
+        self.ctrl.size_data,
+        self.ctrl.ofst_data,
+        self.ctrl.ip_data,
+        self.ctrl.data_ip,
+        self.ctrl.sp_data,
+        self.ctrl.data_sp,
+        self.ctrl.data_al,
+        self.ctrl.mem_data,
+        self.ctrl.data_mem,
+        self.ctrl.data_xl,
+        self.ctrl.data_yl,
+        self.ctrl.data_zl,
+        self.ctrl.sum_data,
+        self.ctrl.nand_data,
+      ),
+    )
   }
 }
 
 impl std::fmt::Display for Clock {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let underline = "\u{005F}";
+    let rising = "/";
+    let overline = "\u{203E}";
+    let falling = "\\";
     match self {
-      Clock::Rising => write!(f, "Rising"),
-      Clock::High => write!(f, "High"),
-      Clock::Falling => write!(f, "Falling"),
-      Clock::Low => write!(f, "Low"),
+      Clock::Rising => write!(f, "{}{}{}", underline, rising, overline),
+      Clock::High => write!(f, "{}{}{}", overline, overline, overline),
+      Clock::Falling => write!(f, "{}{}{}", overline, falling, underline),
+      Clock::Low => write!(f, "{}{}{}", underline, underline, underline),
     }
   }
 }
@@ -833,8 +1216,8 @@ impl std::fmt::Display for Clock {
 impl std::fmt::Display for Reset {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Reset::Asserted => write!(f, "Asserted"),
-      Reset::Deasserted => write!(f, "Deasserted"),
+      Reset::Asserted => write!(f, "[#]"),
+      Reset::Deasserted => write!(f, "[ ]"),
     }
   }
 }
@@ -842,8 +1225,125 @@ impl std::fmt::Display for Reset {
 impl std::fmt::Display for Signal {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Signal::Active => write!(f, "Active"),
-      Signal::Inactive => write!(f, "Inactive"),
+      Signal::Active => write!(f, "HI"),
+      Signal::Inactive => write!(f, "LO"),
     }
   }
+}
+
+// TODO copied from `emu.rs`
+
+use std::sync::mpsc;
+use std::sync::mpsc::Receiver;
+fn spawn_input_channel() -> Receiver<console::Key> {
+  let stdout = console::Term::stdout();
+
+  let (tx, rx) = mpsc::channel::<console::Key>();
+  std::thread::spawn(move || loop {
+    if let Ok(key) = stdout.read_key() {
+      tx.send(key).unwrap();
+    }
+  });
+
+  rx
+}
+
+fn render_memory(memory: &[u8; MEM_SIZE], ip: u8, sp: u8, cf: bool) -> String {
+  let mut fmt: String = "".to_string();
+
+  fmt += "MEM\r\n";
+  for y in 0..0x10 {
+    for x in 0..0x10 {
+      let address: u8 = (y << 0x04 | x) as u8;
+      fmt += &format!(
+        "{:02X}{}",
+        memory[address as usize],
+        if address == sp.wrapping_sub(1) {
+          if cf {
+            "/"
+          } else {
+            "|"
+          }
+        } else if address == ip.wrapping_sub(1) {
+          "["
+        } else if address == ip {
+          "]"
+        } else {
+          " "
+        }
+      );
+    }
+    fmt += "\r\n";
+  }
+
+  fmt
+}
+
+fn render_display_buffer(display_buffer: &[u8; 0x20]) -> String {
+  let mut fmt = "".to_string();
+
+  // https://en.wikipedia.org/wiki/Block_Elements
+  let line_top: &str = "\u{25aa}                \u{25aa}\r\n";
+  let line_bottom: &str = "\u{25aa}                \u{25aa}\r\n";
+  let col_left: &str = " ";
+  let col_right: &str = " ";
+
+  fmt += &line_top;
+  for y in (0..0x10).step_by(2) {
+    fmt += &col_left;
+    for x in 0..0x10 {
+      let mut pixel_pair = 0;
+      for y2 in 0..2 {
+        let address: u8 = (x >> 0x03) | ((y + y2) << 0x01);
+        let pixel = display_buffer[address as usize] >> (0x07 - (x & 0x07)) & 0x01;
+        pixel_pair |= pixel << y2;
+      }
+      fmt += match pixel_pair {
+        0b00 => " ",
+        0b01 => "\u{2580}",
+        0b10 => "\u{2584}",
+        0b11 => "\u{2588}",
+        _ => unreachable!(),
+      };
+    }
+    fmt += &col_right;
+    fmt += "\r\n";
+  }
+
+  fmt += &line_bottom;
+  fmt += "\r\n";
+
+  fmt
+}
+
+fn render_controller_input(controller_input: &[u8; 0x01]) -> String {
+  let mut fmt = "".to_string();
+
+  fn bit_to_str(controller_input: &[u8; 0x01], bit: u8) -> &'static str {
+    match controller_input[0x00] >> bit & 0x01 {
+      0b0 => "\u{2591}\u{2591}",
+      0b1 => "\u{2588}\u{2588}",
+      _ => unreachable!(),
+    }
+  }
+
+  fmt += &format!(
+    "    {}      {}    \r\n",
+    bit_to_str(controller_input, 0),
+    bit_to_str(controller_input, 4),
+  );
+  fmt += &format!(
+    "  {}  {}  {}  {}  \r\n",
+    bit_to_str(controller_input, 2),
+    bit_to_str(controller_input, 3),
+    bit_to_str(controller_input, 6),
+    bit_to_str(controller_input, 7),
+  );
+  fmt += &format!(
+    "    {}      {}    \r\n",
+    bit_to_str(controller_input, 1),
+    bit_to_str(controller_input, 5),
+  );
+
+  fmt
 }

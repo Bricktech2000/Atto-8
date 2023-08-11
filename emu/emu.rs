@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() != 2 {
@@ -9,7 +7,7 @@ fn main() {
 
   let memory_image_file: &String = &args[1];
 
-  let image = std::fs::read(memory_image_file)
+  let memory_image = std::fs::read(memory_image_file)
     .unwrap_or_else(|_| {
       println!("Emu: Error: Unable to read file `{}`", memory_image_file);
       std::process::exit(1);
@@ -24,7 +22,7 @@ fn main() {
     });
 
   let mc = Microcomputer {
-    mem: image,
+    mem: memory_image,
     stdin: 0x00,
     stdout: 0x00,
     mp: Microprocessor {
@@ -52,12 +50,16 @@ struct Microprocessor {
   cf: bool, // carry flag
 }
 
+#[allow(dead_code)]
 enum TickTrap {
   DebugRequest,
+  MicrocodeFault,
   IllegalOpcode(u8),
 }
 
 fn emulate(mut mc: Microcomputer, clock_speed: u128) {
+  use std::collections::VecDeque;
+
   let mut start_time = std::time::Instant::now();
   let mut next_print_time = std::time::Instant::now();
   let mut current_clocks = 0;
@@ -160,6 +162,7 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
         debug_mode = true;
         status_line = match tick_trap {
           TickTrap::DebugRequest => format!("Debug request"),
+          TickTrap::MicrocodeFault => format!("Microcode fault"),
           TickTrap::IllegalOpcode(instruction) => {
             format!("Illegal opcode `{:02X}`", instruction)
           }
@@ -217,16 +220,17 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
 
       print!("\x1B[2J"); // clear screen
       print!("\x1B[1;1H"); // move cursor to top left
-      print!("{:32}\r\n", status_line);
+      print!("{}\r\n", status_line);
       print!("\r\n");
       if show_state || debug_mode {
         print!("{}", mc);
+      } else {
+        print!(
+          "{}\r\n{}\r\n",
+          render_display_buffer(&mc.mem[0xE0..0x100].try_into().unwrap()),
+          render_controller_input(&mc.mem[0x00..0x01].try_into().unwrap())
+        );
       }
-      print!(
-        "{}{}",
-        render_display_buffer(&mc.mem[0xE0..0x100].try_into().unwrap()),
-        render_controller_input(&mc.mem[0x00..0x01].try_into().unwrap())
-      );
       print!("{}", stdout_string);
       use std::io::Write;
       std::io::stdout().flush().unwrap();
@@ -296,7 +300,7 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
       // psh
       let imm = instruction; // decode_imm
       push!(imm);
-      Ok(0x04)
+      Ok(4)
     }
 
     0b1 => {
@@ -312,18 +316,20 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
               // add
               let a = pop!();
               let b = mem_read!(size_pointer);
-              mem_write!(size_pointer, (b as u16 + a as u16 + mp.cf as u16) as u8);
-              mp.cf = (b as u16 + a as u16 + mp.cf as u16) > 0xFF;
-              Ok(0x04)
+              let sum = b as u16 + a as u16 + mp.cf as u16;
+              mem_write!(size_pointer, sum as u8);
+              mp.cf = sum > 0xFF;
+              Ok(4)
             }
 
             0x1 => {
               // sub
               let a = pop!();
               let b = mem_read!(size_pointer);
-              mem_write!(size_pointer, (b as i16 - a as i16 - mp.cf as i16) as u8);
-              mp.cf = (b as i16 - a as i16 - mp.cf as i16) < 0x00;
-              Ok(0x04)
+              let diff = b as i16 - a as i16 - mp.cf as i16;
+              mem_write!(size_pointer, diff as u8);
+              mp.cf = diff < 0x00;
+              Ok(4)
             }
 
             0x4 => {
@@ -331,7 +337,7 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
               let a = pop!();
               let b = mem_read!(size_pointer);
               mem_write!(size_pointer, if mp.cf { a } else { b });
-              Ok(0x04)
+              Ok(4)
             }
 
             0x5 => {
@@ -340,7 +346,7 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
               let b = mem_read!(size_pointer);
               let shifted = (b as u16) << a % 8;
               mem_write!(size_pointer, (shifted & 0xFF) as u8 | (shifted >> 8) as u8);
-              Ok(0x04)
+              Ok(4)
             }
 
             0x8 => {
@@ -349,7 +355,7 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
               let b = mem_read!(size_pointer);
               mem_write!(size_pointer, a | b);
               mp.cf = mem_read!(size_pointer) == 0x00;
-              Ok(0x04)
+              Ok(4)
             }
 
             0x9 => {
@@ -358,7 +364,7 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
               let b = mem_read!(size_pointer);
               mem_write!(size_pointer, a & b);
               mp.cf = mem_read!(size_pointer) == 0x00;
-              Ok(0x04)
+              Ok(4)
             }
 
             0xA => {
@@ -367,7 +373,7 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
               let b = mem_read!(size_pointer);
               mem_write!(size_pointer, a ^ b);
               mp.cf = mem_read!(size_pointer) == 0x00;
-              Ok(0x04)
+              Ok(4)
             }
 
             0xB => {
@@ -375,7 +381,7 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
               let _ = pop!();
               mem_write!(size_pointer, 0x00);
               mp.cf = mem_read!(size_pointer) == 0x00;
-              Ok(0x04)
+              Ok(4)
             }
 
             _ => match (opcode, instruction & 0b00000011) {
@@ -383,19 +389,19 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
               (0xC, 0b00) => {
                 // inc
                 push!(pop!().wrapping_add(1));
-                Ok(0x04)
+                Ok(4)
               }
 
               (0xC, 0b01) => {
                 // dec
                 push!(pop!().wrapping_sub(1));
-                Ok(0x04)
+                Ok(4)
               }
 
               (0xC, 0b10) => {
                 // neg
                 push!(pop!().wrapping_neg());
-                Ok(0x04)
+                Ok(4)
               }
 
               (0xD, 0b00) => {
@@ -403,7 +409,7 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
                 let a = pop!();
                 push!(a.wrapping_shl(1) | (mp.cf as u8));
                 mp.cf = a & 0b10000000 != 0x00;
-                Ok(0x04)
+                Ok(4)
               }
 
               (0xD, 0b01) => {
@@ -411,21 +417,21 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
                 let a = pop!();
                 push!(a.wrapping_shr(1) | (mp.cf as u8) << 7);
                 mp.cf = a & 0b00000001 != 0x00;
-                Ok(0x04)
+                Ok(4)
               }
 
               (0xD, 0b10) => {
                 // not
                 push!(!pop!());
                 mp.cf = mem_read!(mp.sp) == 0x00;
-                Ok(0x04)
+                Ok(4)
               }
 
               (0xD, 0b11) => {
                 // buf
                 push!(pop!());
                 mp.cf = mem_read!(mp.sp) == 0x00;
-                Ok(0x04)
+                Ok(4)
               }
 
               (0b1110, 0b11) => {
@@ -449,14 +455,14 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
                   // ldo
                   let ofst_pointer = mp.sp.wrapping_add(ofst);
                   push!(mem_read!(ofst_pointer));
-                  Ok(0x04)
+                  Ok(4)
                 }
 
                 0b1 => {
                   // sto
                   let ofst_pointer = mp.sp.wrapping_add(ofst).wrapping_add(1);
                   mem_write!(ofst_pointer, pop!());
-                  Ok(0x04)
+                  Ok(4)
                 }
 
                 _ => unreachable!(),
@@ -471,60 +477,60 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
                     0x0 => {
                       // lda
                       push!(mem_read!(pop!()));
-                      Ok(0x04)
+                      Ok(4)
                     }
 
                     0x1 => {
                       // sta
                       mem_write!(pop!(), pop!());
-                      Ok(0x04)
+                      Ok(4)
                     }
 
                     0x2 => {
                       // ldi
                       push!(mp.ip);
-                      Ok(0x04)
+                      Ok(4)
                     }
 
                     0x3 => {
                       // sti
                       mp.ip = pop!();
-                      Ok(0x04)
+                      Ok(4)
                     }
 
                     0x4 => {
                       // lds
                       push!(mp.sp);
-                      Ok(0x04)
+                      Ok(4)
                     }
 
                     0x5 => {
                       // sts
                       mp.sp = pop!();
-                      Ok(0x04)
+                      Ok(4)
                     }
 
                     0x8 => {
                       // nop
-                      Ok(0x04)
+                      Ok(4)
                     }
 
                     0x9 => {
                       // clc
                       mp.cf = false;
-                      Ok(0x04)
+                      Ok(4)
                     }
 
                     0xA => {
                       // sec
                       mp.cf = true;
-                      Ok(0x04)
+                      Ok(4)
                     }
 
                     0xB => {
                       // flc
                       mp.cf = !mp.cf;
-                      Ok(0x04)
+                      Ok(4)
                     }
 
                     0xC => {
@@ -533,13 +539,13 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
                       let b = pop!();
                       push!(a);
                       push!(b);
-                      Ok(0x04)
+                      Ok(4)
                     }
 
                     0xD => {
                       // pop
                       let _ = pop!();
-                      Ok(0x04)
+                      Ok(4)
                     }
 
                     _ => Err(TickTrap::IllegalOpcode(instruction)),
@@ -550,7 +556,7 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
                   // phn
                   let imm = instruction; // decode_imm
                   push!(imm);
-                  Ok(0x04)
+                  Ok(4)
                 }
 
                 _ => unreachable!(),
@@ -569,6 +575,29 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
   }
 }
 
+impl std::fmt::Display for Microcomputer {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "{}\r\n{}\r\n{}\r\n{}",
+      self.mp,
+      render_memory(&self.mem, self.mp.ip, self.mp.sp, self.mp.cf),
+      render_display_buffer(self.mem[0xE0..0x100].try_into().unwrap()),
+      render_controller_input(self.mem[0x00..0x01].try_into().unwrap())
+    )
+  }
+}
+
+impl std::fmt::Display for Microprocessor {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "IP  SP  CF\r\n{:02X}  {:02X}  {:01X} \r\n",
+      self.ip, self.sp, self.cf as u8,
+    )
+  }
+}
+
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 fn spawn_input_channel() -> Receiver<console::Key> {
@@ -584,52 +613,35 @@ fn spawn_input_channel() -> Receiver<console::Key> {
   rx
 }
 
-impl std::fmt::Display for Microcomputer {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    let mut fmt: String = "".to_string();
+fn render_memory(memory: &[u8; MEM_SIZE], ip: u8, sp: u8, cf: bool) -> String {
+  let mut fmt: String = "".to_string();
 
-    fmt += "MEM\r\n";
-
-    for y in 0..0x10 {
-      for x in 0..0x10 {
-        let address: u8 = (y << 0x04 | x) as u8;
-        fmt += &format!(
-          "{:02X}{}",
-          self.mem[address as usize],
-          if address == self.mp.sp.wrapping_sub(1) {
-            if self.mp.cf {
-              "/"
-            } else {
-              "|"
-            }
-          } else if address == self.mp.ip.wrapping_sub(1) {
-            "["
-          } else if address == self.mp.ip {
-            "]"
+  fmt += "MEM\r\n";
+  for y in 0..0x10 {
+    for x in 0..0x10 {
+      let address: u8 = (y << 0x04 | x) as u8;
+      fmt += &format!(
+        "{:02X}{}",
+        memory[address as usize],
+        if address == sp.wrapping_sub(1) {
+          if cf {
+            "/"
           } else {
-            " "
+            "|"
           }
-        );
-      }
-      fmt += "\r\n";
+        } else if address == ip.wrapping_sub(1) {
+          "["
+        } else if address == ip {
+          "]"
+        } else {
+          " "
+        }
+      );
     }
-
     fmt += "\r\n";
-    fmt += &format!("{}", self.mp);
-    fmt += "\r\n";
-
-    write!(f, "{}", fmt)
   }
-}
 
-impl std::fmt::Display for Microprocessor {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(
-      f,
-      "IP  SP  CF\r\n{:02X}  {:02X}   {:01X}\r\n",
-      self.ip, self.sp, self.cf as u8,
-    )
-  }
+  fmt
 }
 
 fn render_display_buffer(display_buffer: &[u8; 0x20]) -> String {
