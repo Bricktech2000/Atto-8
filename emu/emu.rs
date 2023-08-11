@@ -226,11 +226,12 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
         print!("{}", mc);
       } else {
         print!(
-          "{}\r\n{}\r\n",
+          "{}\r\n{}",
           render_display_buffer(&mc.mem[0xE0..0x100].try_into().unwrap()),
           render_controller_input(&mc.mem[0x00..0x01].try_into().unwrap())
         );
       }
+      print!("\r\n");
       print!("{}", stdout_string);
       use std::io::Write;
       std::io::stdout().flush().unwrap();

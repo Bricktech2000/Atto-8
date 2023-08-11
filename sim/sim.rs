@@ -180,43 +180,6 @@ enum Signal {
 // TODO copied from `emu.rs`
 
 fn simulate(mut mc: Microcomputer, clock_speed: u128) {
-  // let mut dbg = false;
-  //
-  // loop {
-  //   println!("{}", mc);
-  //   for _ in 0..100 {
-  //     match tick(&mut mc) {
-  //       Ok(_clocks) => (), // TODO use meaningfully
-  //       Err(tick_trap) => {
-  //         println!("{}", mc);
-  //         match tick_trap {
-  //           TickTrap::MicrocodeFault => {
-  //             panic!("Microcode fault")
-  //           }
-  //           TickTrap::DebugRequest => {
-  //             mc.mp.sc += 1;
-  //             dbg = true;
-  //           }
-  //           TickTrap::IllegalOpcode(opcode) => {
-  //             panic!("Illegal opcode `0x{:02X}`", opcode)
-  //           }
-  //         }
-  //       }
-  //     }
-  //     mc.rst = Reset::Deasserted; // reset is only active for one cycle
-  //   }
-  //
-  //   if dbg {
-  //     let mut input = String::new();
-  //     std::io::stdin().read_line(&mut input).unwrap();
-  //     if input != "\n" {
-  //       dbg = false;
-  //     }
-  //   }
-  //
-  //   std::thread::sleep(std::time::Duration::from_millis(1));
-  // }
-
   use std::collections::VecDeque;
 
   let mut start_time = std::time::Instant::now();
@@ -385,11 +348,12 @@ fn simulate(mut mc: Microcomputer, clock_speed: u128) {
         print!("{}", mc);
       } else {
         print!(
-          "{}\r\n{}\r\n",
+          "{}\r\n{}",
           render_display_buffer(&mc.mem[0xE0..0x100].try_into().unwrap()),
           render_controller_input(&mc.mem[0x00..0x01].try_into().unwrap())
         );
       }
+      print!("\r\n");
       print!("{}", stdout_string);
       use std::io::Write;
       std::io::stdout().flush().unwrap();

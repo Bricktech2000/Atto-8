@@ -15,7 +15,7 @@ main!
       !u4u4.ld1 !u4u4.fst x03 rot clc x40 sub !i4f4 # c_im
       x07 !i4f4 # pos_im
       !i4f4.add
-      !is_in_set x00 shl @dyn
+      !is_in_set @dyn x00 shl @dyn
       ld1 !display_buffer x10 add !bit_addr !store_bit
     buf :for_xy !bcc pop
   :loop !jmp

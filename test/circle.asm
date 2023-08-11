@@ -59,7 +59,7 @@ draw_circle! # draw_circle(u8 r, u4u4 cycy)
     x00 for_neg_y. # will be 0x00 then 0xF0
       x00 for_neg_x. # will be 0x00 then 0x0F
         x00 for_swap. # will be 0x00 then 0x04
-          # laod (cx, cy)
+          # load (cx, cy)
           !u4u4.ld2+3
           # compute (x_, x_) = (+-x, +-y) or (+-y, +-x)
           !u4u4.ld2+3 ld2 rot ld4 ld4 xor xor

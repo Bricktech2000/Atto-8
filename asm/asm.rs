@@ -847,6 +847,47 @@ fn assemble(
           Root::Instruction(Instruction::Ldo(*ofst1 + 1)),
         ])
       }
+      [Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x07))]
+      | [Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x08)), Root::Instruction(Instruction::Pop)] => {
+        Some(vec![Root::Instruction(Instruction::Xnd(0x08))])
+      }
+      [Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x03))]
+      | [Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x04)), Root::Instruction(Instruction::Pop)] => {
+        Some(vec![Root::Instruction(Instruction::Xnd(0x04))])
+      }
+      [Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x01))]
+      | [Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x02)), Root::Instruction(Instruction::Pop)] => {
+        Some(vec![Root::Instruction(Instruction::Xnd(0x02))])
+      }
+      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x00))]
+      | [Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x00))]
+      | [Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)] => {
+        Some(vec![Root::Instruction(Instruction::Xnd(0x01))])
+      }
+      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x01))]
+      | [Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x01)), Root::Instruction(Instruction::Sto(0x00))]
+      | [Root::Node(Node::Value(0x01)), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)] => {
+        Some(vec![
+          Root::Instruction(Instruction::Xnd(0x01)),
+          Root::Instruction(Instruction::Shl),
+        ])
+      }
+      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x80))]
+      | [Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x80)), Root::Instruction(Instruction::Sto(0x00))]
+      | [Root::Node(Node::Value(0x80)), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)] => {
+        Some(vec![
+          Root::Instruction(Instruction::Xnd(0x01)),
+          Root::Instruction(Instruction::Shr),
+        ])
+      }
+      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0xFF))]
+      | [Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0xFF)), Root::Instruction(Instruction::Sto(0x00))]
+      | [Root::Node(Node::Value(0xFF)), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)] => {
+        Some(vec![
+          Root::Instruction(Instruction::Xnd(0x01)),
+          Root::Instruction(Instruction::Not),
+        ])
+      }
       _ => None,
     });
 
