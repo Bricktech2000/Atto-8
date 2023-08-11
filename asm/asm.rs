@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() != 3 {
@@ -324,6 +322,8 @@ fn assemble(
   entry_point: &str,
 ) -> Vec<(Pos, Instruction)> {
   // resolve macros recursively from `entry_point`
+
+  use std::collections::HashMap;
 
   let mut macro_definitions: HashMap<Macro, Vec<(Pos, Token)>> = HashMap::new();
   let mut current_macro: Option<Macro> = None;

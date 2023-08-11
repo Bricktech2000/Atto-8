@@ -131,9 +131,6 @@ enum TickTrap {
 
 #[derive(Clone, Copy, Default, Debug)]
 struct ControlWord {
-  cin_sum: Signal,
-  cout_cf: Signal,
-
   data_il: Signal,
   zero_sc: Signal,
   size_data: Signal,
@@ -456,10 +453,12 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
   if let Signal::Active = mp.ctrl.zero_sc {
     mp.sc = 0x00; // asynchronous
   }
-  if let Signal::Active = mp.ctrl.size_data {
+  if let (Signal::Inactive, Signal::Active) = (mp.ctrl.sum_data, mp.ctrl.size_data) {
     mc.data = mp.size;
   }
-  if let Signal::Active = mp.ctrl.ofst_data {
+  if let (Signal::Inactive, Signal::Inactive, Signal::Active) =
+    (mp.ctrl.nand_data, mp.ctrl.sum_data, mp.ctrl.ofst_data)
+  {
     mc.data = mp.ofst;
   }
   if let Reset::Asserted = mc.rst {
@@ -498,19 +497,19 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
 
   // carry flag
   if let Clock::Rising = mc.clk {
-    if let Signal::Active = mp.ctrl.cout_cf {
-      if let Signal::Active = mp.ctrl.sum_data {
-        mp.cf = (mp.xl as u16
-          + mp.yl as u16
-          + match mp.ctrl.cin_sum {
-            Signal::Active => 1,
-            Signal::Inactive => 0,
-          })
-          > 0xFF;
-      }
-      if let Signal::Active = mp.ctrl.nand_data {
-        mp.cf = mp.nand == 0x00;
-      }
+    if let (Signal::Active, Signal::Active) = (mp.ctrl.sum_data, mp.ctrl.ofst_data) {
+      // TODO clean up
+      mp.cf = (mp.xl as u16
+        + mp.yl as u16
+        + match mp.ctrl.size_data {
+          Signal::Active => 1,
+          Signal::Inactive => 0,
+        })
+        > 0xFF;
+    }
+    if let (Signal::Active, Signal::Active) = (mp.ctrl.nand_data, mp.ctrl.ofst_data) {
+      // TODO clean up
+      mp.cf = mp.nand == 0x00;
     }
   }
   if let Reset::Asserted = mc.rst {
@@ -545,7 +544,7 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
   // X latch and Y latch and Z latch
   mp.sum = (mp.xl as u16
     + mp.yl as u16
-    + match mp.ctrl.cin_sum {
+    + match mp.ctrl.size_data {
       Signal::Active => 1,
       Signal::Inactive => 0,
     }) as u8;
@@ -598,6 +597,9 @@ fn build_microcode_image() -> MicrocodeImage {
   }
 
   // TODO document why every instruction must end with YL = 0x00
+  // TODO document sum_data && ofst_data is sum_data && sum_cf
+  // TODO document nand_data && ofst_data is nand_data && nand_cf
+  // TODO document sum_data && size_data is sum_data && cin_sum
 
   // TODO order
   let default = ControlWord! {};
@@ -608,7 +610,7 @@ fn build_microcode_image() -> MicrocodeImage {
   let mem_ilzl = ControlWord! {mem_data, data_il, data_zl};
   let nand_ylzl = ControlWord! {nand_data, data_yl, data_zl};
   let sum_spal = ControlWord! {sum_data, data_sp, data_al};
-  let cinsum_ip = ControlWord! {cin_sum, sum_data, data_ip};
+  let cinsum_ip = ControlWord! {size_data, sum_data, data_ip};
   let nand_mem = ControlWord! {nand_data, data_mem};
   let mem_zl = ControlWord! {mem_data, data_zl};
   let mem_xl = ControlWord! {mem_data, data_xl};
@@ -620,26 +622,26 @@ fn build_microcode_image() -> MicrocodeImage {
   let nand_xl = ControlWord! {nand_data, data_xl};
   let mem_ylzl = ControlWord! {mem_data, data_yl, data_zl};
   let nand_zl = ControlWord! {nand_data, data_zl};
-  let cinsum_yl = ControlWord! {cin_sum, sum_data, data_yl};
-  let cinsum_mem = ControlWord! {cin_sum, sum_data, data_mem};
+  let cinsum_yl = ControlWord! {size_data, sum_data, data_yl};
+  let cinsum_mem = ControlWord! {size_data, sum_data, data_mem};
   let ones_ylzl = ControlWord! {data_yl, data_zl};
   let sp_xlzl = ControlWord! {sp_data, data_xl, data_zl};
   let ones_zl = ControlWord! {data_zl};
   let nand_yl = ControlWord! {nand_data, data_yl};
   let mem_ip = ControlWord! {mem_data, data_ip};
-  let cinsum_sp = ControlWord! {cin_sum, sum_data, data_sp};
-  let nand_memcf = ControlWord! {nand_data, data_mem, cout_cf};
+  let cinsum_sp = ControlWord! {size_data, sum_data, data_sp};
+  let nand_memcf = ControlWord! {nand_data, data_mem, ofst_data};
   let mem_sp = ControlWord! {mem_data, data_sp};
-  let nand_ylcf = ControlWord! {nand_data, data_yl, cout_cf};
+  let nand_ylcf = ControlWord! {nand_data, data_yl, ofst_data};
   let mem_xlyl = ControlWord! {mem_data, data_xl, data_yl};
   let nand_al = ControlWord! {nand_data, data_al};
-  let cinsum_spxl = ControlWord! {cin_sum, sum_data, data_sp, data_xl};
-  let cinsum_al = ControlWord! {cin_sum, sum_data, data_al};
-  let nand_zlcf = ControlWord! {nand_data, data_zl, cout_cf};
-  let cinsum_xlcf = ControlWord! {cin_sum, sum_data, data_xl, cout_cf};
-  let sum_xlcf = ControlWord! {sum_data, data_xl, cout_cf};
-  let cinsum_xlylcf = ControlWord! {cin_sum, sum_data, data_xl, data_yl, cout_cf};
-  let sum_xlylcf = ControlWord! {sum_data, data_xl, data_yl, cout_cf};
+  let cinsum_spxl = ControlWord! {size_data, sum_data, data_sp, data_xl};
+  let cinsum_al = ControlWord! {size_data, sum_data, data_al};
+  let nand_zlcf = ControlWord! {nand_data, data_zl, ofst_data};
+  let cinsum_xlcf = ControlWord! {size_data, sum_data, data_xl, ofst_data};
+  let sum_xlcf = ControlWord! {sum_data, data_xl, ofst_data};
+  let cinsum_xlylcf = ControlWord! {size_data, sum_data, data_xl, data_yl, ofst_data};
+  let sum_xlylcf = ControlWord! {sum_data, data_xl, data_yl, ofst_data};
 
   // TODO assumes YL = 0x00
   let fetch = seq![ip_alxl, mem_ilzl, cinsum_ip];
@@ -1138,9 +1140,7 @@ impl std::fmt::Display for Microprocessor {
         self.imm, self.size, self.ofst, self.sum, self.nand
       ),
       format!(
-        "CTRL  {} {} {} {} {} {} {} {} {}\r\nWORD  {} {} {} {} {} {} {} {} {}\r\n",
-        self.ctrl.cin_sum,
-        self.ctrl.cout_cf,
+        "CTRL  {} {} {} {} {} {} {} {}\r\nWORD  {} {} {} {} {} {} {} {}\r\n",
         self.ctrl.data_il,
         self.ctrl.zero_sc,
         self.ctrl.size_data,
