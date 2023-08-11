@@ -27,7 +27,11 @@ tasks:
 - [ ] finish `pong.asm`
 - [ ] finish `snake.asm`
 - [ ] finish `mandelbrot.asm`
-- [ ] come up with microcode
+- [x] come up with microcode
+- [ ] implement `rot` in simulator
+- [ ] clean up simulator and microcode compiler
+- [ ] write readme for simulator
+- [ ] write readme for microcode compiler
 - [ ] build computer
 
 - potentially remove: neg, not, sub, xnd, clc, sec, flc
@@ -46,7 +50,7 @@ constituents:
 - [x] assembler
 - [x] emulator
 - [x] encoder
-- [ ] microcode
+- [x] microcode
 - [ ] schematics
 - [ ] circuits
 
@@ -212,5 +216,5 @@ things needed:
 - sum to data
 - zero to bl
 - rot to data
-- [ ] not
-- [ ] latch carry
+- [x] not
+- [x] latch carry

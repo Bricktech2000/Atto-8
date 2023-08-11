@@ -20,36 +20,61 @@ run_python = functools.partial(run, 'python3')
 
 
 if len(sys.argv) <= 1:
-  print("Test: Usage: test.py <operations> <filename>")
+  print("Test: Usage: test.py <filenames|operations>")
   sys.exit(1)
 
-_filename = sys.argv[-1]
-_operations = sys.argv[1:-1]
+target = 'target'
+input = sys.argv[1:][::-1]
+shutil.rmtree(rel_path(target), ignore_errors=True)
+shutil.copytree(rel_path('./'), rel_path(target), dirs_exist_ok=True)
+shutil.copytree(rel_path('../lib/'), rel_path('target/lib/'), dirs_exist_ok=True)
 
-shutil.rmtree(rel_path('target'), ignore_errors=True)
-shutil.copytree(rel_path('../lib'), rel_path('target/lib'), dirs_exist_ok=True)
-shutil.copyfile(_filename, rel_path('target', os.path.basename(_filename)))
-filename = rel_path('target', os.path.basename(_filename))
 
+filenames = []
 operations = []
-for operation in _operations:
-  match operation:
-    case 'enc':
-      operations.append(('enc', functools.partial(run_python, rel_path('../enc/enc.py'), filename, filename + '.bin')))
-      filename += '.bin'
-    case 'asm':
-      operations.append(('asm', functools.partial(run_cargo, 'run', '--bin', 'asm', filename, filename + '.bin')))
-      filename += '.bin'
-    case 'dasm':
-      operations.append(('dasm', functools.partial(run_cargo, 'run', '--bin', 'dasm', filename, filename + '.asm')))
-      filename += '.asm'
-    case 'emu':
-      operations.append(('emu', functools.partial(run_cargo, 'run', '--bin', 'emu', filename)))
-    case 'sim':
-      operations.append(('sim', functools.partial(run_cargo, 'run', '--bin', 'sim', filename)))
-    case _:
-      print(f'Test: Error: Unknown operation `{operation}`')
-      sys.exit(1)
+while input:
+  operation = ''  # make type checker happy
+  try:
+    operation = input.pop()
+    match operation:
+      case 'enc':
+        hex_file = filenames.pop()
+        memory_image_file = hex_file + '.mem'
+        operations.append(('enc', functools.partial(
+            run_python, rel_path('../enc/enc.py'), hex_file, memory_image_file)))
+        filenames.append(memory_image_file)
+      case 'asm':
+        assembly_source_file = filenames.pop()
+        memory_image_file = assembly_source_file + '.mem'
+        operations.append(('asm', functools.partial(run_cargo, 'run', '--bin',
+                          'asm', assembly_source_file, memory_image_file)))
+        filenames.append(memory_image_file)
+      case 'dasm':
+        memory_image_file = filenames.pop()
+        disassembly_output_file = memory_image_file + '.dasm'
+        operations.append(('dasm', functools.partial(run_cargo, 'run', '--bin',
+                          'dasm', memory_image_file, disassembly_output_file)))
+        filenames.append(disassembly_output_file)
+      case 'emu':
+        memory_image_file = filenames.pop()
+        operations.append(('emu', functools.partial(run_cargo, 'run', '--bin', 'emu', memory_image_file)))
+      case 'mic':
+        microcode_image_file = rel_path(target, 'microcode.mic')
+        operations.append(('mic', functools.partial(run_cargo, 'run', '--bin', 'mic', microcode_image_file)))
+        filenames.append(microcode_image_file)
+      case 'sim':
+        microcode_image_file = filenames.pop()
+        memory_image_file = filenames.pop()
+        operations.append(('sim', functools.partial(run_cargo, 'run', '--bin',
+                          'sim', memory_image_file, microcode_image_file)))
+      case file:
+        filenames.append(rel_path(target, file))
+  except IndexError:
+    print(f'Test: Error: Missing argument for operation `{operation}`')
+    sys.exit(1)
+
+while filenames:
+  print(f'Test: Warning: Unused filename `{filenames.pop()}`')
 
 try:
   for (name, func) in operations:
