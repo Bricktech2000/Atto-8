@@ -79,11 +79,14 @@ fn main() {
   });
   mc.rst = Reset::Deasserted;
 
-  simulate(mc, 100000);
+  simulate(mc, 500000);
 }
 
 const MEM_SIZE: usize = 0x100;
 const MIC_SIZE: usize = 2 * 0x20 * MEM_SIZE;
+const MICROCODE_FAULT_TOMBSTONE: u16 = 0xFFF0;
+const DEBUG_REQUEST_TOMBSTONE: u16 = 0xFFF1;
+const ILLEGAL_OPCODE_TOMBSTONE: u16 = 0xFFF2;
 
 struct Microcomputer {
   mem: [u8; MEM_SIZE], // memory
@@ -124,8 +127,8 @@ struct Microprocessor {
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 enum TickTrap {
-  MicrocodeFault,
   DebugRequest,
+  MicrocodeFault,
   IllegalOpcode(u8),
 }
 
@@ -316,11 +319,11 @@ fn simulate(mut mc: Microcomputer, clock_speed: u128) {
     if !debug_mode {
       let realtime_tolerance = 0.01;
       status_line = if -realtime_ratio > realtime_tolerance {
-        format!("Emulation behind by {:.0}%", -realtime_ratio * 100.0)
+        format!("Execution behind by {:.0}%", -realtime_ratio * 100.0)
       } else if realtime_ratio > realtime_tolerance {
-        format!("Emulation ahead by {:.0}%", realtime_ratio * 100.0)
+        format!("Execution ahead by {:.0}%", realtime_ratio * 100.0)
       } else {
-        format!("Emulation on time")
+        format!("Execution on time")
       };
     }
 
@@ -406,10 +409,6 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
     }};
   }
 
-  // control logic
-  mp.ctrl =
-    mp.mic[((mp.cf as usize) << 13) | ((mp.sc as usize) << 8) | ((mp.il as usize) << 0)].into();
-
   // clock
   match mc.clk {
     Clock::Rising => mc.clk = Clock::High,
@@ -420,6 +419,18 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
   if let Reset::Asserted = mc.rst {
     mc.clk = Clock::Low;
   }
+
+  // step counter
+  if let Clock::Falling = mc.clk {
+    if true {
+      mp.sc = mp.sc.wrapping_add(1) & (0x20 - 1);
+    }
+  }
+
+  // control logic
+  mp.ctrl = u16_into_result(
+    mp.mic[mp.cf as usize * MEM_SIZE * 0x20 | mp.sc as usize * MEM_SIZE | mp.il as usize],
+  )?;
 
   // ones
   if let (
@@ -446,11 +457,6 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
   if let Clock::Rising = mc.clk {
     if let Signal::Active = mp.ctrl.data_il {
       mp.il = mc.data;
-    }
-  }
-  if let Clock::Falling = mc.clk {
-    if true {
-      mp.sc = mp.sc.wrapping_add(1);
     }
   }
   if let Signal::Active = mp.ctrl.zero_sc {
@@ -593,6 +599,15 @@ impl From<u16> for ControlWord {
     unsafe {
       std::mem::transmute::<[u8; std::mem::size_of::<ControlWord>()], ControlWord>(control_word)
     }
+  }
+}
+
+fn u16_into_result(u16: u16) -> Result<ControlWord, TickTrap> {
+  match u16 {
+    DEBUG_REQUEST_TOMBSTONE => Err(TickTrap::DebugRequest),
+    MICROCODE_FAULT_TOMBSTONE => Err(TickTrap::MicrocodeFault),
+    ILLEGAL_OPCODE_TOMBSTONE => Err(TickTrap::IllegalOpcode(0x00)),
+    control_word => Ok(control_word.into()),
   }
 }
 

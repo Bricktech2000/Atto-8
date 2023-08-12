@@ -5,33 +5,52 @@ fn main() {
     std::process::exit(1);
   }
 
+  let mut errors: Vec<Error> = vec![];
   let microcode_image_file: &String = &args[1];
 
-  let microcode_image = compile_microcode();
+  let microcode_image = compile_microcode(&mut errors);
 
-  std::fs::write::<&String, [u8; 2 * MIC_SIZE]>(
-    microcode_image_file,
-    microcode_image
-      .iter()
-      .flat_map(|&word| word.to_le_bytes().to_vec())
-      .collect::<Vec<u8>>()
-      .try_into()
-      .unwrap(),
-  )
-  .unwrap();
+  match errors[..] {
+    [] => {
+      std::fs::write::<&String, [u8; 2 * MIC_SIZE]>(
+        microcode_image_file,
+        microcode_image
+          .iter()
+          .flat_map(|&word| word.to_le_bytes().to_vec())
+          .collect::<Vec<u8>>()
+          .try_into()
+          .unwrap(),
+      )
+      .unwrap();
+    }
+
+    _ => {
+      let errors = errors
+        .iter()
+        .map(|error| format!("Mic: Error: {}", error.0))
+        .collect::<Vec<String>>()
+        .join("\n");
+
+      println!("{}", errors);
+      std::process::exit(1);
+    }
+  }
 
   println!("Mic: Done");
 }
 
 const MEM_SIZE: usize = 0x100;
 const MIC_SIZE: usize = 2 * 0x20 * MEM_SIZE;
+const MICROCODE_FAULT_TOMBSTONE: u16 = 0xFFF0;
+const DEBUG_REQUEST_TOMBSTONE: u16 = 0xFFF1;
+const ILLEGAL_OPCODE_TOMBSTONE: u16 = 0xFFF2;
 
 // TODO copied from `emu.rs`
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 enum TickTrap {
-  MicrocodeFault,
   DebugRequest,
+  MicrocodeFault,
   IllegalOpcode(u8),
 }
 
@@ -68,7 +87,9 @@ enum Signal {
   Active,
 }
 
-fn compile_microcode() -> [u16; MIC_SIZE] {
+struct Error(String);
+
+fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
   // sets specified fields to `true` and wraps to ensure compatibility with `seq!`
   macro_rules! ControlWord {
     ($($field:ident),*) => {
@@ -132,32 +153,32 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
   let sum_xlcf = ControlWord! {sum_data, data_xl, ofst_data};
   let cinsum_xlylcf = ControlWord! {size_data, sum_data, data_xl, data_yl, ofst_data};
   let sum_xlylcf = ControlWord! {sum_data, data_xl, data_yl, ofst_data};
+  let mem_yl = ControlWord! {mem_data, data_yl};
+  let cinsum_zl = ControlWord! {size_data, sum_data, data_zl};
+  let sum_memcf = ControlWord! {sum_data, data_mem, ofst_data};
+  let sum_zl = ControlWord! {sum_data, data_zl};
+  let cinsum_spal = ControlWord! {size_data, sum_data, data_sp, data_al};
+  let yl_mem = ControlWord! {data_yl, data_mem};
+  let ones_xlylzl = ControlWord! {data_xl, data_yl, data_zl};
 
   // TODO assumes YL = 0x00
-  let fetch = seq![ip_alxl, mem_ilzl, cinsum_ip];
+  let fetch = seq![ip_alxl, cinsum_ip, mem_ilzl];
   let zero_yl = seq![ones_ylzl, nand_yl];
   let zero_sc = seq![ControlWord! {zero_sc}];
   let psh = seq![
-    fetch, //
     // instruction is in ZL
     sp_xl, ones_yl, sum_spal, // SP-- -> AL
     nand_zl, nand_mem, // IL -> *AL
-    zero_yl, zero_sc //
+    zero_yl   //
   ];
   let pop = seq![
-    fetch, //
-    sp_xl, cinsum_sp, // SP++
-    zero_sc    //
+    sp_xl, cinsum_sp // SP++
   ];
   let sec = seq![
-    fetch, //
-    ones_ylzl, ones_ylzl, nand_ylcf, // 1 -> CF
-    zero_sc    //
+    ones_ylzl, ones_ylzl, nand_ylcf // 1 -> CF
   ];
   let clc = seq![
-    fetch, //
-    ones_ylzl, nand_ylzl, nand_zlcf, // 0 -> CF
-    zero_sc    //
+    ones_ylzl, nand_ylzl, nand_zlcf // 0 -> CF
   ];
 
   let microcode: [[[Result<ControlWord, TickTrap>; MEM_SIZE]; 0x20]; 2] = [[[(); MEM_SIZE]; 0x20];
@@ -176,10 +197,10 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
             .enumerate()
             .map(|(instruction, rest)| (instruction as u8, rest))
             .map(|(instruction, _)| {
-              match (instruction & 0b10000000) >> 7 {
+              let seq = match (instruction & 0b10000000) >> 7 {
                 0b0 => {
                   // psh
-                  seq![psh]
+                  seq![fetch, psh]
                 }
                 0b1 => match (instruction & 0b01000000) >> 6 {
                   0b0 => {
@@ -206,8 +227,7 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                           },
                           ones_ylzl,
                           cinsum_mem, // XL -> *AL
-                          nand_yl,
-                          zero_sc //
+                          nand_yl
                         ]
                       }
 
@@ -232,8 +252,7 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                           match carry {
                             true => seq![nand_ylzl, nand_zlcf], // 0 -> CF
                             false => seq![default, nand_ylcf],  // 1 -> CF
-                          },
-                          zero_sc //
+                          }
                         ]
                       }
 
@@ -253,15 +272,43 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                             false => seq![default, default], // no-op
                           },
                           cinsum_mem, // XL -> *AL
-                          zero_yl,
-                          zero_sc //
+                          zero_yl
                         ]
                       }
 
                       0x5 => {
                         // rot
-                        // TODO
-                        seq![fetch, vec![Err(TickTrap::MicrocodeFault)]]
+                        // TODO document that `rot` clears carry
+                        seq![
+                          match carry {
+                            // not done. no-op
+                            true => seq![default, default, default],
+                            // done. fetch next instruction
+                            false => seq![fetch],
+                          },
+                          sp_xl,
+                          size_yl,
+                          sum_al, // SP + SIZE -> AL
+                          mem_xlyl,
+                          sum_xlcf, // *AL + *AL -> XL
+                          zero_yl,
+                          match carry {
+                            true => seq![cinsum_zl], // XL + 1 -> ZL
+                            false => seq![sum_zl],   // XL -> ZL
+                          },
+                          sp_al,
+                          mem_xl,
+                          ones_yl,
+                          sum_memcf, // *SP - 1 -> *SP
+                          match carry {
+                            // not done. store shifted value
+                            true =>
+                              seq![sp_xl, size_yl, sum_al, ones_yl, nand_zl, nand_mem, zero_yl], // ZL -> *(SP + SIZE)
+                            // done. ignore shifted value, pop counter
+                            false =>
+                              seq![zero_yl, sp_xl, cinsum_sp, default, default, default, default], // SP++
+                          }
+                        ]
                       }
 
                       0x8 => {
@@ -275,7 +322,7 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                           mem_zl, nand_zl,    // ~*AL -> ZL
                           cinsum_yl,  // XL -> YL
                           nand_memcf, // YL NAND ZL -> *AL
-                          zero_yl, zero_sc //
+                          zero_yl     //
                         ]
                       }
 
@@ -286,16 +333,38 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                           sp_alxl, cinsum_sp, // SP++
                           mem_zl,    // *SP -> ZL
                           size_yl, sum_al, // SP + SIZE -> AL
-                          ones_yl, nand_zl, nand_xl,   // ZL -> XL
-                          mem_zl,    // *AL -> ZL
-                          cinsum_yl, // XL -> YL
+                          mem_yl, // *AL -> YL
                           nand_ylzl, nand_memcf, // ~(YL NAND ZL) -> *AL
-                          zero_yl, zero_sc //
+                          zero_yl     //
                         ]
                       }
 
                       0xA => {
                         // xor
+                        // seq![fetch, vec![Err(TickTrap::DebugRequest)]]
+
+                        // seq![
+                        //   ones_ylzl, nand_ylzl, default, //
+                        //   // TODO get to fit in 0x10 steps
+                        //   ip_alxl, mem_xl, sum_il, // fetch `and` instruction
+                        //   sp_alxl, mem_zl, // *SP -> ZL
+                        //   size_yl, cinsum_al, // (SP + 1) + SIZE -> AL
+                        //   mem_ylxl,  // *AL -> YL; *AL -> XL
+                        //   nand_mem,  // YL NAND ZL -> *AL
+                        //   ones_yl, cinsum_zl, nand_xl, // ~XL -> XL
+                        //   sp_al, mem_zl, nand_zl,   // ~*SP -> ZL
+                        //   cinsum_yl, // XL -> YL
+                        //   nand_mem,  // YL NAND ZL -> *AL
+                        //   ones_yl    //
+                        //
+                        //              // ones_zl, nand_yl, // ~YL -> YL
+                        //              // mem_zl,  // *AL -> ZL
+                        //              // nand_zl, // YL NAND ZL -> ZL
+                        //              // ones_yl, cinsum_yl,  // XL -> YL
+                        //              // nand_memcf, // ~(YL NAND ZL) -> *AL
+                        //              // zero_yl     //
+                        // ]
+
                         seq![
                           fetch, //
                           sp_alxl, cinsum_sp, // SP++
@@ -311,14 +380,21 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                           nand_zl, // YL NAND ZL -> ZL
                           ones_yl, cinsum_yl,  // XL -> YL
                           nand_memcf, // ~(YL NAND ZL) -> *AL
-                          zero_yl, zero_sc //
+                          zero_yl     //
                         ]
                       }
 
                       0xB => {
                         // xnd
-                        // TODO
-                        seq![fetch, vec![Err(TickTrap::MicrocodeFault)]]
+                        seq![
+                          fetch, //
+                          sp_xl,
+                          cinsum_spal, // SP++
+                          yl_mem,      // 0x00 -> SP
+                          ones_xlylzl, // 0xFF -> XL; 0xFF -> YL; 0xFF -> ZL
+                          sum_xlcf,    // 1 -> CF
+                          nand_yl
+                        ]
                       }
 
                       _ => match (opcode, instruction & 0b00000011) {
@@ -328,8 +404,7 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                           seq![
                             fetch, //
                             sp_al, mem_xl,     // *SP -> XL
-                            cinsum_mem, // XL + 1 -> *SP
-                            zero_sc     //
+                            cinsum_mem  // XL + 1 -> *SP
                           ]
                         }
 
@@ -339,7 +414,7 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                             fetch, //
                             sp_al, mem_xl, // *SP -> XL
                             ones_ylzl, sum_mem, // XL + 0xFF -> *SP
-                            nand_yl, zero_sc //
+                            nand_yl  //
                           ]
                         }
 
@@ -349,7 +424,7 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                             fetch, //
                             ones_ylzl, nand_xl, // 0x00 -> XL
                             sp_al, mem_ylzl, nand_ylzl, cinsum_mem, // 0x00 - *SP -> *SP
-                            zero_yl, zero_sc //
+                            zero_yl     //
                           ]
                         }
 
@@ -365,8 +440,7 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                             },
                             ones_ylzl,
                             cinsum_mem, // XL -> *SP
-                            nand_yl,
-                            zero_sc //
+                            nand_yl
                           ]
                         }
 
@@ -388,8 +462,7 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                             },
                             ones_ylzl,
                             cinsum_mem, // XL -> *SP
-                            nand_yl,
-                            zero_sc //
+                            nand_yl
                           ]
                         }
 
@@ -398,7 +471,7 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                           seq![
                             fetch, //
                             sp_al, mem_ylzl, nand_memcf, // ~*SP -> *SP
-                            zero_yl, zero_sc //
+                            zero_yl     //
                           ]
                         }
 
@@ -407,13 +480,13 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                           seq![
                             fetch, //
                             sp_al, mem_ylzl, nand_ylzl, nand_memcf, // *SP -> *SP
-                            zero_yl, zero_sc //
+                            zero_yl     //
                           ]
                         }
 
                         (0b1110, 0b11) => {
                           // dbg
-                          seq![fetch, vec![Err(TickTrap::DebugRequest)], zero_sc]
+                          seq![fetch, vec![Err(TickTrap::DebugRequest)]]
                         }
 
                         _ => seq![fetch, vec![Err(TickTrap::IllegalOpcode(instruction))]],
@@ -434,7 +507,7 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                               mem_zl, // *AL -> ZL
                               sp_xl, ones_yl, sum_spal, // SP-- -> AL
                               nand_zl, nand_mem, // ZL -> *AL
-                              zero_yl, zero_sc //
+                              zero_yl   //
                             ]
                           }
 
@@ -450,8 +523,7 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                               ones_yl,
                               nand_zl,
                               nand_mem, // ZL -> *AL
-                              zero_yl,
-                              zero_sc //
+                              zero_yl
                             ]
                           }
 
@@ -470,8 +542,7 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                                   fetch, //
                                   sp_al, mem_xl, // *SP -> XL
                                   sum_al, mem_xl, // *XL -> XL
-                                  sp_al, sum_mem, // XL -> *SP
-                                  zero_sc  //
+                                  sp_al, sum_mem // XL -> *SP
                                 ]
                               }
 
@@ -482,15 +553,14 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                                   sp_alxl, cinsum_sp, mem_zl, // *SP++ -> ZL
                                   sp_alxl, cinsum_sp, mem_xl, // *SP++ -> XL
                                   ones_yl, nand_zl, nand_al, // ZL -> AL
-                                  zero_yl, sum_mem, // ZL -> *AL
-                                  zero_sc  //
+                                  zero_yl, sum_mem // ZL -> *AL
                                 ]
                               }
 
                               0x2 => {
                                 // ldi
                                 // TODO
-                                seq![fetch, vec![Err(TickTrap::MicrocodeFault)]]
+                                vec![Err(TickTrap::DebugRequest)]
                               }
 
                               0x3 => {
@@ -498,8 +568,7 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                                 seq![
                                   fetch, //
                                   sp_alxl, cinsum_sp, // SP++
-                                  mem_ip,    // *SP -> IP
-                                  zero_sc    //
+                                  mem_ip     // *SP -> IP
                                 ]
                               }
 
@@ -509,7 +578,7 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                                   fetch, //
                                   sp_xlzl, ones_yl, sum_spal, // SP -> ZL; SP-- -> AL
                                   nand_zl, nand_mem, // ZL -> *AL
-                                  zero_yl, zero_sc //
+                                  zero_yl   //
                                 ]
                               }
 
@@ -517,34 +586,30 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                                 // sts
                                 seq![
                                   fetch, //
-                                  sp_al, mem_sp,  // *SP -> SP
-                                  zero_sc  //
+                                  sp_al, mem_sp // *SP -> SP
                                 ]
                               }
 
                               0x8 => {
                                 // nop
-                                seq![
-                                  fetch,   //
-                                  zero_sc  //
-                                ]
+                                seq![fetch]
                               }
 
                               0x9 => {
                                 // clc
-                                seq![clc]
+                                seq![fetch, clc]
                               }
 
                               0xA => {
                                 // sec
-                                seq![sec]
+                                seq![fetch, sec]
                               }
 
                               0xB => {
                                 // flc
                                 match carry {
-                                  true => seq![clc],
-                                  false => seq![sec],
+                                  true => seq![fetch, clc],
+                                  false => seq![fetch, sec],
                                 }
                               }
 
@@ -554,25 +619,24 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                                   fetch, //
                                   sp_al, mem_zl, // *SP -> ZL
                                   sp_xl, cinsum_al, mem_xl, // *(SP + 1) -> *XL
-                                  sp_al, sum_mem, // XL -> *SP
-                                  sp_xl, cinsum_al, ones_yl, nand_zl,
-                                  nand_mem, // ZL -> *(SP + 1)
-                                  zero_yl, zero_sc //
+                                  ones_yl, nand_zl, nand_mem, // ZL -> *(SP + 1)
+                                  sp_al, cinsum_mem, // XL -> *SP
+                                  zero_yl     //
                                 ]
                               }
 
                               0xD => {
                                 // pop
-                                seq![pop]
+                                seq![fetch, pop]
                               }
 
-                              _ => seq![fetch, vec![Err(TickTrap::IllegalOpcode(instruction))]],
+                              _ => vec![Err(TickTrap::IllegalOpcode(instruction))],
                             }
                           }
 
                           0b1 => {
                             // phn
-                            seq![psh]
+                            seq![fetch, psh]
                           }
 
                           _ => unreachable!(),
@@ -587,10 +651,21 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
                 },
 
                 _ => unreachable!(),
+              };
+              let seq = seq![seq, zero_sc];
+              let rest = seq.get(0x20..seq.len() - 1).unwrap_or(&[]);
+              if step == 0x00 && rest.len() > 0 {
+                errors.push(Error(format!(
+                  "Microcode for instruction `{:02X}` with carry `{:01X}` overflows by {} steps",
+                  instruction,
+                  carry as u8,
+                  rest.len()
+                )));
               }
-              .get(step)
-              .copied()
-              .unwrap_or(Err(TickTrap::MicrocodeFault))
+              seq
+                .get(step)
+                .copied()
+                .unwrap_or(Err(TickTrap::MicrocodeFault))
             })
             .collect::<Vec<_>>()
             .try_into()
@@ -608,7 +683,11 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
     .concat()
     .concat()
     .iter()
-    .map(|control_word| control_word.unwrap_or_default().into())
+    .map(|result| {
+      result
+        .map(|control_word| control_word.into())
+        .unwrap_or_else(|trap| trap.into())
+    })
     .collect::<Vec<_>>()
     .try_into()
     .unwrap();
@@ -616,14 +695,23 @@ fn compile_microcode() -> [u16; MIC_SIZE] {
   microcode_image
 }
 
-impl From<ControlWord> for u16 {
-  fn from(control_word: ControlWord) -> Self {
-    let control_word = unsafe {
-      std::mem::transmute::<ControlWord, [u8; std::mem::size_of::<ControlWord>()]>(control_word)
-    };
+impl Into<u16> for ControlWord {
+  fn into(self) -> u16 {
+    let control_word =
+      unsafe { std::mem::transmute::<ControlWord, [u8; std::mem::size_of::<ControlWord>()]>(self) };
 
     control_word
       .iter()
       .fold(0, |acc, &byte| (acc << 1) | byte as u16)
+  }
+}
+
+impl Into<u16> for TickTrap {
+  fn into(self) -> u16 {
+    match self {
+      TickTrap::DebugRequest => DEBUG_REQUEST_TOMBSTONE,
+      TickTrap::MicrocodeFault => MICROCODE_FAULT_TOMBSTONE,
+      TickTrap::IllegalOpcode(_) => ILLEGAL_OPCODE_TOMBSTONE,
+    }
   }
 }
