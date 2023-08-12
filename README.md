@@ -54,3 +54,5 @@ python3 test.py errors.asm asm emu
 ```
 
 ![Game of Life Demo](misc/assets/life.gif) ![Random Number Generator Demo](misc/assets/random.gif) ![Flappy Bird Demo](misc/assets/flappy.gif) ![Infinite Counter Demo](misc/assets/counter.gif)
+
+![Atto-8 Microprocessor Diagram](misc/assets/microprocessor.png)
