@@ -61,6 +61,9 @@ fn main() {
       ofst: 0x00,
       sum: 0x00,
       nand: 0x00,
+      cin: false,
+      cout: false,
+      zero: false,
 
       mic: microcode_image,
     },
@@ -84,9 +87,9 @@ fn main() {
 
 const MEM_SIZE: usize = 0x100;
 const MIC_SIZE: usize = 2 * 0x20 * MEM_SIZE;
-const MICROCODE_FAULT_TOMBSTONE: u16 = 0xFFF0;
-const DEBUG_REQUEST_TOMBSTONE: u16 = 0xFFF1;
-const ILLEGAL_OPCODE_TOMBSTONE: u16 = 0xFFF2;
+const MICROCODE_FAULT_MAGIC: u16 = -1i16 as u16;
+const ILLEGAL_OPCODE_MAGIC: u16 = -2i16 as u16;
+const DEBUG_REQUEST_MAGIC: u16 = -3i16 as u16;
 
 struct Microcomputer {
   mem: [u8; MEM_SIZE], // memory
@@ -119,6 +122,9 @@ struct Microprocessor {
   ofst: u8,          // offset derivation
   sum: u8,           // sum derivation
   nand: u8,          // not-and derivation
+  cin: bool,         // sum carry-in derivation
+  cout: bool,        // sum carry-out derivation
+  zero: bool,        // nand is-zero derivation
 
   mic: [u16; MIC_SIZE], // microcode read-only memory
 }
@@ -127,9 +133,9 @@ struct Microprocessor {
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 enum TickTrap {
-  DebugRequest,
   MicrocodeFault,
-  IllegalOpcode(u8),
+  IllegalOpcode,
+  DebugRequest,
 }
 
 // TODO copied from `mic.rs`
@@ -285,11 +291,9 @@ fn simulate(mut mc: Microcomputer, clock_speed: u128) {
       Err(tick_trap) => {
         debug_mode = true;
         status_line = match tick_trap {
-          TickTrap::DebugRequest => format!("Debug request"),
           TickTrap::MicrocodeFault => format!("Microcode fault"),
-          TickTrap::IllegalOpcode(instruction) => {
-            format!("Illegal opcode `{:02X}`", instruction)
-          }
+          TickTrap::IllegalOpcode => format!("Illegal opcode"),
+          TickTrap::DebugRequest => format!("Debug request"),
         }
       }
     };
@@ -507,18 +511,10 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
   // carry flag
   if let Clock::Rising = mc.clk {
     if let (Signal::Active, Signal::Active) = (mp.ctrl.sum_data, mp.ctrl.ofst_data) {
-      // TODO clean up
-      mp.cf = (mp.xl as u16
-        + mp.yl as u16
-        + match mp.ctrl.size_data {
-          Signal::Active => 1,
-          Signal::Inactive => 0,
-        })
-        > 0xFF;
+      mp.cf = mp.cout;
     }
     if let (Signal::Active, Signal::Active) = (mp.ctrl.nand_data, mp.ctrl.ofst_data) {
-      // TODO clean up
-      mp.cf = mp.nand == 0x00;
+      mp.cf = mp.zero;
     }
   }
   if let Reset::Asserted = mc.rst {
@@ -551,13 +547,16 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
   }
 
   // X latch and Y latch and Z latch
-  mp.sum = (mp.xl as u16
-    + mp.yl as u16
-    + match mp.ctrl.size_data {
-      Signal::Active => 1,
-      Signal::Inactive => 0,
-    }) as u8;
-  mp.nand = !(mp.yl & mp.zl);
+  let sum = mp.xl as u16 + mp.yl as u16 + mp.cin as u16;
+  let nand = !(mp.yl & mp.zl);
+  mp.sum = sum as u8;
+  mp.cout = sum > 0xFF;
+  mp.nand = nand;
+  mp.zero = nand == 0x00;
+  mp.cin = match mp.ctrl.size_data {
+    Signal::Active => true,
+    Signal::Inactive => false,
+  };
   if let Clock::Rising = mc.clk {
     if let Signal::Active = mp.ctrl.data_xl {
       mp.xl = mc.data;
@@ -604,9 +603,9 @@ impl From<u16> for ControlWord {
 
 fn u16_into_result(u16: u16) -> Result<ControlWord, TickTrap> {
   match u16 {
-    DEBUG_REQUEST_TOMBSTONE => Err(TickTrap::DebugRequest),
-    MICROCODE_FAULT_TOMBSTONE => Err(TickTrap::MicrocodeFault),
-    ILLEGAL_OPCODE_TOMBSTONE => Err(TickTrap::IllegalOpcode(0x00)),
+    MICROCODE_FAULT_MAGIC => Err(TickTrap::MicrocodeFault),
+    ILLEGAL_OPCODE_MAGIC => Err(TickTrap::IllegalOpcode),
+    DEBUG_REQUEST_MAGIC => Err(TickTrap::DebugRequest),
     control_word => Ok(control_word.into()),
   }
 }
@@ -638,8 +637,8 @@ impl std::fmt::Display for Microprocessor {
         self.ip, self.sp, self.cf as u8, self.il, self.sc, self.al, self.xl, self.yl, self.zl
       ),
       format!(
-        "IMM  SIZE  OFST  SUM  NAND\r\n{:02X}   {:02X}    {:02X}    {:02X}   {:02X}\r\n", 
-        self.imm, self.size, self.ofst, self.sum, self.nand
+        "IMM  SIZE  OFST  SUM  NAND  CIN  COUT  ZERO\r\n{:02X}   {:02X}    {:02X}    {:02X}   {:02X}    {:01X}    {:01X}     {:01X}\r\n",
+        self.imm, self.size, self.ofst, self.sum, self.nand, self.cin as u8, self.cout as u8, self.zero as u8
       ),
       format!(
         "CTRL  {} {} {} {} {} {} {} {}\r\nWORD  {} {} {} {} {} {} {} {}\r\n",

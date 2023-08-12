@@ -14,7 +14,8 @@ Available operations are as follows:
 - `emu` &mdash; See [/emu/](../emu/)
 - `mic` &mdash; See [/mic/](../mic/)
 - `sim` &mdash; See [/sim/](../sim/)
-- `pop` &mdash; Pop a filename from the stack
+- `pop` &mdash; Pop argument from the stack
+- `dup` &mdash; Duplicate argument on the stack
 
 ## Examples
 

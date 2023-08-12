@@ -40,28 +40,28 @@ while input:
       case 'enc':
         hex_file = filenames.pop()
         memory_image_file = hex_file + '.mem'
+        filenames.append(memory_image_file)
         operations.append((operation, functools.partial(
             run_python, rel_path(f'../{operation}/{operation}.py'), hex_file, memory_image_file)))
-        filenames.append(memory_image_file)
       case 'asm':
         assembly_source_file = filenames.pop()
         memory_image_file = assembly_source_file + '.mem'
+        filenames.append(memory_image_file)
         operations.append((operation, functools.partial(run_cargo, 'run', '--bin',
                           operation, assembly_source_file, memory_image_file)))
-        filenames.append(memory_image_file)
       case 'dasm':
         memory_image_file = filenames.pop()
         disassembly_output_file = memory_image_file + '.dasm'
+        filenames.append(disassembly_output_file)
         operations.append((operation, functools.partial(run_cargo, 'run', '--bin',
                           operation, memory_image_file, disassembly_output_file)))
-        filenames.append(disassembly_output_file)
       case 'emu':
         memory_image_file = filenames.pop()
         operations.append((operation, functools.partial(run_cargo, 'run', '--bin', operation, memory_image_file)))
       case 'mic':
         microcode_image_file = rel_path(target, 'microcode.mic')
-        operations.append((operation, functools.partial(run_cargo, 'run', '--bin', operation, microcode_image_file)))
         filenames.append(microcode_image_file)
+        operations.append((operation, functools.partial(run_cargo, 'run', '--bin', operation, microcode_image_file)))
       case 'sim':
         microcode_image_file = filenames.pop()
         memory_image_file = filenames.pop()
@@ -69,6 +69,8 @@ while input:
                           operation, memory_image_file, microcode_image_file)))
       case 'pop':
         filenames.pop()
+      case 'dup':
+        filenames.append(filenames[-1])
       case file:
         filenames.append(rel_path(target, file))
   except IndexError:
@@ -76,8 +78,8 @@ while input:
     sys.exit(1)
 
 if filenames:
-  while filenames:
-    print(f'Test: Error: Unused filename `{filenames.pop()}`')
+  for filename in filenames:
+    print(f'Test: Error: Unused argument `{filename}`')
   sys.exit(1)
 
 try:

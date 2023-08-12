@@ -41,17 +41,17 @@ fn main() {
 
 const MEM_SIZE: usize = 0x100;
 const MIC_SIZE: usize = 2 * 0x20 * MEM_SIZE;
-const MICROCODE_FAULT_TOMBSTONE: u16 = 0xFFF0;
-const DEBUG_REQUEST_TOMBSTONE: u16 = 0xFFF1;
-const ILLEGAL_OPCODE_TOMBSTONE: u16 = 0xFFF2;
+const MICROCODE_FAULT_MAGIC: u16 = -1i16 as u16;
+const ILLEGAL_OPCODE_MAGIC: u16 = -2i16 as u16;
+const DEBUG_REQUEST_MAGIC: u16 = -3i16 as u16;
 
 // TODO copied from `emu.rs`
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 enum TickTrap {
-  DebugRequest,
   MicrocodeFault,
-  IllegalOpcode(u8),
+  IllegalOpcode,
+  DebugRequest,
 }
 
 #[allow(dead_code)]
@@ -108,14 +108,14 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
   }
 
   // TODO document why every instruction must end with YL = 0x00
-  // TODO document sum_data && ofst_data is sum_data && sum_cf
-  // TODO document nand_data && ofst_data is nand_data && nand_cf
-  // TODO document sum_data && size_data is sum_data && cin_sum
+  // TODO document sum_data && ofst_data is sum_data && cout_cf
+  // TODO document nand_data && ofst_data is nand_data && zero_cf
+  // TODO document sum_data && size_data is sum_data && one_cin
 
   // TODO document `sim` expects memory around SP to behave normally, otherwise UB
 
   // TODO order
-  let default = ControlWord! {};
+  let nop = ControlWord! {};
   let sp_xl = ControlWord! {sp_data, data_xl};
   let ofst_yl = ControlWord! {ofst_data, data_yl};
   let size_yl = ControlWord! {size_data, data_yl};
@@ -162,11 +162,12 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
   let cinsum_spal = ControlWord! {size_data, sum_data, data_sp, data_al};
   let yl_mem = ControlWord! {data_yl, data_mem};
   let ones_xlylzl = ControlWord! {data_xl, data_yl, data_zl};
+  let ip_mem = ControlWord! {ip_data, data_mem};
+  let zero_sc = ControlWord! {zero_sc};
 
   // TODO assumes YL = 0x00
   let fetch = seq![ip_alxl, cinsum_ip, mem_ilzl];
   let zero_yl = seq![ones_ylzl, nand_yl];
-  let zero_sc = seq![ControlWord! {zero_sc}];
   let psh = seq![
     // instruction is in ZL
     sp_xl, ones_yl, sum_spal, // SP-- -> AL
@@ -253,7 +254,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           cinsum_mem, // XL -> *AL
                           match carry {
                             true => seq![nand_ylzl, nand_zlcf], // 0 -> CF
-                            false => seq![default, nand_ylcf],  // 1 -> CF
+                            false => seq![nop, nand_ylcf],      // 1 -> CF
                           }
                         ]
                       }
@@ -270,8 +271,8 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           mem_xl, // *AL -> XL
                           ones_yl,
                           match carry {
-                            true => seq![nand_zl, nand_xl],  // ZL -> xL
-                            false => seq![default, default], // no-op
+                            true => seq![nand_zl, nand_xl], // ZL -> xL
+                            false => seq![nop, nop],        // no-op
                           },
                           cinsum_mem, // XL -> *AL
                           zero_yl
@@ -302,7 +303,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           sum_memcf, // *SP - 1 -> *SP
                           match carry {
                             // not done. store shifted value
-                            true => seq![sp_xl, size_yl, sum_al, default], // ZL -> *(SP + SIZE)
+                            true => seq![sp_xl, size_yl, sum_al, nop], // ZL -> *(SP + SIZE)
                             // done. ignore shifted value, pop counter, fetch next instruction
                             false => seq![zero_yl, sp_xl, cinsum_sp], // SP++
                           }
@@ -339,10 +340,9 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
 
                       0xA => {
                         // xor
-                        // seq![fetch, vec![Err(TickTrap::DebugRequest)]]
 
                         // seq![
-                        //   ones_ylzl, nand_ylzl, default, //
+                        //   ones_ylzl, nand_ylzl, nop, //
                         //   // TODO get to fit in 0x10 steps
                         //   ip_alxl, mem_xl, sum_il, // fetch `and` instruction
                         //   sp_alxl, mem_zl, // *SP -> ZL
@@ -487,7 +487,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           seq![fetch, vec![Err(TickTrap::DebugRequest)]]
                         }
 
-                        _ => seq![fetch, vec![Err(TickTrap::IllegalOpcode(instruction))]],
+                        _ => seq![fetch, vec![Err(TickTrap::IllegalOpcode)]],
                       },
                     }
                   }
@@ -557,8 +557,12 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
 
                               0x2 => {
                                 // ldi
-                                // TODO
-                                vec![Err(TickTrap::DebugRequest)]
+                                seq![
+                                  fetch, //
+                                  sp_xl, ones_yl, sum_spal, // SP-- -> AL
+                                  ip_mem,   // IP -> *AL
+                                  zero_yl   //
+                                ]
                               }
 
                               0x3 => {
@@ -628,7 +632,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                                 seq![fetch, pop]
                               }
 
-                              _ => vec![Err(TickTrap::IllegalOpcode(instruction))],
+                              _ => vec![Err(TickTrap::IllegalOpcode)],
                             }
                           }
 
@@ -707,9 +711,9 @@ impl Into<u16> for ControlWord {
 impl Into<u16> for TickTrap {
   fn into(self) -> u16 {
     match self {
-      TickTrap::DebugRequest => DEBUG_REQUEST_TOMBSTONE,
-      TickTrap::MicrocodeFault => MICROCODE_FAULT_TOMBSTONE,
-      TickTrap::IllegalOpcode(_) => ILLEGAL_OPCODE_TOMBSTONE,
+      TickTrap::MicrocodeFault => MICROCODE_FAULT_MAGIC,
+      TickTrap::IllegalOpcode => ILLEGAL_OPCODE_MAGIC,
+      TickTrap::DebugRequest => DEBUG_REQUEST_MAGIC,
     }
   }
 }

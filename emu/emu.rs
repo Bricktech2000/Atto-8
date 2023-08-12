@@ -52,9 +52,9 @@ struct Microprocessor {
 
 #[allow(dead_code)]
 enum TickTrap {
-  DebugRequest,
   MicrocodeFault,
-  IllegalOpcode(u8),
+  IllegalOpcode,
+  DebugRequest,
 }
 
 fn emulate(mut mc: Microcomputer, clock_speed: u128) {
@@ -161,11 +161,9 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
       Err(tick_trap) => {
         debug_mode = true;
         status_line = match tick_trap {
-          TickTrap::DebugRequest => format!("Debug request"),
           TickTrap::MicrocodeFault => format!("Microcode fault"),
-          TickTrap::IllegalOpcode(instruction) => {
-            format!("Illegal opcode `{:02X}`", instruction)
-          }
+          TickTrap::IllegalOpcode => format!("Illegal opcode"),
+          TickTrap::DebugRequest => format!("Debug request"),
         }
       }
     };
@@ -441,7 +439,7 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
                 Err(TickTrap::DebugRequest)
               }
 
-              _ => Err(TickTrap::IllegalOpcode(instruction)),
+              _ => Err(TickTrap::IllegalOpcode),
             },
           }
         }
@@ -550,7 +548,7 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
                       Ok(20)
                     }
 
-                    _ => Err(TickTrap::IllegalOpcode(instruction)),
+                    _ => Err(TickTrap::IllegalOpcode),
                   }
                 }
 
