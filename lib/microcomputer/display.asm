@@ -9,7 +9,7 @@ bit_addr! # (rot, addr) = bit_addr(buffer, index)
   # return* (rot, addr)
 load_bit! # bit = load_bit(rot, addr)
   # bit = (*addr >> rot) & 0x01
-  ld1 lda st1 !ror x01 and
+  !rneg ld1 lda st1 rot x01 and
   # return* bit
 store_bit! # store_bit(rot, addr, bit)
   # bit <<= rot
@@ -46,7 +46,7 @@ nibble_addr! # (rot, addr) = nibble_addr(buffer, index)
   # return*
 load_nibble! # nibble = load_nibble(rot, addr)
   # nibble = (*addr >> rot) & 0x0F
-  ld1 lda st1 !ror x0F and
+  !rneg ld1 lda st1 rot x0F and
   # return* nibble
 store_nibble! # store_nibble(rot, addr, nibble)
   # nibble <<= rot

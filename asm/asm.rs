@@ -704,15 +704,29 @@ fn assemble(
 
     roots =
       match_replace(&roots, |window| match window {
-        [Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Xor(0x01))] => {
+        [Root::Node(node), Root::Instruction(Instruction::Xor(0x01))]
+          if eval(&node, &HashMap::new()) == Ok(0x00) =>
+        {
           Some(vec![Root::Instruction(Instruction::Buf)])
         }
-        [Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Add(0x01))] => Some(vec![]),
-        [Root::Node(Node::Value(0x01)), Root::Instruction(Instruction::Add(0x01))] => {
+        [Root::Node(node), Root::Instruction(Instruction::Add(0x01))]
+          if eval(&node, &HashMap::new()) == Ok(0x00) =>
+        {
+          Some(vec![])
+        }
+        [Root::Node(node), Root::Instruction(Instruction::Add(0x01))]
+          if eval(&node, &HashMap::new()) == Ok(0x01) =>
+        {
           Some(vec![Root::Instruction(Instruction::Inc)])
         }
-        [Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sub(0x01))] => Some(vec![]),
-        [Root::Node(Node::Value(0x01)), Root::Instruction(Instruction::Sub(0x01))] => {
+        [Root::Node(node), Root::Instruction(Instruction::Sub(0x01))]
+          if eval(&node, &HashMap::new()) == Ok(0x01) =>
+        {
+          Some(vec![])
+        }
+        [Root::Node(node), Root::Instruction(Instruction::Sub(0x01))]
+          if eval(&node, &HashMap::new()) == Ok(0x01) =>
+        {
           Some(vec![Root::Instruction(Instruction::Dec)])
         }
         [Root::Node(node), Root::Instruction(Instruction::Inc)] => Some(vec![Root::Node(
@@ -847,42 +861,56 @@ fn assemble(
           Root::Instruction(Instruction::Ldo(*ofst1 + 1)),
         ])
       }
-      [Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x07))]
-      | [Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x08)), Root::Instruction(Instruction::Pop)] => {
+      [Root::Instruction(Instruction::Pop), Root::Node(node), Root::Instruction(Instruction::Sto(0x07))]
+      | [Root::Node(node), Root::Instruction(Instruction::Sto(0x08)), Root::Instruction(Instruction::Pop)]
+        if eval(&node, &HashMap::new()) == Ok(0x00) =>
+      {
         Some(vec![Root::Instruction(Instruction::Xnd(0x08))])
       }
-      [Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x03))]
-      | [Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x04)), Root::Instruction(Instruction::Pop)] => {
+      [Root::Instruction(Instruction::Pop), Root::Node(node), Root::Instruction(Instruction::Sto(0x03))]
+      | [Root::Node(node), Root::Instruction(Instruction::Sto(0x04)), Root::Instruction(Instruction::Pop)]
+        if eval(&node, &HashMap::new()) == Ok(0x00) =>
+      {
         Some(vec![Root::Instruction(Instruction::Xnd(0x04))])
       }
-      [Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x01))]
-      | [Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x02)), Root::Instruction(Instruction::Pop)] => {
+      [Root::Instruction(Instruction::Pop), Root::Node(node), Root::Instruction(Instruction::Sto(0x01))]
+      | [Root::Node(node), Root::Instruction(Instruction::Sto(0x02)), Root::Instruction(Instruction::Pop)]
+        if eval(&node, &HashMap::new()) == Ok(0x00) =>
+      {
         Some(vec![Root::Instruction(Instruction::Xnd(0x02))])
       }
-      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x00))]
-      | [Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x00))]
-      | [Root::Node(Node::Value(0x00)), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)] => {
+      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(node)]
+      | [Root::Instruction(Instruction::Pop), Root::Node(node), Root::Instruction(Instruction::Sto(0x00))]
+      | [Root::Node(node), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
+        if eval(&node, &HashMap::new()) == Ok(0x00) =>
+      {
         Some(vec![Root::Instruction(Instruction::Xnd(0x01))])
       }
-      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x01))]
-      | [Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x01)), Root::Instruction(Instruction::Sto(0x00))]
-      | [Root::Node(Node::Value(0x01)), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)] => {
+      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(node)]
+      | [Root::Instruction(Instruction::Pop), Root::Node(node), Root::Instruction(Instruction::Sto(0x00))]
+      | [Root::Node(node), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
+        if eval(&node, &HashMap::new()) == Ok(0x01) =>
+      {
         Some(vec![
           Root::Instruction(Instruction::Xnd(0x01)),
           Root::Instruction(Instruction::Shl),
         ])
       }
-      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x80))]
-      | [Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0x80)), Root::Instruction(Instruction::Sto(0x00))]
-      | [Root::Node(Node::Value(0x80)), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)] => {
+      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(node)]
+      | [Root::Instruction(Instruction::Pop), Root::Node(node), Root::Instruction(Instruction::Sto(0x00))]
+      | [Root::Node(node), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
+        if eval(&node, &HashMap::new()) == Ok(0x80) =>
+      {
         Some(vec![
           Root::Instruction(Instruction::Xnd(0x01)),
           Root::Instruction(Instruction::Shr),
         ])
       }
-      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0xFF))]
-      | [Root::Instruction(Instruction::Pop), Root::Node(Node::Value(0xFF)), Root::Instruction(Instruction::Sto(0x00))]
-      | [Root::Node(Node::Value(0xFF)), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)] => {
+      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(node)]
+      | [Root::Instruction(Instruction::Pop), Root::Node(node), Root::Instruction(Instruction::Sto(0x00))]
+      | [Root::Node(node), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
+        if eval(&node, &HashMap::new()) == Ok(0xFF) =>
+      {
         Some(vec![
           Root::Instruction(Instruction::Xnd(0x01)),
           Root::Instruction(Instruction::Not),
@@ -946,6 +974,28 @@ fn assemble(
         Some(vec![
           Root::Node(Node::Xnd(Box::new(node2.clone()), Box::new(node1.clone()))),
           Root::Instruction(Instruction::Xnd(*size1)),
+        ])
+      }
+      [Root::Node(node1), Root::Instruction(Instruction::And(size1)), Root::Node(node2), Root::Instruction(Instruction::Orr(size2))]
+        if size1 == size2
+          && eval(&node1, &HashMap::new())
+            .and_then(|value1| eval(&node2, &HashMap::new()).map(|value2| value1 ^ value2 == 0xFF))
+            .unwrap_or(false) =>
+      {
+        Some(vec![
+          Root::Node(node2.clone()),
+          Root::Instruction(Instruction::Orr(*size1)),
+        ])
+      }
+      [Root::Node(node1), Root::Instruction(Instruction::Orr(size1)), Root::Node(node2), Root::Instruction(Instruction::And(size2))]
+        if size1 == size2
+          && eval(&node1, &HashMap::new())
+            .and_then(|value1| eval(&node2, &HashMap::new()).map(|value2| value1 ^ value2 == 0xFF))
+            .unwrap_or(false) =>
+      {
+        Some(vec![
+          Root::Node(node2.clone()),
+          Root::Instruction(Instruction::And(*size1)),
         ])
       }
       [Root::Node(node1), root1, root2, Root::Instruction(Instruction::Ldo(0x02))]

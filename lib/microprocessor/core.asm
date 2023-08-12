@@ -1,4 +1,4 @@
-ror! neg rot
+rneg! xF8 orr neg # prepares for rotate right
 norr! orr not
 nand! and not
 xnorr! xor not
