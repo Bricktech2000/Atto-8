@@ -720,7 +720,7 @@ fn assemble(
           Some(vec![Root::Instruction(Instruction::Inc)])
         }
         [Root::Node(node), Root::Instruction(Instruction::Sub(0x01))]
-          if eval(&node, &HashMap::new()) == Ok(0x01) =>
+          if eval(&node, &HashMap::new()) == Ok(0x00) =>
         {
           Some(vec![])
         }
