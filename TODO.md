@@ -28,7 +28,7 @@ tasks:
 - [ ] finish `snake.asm`
 - [ ] finish `mandelbrot.asm`
 - [x] come up with microcode
-- [ ] implement `rot` in simulator
+- [x] implement `rot` in simulator
 - [ ] clean up simulator and microcode compiler
 - [ ] write readme for simulator
 - [ ] write readme for microcode compiler

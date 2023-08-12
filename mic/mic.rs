@@ -112,6 +112,8 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
   // TODO document nand_data && ofst_data is nand_data && nand_cf
   // TODO document sum_data && size_data is sum_data && cin_sum
 
+  // TODO document `sim` expects memory around SP to behave normally, otherwise UB
+
   // TODO order
   let default = ControlWord! {};
   let sp_xl = ControlWord! {sp_data, data_xl};
@@ -281,11 +283,9 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                         // TODO document that `rot` clears carry
                         seq![
                           match carry {
-                            // not done. no-op
-                            true => seq![default, default, default],
-                            // done. fetch next instruction
+                            true => seq![ones_yl, nand_zl, nand_mem],
                             false => seq![fetch],
-                          },
+                          }, // continuation of match below
                           sp_xl,
                           size_yl,
                           sum_al, // SP + SIZE -> AL
@@ -302,11 +302,9 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           sum_memcf, // *SP - 1 -> *SP
                           match carry {
                             // not done. store shifted value
-                            true =>
-                              seq![sp_xl, size_yl, sum_al, ones_yl, nand_zl, nand_mem, zero_yl], // ZL -> *(SP + SIZE)
-                            // done. ignore shifted value, pop counter
-                            false =>
-                              seq![zero_yl, sp_xl, cinsum_sp, default, default, default, default], // SP++
+                            true => seq![sp_xl, size_yl, sum_al, default], // ZL -> *(SP + SIZE)
+                            // done. ignore shifted value, pop counter, fetch next instruction
+                            false => seq![zero_yl, sp_xl, cinsum_sp], // SP++
                           }
                         ]
                       }

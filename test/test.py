@@ -40,41 +40,45 @@ while input:
       case 'enc':
         hex_file = filenames.pop()
         memory_image_file = hex_file + '.mem'
-        operations.append(('enc', functools.partial(
-            run_python, rel_path('../enc/enc.py'), hex_file, memory_image_file)))
+        operations.append((operation, functools.partial(
+            run_python, rel_path(f'../{operation}/{operation}.py'), hex_file, memory_image_file)))
         filenames.append(memory_image_file)
       case 'asm':
         assembly_source_file = filenames.pop()
         memory_image_file = assembly_source_file + '.mem'
-        operations.append(('asm', functools.partial(run_cargo, 'run', '--bin',
-                          'asm', assembly_source_file, memory_image_file)))
+        operations.append((operation, functools.partial(run_cargo, 'run', '--bin',
+                          operation, assembly_source_file, memory_image_file)))
         filenames.append(memory_image_file)
       case 'dasm':
         memory_image_file = filenames.pop()
         disassembly_output_file = memory_image_file + '.dasm'
-        operations.append(('dasm', functools.partial(run_cargo, 'run', '--bin',
-                          'dasm', memory_image_file, disassembly_output_file)))
+        operations.append((operation, functools.partial(run_cargo, 'run', '--bin',
+                          operation, memory_image_file, disassembly_output_file)))
         filenames.append(disassembly_output_file)
       case 'emu':
         memory_image_file = filenames.pop()
-        operations.append(('emu', functools.partial(run_cargo, 'run', '--bin', 'emu', memory_image_file)))
+        operations.append((operation, functools.partial(run_cargo, 'run', '--bin', operation, memory_image_file)))
       case 'mic':
         microcode_image_file = rel_path(target, 'microcode.mic')
-        operations.append(('mic', functools.partial(run_cargo, 'run', '--bin', 'mic', microcode_image_file)))
+        operations.append((operation, functools.partial(run_cargo, 'run', '--bin', operation, microcode_image_file)))
         filenames.append(microcode_image_file)
       case 'sim':
         microcode_image_file = filenames.pop()
         memory_image_file = filenames.pop()
-        operations.append(('sim', functools.partial(run_cargo, 'run', '--bin',
-                          'sim', memory_image_file, microcode_image_file)))
+        operations.append((operation, functools.partial(run_cargo, 'run', '--bin',
+                          operation, memory_image_file, microcode_image_file)))
+      case 'pop':
+        filenames.pop()
       case file:
         filenames.append(rel_path(target, file))
   except IndexError:
     print(f'Test: Error: Missing argument for operation `{operation}`')
     sys.exit(1)
 
-while filenames:
-  print(f'Test: Warning: Unused filename `{filenames.pop()}`')
+if filenames:
+  while filenames:
+    print(f'Test: Error: Unused filename `{filenames.pop()}`')
+  sys.exit(1)
 
 try:
   for (name, func) in operations:
