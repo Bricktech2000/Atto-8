@@ -39,8 +39,7 @@ fn main() {
   println!("Mic: Done");
 }
 
-const MEM_SIZE: usize = 0x100;
-const MIC_SIZE: usize = 2 * 0x20 * MEM_SIZE;
+const MIC_SIZE: usize = 0x80 * 0x02 * 0x20;
 const MICROCODE_FAULT_MAGIC: u16 = -1i16 as u16;
 const ILLEGAL_OPCODE_MAGIC: u16 = -2i16 as u16;
 const DEBUG_REQUEST_MAGIC: u16 = -3i16 as u16;
@@ -184,22 +183,21 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
     ones_ylzl, nand_ylzl, nand_zlcf // 0 -> CF
   ];
 
-  let microcode: [[[Result<ControlWord, TickTrap>; MEM_SIZE]; 0x20]; 2] = [[[(); MEM_SIZE]; 0x20];
-    2]
+  let microcode: [[[Result<ControlWord, TickTrap>; 0x20]; 0x02]; 0x80] = [[[(); 0x20]; 0x02]; 0x80]
     .iter()
     .enumerate()
-    .map(|(carry, rest)| (carry != 0, rest))
-    .map(|(carry, rest)| {
+    .map(|(instruction, rest)| (instruction as u8 | 0x80, rest))
+    .map(|(instruction, rest)| {
       rest
         .iter()
         .enumerate()
-        .map(|(step, rest)| (step as usize, rest))
-        .map(|(step, rest)| {
+        .map(|(carry, rest)| (carry != 0, rest))
+        .map(|(carry, rest)| {
           rest
             .iter()
             .enumerate()
-            .map(|(instruction, rest)| (instruction as u8, rest))
-            .map(|(instruction, _)| {
+            .map(|(step, rest)| (step as usize, rest))
+            .map(|(step, _rest)| {
               let seq = match (instruction & 0b10000000) >> 7 {
                 0b0 => {
                   // psh

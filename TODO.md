@@ -32,6 +32,7 @@ tasks:
 - [ ] clean up simulator and microcode compiler
 - [ ] write readme for simulator
 - [ ] write readme for microcode compiler
+- [ ] write readme for circuit, document loading `mic` and `mem`
 - [ ] build computer
 
 - potentially remove: neg, not, sub, xnd, clc, sec, flc

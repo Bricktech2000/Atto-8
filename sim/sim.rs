@@ -86,7 +86,7 @@ fn main() {
 }
 
 const MEM_SIZE: usize = 0x100;
-const MIC_SIZE: usize = 2 * 0x20 * MEM_SIZE;
+const MIC_SIZE: usize = 0x80 * 0x02 * 0x20;
 const MICROCODE_FAULT_MAGIC: u16 = -1i16 as u16;
 const ILLEGAL_OPCODE_MAGIC: u16 = -2i16 as u16;
 const DEBUG_REQUEST_MAGIC: u16 = -3i16 as u16;
@@ -427,13 +427,17 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
   // step counter
   if let Clock::Falling = mc.clk {
     if true {
-      mp.sc = mp.sc.wrapping_add(1) & (0x20 - 1);
+      mp.sc = mp.sc.wrapping_add(1) & 0x20 - 1;
     }
   }
 
   // control logic
+  let il = match mp.il & 0x80 {
+    0b0 => mp.il | 0xF0, // map `psh` to `phn` as both have equivalent microcode
+    _ => mp.il,          // not `psh`; pass through
+  };
   mp.ctrl = u16_into_result(
-    mp.mic[mp.cf as usize * MEM_SIZE * 0x20 | mp.sc as usize * MEM_SIZE | mp.il as usize],
+    mp.mic[(il as usize & 0x80 - 1) * 0x02 * 0x20 | mp.cf as usize * 0x20 | mp.sc as usize],
   )?;
 
   // ones
@@ -529,12 +533,12 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
     if let Signal::Active = mp.ctrl.data_al {
       mp.al = mc.data;
     }
-  }
-  if let Signal::Active = mc.wrt {
-    mem_write!(mc.addr, mc.data); // asynchronous
+    if let Signal::Active = mc.wrt {
+      mem_write!(mc.addr, mc.data);
 
-    // TODO remove
-    // mc.mem[mc.addr as usize] = mc.data; // asynchronous
+      // TODO remove
+      // mc.mem[mc.addr as usize] = mc.data;
+    }
   }
   if let Signal::Active = mc.read {
     mc.data = mem_read!(mc.addr);

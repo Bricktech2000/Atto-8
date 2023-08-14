@@ -14,6 +14,7 @@ Available operations are as follows:
 - `emu` &mdash; See [/emu/](../emu/)
 - `mic` &mdash; See [/mic/](../mic/)
 - `sim` &mdash; See [/sim/](../sim/)
+- `circ` &mdash; See [/circ/](../circ/)
 - `pop` &mdash; Pop argument from the stack
 - `dup` &mdash; Duplicate argument on the stack
 
@@ -33,5 +34,5 @@ python3 test.py life.asm asm dasm asm emu
 python3 test.py ctf.asm asm emu ctf.asm asm mic sim
 
 # encode from hex, disassemble binary, assemble disassembly, compile microcode, simulate resulting binary with microcode
-python3 test.py checkerboard.hex enc dasm asm mic sim
+python3 test.py checkerboard.hex enc dasm asm mic circ
 ```

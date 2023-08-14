@@ -6,7 +6,7 @@ import subprocess
 
 
 def run(*args):
-  print(f"Test: Running `{' '.join(args)}`")
+  print(f'Test: Running `{" ".join(args)}`')
   subprocess.run([*args], check=True)
 
 
@@ -20,7 +20,7 @@ run_python = functools.partial(run, 'python3')
 
 
 if len(sys.argv) <= 1:
-  print("Test: Usage: test.py <filenames|operations>")
+  print('Test: Usage: test <filenames|operations>')
   sys.exit(1)
 
 target = 'target'
@@ -67,6 +67,11 @@ while input:
         memory_image_file = filenames.pop()
         operations.append((operation, functools.partial(run_cargo, 'run', '--bin',
                           operation, memory_image_file, microcode_image_file)))
+      case 'circ':
+        microcode_image_file = filenames.pop()
+        memory_image_file = filenames.pop()
+        operations.append((operation, functools.partial(run_python, rel_path(
+            f'../{operation}/{operation}.py'), memory_image_file, microcode_image_file)))
       case 'pop':
         filenames.pop()
       case 'dup':
