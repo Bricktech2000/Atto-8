@@ -123,7 +123,7 @@ struct Microprocessor {
   yl: u8,   // Y latch
   zl: u8,   // Z latch
 
-  ctrl: ControlWord, // control word
+  ctrl: ControlWord, // control word derivation
   size_data: Signal, // size-to-data derivation
   ofst_data: Signal, // offset-to-data derivation
   set_cin: Signal,   // set-to-carry-in derivation
