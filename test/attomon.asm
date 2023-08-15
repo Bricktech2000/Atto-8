@@ -37,13 +37,13 @@ main!
   !char.space :stall_print !jmp
 
   got_full_stop:
-    ld2 ld2 sta x00 ad2 # write `buffer` to `*head` and increment `head`
+    ld2 ld2 sta x01 ad2 # write `buffer` to `*head` and increment `head`
   !char.space :stall_print !jmp
 
   got_semicolon:
-    x00 su2 # decrement `head`, which clears the carry flag
+    x02 su2 # decrement `head`, by two since it is incremented below
   got_question_mark:
-    ld1 lda st2 x00 ad2 # copy `*head` to `buffer` for `buffer_print` and increment `head`
+    ld1 lda st2 x01 ad2 # copy `*head` to `buffer` for `buffer_print` and increment `head`
   :buffer_print !jmp
 
   got_hex:
@@ -85,14 +85,16 @@ main!
     # print `stdin` to `stdout`
     !char.ld0 !putc
 
-    !char.colon xor :got_colon !bcs !char.colon xor
-    !char.full_stop xor :got_full_stop !bcs !char.full_stop xor
-    !char.semicolon xor :got_semicolon !bcs !char.semicolon xor
-    !char.question_mark xor :got_question_mark !bcs !char.question_mark xor
-    !char.backspace xor :got_backspace !bcs !char.backspace xor
-    !char.line_feed xor :got_line_feed !bcs !char.line_feed xor
-    !char.dollar_sign xor :got_dollar_sign !bcs !char.dollar_sign xor
-    !char.exclamation_mark xor ld2 !bcs.dyn !char.exclamation_mark xor
+    :default
+      !char.colon xo2 :got_colon iff !char.colon xo2
+      !char.full_stop xo2 :got_full_stop iff !char.full_stop xo2
+      !char.semicolon xo2 :got_semicolon iff !char.semicolon xo2
+      !char.question_mark xo2 :got_question_mark iff !char.question_mark xo2
+      !char.backspace xo2 :got_backspace iff !char.backspace xo2
+      !char.line_feed xo2 :got_line_feed iff !char.line_feed xo2
+      !char.dollar_sign xo2 :got_dollar_sign iff !char.dollar_sign xo2
+      !char.exclamation_mark xo2 ld3 iff !char.exclamation_mark xo2
+    !jmp default:
     x3A !char.sub clc # map '0'..='9' to 0xF6..=0xFF
     x0A !char.add :got_hex !bcs # branch if adding 0x0A wrapped around
     x11 !char.sub clc # map 'A'..='F' to 0x00..=0x05
