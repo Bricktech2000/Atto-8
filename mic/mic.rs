@@ -56,26 +56,26 @@ enum TickTrap {
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Default)]
 struct ControlWord {
-  data_il: Signal,
-  zero_sc: Signal,
-  size_data: Signal,
-  ofst_data: Signal,
+  clr_sc: Signal,       // clear to step counter
+  data_il: Signal,      // data bus to instruction latch
+  size_and_cin: Signal, // size and carry-in
+  ofst_and_cf: Signal,  // offset and carry-flag
 
-  ip_data: Signal,
-  data_ip: Signal,
+  ip_data: Signal, // instruction pointer to data bus
+  data_ip: Signal, // data bus to instruction pointer
 
-  sp_data: Signal,
-  data_sp: Signal,
+  sp_data: Signal, // stack pointer to data bus
+  data_sp: Signal, // data bus to stack pointer
 
-  data_al: Signal,
-  mem_data: Signal,
-  data_mem: Signal,
+  data_al: Signal,  // data bus to address latch
+  mem_data: Signal, // data bus to memory
+  data_mem: Signal, // memory to data bus
 
-  data_xl: Signal,
-  data_yl: Signal,
-  data_zl: Signal,
-  sum_data: Signal,
-  nand_data: Signal,
+  data_xl: Signal,   // data bus to X latch
+  data_yl: Signal,   // data bus to Y latch
+  data_zl: Signal,   // data bus to Z latch
+  sum_data: Signal,  // sum to data bus
+  nand_data: Signal, // nand to data bus
 }
 
 #[allow(dead_code)]
@@ -107,80 +107,80 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
   }
 
   // TODO document why every instruction must end with YL = 0x00
-  // TODO document sum_data && ofst_data is sum_data && cout_cf
-  // TODO document nand_data && ofst_data is nand_data && zero_cf
-  // TODO document sum_data && size_data is sum_data && one_cin
+  // TODO document sum_data && ofst_and_cf is sum_data && cout_cf
+  // TODO document nand_data && ofst_and_cf is nand_data && zero_cf
+  // TODO document sum_data && size_and_cin is sum_data && cin
 
   // TODO document `sim` expects memory around SP to behave normally, otherwise UB
 
   // TODO order
   let nop = ControlWord! {};
   let sp_xl = ControlWord! {sp_data, data_xl};
-  let ofst_yl = ControlWord! {ofst_data, data_yl};
-  let size_yl = ControlWord! {size_data, data_yl};
+  let ofst_yl = ControlWord! {ofst_and_cf, data_yl};
+  let size_yl = ControlWord! {size_and_cin, data_yl};
   let ip_alxl = ControlWord! {ip_data, data_al, data_xl};
   let mem_ilzl = ControlWord! {mem_data, data_il, data_zl};
   let nand_ylzl = ControlWord! {nand_data, data_yl, data_zl};
   let sum_spal = ControlWord! {sum_data, data_sp, data_al};
-  let cinsum_ip = ControlWord! {size_data, sum_data, data_ip};
+  let cinsum_ip = ControlWord! {size_and_cin, sum_data, data_ip};
   let nand_mem = ControlWord! {nand_data, data_mem};
   let mem_zl = ControlWord! {mem_data, data_zl};
   let mem_xl = ControlWord! {mem_data, data_xl};
   let sum_mem = ControlWord! {sum_data, data_mem};
-  let ones_yl = ControlWord! {data_yl};
+  let set_yl = ControlWord! {data_yl};
   let sp_al = ControlWord! {sp_data, data_al};
   let sp_alxl = ControlWord! {sp_data, data_al, data_xl};
   let sum_al = ControlWord! {sum_data, data_al};
   let nand_xl = ControlWord! {nand_data, data_xl};
   let mem_ylzl = ControlWord! {mem_data, data_yl, data_zl};
   let nand_zl = ControlWord! {nand_data, data_zl};
-  let cinsum_yl = ControlWord! {size_data, sum_data, data_yl};
-  let cinsum_mem = ControlWord! {size_data, sum_data, data_mem};
-  let ones_ylzl = ControlWord! {data_yl, data_zl};
+  let cinsum_yl = ControlWord! {size_and_cin, sum_data, data_yl};
+  let cinsum_mem = ControlWord! {size_and_cin, sum_data, data_mem};
+  let set_ylzl = ControlWord! {data_yl, data_zl};
   let sp_xlzl = ControlWord! {sp_data, data_xl, data_zl};
-  let ones_zl = ControlWord! {data_zl};
+  let set_zl = ControlWord! {data_zl};
   let nand_yl = ControlWord! {nand_data, data_yl};
   let mem_ip = ControlWord! {mem_data, data_ip};
-  let cinsum_sp = ControlWord! {size_data, sum_data, data_sp};
-  let nand_memcf = ControlWord! {nand_data, data_mem, ofst_data};
+  let cinsum_sp = ControlWord! {size_and_cin, sum_data, data_sp};
+  let nand_memcf = ControlWord! {nand_data, data_mem, ofst_and_cf};
   let mem_sp = ControlWord! {mem_data, data_sp};
-  let nand_ylcf = ControlWord! {nand_data, data_yl, ofst_data};
+  let nand_ylcf = ControlWord! {nand_data, data_yl, ofst_and_cf};
   let mem_xlyl = ControlWord! {mem_data, data_xl, data_yl};
   let nand_al = ControlWord! {nand_data, data_al};
-  let cinsum_spxl = ControlWord! {size_data, sum_data, data_sp, data_xl};
-  let cinsum_al = ControlWord! {size_data, sum_data, data_al};
-  let nand_zlcf = ControlWord! {nand_data, data_zl, ofst_data};
-  let cinsum_xlcf = ControlWord! {size_data, sum_data, data_xl, ofst_data};
-  let sum_xlcf = ControlWord! {sum_data, data_xl, ofst_data};
-  let cinsum_xlylcf = ControlWord! {size_data, sum_data, data_xl, data_yl, ofst_data};
-  let sum_xlylcf = ControlWord! {sum_data, data_xl, data_yl, ofst_data};
+  let cinsum_spxl = ControlWord! {size_and_cin, sum_data, data_sp, data_xl};
+  let cinsum_al = ControlWord! {size_and_cin, sum_data, data_al};
+  let nand_zlcf = ControlWord! {nand_data, data_zl, ofst_and_cf};
+  let cinsum_xlcf = ControlWord! {size_and_cin, sum_data, data_xl, ofst_and_cf};
+  let sum_xlcf = ControlWord! {sum_data, data_xl, ofst_and_cf};
+  let cinsum_xlylcf = ControlWord! {size_and_cin, sum_data, data_xl, data_yl, ofst_and_cf};
+  let sum_xlylcf = ControlWord! {sum_data, data_xl, data_yl, ofst_and_cf};
   let mem_yl = ControlWord! {mem_data, data_yl};
-  let cinsum_zl = ControlWord! {size_data, sum_data, data_zl};
-  let sum_memcf = ControlWord! {sum_data, data_mem, ofst_data};
+  let cinsum_zl = ControlWord! {size_and_cin, sum_data, data_zl};
+  let sum_memcf = ControlWord! {sum_data, data_mem, ofst_and_cf};
   let sum_zl = ControlWord! {sum_data, data_zl};
-  let cinsum_spal = ControlWord! {size_data, sum_data, data_sp, data_al};
+  let cinsum_spal = ControlWord! {size_and_cin, sum_data, data_sp, data_al};
   let yl_mem = ControlWord! {data_yl, data_mem};
-  let ones_xlylzl = ControlWord! {data_xl, data_yl, data_zl};
+  let set_xlylzl = ControlWord! {data_xl, data_yl, data_zl};
   let ip_mem = ControlWord! {ip_data, data_mem};
-  let zero_sc = ControlWord! {zero_sc};
+  let clr_sc = ControlWord! {clr_sc};
 
   // TODO assumes YL = 0x00
   let fetch = seq![ip_alxl, cinsum_ip, mem_ilzl];
-  let zero_yl = seq![ones_ylzl, nand_yl];
+  let clr_yl = seq![set_ylzl, nand_yl];
   let psh = seq![
     // instruction is in ZL
-    sp_xl, ones_yl, sum_spal, // SP-- -> AL
+    sp_xl, set_yl, sum_spal, // SP-- -> AL
     nand_zl, nand_mem, // IL -> *AL
-    zero_yl   //
+    clr_yl    //
   ];
   let pop = seq![
     sp_xl, cinsum_sp // SP++
   ];
   let sec = seq![
-    ones_ylzl, ones_ylzl, nand_ylcf // 1 -> CF
+    set_ylzl, set_ylzl, nand_ylcf // 1 -> CF
   ];
   let clc = seq![
-    ones_ylzl, nand_ylzl, nand_zlcf // 0 -> CF
+    set_ylzl, nand_ylzl, nand_zlcf // 0 -> CF
   ];
 
   let microcode: [[[Result<ControlWord, TickTrap>; 0x20]; 0x02]; 0x80] = [[[(); 0x20]; 0x02]; 0x80]
@@ -218,7 +218,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           mem_zl,    // *SP -> ZL
                           size_yl,
                           sum_al, // SP + SIZE -> AL
-                          ones_yl,
+                          set_yl,
                           nand_zl,
                           nand_yl, // ZL -> YL
                           mem_xl,  // *AL -> XL
@@ -226,7 +226,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                             true => seq![cinsum_xlcf], // XL + YL -> XL
                             false => seq![sum_xlcf],   // XL + YL -> XL
                           },
-                          ones_ylzl,
+                          set_ylzl,
                           cinsum_mem, // XL -> *AL
                           nand_yl
                         ]
@@ -241,14 +241,14 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           mem_zl,    // *SP -> ZL
                           size_yl,
                           sum_al, // SP + SIZE -> AL
-                          ones_yl,
+                          set_yl,
                           nand_yl, // ~ZL -> YL
                           mem_xl,  // *AL -> XL
                           match carry {
                             true => seq![sum_xlcf],     // XL - YL -> XL
                             false => seq![cinsum_xlcf], // XL - YL -> XL
                           },
-                          ones_ylzl,
+                          set_ylzl,
                           cinsum_mem, // XL -> *AL
                           match carry {
                             true => seq![nand_ylzl, nand_zlcf], // 0 -> CF
@@ -267,13 +267,13 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           size_yl,
                           sum_al, // SP + SIZE -> AL
                           mem_xl, // *AL -> XL
-                          ones_yl,
+                          set_yl,
                           match carry {
                             true => seq![nand_zl, nand_xl], // ZL -> xL
                             false => seq![nop, nop],        // no-op
                           },
                           cinsum_mem, // XL -> *AL
-                          zero_yl
+                          clr_yl
                         ]
                       }
 
@@ -282,7 +282,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                         // TODO document that `rot` clears carry
                         seq![
                           match carry {
-                            true => seq![ones_yl, nand_zl, nand_mem],
+                            true => seq![set_yl, nand_zl, nand_mem],
                             false => seq![fetch],
                           }, // continuation of match below
                           sp_xl,
@@ -290,20 +290,20 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           sum_al, // SP + SIZE -> AL
                           mem_xlyl,
                           sum_xlcf, // *AL + *AL -> XL
-                          zero_yl,
+                          clr_yl,
                           match carry {
                             true => seq![cinsum_zl], // XL + 1 -> ZL
                             false => seq![sum_zl],   // XL -> ZL
                           },
                           sp_al,
                           mem_xl,
-                          ones_yl,
+                          set_yl,
                           sum_memcf, // *SP - 1 -> *SP
                           match carry {
                             // not done. store shifted value
                             true => seq![sp_xl, size_yl, sum_al, nop], // ZL -> *(SP + SIZE)
                             // done. ignore shifted value, pop counter, fetch next instruction
-                            false => seq![zero_yl, sp_xl, cinsum_sp], // SP++
+                            false => seq![clr_yl, sp_xl, cinsum_sp], // SP++
                           }
                         ]
                       }
@@ -315,11 +315,11 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           sp_alxl, cinsum_sp, // SP++
                           mem_zl,    // *SP -> ZL
                           size_yl, sum_al, // SP + SIZE -> AL
-                          ones_yl, nand_xl, // ~ZL -> XL
+                          set_yl, nand_xl, // ~ZL -> XL
                           mem_zl, nand_zl,    // ~*AL -> ZL
                           cinsum_yl,  // XL -> YL
                           nand_memcf, // YL NAND ZL -> *AL
-                          zero_yl     //
+                          clr_yl      //
                         ]
                       }
 
@@ -332,7 +332,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           size_yl, sum_al, // SP + SIZE -> AL
                           mem_yl, // *AL -> YL
                           nand_ylzl, nand_memcf, // ~(YL NAND ZL) -> *AL
-                          zero_yl     //
+                          clr_yl      //
                         ]
                       }
 
@@ -340,25 +340,25 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                         // xor
 
                         // seq![
-                        //   ones_ylzl, nand_ylzl, nop, //
+                        //   set_ylzl, nand_ylzl, nop, //
                         //   // TODO get to fit in 0x10 steps
                         //   ip_alxl, mem_xl, sum_il, // fetch `and` instruction
                         //   sp_alxl, mem_zl, // *SP -> ZL
                         //   size_yl, cinsum_al, // (SP + 1) + SIZE -> AL
                         //   mem_ylxl,  // *AL -> YL; *AL -> XL
                         //   nand_mem,  // YL NAND ZL -> *AL
-                        //   ones_yl, cinsum_zl, nand_xl, // ~XL -> XL
+                        //   set_yl, cinsum_zl, nand_xl, // ~XL -> XL
                         //   sp_al, mem_zl, nand_zl,   // ~*SP -> ZL
                         //   cinsum_yl, // XL -> YL
                         //   nand_mem,  // YL NAND ZL -> *AL
-                        //   ones_yl    //
+                        //   set_yl    //
                         //
-                        //              // ones_zl, nand_yl, // ~YL -> YL
+                        //              // set_zl, nand_yl, // ~YL -> YL
                         //              // mem_zl,  // *AL -> ZL
                         //              // nand_zl, // YL NAND ZL -> ZL
-                        //              // ones_yl, cinsum_yl,  // XL -> YL
+                        //              // set_yl, cinsum_yl,  // XL -> YL
                         //              // nand_memcf, // ~(YL NAND ZL) -> *AL
-                        //              // zero_yl     //
+                        //              // clr_yl     //
                         // ]
 
                         seq![
@@ -366,17 +366,17 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           sp_alxl, cinsum_sp, // SP++
                           mem_zl,    // *SP -> ZL
                           size_yl, sum_al, // SP + SIZE -> AL
-                          ones_yl, nand_zl, nand_xl, // ZL -> XL
+                          set_yl, nand_zl, nand_xl, // ZL -> XL
                           mem_zl, nand_zl,   // ~*AL -> ZL
                           cinsum_yl, // XL -> YL
                           nand_xl,   // YL NAND ZL -> XL
                           // ---
-                          ones_zl, nand_yl, // ~YL -> YL
+                          set_zl, nand_yl, // ~YL -> YL
                           mem_zl,  // *AL -> ZL
                           nand_zl, // YL NAND ZL -> ZL
-                          ones_yl, cinsum_yl,  // XL -> YL
+                          set_yl, cinsum_yl,  // XL -> YL
                           nand_memcf, // ~(YL NAND ZL) -> *AL
-                          zero_yl     //
+                          clr_yl      //
                         ]
                       }
 
@@ -387,7 +387,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           sp_xl,
                           cinsum_spal, // SP++
                           yl_mem,      // 0x00 -> SP
-                          ones_xlylzl, // 0xFF -> XL; 0xFF -> YL; 0xFF -> ZL
+                          set_xlylzl,  // 0xFF -> XL; 0xFF -> YL; 0xFF -> ZL
                           sum_xlcf,    // 1 -> CF
                           nand_yl
                         ]
@@ -409,7 +409,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           seq![
                             fetch, //
                             sp_al, mem_xl, // *SP -> XL
-                            ones_ylzl, sum_mem, // XL + 0xFF -> *SP
+                            set_ylzl, sum_mem, // XL + 0xFF -> *SP
                             nand_yl  //
                           ]
                         }
@@ -418,9 +418,9 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           // neg
                           seq![
                             fetch, //
-                            ones_ylzl, nand_xl, // 0x00 -> XL
+                            set_ylzl, nand_xl, // 0x00 -> XL
                             sp_al, mem_ylzl, nand_ylzl, cinsum_mem, // 0x00 - *SP -> *SP
-                            zero_yl     //
+                            clr_yl      //
                           ]
                         }
 
@@ -434,7 +434,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                               true => seq![cinsum_xlcf], // XL + XL -> XL
                               false => seq![sum_xlcf],   // XL + XL -> XL
                             },
-                            ones_ylzl,
+                            set_ylzl,
                             cinsum_mem, // XL -> *SP
                             nand_yl
                           ]
@@ -456,7 +456,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                                 .flatten()
                                 .collect::<Vec<_>>(), // XL + XL -> XL; XL + XL -> YL
                             },
-                            ones_ylzl,
+                            set_ylzl,
                             cinsum_mem, // XL -> *SP
                             nand_yl
                           ]
@@ -467,7 +467,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           seq![
                             fetch, //
                             sp_al, mem_ylzl, nand_memcf, // ~*SP -> *SP
-                            zero_yl     //
+                            clr_yl      //
                           ]
                         }
 
@@ -476,7 +476,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                           seq![
                             fetch, //
                             sp_al, mem_ylzl, nand_ylzl, nand_memcf, // *SP -> *SP
-                            zero_yl     //
+                            clr_yl      //
                           ]
                         }
 
@@ -501,9 +501,9 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                               fetch, //
                               sp_xl, ofst_yl, sum_al, // SP + OFST -> AL
                               mem_zl, // *AL -> ZL
-                              sp_xl, ones_yl, sum_spal, // SP-- -> AL
+                              sp_xl, set_yl, sum_spal, // SP-- -> AL
                               nand_zl, nand_mem, // ZL -> *AL
-                              zero_yl   //
+                              clr_yl    //
                             ]
                           }
 
@@ -516,10 +516,10 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                               cinsum_spxl,
                               ofst_yl,
                               sum_al, // ++SP + OFST -> AL
-                              ones_yl,
+                              set_yl,
                               nand_zl,
                               nand_mem, // ZL -> *AL
-                              zero_yl
+                              clr_yl
                             ]
                           }
 
@@ -548,8 +548,8 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                                   fetch, //
                                   sp_alxl, cinsum_sp, mem_zl, // *SP++ -> ZL
                                   sp_alxl, cinsum_sp, mem_xl, // *SP++ -> XL
-                                  ones_yl, nand_zl, nand_al, // ZL -> AL
-                                  zero_yl, sum_mem // ZL -> *AL
+                                  set_yl, nand_zl, nand_al, // ZL -> AL
+                                  clr_yl, sum_mem // ZL -> *AL
                                 ]
                               }
 
@@ -557,9 +557,9 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                                 // ldi
                                 seq![
                                   fetch, //
-                                  sp_xl, ones_yl, sum_spal, // SP-- -> AL
+                                  sp_xl, set_yl, sum_spal, // SP-- -> AL
                                   ip_mem,   // IP -> *AL
-                                  zero_yl   //
+                                  clr_yl    //
                                 ]
                               }
 
@@ -576,9 +576,9 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                                 // lds
                                 seq![
                                   fetch, //
-                                  sp_xlzl, ones_yl, sum_spal, // SP -> ZL; SP-- -> AL
+                                  sp_xlzl, set_yl, sum_spal, // SP -> ZL; SP-- -> AL
                                   nand_zl, nand_mem, // ZL -> *AL
-                                  zero_yl   //
+                                  clr_yl    //
                                 ]
                               }
 
@@ -619,9 +619,9 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
                                   fetch, //
                                   sp_al, mem_zl, // *SP -> ZL
                                   sp_xl, cinsum_al, mem_xl, // *(SP + 1) -> *XL
-                                  ones_yl, nand_zl, nand_mem, // ZL -> *(SP + 1)
+                                  set_yl, nand_zl, nand_mem, // ZL -> *(SP + 1)
                                   sp_al, cinsum_mem, // XL -> *SP
-                                  zero_yl     //
+                                  clr_yl      //
                                 ]
                               }
 
@@ -652,7 +652,7 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
 
                 _ => unreachable!(),
               };
-              let seq = seq![seq, zero_sc];
+              let seq = seq![seq, clr_sc];
               let rest = seq.get(0x20..seq.len() - 1).unwrap_or(&[]);
               if step == 0x00 && rest.len() > 0 {
                 errors.push(Error(format!(

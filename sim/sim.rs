@@ -56,7 +56,14 @@ fn main() {
       zl: 0x00,
 
       ctrl: ControlWord::default(),
-      imm: 0x00,
+      size_data: Signal::Inactive,
+      ofst_data: Signal::Inactive,
+      set_cin: Signal::Inactive,
+      cout_cf: Signal::Inactive,
+      zero_cf: Signal::Inactive,
+      ones_data: Signal::Inactive,
+
+      ones: 0x00,
       size: 0x00,
       ofst: 0x00,
       sum: 0x00,
@@ -97,8 +104,8 @@ struct Microcomputer {
   stdout: u8,          // standard output
   mp: Microprocessor,  // microprocessor
 
-  clk: Clock,   // clock state
-  rst: Reset,   // reset state
+  clk: Clock,   // clock
+  rst: Reset,   // reset
   addr: u8,     // address bus
   data: u8,     // data bus
   read: Signal, // memory read
@@ -117,14 +124,21 @@ struct Microprocessor {
   zl: u8,   // Z latch
 
   ctrl: ControlWord, // control word
-  imm: u8,           // immediate derivation
-  size: u8,          // size derivation
-  ofst: u8,          // offset derivation
-  sum: u8,           // sum derivation
-  nand: u8,          // not-and derivation
-  cin: bool,         // sum carry-in derivation
-  cout: bool,        // sum carry-out derivation
-  zero: bool,        // nand is-zero derivation
+  size_data: Signal, // size-to-data derivation
+  ofst_data: Signal, // offset-to-data derivation
+  set_cin: Signal,   // set-to-carry-in derivation
+  cout_cf: Signal,   // carry-out-to-carry-flag derivation
+  zero_cf: Signal,   // zero-to-carry-flag derivation
+  ones_data: Signal, // ones-to-data derivation
+
+  ones: u8,   // ones derivation
+  size: u8,   // size derivation
+  ofst: u8,   // offset derivation
+  sum: u8,    // sum derivation
+  nand: u8,   // not-and derivation
+  cin: bool,  // sum carry-in derivation
+  cout: bool, // sum carry-out derivation
+  zero: bool, // nand is-zero derivation
 
   mic: [u16; MIC_SIZE], // microcode read-only memory
 }
@@ -142,26 +156,26 @@ enum TickTrap {
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Default)]
 struct ControlWord {
-  data_il: Signal,
-  zero_sc: Signal,
-  size_data: Signal,
-  ofst_data: Signal,
+  clr_sc: Signal,       // clear to step counter
+  data_il: Signal,      // data bus to instruction latch
+  size_and_cin: Signal, // size and carry-in
+  ofst_and_cf: Signal,  // offset and carry-flag
 
-  ip_data: Signal,
-  data_ip: Signal,
+  ip_data: Signal, // instruction pointer to data bus
+  data_ip: Signal, // data bus to instruction pointer
 
-  sp_data: Signal,
-  data_sp: Signal,
+  sp_data: Signal, // stack pointer to data bus
+  data_sp: Signal, // data bus to stack pointer
 
-  data_al: Signal,
-  mem_data: Signal,
-  data_mem: Signal,
+  data_al: Signal,  // data bus to address latch
+  mem_data: Signal, // data bus to memory
+  data_mem: Signal, // memory to data bus
 
-  data_xl: Signal,
-  data_yl: Signal,
-  data_zl: Signal,
-  sum_data: Signal,
-  nand_data: Signal,
+  data_xl: Signal,   // data bus to X latch
+  data_yl: Signal,   // data bus to Y latch
+  data_zl: Signal,   // data bus to Z latch
+  sum_data: Signal,  // sum to data bus
+  nand_data: Signal, // nand to data bus
 }
 
 // TODO copied from `mic.rs`
@@ -431,7 +445,7 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
     }
   }
 
-  // control logic
+  // microcode and control logic
   let il = match mp.il & 0x80 {
     0b0 => mp.il | 0xF0, // map `psh` to `phn` as both have equivalent microcode
     _ => mp.il,          // not `psh`; pass through
@@ -439,26 +453,43 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
   mp.ctrl = u16_into_result(
     mp.mic[(il as usize & 0x80 - 1) * 0x02 * 0x20 | mp.cf as usize * 0x20 | mp.sc as usize],
   )?;
-
-  // ones
-  if let (
-    Signal::Inactive,
-    Signal::Inactive,
-    Signal::Inactive,
-    Signal::Inactive,
-    Signal::Inactive,
-    Signal::Inactive,
-    Signal::Inactive,
-  ) = (
+  mp.ones_data = match (
     mp.ctrl.ip_data,
     mp.ctrl.sp_data,
     mp.ctrl.mem_data,
-    mp.ctrl.size_data,
-    mp.ctrl.ofst_data,
+    mp.ctrl.size_and_cin,
+    mp.ctrl.ofst_and_cf,
     mp.ctrl.sum_data,
     mp.ctrl.nand_data,
   ) {
-    mc.data = 0xFF;
+    (
+      Signal::Inactive,
+      Signal::Inactive,
+      Signal::Inactive,
+      Signal::Inactive,
+      Signal::Inactive,
+      Signal::Inactive,
+      Signal::Inactive,
+    ) => Signal::Active,
+    _ => Signal::Inactive,
+  };
+  (mp.size_data, mp.set_cin) = match mp.ctrl.sum_data {
+    Signal::Inactive => (mp.ctrl.size_and_cin, Signal::Inactive),
+    Signal::Active => (Signal::Inactive, mp.ctrl.size_and_cin),
+  };
+  (mp.ofst_data, mp.cout_cf, mp.zero_cf) = match (mp.ctrl.sum_data, mp.ctrl.nand_data) {
+    (Signal::Inactive, Signal::Inactive) => {
+      (mp.ctrl.ofst_and_cf, Signal::Inactive, Signal::Inactive)
+    }
+    (Signal::Active, Signal::Inactive) => (Signal::Inactive, mp.ctrl.ofst_and_cf, Signal::Inactive),
+    (Signal::Inactive, Signal::Active) => (Signal::Inactive, Signal::Inactive, mp.ctrl.ofst_and_cf),
+    _ => return Err(TickTrap::MicrocodeFault),
+  };
+
+  // ones
+  mp.ones = 0xFF;
+  if let Signal::Active = mp.ones_data {
+    mc.data = mp.ones;
   }
 
   // instruction latch and step counter
@@ -467,22 +498,19 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
       mp.il = mc.data;
     }
   }
-  if let Signal::Active = mp.ctrl.zero_sc {
+  if let Signal::Active = mp.ctrl.clr_sc {
     mp.sc = 0x00; // asynchronous
   }
-  if let (Signal::Inactive, Signal::Active) = (mp.ctrl.sum_data, mp.ctrl.size_data) {
+  if let Signal::Active = mp.size_data {
     mc.data = mp.size;
   }
-  if let (Signal::Inactive, Signal::Inactive, Signal::Active) =
-    (mp.ctrl.nand_data, mp.ctrl.sum_data, mp.ctrl.ofst_data)
-  {
+  if let Signal::Active = mp.ofst_data {
     mc.data = mp.ofst;
   }
   if let Reset::Asserted = mc.rst {
     mp.il = 0x00;
     mp.sc = 0x00;
   }
-  mp.imm = mp.il & 0b01111111; // decode_imm
   mp.size = 1 << (mp.il & 0b00000011); // decode_size
   mp.ofst = mp.il & 0b00001111; // decode_ofst
 
@@ -514,10 +542,10 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
 
   // carry flag
   if let Clock::Rising = mc.clk {
-    if let (Signal::Active, Signal::Active) = (mp.ctrl.sum_data, mp.ctrl.ofst_data) {
+    if let Signal::Active = mp.cout_cf {
       mp.cf = mp.cout;
     }
-    if let (Signal::Active, Signal::Active) = (mp.ctrl.nand_data, mp.ctrl.ofst_data) {
+    if let Signal::Active = mp.zero_cf {
       mp.cf = mp.zero;
     }
   }
@@ -557,7 +585,7 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
   mp.cout = sum > 0xFF;
   mp.nand = nand;
   mp.zero = nand == 0x00;
-  mp.cin = match mp.ctrl.size_data {
+  mp.cin = match mp.ctrl.size_and_cin {
     Signal::Active => true,
     Signal::Inactive => false,
   };
@@ -621,7 +649,7 @@ impl std::fmt::Display for Microcomputer {
       "{}\r\n{}\r\n{}\r\n{}\r\n{}",
       self.mp,
       format!(
-        "CLK  RST  ADDR  DATA READ  WRT\r\n{}  {}  {:02X}    {:02X}   {}    {}\r\n",
+        "CLK  RST  ADDR  DATA  READ  WRT\r\n{}  {}  {:02X}    {:02X}    {}    {}\r\n",
         self.clk, self.rst, self.addr, self.data, self.read, self.wrt
       ),
       render_memory(&self.mem, self.mp.ip, self.mp.sp, self.mp.cf),
@@ -635,25 +663,24 @@ impl std::fmt::Display for Microprocessor {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(
       f,
-      "{}\r\n{}\r\n{}",
+      "{}\r\n{}\r\n{}\r\n{}",
       format!(
         "IP  SP  CF  IL  SC  AL  XL  YL  ZL\r\n{:02X}  {:02X}  {:01X}   {:02X}  {:02X}  {:02X}  {:02X}  {:02X}  {:02X}\r\n",
         self.ip, self.sp, self.cf as u8, self.il, self.sc, self.al, self.xl, self.yl, self.zl
       ),
       format!(
-        "IMM  SIZE  OFST  SUM  NAND  CIN  COUT  ZERO\r\n{:02X}   {:02X}    {:02X}    {:02X}   {:02X}    {:01X}    {:01X}     {:01X}\r\n",
-        self.imm, self.size, self.ofst, self.sum, self.nand, self.cin as u8, self.cout as u8, self.zero as u8
-      ),
-      format!(
-        "CTRL  {} {} {} {} {} {} {} {}\r\nWORD  {} {} {} {} {} {} {} {}\r\n",
+        "CTRL  {} {} {} {} {} {} {} {}  {} {} {}\r\n      {} {} {} {} {} {} {} {}  {} {} {}\r\n",
+        self.ctrl.clr_sc,
         self.ctrl.data_il,
-        self.ctrl.zero_sc,
-        self.ctrl.size_data,
-        self.ctrl.ofst_data,
+        self.ctrl.size_and_cin,
+        self.ctrl.ofst_and_cf,
         self.ctrl.ip_data,
         self.ctrl.data_ip,
         self.ctrl.sp_data,
         self.ctrl.data_sp,
+        self.size_data,
+        self.ofst_data,
+        self.set_cin,
         self.ctrl.data_al,
         self.ctrl.mem_data,
         self.ctrl.data_mem,
@@ -662,6 +689,17 @@ impl std::fmt::Display for Microprocessor {
         self.ctrl.data_zl,
         self.ctrl.sum_data,
         self.ctrl.nand_data,
+        self.cout_cf,
+        self.zero_cf,
+        self.ones_data,
+      ),
+      format!(
+        "ONES  SIZE  OFST  SUM  NAND  CIN  COUT  ZERO\r\n{:02X}    {:02X}    {:02X}    {:02X}   {:02X}    {:01X}    {:01X}     {:01X}\r\n",
+        self.ones, self.size, self.ofst, self.sum, self.nand, self.cin as u8, self.cout as u8, self.zero as u8,
+      ),
+      format!(
+        "MIC  ({} B)\r\n",
+        self.mic.len()
       ),
     )
   }
