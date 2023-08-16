@@ -12,13 +12,23 @@ secondary_right! x80 @const
 
 fgetc! lda # char = fgetc(stream)
 getc! !stdin !fgetc # char = getc()
-fgets! @err # to be implemented
-gets! @err # to be implemented
-fgets.def! fgets: @err # to be implemented
-gets.def! gets: @err # to be implemented
+fgets! # fgets(stream, *str)
+  swp for_c.
+    ld1 !fgetc
+    !char.null xor
+    ld1 sta
+  inc .for_c !bcc pop pop
+gets! !stdin !fgets # gets(*str)
+fgets.def! fgets: swp ld2 swp !fgets !rt1 # fgets(stream, *str)
+gets.def! gets: swp !gets !ret # gets(*str)
 
-gets.min! @err # to be implemented
-gets.min.def! @err # to be implemented
+gets.min! # gets.min(*str)
+  for_c.
+    !getc
+    !char.null xor
+    ld1 sta
+  inc .for_c !bcc pop
+gets.min.def! gets.min: swp !gets.min !ret # gets.min(*str)
 
 fputc! sta # fputc(stream, char)
 putc! !stdout !fputc # putc(char)
@@ -26,8 +36,8 @@ fputs! # fputs(stream, *str)
   swp for_c.
     ld0 lda
     !char.null xor
-    ld2 !fputc inc
-  .for_c !bcc pop pop
+    ld2 !fputc
+  inc .for_c !bcc pop pop
 puts! !stdout !fputs # puts(*str)
 fputs.def! fputs: swp ld2 swp !fputs !rt1 # fputs(stream, *str)
 puts.def! puts: swp !puts !ret # puts(*str)
@@ -36,8 +46,8 @@ puts.min! # puts.min(*str)
   for_c.
     ld0 lda
     !char.null xor
-    !putc inc
-  .for_c !bcc pop
+    !putc
+  inc .for_c !bcc pop
 puts.min.def! puts.min: swp !puts.min !ret # puts.min(*str)
 
 wait_char! @const !wait_char.dyn

@@ -30,6 +30,7 @@ python3 test.py hllowrld.asm asm emu
 python3 test.py counter.asm asm emu
 python3 test.py mushroom.asm asm emu
 python3 test.py bad\ apple.asm asm emu
+python3 test.py brainfuck.asm asm emu
 python3 test.py attomon.asm asm emu
 python3 test.py flappy.asm asm emu
 python3 test.py circle.asm asm emu

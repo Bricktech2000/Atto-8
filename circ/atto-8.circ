@@ -479,9 +479,9 @@
       <a name="bit7" val="8"/>
       <a name="bit8" val="7"/>
       <a name="bit9" val="6"/>
-      <a name="facing" val="north"/>
       <a name="fanout" val="16"/>
       <a name="incoming" val="16"/>
+      <a name="spacing" val="3"/>
     </comp>
     <comp lib="0" loc="(1680,500)" name="Splitter">
       <a name="appear" val="right"/>
@@ -501,9 +501,9 @@
       <a name="bit7" val="8"/>
       <a name="bit8" val="7"/>
       <a name="bit9" val="6"/>
+      <a name="facing" val="north"/>
       <a name="fanout" val="16"/>
       <a name="incoming" val="16"/>
-      <a name="spacing" val="3"/>
     </comp>
     <comp lib="0" loc="(1690,1570)" name="NoConnect"/>
     <comp lib="0" loc="(1690,1630)" name="Splitter">
@@ -1195,7 +1195,9 @@
       <a name="matrixrows" val="8"/>
     </comp>
     <comp lib="5" loc="(1110,1620)" name="TTY"/>
-    <comp lib="5" loc="(1150,1760)" name="Keyboard"/>
+    <comp lib="5" loc="(1150,1760)" name="Keyboard">
+      <a name="buflen" val="256"/>
+    </comp>
     <comp lib="5" loc="(1160,1670)" name="Button">
       <a name="facing" val="north"/>
     </comp>
