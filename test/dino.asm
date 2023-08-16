@@ -71,7 +71,7 @@ main!
       !u16.lda !u16.st2
     ignore_cactus:
 
-    x60 !stall
+    x07 !delay
   :loop !jmp
 
   game_over:

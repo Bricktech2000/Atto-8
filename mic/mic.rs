@@ -106,6 +106,13 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
     };
   }
 
+  // convenience function for printing instruction clocks
+  #[allow(dead_code)]
+  fn print_len<T>(seq: Vec<T>) -> Vec<T> {
+    println!("{}", seq.len());
+    seq
+  }
+
   // TODO document why every instruction must end with YL = 0x00
   // TODO document sum_data && ofst_and_cf is sum_data && cout_cf
   // TODO document nand_data && ofst_and_cf is nand_data && zero_cf
@@ -279,7 +286,6 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
 
                       0x5 => {
                         // rot
-                        // TODO document that `rot` clears carry
                         seq![
                           match carry {
                             true => seq![set_yl, nand_zl, nand_mem],
@@ -338,29 +344,6 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
 
                       0xA => {
                         // xor
-
-                        // seq![
-                        //   set_ylzl, nand_ylzl, nop, //
-                        //   // TODO get to fit in 0x10 steps
-                        //   ip_alxl, mem_xl, sum_il, // fetch `and` instruction
-                        //   sp_alxl, mem_zl, // *SP -> ZL
-                        //   size_yl, cinsum_al, // (SP + 1) + SIZE -> AL
-                        //   mem_ylxl,  // *AL -> YL; *AL -> XL
-                        //   nand_mem,  // YL NAND ZL -> *AL
-                        //   set_yl, cinsum_zl, nand_xl, // ~XL -> XL
-                        //   sp_al, mem_zl, nand_zl,   // ~*SP -> ZL
-                        //   cinsum_yl, // XL -> YL
-                        //   nand_mem,  // YL NAND ZL -> *AL
-                        //   set_yl    //
-                        //
-                        //              // set_zl, nand_yl, // ~YL -> YL
-                        //              // mem_zl,  // *AL -> ZL
-                        //              // nand_zl, // YL NAND ZL -> ZL
-                        //              // set_yl, cinsum_yl,  // XL -> YL
-                        //              // nand_memcf, // ~(YL NAND ZL) -> *AL
-                        //              // clr_yl     //
-                        // ]
-
                         seq![
                           fetch, //
                           sp_alxl, cinsum_sp, // SP++

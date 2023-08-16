@@ -18,7 +18,7 @@ main!
     # invert pixel at xy_pos
     !u4u4.ld1 !display_buffer !bit_addr !flip_bit
     # sleep
-    x02 !stall_long
+    x20 !delay
     # input = getc()
     !getc
     # input = (1 << rand()) & 0x0F

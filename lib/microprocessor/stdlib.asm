@@ -12,11 +12,12 @@ rand! clc # seed = rand(seed)
 rand.min! clc # seed = rand.min(seed)
   shl x00 !rand_bits iff xor
 
-stall! # stall(iterations)
-  loop. x01 sub @dyn .loop !bcc pop
 
-stall_long! # stall_long(iterations)
-  x00 loop. x00 x01 su2 su2 .loop !bcc pop pop
+delay! # delay(iterations)
+  loop. x1F !stall x01 sub @dyn .loop !bcc pop
+
+delay_long! # delay_long(iterations)
+  x00 loop. x1F !stall x00 x01 su2 su2 .loop !bcc pop pop
 
 popcnt! # count = popcnt(a)
   # count = a == 0 ? -1 : 0

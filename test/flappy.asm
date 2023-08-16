@@ -61,14 +61,14 @@ main!
       sta
     ignore_pipe:
 
-    x60 !stall
+    x07 !delay
   :loop !jmp
 
   game_over:
     # blink pixel at (x_pos, y_pos)
     blink:
       !u8u8.ld0 !flip_bit
-      xFF !stall
+      x1F !stall x1F !stall x1F !stall
     :blink !jmp
 
   !display_buffer @org

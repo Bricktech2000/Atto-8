@@ -71,7 +71,7 @@ main!
 
   # print the character at the top of the stack and fall through
   stall_print:
-    xFF !stall # small delay for visual feedback to user
+    x10 !delay # small delay for visual feedback to user
     !putc
 
   # pop previous character and fall through

@@ -34,13 +34,13 @@ main!
       # this only checks paddle bounces if the ball is on either side of the screen
       !u4f4.ld4 !u4f4.ld0 x01 rot xor xE0 and pop :ignore_check !bcc
         # if the byte in memory where the ball is not 0, game over
-        !display_buffer !u4u4.ld1 x03 !rneg rot clc add lda buf pop :game_over !bcs
+        !display_buffer !u4u4.ld1 x03 !rneg rot add lda buf pop :game_over !bcs
         # otherwise, x_vel = -x_vel
         !u4f4.ld3 !u4f4.neg !u4f4.st3
       ignore_check:
 
       # draw paddle centered at paddle_b
-      !display_buffer inc !u8.ld6 x01 rot clc add
+      !display_buffer inc !u8.ld6 x01 rot add
       x00 ld1 x04 sub sta
       x01 ld1 x02 sub sta
       x01 ld1         sta
@@ -57,7 +57,7 @@ main!
       # draw pixel at (x_pos >> 4, y_pos >> 4) and consume
       !display_buffer !bit_addr !set_bit
 
-    x7F !stall
+    x08 !delay
   :loop !jmp
 
   game_over:

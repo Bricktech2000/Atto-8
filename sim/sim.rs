@@ -89,7 +89,7 @@ fn main() {
   });
   mc.rst = Reset::Deasserted;
 
-  simulate(mc, 500000);
+  simulate(mc, 1000000);
 }
 
 const MEM_SIZE: usize = 0x100;

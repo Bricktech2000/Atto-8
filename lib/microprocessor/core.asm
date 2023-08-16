@@ -27,3 +27,5 @@ nop! nop @dyn
 here! lbl. .lbl
 hlt! !here !jmp
 pad! .lbl add lbl. @org
+stall! @const !stall.dyn # argument at most 0x1F
+stall.dyn! shl shl shl rot @dyn # argument at most 0x1F

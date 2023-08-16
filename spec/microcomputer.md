@@ -6,7 +6,7 @@ The Atto-8 microcomputer is a minimalist computer based on the Atto-8 microproce
 
 ## Features
 
-- 100kHz clock
+- 1 MHz clock
 - 256 bytes of memory
 - Standard input/output
 - 16x16 pixel display

@@ -28,7 +28,7 @@ main!
     !display_buffer_len x00 !display_buffer :memset !call
     ld1 ld1 inc !draw_circle
 
-    x01 !stall_long
+    x30 !delay
 
     # wait until a controller button is pressed
     x00 wait: pop !getc !char.null xor :wait !bcs
