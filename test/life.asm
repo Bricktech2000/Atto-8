@@ -47,15 +47,15 @@ main!
   :loop !jmp
 
   neighbours:
-    dFF !i4i4
-    dF0 !i4i4
-    dF1 !i4i4
-    d0F !i4i4
-    d00 !i4i4
-    d01 !i4i4
-    d1F !i4i4
-    d10 !i4i4
-    d11 !i4i4
+    @FF !i4i4
+    @F0 !i4i4
+    @F1 !i4i4
+    @0F !i4i4
+    @00 !i4i4
+    @01 !i4i4
+    @1F !i4i4
+    @10 !i4i4
+    @11 !i4i4
   neighbours_end:
 
   !memcpy.def
@@ -76,59 +76,59 @@ back_buffer! xC0 @const
 
 glider!
   x0C !pad
-  d07 d00
-  d01 d00
-  d02 d00
+  @07 @00
+  @01 @00
+  @02 @00
 
 blinker!
   x0C !pad
-  d07 d00
+  @07 @00
 
 diehard!
   # already advanced 2 generations
   x0C !pad
-  d30 d80
-  d31 dC0
+  @30 @80
+  @31 @C0
 
 r-pentomino!
   x0C !pad
-  d06 d00
-  d0C d00
-  d04 d00
+  @06 @00
+  @0C @00
+  @04 @00
 
 lightweight_spaceship!
   x0A !pad
-  d00 d09
-  d00 d10
-  d00 d11
-  d00 d1E
+  @00 @09
+  @00 @10
+  @00 @11
+  @00 @1E
 
 heavyweight_spaceship!
   x0A !pad
-  d00 d0C
-  d00 d21
-  d00 d40
-  d00 d41
-  d00 d7E
+  @00 @0C
+  @00 @21
+  @00 @40
+  @00 @41
+  @00 @7E
 
 compact_pulsar!
   # pattern that turns into a pulsar
   x0C !pad
-  d07 dC0
-  d08 d40
-  d07 dC0
+  @07 @C0
+  @08 @40
+  @07 @C0
 
 copperhead!
   x08 !pad
-  d06 d60
-  d01 d80
-  d01 d80
-  d0A d50
-  d08 d10
-  d00 d00
-  d08 d10
-  d06 d60
-  d03 dC0
-  d00 d00
-  d01 d80
-  d01 d80
+  @06 @60
+  @01 @80
+  @01 @80
+  @0A @50
+  @08 @10
+  @00 @00
+  @08 @10
+  @06 @60
+  @03 @C0
+  @00 @00
+  @01 @80
+  @01 @80

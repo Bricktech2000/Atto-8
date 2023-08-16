@@ -20,11 +20,11 @@ main!
   x03 :str_ac :str_ab :memcmp !call # 0x01
   !hlt
 
-  str_ab: d61 d62 d00
-  str_ac: d61 d63 d00
-  str_abc: d61 d62 d63 d00
-  str_abcdef: d61 d62 d63 d64 d65 d66 d00
-  str_buf: dCC dCC dCC dCC dCC dCC dCC dCC
+  str_ab: @61 @62 @00
+  str_ac: @61 @63 @00
+  str_abc: @61 @62 @63 @00
+  str_abcdef: @61 @62 @63 @64 @65 @66 @00
+  str_buf: @CC @CC @CC @CC @CC @CC @CC @CC
 
   # !fib.def
   !strchr.def

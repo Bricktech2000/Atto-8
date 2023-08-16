@@ -336,6 +336,7 @@
     </comp>
     <comp lib="0" loc="(1330,1450)" name="Clock">
       <a name="facing" val="west"/>
+      <a name="phaseOffset" val="1"/>
     </comp>
     <comp lib="0" loc="(1340,1170)" name="Ground">
       <a name="facing" val="north"/>
@@ -478,9 +479,9 @@
       <a name="bit7" val="8"/>
       <a name="bit8" val="7"/>
       <a name="bit9" val="6"/>
+      <a name="facing" val="north"/>
       <a name="fanout" val="16"/>
       <a name="incoming" val="16"/>
-      <a name="spacing" val="3"/>
     </comp>
     <comp lib="0" loc="(1680,500)" name="Splitter">
       <a name="appear" val="right"/>
@@ -500,9 +501,9 @@
       <a name="bit7" val="8"/>
       <a name="bit8" val="7"/>
       <a name="bit9" val="6"/>
-      <a name="facing" val="north"/>
       <a name="fanout" val="16"/>
       <a name="incoming" val="16"/>
+      <a name="spacing" val="3"/>
     </comp>
     <comp lib="0" loc="(1690,1570)" name="NoConnect"/>
     <comp lib="0" loc="(1690,1630)" name="Splitter">
@@ -1263,7 +1264,7 @@
     <comp lib="8" loc="(1210,1405)" name="Text">
       <a name="text" val=". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . "/>
     </comp>
-    <comp lib="8" loc="(1219,467)" name="Text">
+    <comp lib="8" loc="(1215,465)" name="Text">
       <a name="font" val="SansSerif bold 32"/>
       <a name="text" val="SC"/>
     </comp>
@@ -1339,7 +1340,7 @@
       <a name="font" val="SansSerif bold 32"/>
       <a name="text" val="SUM"/>
     </comp>
-    <comp lib="8" loc="(826,1264)" name="Text">
+    <comp lib="8" loc="(825,1260)" name="Text">
       <a name="font" val="SansSerif bold 32"/>
       <a name="text" val="ADDR"/>
     </comp>

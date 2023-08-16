@@ -8,8 +8,7 @@ syntax match atto8Instruction "\<\(add\|sub\|iff\|rot\|orr\|and\|xor\|xnd\|inc\|
 syntax match atto8Instruction "\<\(ad\|su\|if\|ro\|or\|an\|xo\|xn\)[1248]\{1\}\>"
 syntax match atto8Instruction "\<\(ld\|st\)[0-9A-F]\{1\}\>"
 syntax match atto8XXX "\<x[0-9A-F]\{2\}\>"
-syntax match atto8DDD "\<d[0-9A-F]\{2\}\>"
-syntax match atto8Directive "@\<\(const\|dyn\|org\|err\)\>"
+syntax match atto8Directive "@\<\(const\|dyn\|org\|err\|[0-9A-F]\{2\}\)\>"
 syntax match atto8MacroRef "!\<[^! ]\+\>"
 syntax match atto8MacroDef "\<[^! ]\+\>!"
 syntax match atto8LabelRef ":\<[^: ]\+\>\|\.\<[^\. ]\+\>"
@@ -20,7 +19,6 @@ syntax keyword atto8Todo TODO FIXME XXX NOTE contained
 
 highlight default link atto8Instruction Keyword
 highlight default link atto8XXX Number
-highlight default link atto8DDD Constant
 highlight default link atto8Directive PreProc
 highlight default link atto8MacroRef Macro
 highlight default link atto8MacroDef Macro

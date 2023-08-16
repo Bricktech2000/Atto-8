@@ -55,10 +55,10 @@ source!
   !puts.min.def
 
   # "FLAG{MIliTAry-Gr4dE_3ncrypT1oN}\0"
-  str_api_key: d46 d4C d41 d47 d7B d4D d49 d6C d69 d54 d41 d72 d79 d2D d47 d72 d34 d64 d45 d5F d33 d6E d63 d72 d79 d70 d54 d31 d6F d4E d7D d00
+  str_api_key: @46 @4C @41 @47 @7B @4D @49 @6C @69 @54 @41 @72 @79 @2D @47 @72 @34 @64 @45 @5F @33 @6E @63 @72 @79 @70 @54 @31 @6F @4E @7D @00
   # "Nothing to see here!\r\nIt appears this program is working as intended.\r\n\0"
-  str_message: d4E d6F d74 d68 d69 d6E d67 d20 d74 d6F d20 d73 d65 d65 d20 d68 d65 d72 d65 d21 d0D d0A d49 d74 d20 d61 d70 d70 d65 d61 d72 d73 d20 d74 d68 d69 d73 d20 d70 d72 d6F d67 d72 d61 d6D d20 d69 d73 d20 d77 d6F d72 d6B d69 d6E d67 d20 d61 d73 d20 d69 d6E d74 d65 d6E d64 d65 d64 d2E d0D d0A d00
+  str_message: @4E @6F @74 @68 @69 @6E @67 @20 @74 @6F @20 @73 @65 @65 @20 @68 @65 @72 @65 @21 @0D @0A @49 @74 @20 @61 @70 @70 @65 @61 @72 @73 @20 @74 @68 @69 @73 @20 @70 @72 @6F @67 @72 @61 @6D @20 @69 @73 @20 @77 @6F @72 @6B @69 @6E @67 @20 @61 @73 @20 @69 @6E @74 @65 @6E @64 @65 @64 @2E @0D @0A @00
   exit:
 
 payload!
-  dB6 d56 d11 dFF d6C dB5 d6E d24 dA4 dD2 dAE d82 dA0 d1E d7D d91 d4C d8D dDA d76 d82 d2E d70 dD1 d30 dE6 d92 d8F d96 dA5 dB7 d09 dCA dFA dA2 d8E d4A d5B dD4 d99 d50 dD1 dB2 d94 d0A dC7 d81 dD5 d1D d77 dEF d49 dE4 d3A dD0 d3A d40 dF4 d2A d88 d20 d45 d35 dF7 d27 d44 dBE d27 dCC dA8 d08 d99 d51 d24 d5E dF1 dEC d07 d43 dE7 dA0 d8D d04 d48 dB3 dB3 d85 d91 d0F d1E d6F dF3 dA1 d00 dCF dB1 d05 d14 d73 d7E dA8 d33 d4D d63 dED d2A dC1 dBE dC2 d10 dC5 d7B dCA dB1 d95 d9B d11 dD5 dB3 d0F d95 dDE dED dFD
+  @B6 @56 @11 @FF @6C @B5 @6E @24 @A4 @D2 @AE @82 @A0 @1E @7D @91 @4C @8D @DA @76 @82 @2E @70 @D1 @30 @E6 @92 @8F @96 @A5 @B7 @09 @CA @FA @A2 @8E @4A @5B @D4 @99 @50 @D1 @B2 @94 @0A @C7 @81 @D5 @1D @77 @EF @49 @E4 @3A @D0 @3A @40 @F4 @2A @88 @20 @45 @35 @F7 @27 @44 @BE @27 @CC @A8 @08 @99 @51 @24 @5E @F1 @EC @07 @43 @E7 @A0 @8D @04 @48 @B3 @B3 @85 @91 @0F @1E @6F @F3 @A1 @00 @CF @B1 @05 @14 @73 @7E @A8 @33 @4D @63 @ED @2A @C1 @BE @C2 @10 @C5 @7B @CA @B1 @95 @9B @11 @D5 @B3 @0F @95 @DE @ED @FD

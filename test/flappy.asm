@@ -81,13 +81,13 @@ y_accel! x01 !i4f4 # gravity
 flap_vel! xF8 !i4f4 # upward velocity when flapping
 
 void!
-  d00 d00 d00 d00 d00 d00 d00 d00
-  d00 d00 d00 d00 d00 d00 d00 d00
+  @00 @00 @00 @00 @00 @00 @00 @00
+  @00 @00 @00 @00 @00 @00 @00 @00
 
 dark_ground!
-  d00 d00 d00 d00 d00 d00 d00 d00
-  dFF dFF d02 d04 d90 d80 d24 d4A
+  @00 @00 @00 @00 @00 @00 @00 @00
+  @FF @FF @02 @04 @90 @80 @24 @4A
 
 light_ground!
-  d00 d00 d00 d00 d00 d00 d00 d00
-  dFF dFF dFD dFB d6F d7F dDB dB5
+  @00 @00 @00 @00 @00 @00 @00 @00
+  @FF @FF @FD @FB @6F @7F @DB @B5

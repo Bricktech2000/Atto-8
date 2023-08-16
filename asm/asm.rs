@@ -78,7 +78,7 @@ enum Token {
   AtDyn,
   AtOrg,
   AtErr,
-  DDD(u8),
+  AtDD(u8),
   XXX(u8),
   Add,
   AdS(u8),
@@ -215,9 +215,8 @@ fn tokenize(source: String, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)>
         errors.push((
           position.clone(),
           Error(match kind {
-            Empty => format!("Invalid empty hexadecimal literal `x{}`", literal),
-            InvalidDigit => format!("Invalid digits in hexadecimal literal `x{}`", literal),
-            NegOverflow | PosOverflow => format!("Out-of-range hexadecimal literal `x{}`", literal),
+            InvalidDigit => format!("Invalid hexadecimal literal digits `{}`", literal),
+            NegOverflow | PosOverflow => format!("Out-of-range hexadecimal literal `{}`", literal),
             _ => panic!("Unexpected error parsing hexadecimal literal"),
           }),
         ));
@@ -288,22 +287,33 @@ fn tokenize(source: String, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)>
         "flc" => Token::Flc,
         "swp" => Token::Swp,
         "pop" => Token::Pop,
-        _ if token.starts_with("ad") => Token::AdS(parse_hex(&token[2..], errors, &position)),
-        _ if token.starts_with("su") => Token::SuS(parse_hex(&token[2..], errors, &position)),
-        _ if token.starts_with("if") => Token::IfS(parse_hex(&token[2..], errors, &position)),
-        _ if token.starts_with("ro") => Token::RoS(parse_hex(&token[2..], errors, &position)),
-        _ if token.starts_with("or") => Token::OrS(parse_hex(&token[2..], errors, &position)),
-        _ if token.starts_with("an") => Token::AnS(parse_hex(&token[2..], errors, &position)),
-        _ if token.starts_with("xo") => Token::XoS(parse_hex(&token[2..], errors, &position)),
-        _ if token.starts_with("xn") => Token::XnS(parse_hex(&token[2..], errors, &position)),
-        _ if token.starts_with("ld") => Token::LdO(parse_hex(&token[2..], errors, &position)),
-        _ if token.starts_with("st") => Token::StO(parse_hex(&token[2..], errors, &position)),
-        _ if token.starts_with("d") => Token::DDD(parse_hex(&token[1..], errors, &position)),
-        _ if token.starts_with("x") => Token::XXX(parse_hex(&token[1..], errors, &position)),
+        _ if token.len() == 3 => match token.split_at(2) {
+          ("ad", hex) => Token::AdS(parse_hex(&hex, errors, &position)),
+          ("su", hex) => Token::SuS(parse_hex(&hex, errors, &position)),
+          ("if", hex) => Token::IfS(parse_hex(&hex, errors, &position)),
+          ("ro", hex) => Token::RoS(parse_hex(&hex, errors, &position)),
+          ("or", hex) => Token::OrS(parse_hex(&hex, errors, &position)),
+          ("an", hex) => Token::AnS(parse_hex(&hex, errors, &position)),
+          ("xo", hex) => Token::XoS(parse_hex(&hex, errors, &position)),
+          ("xn", hex) => Token::XnS(parse_hex(&hex, errors, &position)),
+          ("ld", hex) => Token::LdO(parse_hex(&hex, errors, &position)),
+          ("st", hex) => Token::StO(parse_hex(&hex, errors, &position)),
+          _ => match token.split_at(1) {
+            ("@", hex) => Token::AtDD(parse_hex(&hex, errors, &position)),
+            ("x", hex) => Token::XXX(parse_hex(&hex, errors, &position)),
+            _ => {
+              errors.push((
+                position.clone(),
+                Error(format!("Invalid token `{}`", token)),
+              ));
+              Token::Nop
+            }
+          },
+        },
         _ => {
           errors.push((
             position.clone(),
-            Error(format!("Unexpected token `{}`", token)),
+            Error(format!("Invalid token `{}`", token)),
           ));
           Token::Nop
         }
@@ -606,7 +616,7 @@ fn assemble(
         Token::Flc => Root::Instruction(Instruction::Flc),
         Token::Swp => Root::Instruction(Instruction::Swp),
         Token::Pop => Root::Instruction(Instruction::Pop),
-        Token::DDD(value) => Root::Instruction(Instruction::Raw(value)),
+        Token::AtDD(value) => Root::Instruction(Instruction::Raw(value)),
       };
 
       (position, token)
@@ -1427,7 +1437,7 @@ impl std::fmt::Display for Token {
       Token::AtDyn => write!(f, "@dyn"),
       Token::AtOrg => write!(f, "@org"),
       Token::AtErr => write!(f, "@err"),
-      Token::DDD(value) => write!(f, "d{:02X}", value),
+      Token::AtDD(value) => write!(f, "@{:02X}", value),
       Token::XXX(value) => write!(f, "x{:02X}", value),
       Token::Add => write!(f, "add"),
       Token::AdS(size) => write!(f, "ad{:01X}", size),

@@ -5,11 +5,12 @@ main!
 main!
   @ foo.asm
   x
-  dZZ
+  x2
+  @ZZ
   xca
   xF00
-  ad10
-  ld11
+  ad9
+  ld10
   #comment
   :label
   !macro
@@ -24,6 +25,6 @@ main!
   @err
 
   !row !row !row !row !row !row !row !row !row !row !row !row !row !row !row !row
-row! d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00 d00
+row! @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00
 
 self! !main

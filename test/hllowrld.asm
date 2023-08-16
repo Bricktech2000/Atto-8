@@ -18,14 +18,14 @@ main!
   !memcpy.def
 
   display_data:
-    # dEA dE6 d4E d44 d4A dEC d00 d00 # THIS
-    # dE6 d04 d44 d0E dEC d0A d00 d00 # IS A
-    # dEE d6E d4C d44 d4E dC4 d00 d00 # TEST
+    # @EA @E6 @4E @44 @4A @EC @00 @00 # THIS
+    # @E6 @04 @44 @0E @EC @0A @00 @00 # IS A
+    # @EE @6E @4C @44 @4E @C4 @00 @00 # TEST
 
-    # d4E dEE dE4 d4A dA4 d4E d00 d00 # ATTO
-    # d00 d06 d00 dEE d00 d0E d00 d00 #   -8
+    # @4E @EE @E4 @4A @A4 @4E @00 @00 # ATTO
+    # @00 @06 @00 @EE @00 @0E @00 @00 #   -8
 
-    dA8 d8E dE8 d8A dAE dEE d00 d00 # HLLO
-    dAE d8C dEC d8A dEA dEC d00 d00 # WRLD
+    @A8 @8E @E8 @8A @AE @EE @00 @00 # HLLO
+    @AE @8C @EC @8A @EA @EC @00 @00 # WRLD
   display_data_end:
 display_data_len! :display_data_end :display_data sub @const

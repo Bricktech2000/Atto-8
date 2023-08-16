@@ -73,9 +73,9 @@ main!
     # !hlt
 
   directions:
-    d01 !i4i4
-    d0F !i4i4
-    d10 !i4i4
-    dF0 !i4i4
+    @01 !i4i4
+    @0F !i4i4
+    @10 !i4i4
+    @F0 !i4i4
   directions_end:
 directions_len! :directions_end :directions sub @const

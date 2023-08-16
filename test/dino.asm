@@ -82,10 +82,10 @@ main!
 
   cacti:
   # top bot
-    d04 d05 !u8u8 # ______:.
-    d10 d50 !u8u8 # __.:____
-    d80 d80 !u8u8 # :_______
-    d00 d00 !u8u8 # ________
+    @04 @05 !u8u8 # ______:.
+    @10 @50 !u8u8 # __.:____
+    @80 @80 !u8u8 # :_______
+    @00 @00 !u8u8 # ________
 
   !display_buffer @org
     # !void
@@ -101,25 +101,25 @@ jump_vel! xE8 !i4f4 # upward velocity when jumping
 ground_pos! xB0 !u8f8 # y_pos of the ground
 
 void!
-  d00 d00 d00 d00 d00 d00 d00 d00
-  d00 d00 d00 d00 d00 d00 d00 d00
+  @00 @00 @00 @00 @00 @00 @00 @00
+  @00 @00 @00 @00 @00 @00 @00 @00
 
 planet_and_stars!
-  d01 d08 d60 d08 d60 d36 d04 d08
-  d00 d08 d00 d00 d00 d00 d00 d00
+  @01 @08 @60 @08 @60 @36 @04 @08
+  @00 @08 @00 @00 @00 @00 @00 @00
 
 clouds_and_sun!
-  d70 d0C dFC d1E d00 d1E d03 d0C
-  d07 d80 d00 d00 d00 d00 d00 d00
+  @70 @0C @FC @1E @00 @1E @03 @0C
+  @07 @80 @00 @00 @00 @00 @00 @00
 
 stars_and_moon!
-  d04 d18 d00 d30 d40 d32 d01 d3E
-  d00 d1C d00 d00 d00 d00 d00 d00
+  @04 @18 @00 @30 @40 @32 @01 @3E
+  @00 @1C @00 @00 @00 @00 @00 @00
 
 dark_ground!
-  d00 d00 d00 d00 d00 d00 d00 d00
-  dFF dFF d02 d04 d90 d80 d24 d4A
+  @00 @00 @00 @00 @00 @00 @00 @00
+  @FF @FF @02 @04 @90 @80 @24 @4A
 
 light_ground!
-  d00 d00 d00 d00 d00 d00 d00 d00
-  dFF dFF dFD dFB d6F d7F dDB dB5
+  @00 @00 @00 @00 @00 @00 @00 @00
+  @FF @FF @FD @FB @6F @7F @DB @B5

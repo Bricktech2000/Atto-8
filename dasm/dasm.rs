@@ -98,10 +98,10 @@ fn disassemble(memory: [u8; MEM_SIZE], entry_point: &str) -> String {
 
                     (0xD, 0b11) => format!("buf @dyn"),
 
-                    (0b1110, 0b11) => format!("dBB     "),
+                    (0b1110, 0b11) => format!("@BB     "),
 
                     _ => {
-                      format!("d{:02X}     ", instruction)
+                      format!("@{:02X}     ", instruction)
                     }
                   },
                 }
@@ -156,7 +156,7 @@ fn disassemble(memory: [u8; MEM_SIZE], entry_point: &str) -> String {
                           0xD => format!("pop @dyn"),
 
                           _ => {
-                            format!("d{:02X}     ", instruction)
+                            format!("@{:02X}     ", instruction)
                           }
                         }
                       }
@@ -184,7 +184,7 @@ fn disassemble(memory: [u8; MEM_SIZE], entry_point: &str) -> String {
       })
       .enumerate()
       .zip(memory.iter())
-      .map(|((index, mnemonic), byte)| format!("{} # x{:02X} @org d{:02X}", mnemonic, index, byte))
+      .map(|((index, mnemonic), byte)| format!("{} # x{:02X} @org @{:02X}", mnemonic, index, byte))
       .collect::<Vec<String>>()
       .join("\n")
   )

@@ -111,6 +111,6 @@ main!
     :got_line_feed !jmp
     !user_buffer x10 add @org !puts.min.def
     # "\r\n=AttoMon=\r\n\0"
-    !user_buffer x20 add @org str_AttoMon: d0D d0A d0D d0A d3D d41 d74 d74 d6F d4D d6F d6E d3D d0D d0A d00
+    !user_buffer x20 add @org str_AttoMon: @0D @0A @0D @0A @3D @41 @74 @74 @6F @4D @6F @6E @3D @0D @0A @00
 
 user_buffer! xB0

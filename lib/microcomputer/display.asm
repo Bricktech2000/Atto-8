@@ -93,14 +93,14 @@ print_char.def!
 print_byte.def!
   hex_chars.
   # t m b t m b
-    dEA dEC d4E # 0 1
-    dC4 d6E d6E # 2 3
-    dAE d26 d4C # 4 5
-    d8E dEE d22 # 6 7
-    d6E dEE dE2 # 8 9
-    d4E dAC dEE # A B
-    dE8 dEC dAC # C D
-    dEC dEE dC8 # E F
+    @EA @EC @4E # 0 1
+    @C4 @6E @6E # 2 3
+    @AE @26 @4C # 4 5
+    @8E @EE @22 # 6 7
+    @6E @EE @E2 # 8 9
+    @4E @AC @EE # A B
+    @E8 @EC @AC # C D
+    @EC @EE @C8 # E F
   print_byte: # print_byte(byte, pos)
     ld2 inc .hex_chars ld3 !u4u4.snd :print_char !call
     ld2 .hex_chars ld3 !u4u4.fst :print_char !call
@@ -110,9 +110,9 @@ print_byte.def!
 print_byte.min.def!
   hex_chars.
   # 0 1 2 3 4 5 6 7 8 9 A B C D E F
-    dEC dCE dA6 d8E d6E d4C dEC dEE # top row
-    dA4 d46 dE4 dE2 dEE dEE d8A dCC # middle row
-    dEE d6E d2C dE2 dE2 dAE dEC dE8 # bottom row
+    @EC @CE @A6 @8E @6E @4C @EC @EE # top row
+    @A4 @46 @E4 @E2 @EE @EE @8A @CC # middle row
+    @EE @6E @2C @E2 @E2 @AE @EC @E8 # bottom row
   print_byte.min: clc # print_byte.min(byte, addr)
     # loop through rows
     x03 for_row. dec

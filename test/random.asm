@@ -20,12 +20,12 @@ main!
 
   !print_byte.min.def
 
-  seed: d00
+  seed: @00
 
   !display_buffer @org
-    # dEE dEC dEC dAA d8A dAE # PRNG
-    dE4 dEC dCE dAA dAA dAC # RAND
-    d00 d00 dFF dFF         # ----
-    d00 d00 d00 d00 d00 d00 d00 d00 # (empty lines)
-    # dEA d00 dA4 d00 dEA d00 # 0X
-    d00 d00 d05 d40 # ...
+    # @EE @EC @EC @AA @8A @AE # PRNG
+    @E4 @EC @CE @AA @AA @AC # RAND
+    @00 @00 @FF @FF         # ----
+    @00 @00 @00 @00 @00 @00 @00 @00 # (empty lines)
+    # @EA @00 @A4 @00 @EA @00 # 0X
+    @00 @00 @05 @40 # ...
