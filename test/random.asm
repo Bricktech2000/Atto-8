@@ -20,8 +20,6 @@ main!
 
   !print_byte.min.def
 
-  seed: @00
-
   !display_buffer @org
     # @EE @EC @EC @AA @8A @AE # PRNG
     @E4 @EC @CE @AA @AA @AC # RAND

@@ -13,6 +13,7 @@ main!
   ld10
   #comment
   :label
+  unused:
   !macro
   foobar
   dup: dup:

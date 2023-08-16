@@ -331,9 +331,9 @@ fn assemble(
   errors: &mut Vec<(Pos, Error)>,
   entry_point: &str,
 ) -> Vec<(Pos, Instruction)> {
-  // resolve macros recursively from `entry_point`
+  // resolve macros recursively from `entry_point` and identify unused labels
 
-  use std::collections::HashMap;
+  use std::collections::{HashMap, HashSet};
 
   let mut macro_definitions: HashMap<Macro, Vec<(Pos, Token)>> = HashMap::new();
   let mut current_macro: Option<Macro> = None;
@@ -416,7 +416,7 @@ fn assemble(
               None => {
                 errors.push((
                   token.0.clone(),
-                  Error(format!("Definition for macro `{}` not found", macro_)),
+                  Error(format!("Undefined macro `{}`", macro_)),
                 ));
                 vec![]
               }
@@ -465,10 +465,7 @@ fn assemble(
         Token::AtErr => {
           errors.push((
             token.0.clone(),
-            Error(format!(
-              "`{}` directive encountered during macro expansion",
-              token.1
-            )),
+            Error(format!("`{}` directive encountered", token.1)),
           ));
           vec![]
         }
@@ -476,6 +473,29 @@ fn assemble(
       })
       .collect()
   }
+
+  let label_definitions: HashMap<Label, Pos> = tokens
+    .iter()
+    .filter_map(|token| match &token {
+      (position, Token::LabelDef(label)) => Some((label.clone(), position.clone())),
+      _ => None,
+    })
+    .collect();
+
+  let label_references: HashSet<Label> = tokens
+    .iter()
+    .filter_map(|token| match &token.1 {
+      Token::LabelRef(label) => Some(label.clone()),
+      _ => None,
+    })
+    .collect();
+
+  errors.extend(label_definitions.iter().filter_map(|(label, position)| {
+    (!label_references.contains(label))
+      .then_some((position.clone(), Error(format!("Unused label `{}`", label))))
+  }));
+
+  // turn assembly tokens into roots, an intermediate representation. roots correspond to valid instructions
 
   #[allow(dead_code)]
   fn assert_imm(imm: u8, errors: &mut Vec<(Pos, Error)>, position: &Pos) -> u8 {
@@ -516,8 +536,6 @@ fn assemble(
       }
     }
   }
-
-  // turn assembly tokens into roots, an intermediate representation. roots correspond to valid instructions
 
   #[derive(Clone, Eq, PartialEq)]
   enum Root {
@@ -1267,7 +1285,7 @@ fn assemble(
           Err(label) => {
             errors.push((
               node.0.clone(),
-              Error(format!("Definition for label `{}` not found", label)),
+              Error(format!("Undefined label `{}`", label)),
             ));
             0x00
           }
