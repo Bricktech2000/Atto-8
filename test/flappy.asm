@@ -72,9 +72,9 @@ main!
     :blink !jmp
 
   !display_buffer @org
-  !void
-  !light_ground
-  # !dark ground
+    !void
+    !light_ground
+    # !dark ground
 
 bird_pos! x02 # from left edge of the screen
 y_accel! x01 !i4f4 # gravity

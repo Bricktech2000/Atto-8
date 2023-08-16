@@ -60,50 +60,51 @@ main!
 
   !memcpy.def
 
-  # !glider
-  # !blinker
-  # !r-pentomino
-  # !lightweight_spaceship
-  !heavyweight_spaceship
-  # !copperhead
-  # !diehard
-  # !compact_pulsar
+  !back_buffer @org
+    # !glider
+    # !blinker
+    # !r-pentomino
+    # !lightweight_spaceship
+    !heavyweight_spaceship
+    # !copperhead
+    # !diehard
+    # !compact_pulsar
 
 neighbours_len! :neighbours_end :neighbours sub @const
 back_buffer! xC0 @const
 
 
-blinker!
-  !back_buffer x0C add @org
-  d07 d00
-
 glider!
-  !back_buffer x0C add @org
+  x0C !pad
   d07 d00
   d01 d00
   d02 d00
 
+blinker!
+  x0C !pad
+  d07 d00
+
 diehard!
   # already advanced 2 generations
-  !back_buffer x0C add @org
+  x0C !pad
   d30 d80
   d31 dC0
 
 r-pentomino!
-  !back_buffer x0C add @org
+  x0C !pad
   d06 d00
   d0C d00
   d04 d00
 
 lightweight_spaceship!
-  !back_buffer x0A add @org
+  x0A !pad
   d00 d09
   d00 d10
   d00 d11
   d00 d1E
 
 heavyweight_spaceship!
-  !back_buffer x0A add @org
+  x0A !pad
   d00 d0C
   d00 d21
   d00 d40
@@ -112,13 +113,13 @@ heavyweight_spaceship!
 
 compact_pulsar!
   # pattern that turns into a pulsar
-  !back_buffer x0C add @org
+  x0C !pad
   d07 dC0
   d08 d40
   d07 dC0
 
 copperhead!
-  !back_buffer x08 add @org
+  x08 !pad
   d06 d60
   d01 d80
   d01 d80

@@ -14,7 +14,7 @@ _A minimalist 8-bit microcomputer with stack-based microprocessor_
 - [/emu/](emu/) &mdash; Instruction-level emulator for Atto-8 microcomputer
 - [/mic/](mic/) &mdash; Microcode compiler for Atto-8 microprocessor
 - [/sim/](sim/) &mdash; Cycle-accurate component-level simulator for Atto-8 microcomputer
-- [/circ/](circ/) &mdash; Gate-level logic design for Atto-8 microprocessor and microcomputer
+- [/circ/](circ/) &mdash; Gate-level logic circuit for Atto-8 microprocessor and microcomputer
 - [/test/](test/) &mdash; Test programs and test framework for Atto-8 microcomputer
 - [/misc/](misc/) &mdash; Miscellaneous files
 

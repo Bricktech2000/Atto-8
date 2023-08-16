@@ -24,5 +24,6 @@ rt4! st3 pop pop pop !ret
 
 dbg! dBB # emulator treats unofficial `BB` as debug request
 nop! nop @dyn
-here! lbl. .lbl
+here! .lbl lbl.
 hlt! !here !jmp
+pad! .lbl add lbl. @org

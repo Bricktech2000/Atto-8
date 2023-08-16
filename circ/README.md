@@ -1,3 +1,3 @@
 # Circ
 
-_Gate-level logic design for Atto-8 microprocessor and microcomputer_
+_Gate-level logic circuit for Atto-8 microprocessor and microcomputer_

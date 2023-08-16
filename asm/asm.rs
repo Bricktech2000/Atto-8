@@ -512,8 +512,8 @@ fn assemble(
   #[derive(Clone, Eq, PartialEq)]
   enum Root {
     Instruction(Instruction),
-    Node(Node),
     LabelDef(Label),
+    Node(Node),
     Const,
     Dyn(Option<Instruction>),
     Org(Option<Node>),
@@ -696,6 +696,20 @@ fn assemble(
       [Root::Node(node), Root::Org(None)] => Some(vec![Root::Org(Some(node.clone()))]),
       _ => None,
     });
+    roots = match_replace(&roots, |window| match window {
+      // for `!pad` macro
+      [Root::Node(node), Root::LabelDef(label), Root::Org(None)] => Some(vec![
+        Root::LabelDef(label.clone()),
+        Root::Node(node.clone()),
+        Root::Org(None),
+      ]),
+      [Root::Node(node), Root::LabelDef(label), Root::Const] => Some(vec![
+        Root::Node(node.clone()),
+        Root::Const,
+        Root::LabelDef(label.clone()),
+      ]),
+      _ => None,
+    });
 
     roots = match_replace(&roots, |window| match window {
       [Root::Instruction(Instruction::Nop)] => Some(vec![]),
@@ -730,13 +744,13 @@ fn assemble(
           Some(vec![Root::Instruction(Instruction::Dec)])
         }
         [Root::Node(node), Root::Instruction(Instruction::Inc)] => Some(vec![Root::Node(
-          Node::Add(Box::new(Node::Value(1)), Box::new(node.clone())),
+          Node::Add(Box::new(Node::Value(0x01)), Box::new(node.clone())),
         )]),
         [Root::Node(node), Root::Instruction(Instruction::Dec)] => Some(vec![Root::Node(
-          Node::Sub(Box::new(Node::Value(1)), Box::new(node.clone())),
+          Node::Sub(Box::new(Node::Value(0x01)), Box::new(node.clone())),
         )]),
         [Root::Node(node), Root::Instruction(Instruction::Neg)] => Some(vec![Root::Node(
-          Node::Sub(Box::new(node.clone()), Box::new(Node::Value(0))),
+          Node::Sub(Box::new(node.clone()), Box::new(Node::Value(0x00))),
         )]),
         [Root::Instruction(Instruction::Neg), Root::Instruction(Instruction::Neg)] => Some(vec![]),
         [Root::Node(node), Root::Instruction(Instruction::Shl)] => {
