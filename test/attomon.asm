@@ -64,9 +64,7 @@ main!
 
   # print `buffer` followed by a space and fall through
   buffer_print:
-    x00 for_n:
-      x04 ro4 ld3 x0F and clc !u4.to_char !putc
-    not :for_n !bcc pop
+    ld2 !u8.to_chars !putc !putc
     !char.space
 
   # print the character at the top of the stack and fall through

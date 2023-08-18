@@ -30,6 +30,27 @@ popcnt! # count = popcnt(a)
   # return* count
   st0
 
+sort.def!
+  sort: clc # sort(len, arr)
+    # bubble sort, in-place
+    x01 while. dec # swapped = false
+      ld2 dec for_i. dec
+        ld4 ld1 add # push pointer
+          # if not in order, swap
+          ld0 !u8u8.lda swp sub pop
+          .continue !bcc
+            ld0 !u8u8.lda
+            ld2 !u8u8.sta
+            # swapped = true
+            x01 st2
+          continue.
+        pop # pop pointer
+      buf .for_i !bcc pop
+    # break if not swapped
+    buf .while !bcc pop
+  # return*
+  !rt2
+
 # `free` solely sets the `is_free` bit of the corresponding header
 # `malloc` searches linearly from `HEAP_START` and coalesces free blocks as it goes
 #

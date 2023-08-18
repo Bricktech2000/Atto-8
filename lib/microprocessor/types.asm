@@ -1721,10 +1721,14 @@ c8f8m8f8.mul! # c8f8m8f8 product = c8f8m8f8.mul(c8f8m8f8 a, c8f8m8f8 b)
 c4f4m4f4.norm! !i4f4.ld1 !i4f4.ld0 !i4f4.mul !i4f4.st1 !i4f4.ld0 !i4f4.mul !i4f4.add # i4f4 norm = c4f4m4f4.norm(c4f4m4f4 c)
 c8f8m8f8.norm! !i8f8.ld1 !i8f8.ld0 !i8f8.mul !i8f8.st1 !i8f8.ld0 !i8f8.mul !i4f4.add # i8f8 norm = c8f8m8f8.norm(c8f8m8f8 c)
 
-# converts `0x0..==0xF` to `'0'..='9', 'A'..='F'`. undefined for other values
+# converts `0x0..=0xF` to `'0'..='9', 'A'..='F'`. undefined for other values
 u4.to_char! x0A sub @dyn x41 @const x0A x30 add dec @const iff add
 # converts `'0'..='9', 'A'..='F'` to `0x0..=0xF`. undefined for other values
 char.to_u4! x41 sub @dyn x0A @const x41 x30 sub dec @const iff add
+# converts `0x00..=0xFF` to `'00'..='FF'`
+u8.to_chars! ld0 x0F and clc !u4.to_char swp xF0 and x04 rot !u4.to_char
+# converts `'00'..='FF'` to `0x00..=0xFF`
+chars.to_u8! @err # to be implemented
 
 u8.mul.def!
   u8.mul: clc # u16 product = u8.mul(u8 a, u8 b)
