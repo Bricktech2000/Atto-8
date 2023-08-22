@@ -22,7 +22,7 @@ main!
   x88 !u4u4 # (cx, cy)
   x00 !u8 # r
 
-  # pop previous controller input and fall through 
+  # pop previous controller state and fall through
   loop:
     # clear display then draw circle
     !display_buffer_len x00 !display_buffer :memset !call

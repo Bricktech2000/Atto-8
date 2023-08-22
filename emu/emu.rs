@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() != 2 {
@@ -23,8 +25,6 @@ fn main() {
 
   let mc = Microcomputer {
     mem: memory_image,
-    stdin: 0x00,
-    stdout: 0x00,
     mp: Microprocessor {
       ip: 0x00,
       sp: 0x00,
@@ -36,11 +36,10 @@ fn main() {
 }
 
 const MEM_SIZE: usize = 0x100;
+const DISPLAY_BUFFER: u8 = 0xE0;
 
 struct Microcomputer {
   mem: [u8; MEM_SIZE], // memory
-  stdin: u8,           // standard input
-  stdout: u8,          // standard output
   mp: Microprocessor,  // microprocessor
 }
 
@@ -58,30 +57,26 @@ enum TickTrap {
 }
 
 fn emulate(mut mc: Microcomputer, clock_speed: u128) {
-  use std::collections::VecDeque;
-
   let mut start_time = std::time::Instant::now();
   let mut next_print_time = std::time::Instant::now();
   let mut current_clocks = 0;
   let mut status_line = "".to_string();
-  let mut stdout_string = "".to_string();
-  let mut stdin_queue = VecDeque::new();
-  let mut controller_input = [None; 8];
   let mut debug_mode = false;
   let mut show_state = false;
+  let mut stdin = VecDeque::from([mc.mem[0x00]]);
+  let mut stdout = VecDeque::new();
+  let mut display = [0x00; 0x20];
+  let mut controller = [None; 8];
 
   // this call will switch the termital to raw mode
   let input_channel = spawn_input_channel();
-
-  mc.stdin = mc.mem[0x00];
-  mc.mem[0x00] = 0x00; // controller input
 
   loop {
     if debug_mode {
       'until_valid: loop {
         match input_channel.recv() {
           Ok(console::Key::Del) => {
-            stdout_string = "".to_string();
+            stdout = VecDeque::new();
             break 'until_valid;
           }
 
@@ -107,7 +102,7 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
     use std::sync::mpsc::TryRecvError;
     match input_channel.try_recv() {
       Ok(console::Key::Del) => {
-        stdout_string = "".to_string();
+        stdout = VecDeque::new();
       }
 
       Ok(console::Key::Tab) => {
@@ -131,16 +126,16 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
           console::Key::End,
         ];
 
-        controller_input = keys
+        controller = keys
           .iter()
           .map(|k| (k == &key).then_some(std::time::Instant::now()))
-          .zip(controller_input.iter())
+          .zip(controller.iter())
           .map(|(next, curr)| next.or(*curr))
           .collect::<Vec<_>>()
           .try_into()
           .unwrap();
 
-        stdin_queue.push_back(match key {
+        stdin.push_back(match key {
           console::Key::Char(c) => c as u8,
           console::Key::Backspace => 0x08,
           console::Key::Enter => 0x0A,
@@ -154,29 +149,14 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
       Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
     }
 
-    match tick(&mut mc) {
-      Ok(clocks) => {
-        current_clocks += clocks;
-      }
-      Err(tick_trap) => {
-        debug_mode = true;
-        status_line = match tick_trap {
-          TickTrap::MicrocodeFault => format!("Microcode fault"),
-          TickTrap::IllegalOpcode => format!("Illegal opcode"),
-          TickTrap::DebugRequest => format!("Debug request"),
-        }
-      }
-    };
-
     let timestamp_threshold = std::time::Duration::from_millis(200);
-    controller_input = controller_input
+    controller = controller
       .iter()
       .map(|timestamp| timestamp.and_then(|t| (t.elapsed() < timestamp_threshold).then_some(t)))
       .collect::<Vec<_>>()
       .try_into()
       .unwrap();
-
-    mc.mem[0x00] = controller_input
+    let controller = controller
       .iter()
       .enumerate()
       .fold(0x00, |acc, (index, timestamp)| {
@@ -201,16 +181,19 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
       };
     }
 
-    // was stdout written to?
-    if mc.stdout != 0x00 {
-      stdout_string.push(mc.stdout as char);
-      mc.stdout = 0x00;
-    }
-
-    // was stdin read from?
-    if mc.stdin == 0x00 {
-      mc.stdin = stdin_queue.pop_front().unwrap_or(0x00);
-    }
+    match tick(&mut mc, &mut stdin, &mut stdout, &mut display, &controller) {
+      Ok(clocks) => {
+        current_clocks += clocks;
+      }
+      Err(tick_trap) => {
+        debug_mode = true;
+        status_line = match tick_trap {
+          TickTrap::MicrocodeFault => format!("Microcode fault"),
+          TickTrap::IllegalOpcode => format!("Illegal opcode"),
+          TickTrap::DebugRequest => format!("Debug request"),
+        }
+      }
+    };
 
     // print at most 30 times per second
     if next_print_time <= std::time::Instant::now() || debug_mode {
@@ -225,33 +208,32 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
       } else {
         print!(
           "{}\r\n{}",
-          render_display_buffer(&mc.mem[0xE0..0x100].try_into().unwrap()),
-          render_controller_input(&mc.mem[0x00..0x01].try_into().unwrap())
+          render_display(&display),
+          render_controller(&controller)
         );
       }
       print!("\r\n");
-      print!("{}", stdout_string);
+      print!("{}", stdout.iter().map(|c| *c as char).collect::<String>());
       use std::io::Write;
       std::io::stdout().flush().unwrap();
     }
   }
 }
 
-fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
+fn tick(
+  mc: &mut Microcomputer,
+  stdin: &mut VecDeque<u8>,
+  stdout: &mut VecDeque<u8>,
+  display: &mut [u8; 0x20],
+  controller: &u8,
+) -> Result<u128, TickTrap> {
   let mp = &mut mc.mp;
 
   macro_rules! mem_read {
     ($address:expr) => {{
       let address = $address;
       if address == 0x00 {
-        // was stdin written to?
-        if mc.stdin != 0x00 {
-          let stdin = mc.stdin;
-          mc.stdin = 0x00;
-          stdin
-        } else {
-          mc.mem[0x00] // controller input
-        }
+        stdin.pop_front().unwrap_or(*controller)
       } else {
         mc.mem[address as usize]
       }
@@ -263,15 +245,12 @@ fn tick(mc: &mut Microcomputer) -> Result<u128, TickTrap> {
       let address = $address;
       let value = $value;
       if address == 0x00 {
-        // was stdout read from?
-        if mc.stdout == 0x00 {
-          mc.stdout = value;
-        } else {
-          panic!("attempt to write to `stdout` more than once within one tick");
-        }
-      } else {
-        mc.mem[address as usize] = value;
+        stdout.push_back(value);
       }
+      if address & DISPLAY_BUFFER == DISPLAY_BUFFER {
+        display[(address & !DISPLAY_BUFFER) as usize] = value
+      }
+      mc.mem[address as usize] = value;
     }};
   }
 
@@ -579,11 +558,9 @@ impl std::fmt::Display for Microcomputer {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(
       f,
-      "{}\r\n{}\r\n{}\r\n{}",
+      "{}\r\n{}",
       self.mp,
       render_memory(&self.mem, self.mp.ip, self.mp.sp, self.mp.cf),
-      render_display_buffer(self.mem[0xE0..0x100].try_into().unwrap()),
-      render_controller_input(self.mem[0x00..0x01].try_into().unwrap())
     )
   }
 }
@@ -644,7 +621,7 @@ fn render_memory(memory: &[u8; MEM_SIZE], ip: u8, sp: u8, cf: bool) -> String {
   fmt
 }
 
-fn render_display_buffer(display_buffer: &[u8; 0x20]) -> String {
+fn render_display(display: &[u8; 0x20]) -> String {
   let mut fmt = "".to_string();
 
   // https://en.wikipedia.org/wiki/Block_Elements
@@ -660,7 +637,7 @@ fn render_display_buffer(display_buffer: &[u8; 0x20]) -> String {
       let mut pixel_pair = 0;
       for y2 in 0..2 {
         let address: u8 = (x >> 0x03) | ((y + y2) << 0x01);
-        let pixel = display_buffer[address as usize] >> (0x07 - (x & 0x07)) & 0x01;
+        let pixel = display[address as usize] >> (0x07 - (x & 0x07)) & 0x01;
         pixel_pair |= pixel << y2;
       }
       fmt += match pixel_pair {
@@ -681,11 +658,11 @@ fn render_display_buffer(display_buffer: &[u8; 0x20]) -> String {
   fmt
 }
 
-fn render_controller_input(controller_input: &[u8; 0x01]) -> String {
+fn render_controller(controller: &u8) -> String {
   let mut fmt = "".to_string();
 
-  fn bit_to_str(controller_input: &[u8; 0x01], bit: u8) -> &'static str {
-    match controller_input[0x00] >> bit & 0x01 {
+  fn bit_to_str(controller: &u8, bit: u8) -> &'static str {
+    match controller >> bit & 0x01 {
       0b0 => "\u{2591}\u{2591}",
       0b1 => "\u{2588}\u{2588}",
       _ => unreachable!(),
@@ -694,20 +671,20 @@ fn render_controller_input(controller_input: &[u8; 0x01]) -> String {
 
   fmt += &format!(
     "    {}      {}    \r\n",
-    bit_to_str(controller_input, 0),
-    bit_to_str(controller_input, 4),
+    bit_to_str(controller, 0),
+    bit_to_str(controller, 4),
   );
   fmt += &format!(
     "  {}  {}  {}  {}  \r\n",
-    bit_to_str(controller_input, 2),
-    bit_to_str(controller_input, 3),
-    bit_to_str(controller_input, 6),
-    bit_to_str(controller_input, 7),
+    bit_to_str(controller, 2),
+    bit_to_str(controller, 3),
+    bit_to_str(controller, 6),
+    bit_to_str(controller, 7),
   );
   fmt += &format!(
     "    {}      {}    \r\n",
-    bit_to_str(controller_input, 1),
-    bit_to_str(controller_input, 5),
+    bit_to_str(controller, 1),
+    bit_to_str(controller, 5),
   );
 
   fmt

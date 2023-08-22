@@ -16,7 +16,7 @@ The emulator sends most characters received from `stdin` to the Atto-8's standar
 - `Tab` &mdash; Toggle displaying machine state.
 - `Escape` &mdash; Forcefully enter debug mode.
 
-## Controller Input
+## Controller
 
 The Atto-8 microcomputer is equipped with a pair of D-pad controllers. The emulator reads input from `stdin` and maps it to the following controller buttons:
 

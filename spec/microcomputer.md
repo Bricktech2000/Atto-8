@@ -43,7 +43,7 @@ The Atto-8 is equipped with a 16x16 pixel monochrome display. It fetches rows of
 
 The display buffer behaves as any other memory region and can therefore both be read from and written to by a program.
 
-## Controller Input
+## Controller
 
 The Atto-8 is equipped with a pair of memory-mapped 4-button D-pad controllers. If `stdin` is empty, reading from the _input buffer_, a byte located at address `0x00`, will fall back to returning controller states. In that event, the lower 4 bits of the input buffer represent the state of the buttons on the primary controller, and its upper 4 bits represent the state of the buttons on the secondary controller. It is bit-mapped as follows, where `0` represents the least significant bit:
 
