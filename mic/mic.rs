@@ -8,7 +8,7 @@ fn main() {
   let mut errors: Vec<Error> = vec![];
   let microcode_image_file: &String = &args[1];
 
-  let microcode_image = compile_microcode(&mut errors);
+  let microcode_image = build_microcode(&mut errors);
 
   match errors[..] {
     [] => {
@@ -88,7 +88,7 @@ enum Signal {
 
 struct Error(String);
 
-fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
+fn build_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
   // sets specified fields to `true` and wraps to ensure compatibility with `seq!`
   macro_rules! ControlWord {
     ($($field:ident),*) => {
@@ -113,7 +113,6 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
     seq
   }
 
-  // TODO document why every instruction must end with YL = 0x00
   // TODO document sum_data && ofst_and_cf is sum_data && cout_cf
   // TODO document nand_data && ofst_and_cf is nand_data && zero_cf
   // TODO document sum_data && size_and_cin is sum_data && cin
@@ -171,7 +170,6 @@ fn compile_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
   let ip_mem = ControlWord! {ip_data, data_mem};
   let clr_sc = ControlWord! {clr_sc};
 
-  // TODO assumes YL = 0x00
   let fetch = seq![ip_alxl, cinsum_ip, mem_ilzl];
   let clr_yl = seq![set_ylzl, nand_yl];
   let psh = seq![

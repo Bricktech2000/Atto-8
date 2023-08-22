@@ -30,9 +30,9 @@ python3 test.py flappy.asm asm dasm pop
 # assemble source code, disassemble binary, assemble disassembly, emulate resulting binary
 python3 test.py life.asm asm dasm asm emu
 
-# assemble source code, emulate binary. assemble source code, compile microcode, simulate binary with microcode
+# assemble source code, emulate binary. assemble source code, build microcode, simulate binary with microcode
 python3 test.py ctf.asm asm emu ctf.asm asm mic sim
 
-# encode from hex, disassemble binary, assemble disassembly, compile microcode, simulate resulting binary with microcode
+# encode from hex, disassemble binary, assemble disassembly, build microcode, simulate resulting binary with microcode
 python3 test.py checkerboard.hex enc dasm asm mic circ
 ```
