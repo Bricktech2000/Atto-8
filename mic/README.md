@@ -4,7 +4,7 @@ _Microcode builder for Atto-8 microprocessor_
 
 ## Overview
 
-The microcode builder is a tool for generating microcode for the Atto-8 microprocessor. It outputs a microcode image file to `argv[1]` which is exactly `0x2000` bytes in size. The microcode builder adheres to the Atto-8 microcomputer specification as defined in [/spec/microcomputer.md](../spec/microcomputer.md).
+The microcode builder is a tool for generating microcode for the Atto-8 microprocessor. It outputs a microcode image file to `argv[1]` which is exactly `0x2000` bytes in size. The microcode builder adheres to the Atto-8 microprocessor specification as defined in [/spec/microprocessor.md](../spec/microprocessor.md).
 
 ## Conventions
 

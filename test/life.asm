@@ -1,7 +1,7 @@
-@ lib/microprocessor/core.asm
-@ lib/microprocessor/types.asm
-@ lib/microprocessor/string.asm
-@ lib/microcomputer/display.asm
+@ lib/core.asm
+@ lib/types.asm
+@ lib/string.asm
+@ lib/display.asm
 
 # to count neighbours, display buffer is read from and back buffer is written to.
 # back buffer is copied to display buffer at the end of each iteration.

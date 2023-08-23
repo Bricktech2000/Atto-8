@@ -1,6 +1,6 @@
 # Circ
 
-_Gate-level circuit design for Atto-8 microprocessor and microcomputer_
+_Gate-level circuit design for Atto-8 microcomputer_
 
 ## Overview
 

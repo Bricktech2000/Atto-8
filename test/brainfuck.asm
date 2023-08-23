@@ -1,7 +1,7 @@
-@ lib/microprocessor/core.asm
-@ lib/microprocessor/types.asm
-@ lib/microprocessor/string.asm
-@ lib/microcomputer/stdio.asm
+@ lib/core.asm
+@ lib/types.asm
+@ lib/string.asm
+@ lib/stdio.asm
 
 # - `+[>,.<]` pipes stdin to stdout
 # - `+++++++.` sends a bell to stdout

@@ -1,8 +1,8 @@
-@ lib/microprocessor/core.asm
-@ lib/microprocessor/types.asm
-@ lib/microprocessor/stdlib.asm
-@ lib/microcomputer/stdio.asm
-@ lib/microcomputer/display.asm
+@ lib/core.asm
+@ lib/types.asm
+@ lib/stdlib.asm
+@ lib/stdio.asm
+@ lib/display.asm
 
 # a few bytes short, but was working before removing `adn`s and having to add `clc`s.
 # has always been missing `!delay` call

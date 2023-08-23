@@ -1,10 +1,10 @@
 # Asm
 
-_Optimizing assembler for Atto-8 microprocessor_
+_Optimizing assembler for Atto-8 microarchitecture_
 
 ## Overview
 
-The assembler loads an assembly file from `argv[1]` and outputs a memory image file to `argv[2]` which is exactly `0x100` bytes in size. Code generation adheres to microprocessor specification as defined in [/spec/microprocessor.md](../spec/microprocessor.md).
+The assembler loads an assembly file from `argv[1]` and outputs a memory image file to `argv[2]` which is exactly `0x100` bytes in size. Code generation adheres to microarchitecture specification as defined in [/spec/microarchitecture.md](../spec/microarchitecture.md).
 
 Assembly consists of the following process:
 
@@ -39,38 +39,38 @@ Labels are global by default; local labels are local to a macro. Macros are glob
 | `@err`   | Emit error and terminate compilation              |
 | `@DD`    | Insert `DD` into binary at current address        |
 | `xXX`    | Push hexadecimal `XX` through `psh` and `phn`     |
-| `add`    | Instruction `add 0x01`                            |
-| `adS`    | Instruction `add S`                               |
-| `sub`    | Instruction `sub 0x01`                            |
-| `suS`    | Instruction `sub S`                               |
-| `iff`    | Instruction `iff 0x01`                            |
-| `ifS`    | Instruction `iff S`                               |
-| `rot`    | Instruction `rot 0x01`                            |
-| `roS`    | Instruction `rot S`                               |
-| `orr`    | Instruction `orr 0x01`                            |
-| `orS`    | Instruction `orr S`                               |
-| `and`    | Instruction `and 0x01`                            |
-| `anS`    | Instruction `and S`                               |
-| `xor`    | Instruction `xor 0x01`                            |
-| `xoS`    | Instruction `xor S`                               |
-| `xnd`    | Instruction `xnd 0x01`                            |
-| `xnS`    | Instruction `xnd S`                               |
-| `inc`    | Instruction `inc`                                 |
-| `dec`    | Instruction `dec`                                 |
-| `neg`    | Instruction `neg`                                 |
-| `not`    | Instruction `not`                                 |
-| `buf`    | Instruction `buf`                                 |
-| `ldO`    | Instruction `ldo O`                               |
-| `stO`    | Instruction `sto O`                               |
-| `lda`    | Instruction `lda`                                 |
-| `sta`    | Instruction `sta`                                 |
-| `ldi`    | Instruction `ldi`                                 |
-| `sti`    | Instruction `sti`                                 |
-| `lds`    | Instruction `lds`                                 |
-| `sts`    | Instruction `sts`                                 |
-| `nop`    | Instruction `nop`                                 |
-| `clc`    | Instruction `clc`                                 |
-| `sec`    | Instruction `sec`                                 |
-| `flc`    | Instruction `flc`                                 |
-| `swp`    | Instruction `swp`                                 |
-| `pop`    | Instruction `pop`                                 |
+| `add`    | Emit instruction `add 0x01`                       |
+| `adS`    | Emit instruction `add S`                          |
+| `sub`    | Emit instruction `sub 0x01`                       |
+| `suS`    | Emit instruction `sub S`                          |
+| `iff`    | Emit instruction `iff 0x01`                       |
+| `ifS`    | Emit instruction `iff S`                          |
+| `rot`    | Emit instruction `rot 0x01`                       |
+| `roS`    | Emit instruction `rot S`                          |
+| `orr`    | Emit instruction `orr 0x01`                       |
+| `orS`    | Emit instruction `orr S`                          |
+| `and`    | Emit instruction `and 0x01`                       |
+| `anS`    | Emit instruction `and S`                          |
+| `xor`    | Emit instruction `xor 0x01`                       |
+| `xoS`    | Emit instruction `xor S`                          |
+| `xnd`    | Emit instruction `xnd 0x01`                       |
+| `xnS`    | Emit instruction `xnd S`                          |
+| `inc`    | Emit instruction `inc`                            |
+| `dec`    | Emit instruction `dec`                            |
+| `neg`    | Emit instruction `neg`                            |
+| `not`    | Emit instruction `not`                            |
+| `buf`    | Emit instruction `buf`                            |
+| `ldO`    | Emit instruction `ldo O`                          |
+| `stO`    | Emit instruction `sto O`                          |
+| `lda`    | Emit instruction `lda`                            |
+| `sta`    | Emit instruction `sta`                            |
+| `ldi`    | Emit instruction `ldi`                            |
+| `sti`    | Emit instruction `sti`                            |
+| `lds`    | Emit instruction `lds`                            |
+| `sts`    | Emit instruction `sts`                            |
+| `nop`    | Emit instruction `nop`                            |
+| `clc`    | Emit instruction `clc`                            |
+| `sec`    | Emit instruction `sec`                            |
+| `flc`    | Emit instruction `flc`                            |
+| `swp`    | Emit instruction `swp`                            |
+| `pop`    | Emit instruction `pop`                            |

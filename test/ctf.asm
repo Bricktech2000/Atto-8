@@ -1,9 +1,9 @@
-@ lib/microprocessor/core.asm
-@ lib/microprocessor/types.asm
-@ lib/microprocessor/string.asm
-@ lib/microprocessor/stdlib.asm
-@ lib/microcomputer/display.asm
-@ lib/microcomputer/stdio.asm
+@ lib/core.asm
+@ lib/types.asm
+@ lib/string.asm
+@ lib/stdlib.asm
+@ lib/stdio.asm
+@ lib/display.asm
 
 # Challenge Description
 # ---------------------

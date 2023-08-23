@@ -1,7 +1,7 @@
-@ lib/microprocessor/core.asm
-@ lib/microprocessor/types.asm
-@ lib/microprocessor/stdlib.asm
-@ lib/microcomputer/stdio.asm
+@ lib/core.asm
+@ lib/types.asm
+@ lib/stdlib.asm
+@ lib/stdio.asm
 
 # AttoMon, the Atto-8 hex monitor
 #

@@ -6,15 +6,15 @@ _A minimalist 8-bit microcomputer with stack-based microprocessor_
 
 ## Repository Structure
 
-- [/spec/](spec/) &mdash; Specification for Atto-8 microprocessor and microcomputer
-- [/lib/](lib/) &mdash; Assembly standard library for Atto-8 microprocessor and microcomputer
-- [/enc/](enc/) &mdash; Hex-to-machine-code encoder for Atto-8 microprocessor
-- [/asm/](asm/) &mdash; Optimizing assembler for Atto-8 microprocessor
-- [/dasm/](dasm/) &mdash; Elementary disassembler for Atto-8 microprocessor
+- [/spec/](spec/) &mdash; Specification for Atto-8 microarchitecture, microprocessor and microcomputer
+- [/lib/](lib/) &mdash; Assembly standard library for Atto-8 microcomputer
+- [/enc/](enc/) &mdash; Hex-to-machine-code encoder for Atto-8 microarchitecture
+- [/asm/](asm/) &mdash; Optimizing assembler for Atto-8 microarchitecture
+- [/dasm/](dasm/) &mdash; Elementary disassembler for Atto-8 microarchitecture
 - [/emu/](emu/) &mdash; Instruction-level emulator for Atto-8 microcomputer
 - [/mic/](mic/) &mdash; Microcode builder for Atto-8 microprocessor
 - [/sim/](sim/) &mdash; Cycle-accurate component-level simulator for Atto-8 microcomputer
-- [/circ/](circ/) &mdash; Gate-level circuit design for Atto-8 microprocessor and microcomputer
+- [/circ/](circ/) &mdash; Gate-level circuit design for Atto-8 microcomputer
 - [/test/](test/) &mdash; Test programs and test framework for Atto-8 microcomputer
 - [/misc/](misc/) &mdash; Miscellaneous files
 

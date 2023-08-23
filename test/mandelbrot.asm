@@ -1,6 +1,6 @@
-@ lib/microprocessor/core.asm
-@ lib/microprocessor/types.asm
-@ lib/microcomputer/display.asm
+@ lib/core.asm
+@ lib/types.asm
+@ lib/display.asm
 
 # using display buffer as extra memory. missing `size` and `pos` from C implementation
 

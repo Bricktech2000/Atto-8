@@ -2,107 +2,108 @@
 
 ## Overview
 
-The Atto-8 microprocessor is a minimalist stack-based processor with 8-bit data and address buses. It is designed to be simple enough to be realistically built from discrete logic gates, but powerful enough to run useful programs. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex processors.
+The Atto-8 microprocessor is a minimalist stack-based processor implementing the Atto-8 microarchitecture as defined in [/spec/microarchitecture.md](../spec/microarchitecture.md). It is designed to keep logic IC count to a minimum while still being a complete implementation of the Atto-8 microarchitecture, only consisting of one full adder, one NAND gate and a few latches. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex processors.
 
-## Features
+![Atto-8 Microprocessor Diagram](../misc/assets/microprocessor.png)
 
-- 8-bit data bus
-- 8-bit address bus
-- 8-bit instruction size
-- 8-bit special-purpose registers
-- 0 general-purpose registers
-- 0 internal oscillators
-- 0 hardware timers
-- 0 memory banks
-- 0 interrupts
-- 0 I/O ports
+## Components
 
-## Registers and Flags
+The major components of the Atto-8 microprocessor are stateful. Stateful components are as follows:
 
-| Item | Description         | Size   |
-| ---- | ------------------- | ------ |
-| `IP` | Instruction Pointer | 8 bits |
-| `SP` | Stack Pointer       | 8 bits |
-| `CF` | Carry Flag          | 1 bit  |
+| Component | Name                | Size   | Description                                                    |
+| --------- | ------------------- | ------ | -------------------------------------------------------------- |
+| `IP`      | Instruction Pointer | 8 bits | See [/spec/microarchitecture.md](../spec/microarchitecture.md) |
+| `SP`      | Stack Pointer       | 8 bits | See [/spec/microarchitecture.md](../spec/microarchitecture.md) |
+| `CF`      | Carry Flag          | 1 bit  | See [/spec/microarchitecture.md](../spec/microarchitecture.md) |
+| `IL`      | Instruction Latch   | 8 bits | Stores the opcode for the instruction currently being executed |
+| `SC`      | Step Counter        | 5 bits | Counts microcode steps within an instruction                   |
+| `AL`      | Address Latch       | 8 bits | Latches a value from `DATA` and outputs to `ADDR`              |
+| `XL`      | X Latch             | 8 bits | Latches a value from `DATA` and produces derivations           |
+| `YL`      | Y Latch             | 8 bits | Latches a value from `DATA` and produces derivations           |
+| `ZL`      | Z Latch             | 8 bits | Latches a value from `DATA` and produces derivations           |
 
-`IP` is a pointer to the instruction being executed in memory. Writing to `IP` through `sti` will cause the processor to jump to the specified address. `IP` is incremented after the execution of each instruction.
+Derivations on the Atto-8 microprocessor are stateless components that derive their output continuously from other components. Derivations are as follows:
 
-`SP` is a pointer to the item at top of the stack, which grows downward. Writing to `SP` through `sts` while the stack is empty will move the location of the stack in memory. Instructions increment or decrement `SP` as needed.
+| Component   | Name                               | Size    | Description                                                 |
+| ----------- | ---------------------------------- | ------- | ----------------------------------------------------------- |
+| `CTRL`      | Control Word Derivation            | 16 bits | Turns the output of `MIC` into control signals              |
+| `SIZE_DATA` | Size-to-Data Derivation            | 1 bit   | Computed using `SIZE_AND_CIN` and `SUM_DATA`                |
+| `OFST_DATA` | Offset-to-Data Derivation          | 1 bit   | Computed using `OFST_AND_CF` and `SUM_DATA` and `NAND_DATA` |
+| `SET_CIN`   | Set-to-Carry-In Derivation         | 1 bit   | Computed using `SIZE_AND_CIN` and `SUM_DATA`                |
+| `COUT_CF`   | Carry-Out-to-Carry-Flag Derivation | 1 bit   | Computed using `OFST_AND_CF` and `SUM_DATA` and `NAND_DATA` |
+| `ZERO_CF`   | Zero-to-Carry-Flag Derivation      | 1 bit   | Computed using `OFST_AND_CF` and `SUM_DATA` and `NAND_DATA` |
+| `ONES_DATA` | Ones-to-Data Derivation            | 1 bit   | Computed using all control signals ending in `_DATA`        |
+| `ONES`      | Ones Derivation                    | 8 bits  | Outputs `0xFF` to `DATA` when `DATA` is floating            |
+| `SIZE`      | Size Derivation                    | 8 bits  | Computes the `SIZE` operand from `IL`                       |
+| `OFST`      | Offset Derivation                  | 8 bits  | Computes the `OFST` operand from `IL`                       |
+| `SUM`       | Sum Derivation                     | 8 bits  | Computes the sum of `XL` and `YL`                           |
+| `NAND`      | Not-And Derivation                 | 8 bits  | Computes the not-and of `YL` and `ZL`                       |
+| `CIN`       | `SUM` Carry-In Derivation          | 1 bit   | Outputs to `SUM` carry in                                   |
+| `COUT`      | `SUM` Carry-Out Derivation         | 1 bit   | Computes `SUM` carry out                                    |
+| `ZERO`      | `NAND` Is-Zero Derivation          | 1 bit   | Computes `NAND` is-zero flag                                |
+| `MIC`       | Microcode Derivation               | 16 bits | Computes microcode step from `IL`, `CF` and `SC`            |
 
-`CF` is a one-bit status flag shared by many instructions. As a rule of thumb:
+## Control Word
 
-- `CF` is set by `sec`, cleared by `clc` and flipped by `flc`. `CF` is cleared by `rot`.
-- `CF` is set when a logical operation (`orr`, `and`, `xor`, `xnd`, `not`, `buf`) results in `0x00` and cleared otherwise.
-- `CF` is set when an arithmetic operation (`add`, `sub`, `shl`, `shr`) overflows or underflows and cleared otherwise.
-- `CF` is used as carry-in for arithmetic operations (`add`, `sub`, `shl`, `shr`).
-- `CF` is used as the condition operand for the conditional instruction `iff`.
+The control word is a 16-bit natural number output from `MIC`, the microcode ROM. Control signals are bit-mapped into the control word as follows, where `0x0` represents the least significant bit:
+
+| Bit   | Control Signal | Name                            |
+| ----- | -------------- | ------------------------------- |
+| `0xF` | `CLR_SC`       | Clear to Step Counter           |
+| `0xE` | `DATA_IL`      | Data Bus to Instruction Latch   |
+| `0xD` | `SIZE_AND_CIN` | Size and Carry In               |
+| `0xC` | `OFST_AND_CF`  | Offset and Carry Flag           |
+| `0xB` | `IP_DATA`      | Instruction Pointer to Data Bus |
+| `0xA` | `DATA_IP`      | Data Bus to Instruction Pointer |
+| `0x9` | `SP_DATA`      | Stack Pointer to Data Bus       |
+| `0x8` | `DATA_SP`      | Data Bus to Stack Pointer       |
+| `0x7` | `DATA_AL`      | Data Bus to Address Latch       |
+| `0x6` | `MEM_DATA`     | Data Bus to Memory              |
+| `0x5` | `DATA_MEM`     | Memory to Data Bus              |
+| `0x4` | `DATA_XL`      | Data Bus to X Latch             |
+| `0x3` | `DATA_YL`      | Data Bus to Y Latch             |
+| `0x2` | `DATA_ZL`      | Data Bus to Z Latch             |
+| `0x1` | `SUM_DATA`     | Sum to Data Bus                 |
+| `0x0` | `NAND_DATA`    | Not-And to Data Bus             |
+
+The control signals `SIZE_AND_CIN` and `OFST_AND_CF` are not directly used as control signals; rather, they produce derivations, which are then used as control signals. This mechanism allows the control word to be no more than 16 bits wide, reducing complexity.
 
 ## Instruction Set
 
-All instructions are 8 bits in length and most operands are sourced from the stack. The processor assumes it can address memory of the shape `[u8; 0x100]`. The `*` operator dereferences values from said memory.
+The instruction set of the Atto-8 microprocessor adheres to the Atto-8 microarchitecture as defined in [/spec/microarchitecture.md](../spec/microarchitecture.md). Instruction clock cycle counts are detailed below.
+
+| Instruction | Clocks  |
+| ----------- | ------- |
+| `psh IMM`   | `10`    |
+| `add SIZE`  | `16`    |
+| `sub SIZE`  | `16`    |
+| `iff SIZE`  | `15`    |
+| `rot SIZE`  | &mdash; |
+| `orr SIZE`  | `16`    |
+| `and SIZE`  | `13`    |
+| `xor SIZE`  | `24`    |
+| `xnd SIZE`  | `9`     |
+| `inc`       | `6`     |
+| `dec`       | `8`     |
+| `neg`       | `11`    |
+| `shl`       | `9`     |
+| `shr`       | `16`    |
+| `not`       | `8`     |
+| `buf`       | `9`     |
+| `ldo OFST`  | `14`    |
+| `sto OFST`  | `13`    |
+| `lda`       | `9`     |
+| `sta`       | `15`    |
+| `ldi`       | `9`     |
+| `sti`       | `6`     |
+| `lds`       | `10`    |
+| `sts`       | `5`     |
+| `nop`       | `3`     |
+| `clc`       | `6`     |
+| `sec`       | `6`     |
+| `flc`       | `6`     |
+| `swp`       | `15`    |
+| `pop`       | `5`     |
+| `phn IMM`   | `10`    |
 
 The `rot` instruction requires `19` clock cycles to execute, plus another `19` for every bit rotated. Consequently, `rot` can be used as a stall instruction.
-
-Negative values are represented in two's complement.
-
-| Instruction | Description               | Operation                                                                             | Clocks  | Opcode                |
-| ----------- | ------------------------- | ------------------------------------------------------------------------------------- | ------- | --------------------- |
-| `psh IMM`   | Push                      | `IMM & 0b01111111 -> *(--SP);`                                                        | `10`    | `0b0IIIIIII` (`0xII`) |
-| `add SIZE`  | Add with Carry            | `*(SP++) + *(SP + 2 ** SIZE) + CF -> *(SP + 2 ** SIZE); *SP > 0xFF -> CF;`            | `16`    | `0b100000SS`          |
-| `sub SIZE`  | Subtract with Carry       | `-*(SP++) + *(SP + 2 ** SIZE) - CF -> *(SP + 2 ** SIZE); *SP < 0x00 -> CF;`           | `16`    | `0b100001SS`          |
-| `iff SIZE`  | Conditional with Carry    | `CF ? *((SP++)++) : *((++SP)++ + 2 ** SIZE) -> *(--SP);`                              | `15`    | `0b100100SS`          |
-| `rot SIZE`  | Rotate                    | `(*(SP + 2 ** SIZE) << *SP) \| ((*(SP + 2 ** SIZE) << *SP) >> 8) -> *(++SP); 0 -> CF` | &mdash; | `0b100101SS`          |
-| `orr SIZE`  | Bitwise OR                | `*(SP++) \| *(SP + 2 ** SIZE) -> *(SP + 2 ** SIZE); *SP == 0 -> CF;`                  | `16`    | `0b101000SS`          |
-| `and SIZE`  | Bitwise AND               | `*(SP++) & *(SP + 2 ** SIZE) -> *(SP + 2 ** SIZE); *SP == 0 -> CF;`                   | `13`    | `0b101001SS`          |
-| `xor SIZE`  | Bitwise XOR               | `*(SP++) ^ *(SP + 2 ** SIZE) -> *(SP + 2 ** SIZE); *SP == 0 -> CF;`                   | `24`    | `0b101010SS`          |
-| `xnd SIZE`  | Bitwise XAND              | `SP++; 0 -> *(SP + 2 ** SIZE); *SP == 0 -> CF;`                                       | `9`     | `0b101011SS`          |
-| `inc`       | Increment                 | `*SP + 1 -> *SP;`                                                                     | `6`     | `0b10110000`          |
-| `dec`       | Decrement                 | `*SP - 1 -> *SP;`                                                                     | `8`     | `0b10110001`          |
-| `neg`       | Negate                    | `-*SP -> *SP`                                                                         | `11`    | `0b10110010`          |
-| `shl`       | Shift Left with Carry     | `(*SP & 0x80) -> CF; (*SP << 1) -> *SP;`                                              | `9`     | `0b10110100`          |
-| `shr`       | Shift Right with Carry    | `(*SP & 0x01) -> CF; (*SP >> 1) -> *SP;`                                              | `16`    | `0b10110101`          |
-| `not`       | Bitwise NOT               | `!*SP -> *SP; *SP == 0 -> CF;`                                                        | `8`     | `0b10110110`          |
-| `buf`       | Bitwise Buffer            | `*SP -> *SP; *SP == 0 -> CF;`                                                         | `9`     | `0b10110111`          |
-| `ldo OFST`  | Load from Offset          | `*(SP + OFST) -> *(--SP);`                                                            | `14`    | `0b1100OOOO` (`0xCO`) |
-| `sto OFST`  | Store to Offset           | `*SP++ -> *(SP + OFST);`                                                              | `13`    | `0b1101OOOO` (`0xDO`) |
-| `lda`       | Load from Address         | `*(*(SP++)) -> *(--SP);`                                                              | `9`     | `0b11101000` (`0xE0`) |
-| `sta`       | Store to Address          | `*(SP++ + 1) -> *(*(SP++ - 1));`                                                      | `15`    | `0b11101001` (`0xE1`) |
-| `ldi`       | Load Instruction Pointer  | `IP -> *(--SP);`                                                                      | `9`     | `0b11101010` (`0xE2`) |
-| `sti`       | Store Instruction Pointer | `*(SP++) -> IP;`                                                                      | `6`     | `0b11101011` (`0xE3`) |
-| `lds`       | Load Stack Pointer        | `SP -> *(--SP);`                                                                      | `10`    | `0b11101100` (`0xE4`) |
-| `sts`       | Store Stack Pointer       | `*(SP++) -> SP;`                                                                      | `5`     | `0b11101101` (`0xE5`) |
-| `nop`       | No Operation              | `;`                                                                                   | `3`     | `0b11100000` (`0xE8`) |
-| `clc`       | Clear Carry               | `0 -> CF;`                                                                            | `6`     | `0b11100001` (`0xE9`) |
-| `sec`       | Set Carry                 | `1 -> CF;`                                                                            | `6`     | `0b11100010` (`0xEA`) |
-| `flc`       | Flip Carry                | `!CF -> CF;`                                                                          | `6`     | `0b11100011` (`0xEB`) |
-| `swp`       | Swap                      | `*(SP++) -> *SP -> *(--SP);`                                                          | `15`    | `0b11100100` (`0xEC`) |
-| `pop`       | Pop                       | `0 -> *(SP++);`                                                                       | `5`     | `0b11100101` (`0xED`) |
-| `phn IMM`   | Push Negative             | `IMM \| 0b11110000 -> *(--SP);`                                                       | `10`    | `0b1111IIII` (`0xFI`) |
-
-## Initial State
-
-The Atto-8 microprocessor is initialized with the following state:
-
-| Item | Value  |
-| ---- | ------ |
-| `IP` | `0x00` |
-| `SP` | `0x00` |
-| `CF` | `0b0`  |
-
-This implies that:
-
-- Execution starts at address `0x00`.
-- The first item to be pushed onto the stack will located be at address `0xFF`.
-
-## Instruction Execution
-
-Instruction execution is as follows:
-
-1. Fetch the instruction at `IP`.
-2. Increment `IP`.
-3. Execute the instruction.
-4. Repeat.
-
-## Conventions
-
-The Atto-8 has no inherent endianness. With that said, instructions such as `add SIZE` and `sub SIZE` work best when least significant bytes are at the top of the stack, which grows downward. Consequently, it is recommended that the Atto-8 be assumed to be little-endian.

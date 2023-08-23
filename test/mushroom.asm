@@ -1,5 +1,5 @@
-@ lib/microprocessor/core.asm
-@ lib/microcomputer/display.asm
+@ lib/core.asm
+@ lib/display.asm
 
 main!
   pop pop !hlt

@@ -146,7 +146,7 @@ struct Microprocessor {
   cout: bool, // sum carry-out derivation
   zero: bool, // nand is-zero derivation
 
-  mic: [u16; MIC_SIZE], // microcode read-only memory
+  mic: [u16; MIC_SIZE], // microcode derivation
 }
 
 // TODO copied from `emu.rs`
@@ -164,8 +164,8 @@ enum TickTrap {
 struct ControlWord {
   clr_sc: Signal,       // clear to step counter
   data_il: Signal,      // data bus to instruction latch
-  size_and_cin: Signal, // size and carry-in
-  ofst_and_cf: Signal,  // offset and carry-flag
+  size_and_cin: Signal, // size and carry in
+  ofst_and_cf: Signal,  // offset and carry flag
 
   ip_data: Signal, // instruction pointer to data bus
   data_ip: Signal, // data bus to instruction pointer
@@ -181,7 +181,7 @@ struct ControlWord {
   data_yl: Signal,   // data bus to Y latch
   data_zl: Signal,   // data bus to Z latch
   sum_data: Signal,  // sum to data bus
-  nand_data: Signal, // nand to data bus
+  nand_data: Signal, // not-and to data bus
 }
 
 // TODO copied from `mic.rs`

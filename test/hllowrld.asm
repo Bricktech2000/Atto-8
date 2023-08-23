@@ -1,8 +1,8 @@
-@ lib/microprocessor/core.asm
-@ lib/microprocessor/types.asm
-@ lib/microprocessor/string.asm
-@ lib/microcomputer/stdio.asm
-@ lib/microcomputer/display.asm
+@ lib/core.asm
+@ lib/types.asm
+@ lib/string.asm
+@ lib/stdio.asm
+@ lib/display.asm
 
 main!
   pop pop !display_buffer sts

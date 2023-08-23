@@ -1,19 +1,17 @@
 # Lib
 
-_Assembly standard library for Atto-8 microprocessor and microcomputer_
+_Assembly standard library for Atto-8 microcomputer_
 
 ## Overview
 
-This library provides utilities and convenience macros for the Atto-8 microprocessor and microcomputer. It is to be assembled with the Atto-8 assembler located in [/asm/](../asm/).
+This library provides utilities and convenience macros for the Atto-8 microcomputer. It is to be assembled with the Atto-8 assembler located in [/asm/](../asm/).
 
-- [/lib/microprocessor/](microprocessor/) &mdash; Utilities for to the Atto-8 microprocessor as defined in [/spec/microprocessor.md](../spec/microprocessor.md)
-  - [/lib/microprocessor/core.asm](microprocessor/core.asm) &mdash; Core instruction-like macros such as `!call` and `!hlt`
-  - [/lib/microprocessor/types.asm](microprocessor/types.asm) &mdash; Type definitions and operations such as fixed-point arithmetic and integer multiplication
-  - [/lib/microprocessor/stdlib.asm](microprocessor/stdlib.asm) &mdash; Standard library functions inspired by the C header `stdlib.h` such as `malloc` and `rand`
-  - [/lib/microprocessor/string.asm](microprocessor/string.asm) &mdash; String operations inspired by the C header `string.h` such as `strlen` and `memcpy`
-- [/lib/microcomputer/](microcomputer/) &mdash; Utilities for to the Atto-8 microcomputer as defined in [/spec/microcomputer.md](../spec/microcomputer.md)
-  - [/lib/microcomputer/stdio.asm](microcomputer/stdio.asm) &mdash; Standard input/output functions inspired by the C header `stdio.h` such as `getc` and `puts`
-  - [/lib/microcomputer/display.asm](microcomputer/display.asm) &mdash; Display utilities such as pixel manipulation macros and text rendering functions
+- [/lib/core.asm](core.asm) &mdash; Core instruction-like macros such as `!call` and `!hlt`
+- [/lib/types.asm](types.asm) &mdash; Type definitions and operations such as fixed-point arithmetic and integer multiplication
+- [/lib/string.asm](string.asm) &mdash; String operations inspired by the C header `string.h` such as `strlen` and `memcpy`
+- [/lib/stdlib.asm](stdlib.asm) &mdash; Standard library functions inspired by the C header `stdlib.h` such as `malloc` and `rand`
+- [/lib/stdio.asm](stdio.asm) &mdash; Standard input/output functions inspired by the C header `stdio.h` such as `getc` and `puts`
+- [/lib/display.asm](display.asm) &mdash; Display utilities such as pixel manipulation macros and text rendering functions
 
 ## Conventions
 
