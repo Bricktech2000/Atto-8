@@ -135,13 +135,13 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
           .try_into()
           .unwrap();
 
-        stdin.push_back(match key {
-          console::Key::Char(c) => c as u8,
-          console::Key::Backspace => 0x08,
-          console::Key::Enter => 0x0A,
-          console::Key::Tab => 0x09,
-          console::Key::Del => 0x7F,
-          _ => 0x00,
+        stdin.extend(match key {
+          console::Key::Char(c) => vec![c as u8],
+          console::Key::Backspace => vec![0x08],
+          console::Key::Enter => vec![0x0A],
+          console::Key::Tab => vec![0x09],
+          console::Key::Del => vec![0x7F],
+          _ => vec![],
         });
       }
 
