@@ -5,7 +5,7 @@
 
 # - `+[>,.<]` pipes stdin to stdout
 # - `+++++++.` sends a bell to stdout
-# - `++++++++[.+]` prints all ASCII characters
+# - `++++[->++++++++<]>[.+]` prints all ASCII characters
 # - `>+[,[[>,]<[.<]>[-]]+]` reverses a string
 # - `+[,[---------[-[++++++++++.[-]]],]+]` strips newlines and tabs
 # - `++++++++++[>++++++++++>+<<-]>[>.<-]` clears the screen
