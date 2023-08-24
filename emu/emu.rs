@@ -36,7 +36,7 @@ fn main() {
 }
 
 const MEM_SIZE: usize = 0x100;
-const DISPLAY_BUFFER: u8 = 0xE0;
+const DISPLAY_BUFFER: usize = 0xE0;
 
 struct Microcomputer {
   mem: [u8; MEM_SIZE], // memory
@@ -65,7 +65,7 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
   let mut show_state = false;
   let mut stdin = VecDeque::from([mc.mem[0x00]]);
   let mut stdout = VecDeque::new();
-  let mut display = [0x00; 0x20];
+  let mut display = mc.mem[DISPLAY_BUFFER as usize..].try_into().unwrap();
   let mut controller = [None; 8];
 
   // this call will switch the termital to raw mode
@@ -156,12 +156,6 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
       .collect::<Vec<_>>()
       .try_into()
       .unwrap();
-    let controller = controller
-      .iter()
-      .enumerate()
-      .fold(0x00, |acc, (index, timestamp)| {
-        acc | ((timestamp.is_some() as u8) << index)
-      });
 
     let realtime = std::cmp::max(start_time.elapsed().as_millis(), 1); // prevent division by zero
     let realtime_offset = (1000 * current_clocks / clock_speed) as i128 - realtime as i128;
@@ -181,7 +175,20 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
       };
     }
 
-    match tick(&mut mc, &mut stdin, &mut stdout, &mut display, &controller) {
+    let mut controller = controller
+      .iter()
+      .enumerate()
+      .fold(0x00, |acc, (index, timestamp)| {
+        acc | ((timestamp.is_some() as u8) << index)
+      });
+
+    match tick(
+      &mut mc,
+      &mut stdin,
+      &mut stdout,
+      &mut display,
+      &mut controller,
+    ) {
       Ok(clocks) => {
         current_clocks += clocks;
       }
@@ -225,7 +232,7 @@ fn tick(
   stdin: &mut VecDeque<u8>,
   stdout: &mut VecDeque<u8>,
   display: &mut [u8; 0x20],
-  controller: &u8,
+  controller: &mut u8,
 ) -> Result<u128, TickTrap> {
   let mp = &mut mc.mp;
 
@@ -247,8 +254,8 @@ fn tick(
       if address == 0x00 {
         stdout.push_back(value);
       }
-      if address & DISPLAY_BUFFER == DISPLAY_BUFFER {
-        display[(address & !DISPLAY_BUFFER) as usize] = value
+      if address as usize & DISPLAY_BUFFER == DISPLAY_BUFFER {
+        display[address as usize & !DISPLAY_BUFFER] = value
       }
       mc.mem[address as usize] = value;
     }};
