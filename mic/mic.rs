@@ -43,6 +43,7 @@ const MIC_SIZE: usize = 0x80 * 0x02 * 0x20;
 const MICROCODE_FAULT_MAGIC: u16 = -1i16 as u16;
 const ILLEGAL_OPCODE_MAGIC: u16 = -2i16 as u16;
 const DEBUG_REQUEST_MAGIC: u16 = -3i16 as u16;
+const BUS_FAULT_MAGIC: u16 = -4i16 as u16;
 
 // TODO copied from `emu.rs`
 #[allow(dead_code)]
@@ -51,6 +52,7 @@ enum TickTrap {
   MicrocodeFault,
   IllegalOpcode,
   DebugRequest,
+  BusFault,
 }
 
 #[allow(dead_code)]
@@ -79,7 +81,7 @@ struct ControlWord {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Default)]
 enum Signal {
   #[default]
   Inactive,
@@ -693,6 +695,7 @@ impl Into<u16> for TickTrap {
       TickTrap::MicrocodeFault => MICROCODE_FAULT_MAGIC,
       TickTrap::IllegalOpcode => ILLEGAL_OPCODE_MAGIC,
       TickTrap::DebugRequest => DEBUG_REQUEST_MAGIC,
+      TickTrap::BusFault => BUS_FAULT_MAGIC,
     }
   }
 }

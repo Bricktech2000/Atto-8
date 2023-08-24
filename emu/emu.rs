@@ -54,6 +54,7 @@ enum TickTrap {
   MicrocodeFault,
   IllegalOpcode,
   DebugRequest,
+  BusFault,
 }
 
 fn emulate(mut mc: Microcomputer, clock_speed: u128) {
@@ -156,6 +157,12 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
       .collect::<Vec<_>>()
       .try_into()
       .unwrap();
+    let controller = controller
+      .iter()
+      .enumerate()
+      .fold(0x00, |acc, (index, timestamp)| {
+        acc | ((timestamp.is_some() as u8) << index)
+      });
 
     let realtime = std::cmp::max(start_time.elapsed().as_millis(), 1); // prevent division by zero
     let realtime_offset = (1000 * current_clocks / clock_speed) as i128 - realtime as i128;
@@ -175,13 +182,7 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
       };
     }
 
-    let mut controller = controller
-      .iter()
-      .enumerate()
-      .fold(0x00, |acc, (index, timestamp)| {
-        acc | ((timestamp.is_some() as u8) << index)
-      });
-
+    let mut controller = controller;
     match tick(
       &mut mc,
       &mut stdin,
@@ -198,6 +199,7 @@ fn emulate(mut mc: Microcomputer, clock_speed: u128) {
           TickTrap::MicrocodeFault => format!("Microcode fault"),
           TickTrap::IllegalOpcode => format!("Illegal opcode"),
           TickTrap::DebugRequest => format!("Debug request"),
+          TickTrap::BusFault => format!("Bus fault"),
         }
       }
     };

@@ -104,6 +104,7 @@ const MIC_SIZE: usize = 0x80 * 0x02 * 0x20;
 const MICROCODE_FAULT_MAGIC: u16 = -1i16 as u16;
 const ILLEGAL_OPCODE_MAGIC: u16 = -2i16 as u16;
 const DEBUG_REQUEST_MAGIC: u16 = -3i16 as u16;
+const BUS_FAULT_MAGIC: u16 = -4i16 as u16;
 const DISPLAY_BUFFER: usize = 0xE0;
 
 struct Microcomputer {
@@ -156,6 +157,7 @@ enum TickTrap {
   MicrocodeFault,
   IllegalOpcode,
   DebugRequest,
+  BusFault,
 }
 
 // TODO copied from `mic.rs`
@@ -186,7 +188,7 @@ struct ControlWord {
 
 // TODO copied from `mic.rs`
 #[allow(dead_code)]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Default)]
 enum Signal {
   #[default]
   Inactive,
@@ -307,6 +309,12 @@ fn simulate(mut mc: Microcomputer, clock_speed: u128) {
       .collect::<Vec<_>>()
       .try_into()
       .unwrap();
+    let controller = controller
+      .iter()
+      .enumerate()
+      .fold(0x00, |acc, (index, timestamp)| {
+        acc | ((timestamp.is_some() as u8) << index)
+      });
 
     let realtime = std::cmp::max(start_time.elapsed().as_millis(), 1); // prevent division by zero
     let realtime_offset = (1000 * current_clocks / clock_speed) as i128 - realtime as i128;
@@ -326,13 +334,7 @@ fn simulate(mut mc: Microcomputer, clock_speed: u128) {
       };
     }
 
-    let mut controller = controller
-      .iter()
-      .enumerate()
-      .fold(0x00, |acc, (index, timestamp)| {
-        acc | ((timestamp.is_some() as u8) << index)
-      });
-
+    let mut controller = controller;
     match tick(
       &mut mc,
       &mut stdin,
@@ -349,6 +351,7 @@ fn simulate(mut mc: Microcomputer, clock_speed: u128) {
           TickTrap::MicrocodeFault => format!("Microcode fault"),
           TickTrap::IllegalOpcode => format!("Illegal opcode"),
           TickTrap::DebugRequest => format!("Debug request"),
+          TickTrap::BusFault => format!("Bus fault"),
         }
       }
     };
@@ -413,26 +416,6 @@ fn tick(
   mp.ctrl = u16_into_result(
     mp.mic[(il as usize & 0x80 - 1) * 0x02 * 0x20 | mp.cf as usize * 0x20 | mp.sc as usize],
   )?;
-  mp.ones_data = match (
-    mp.ctrl.ip_data,
-    mp.ctrl.sp_data,
-    mp.ctrl.mem_data,
-    mp.ctrl.size_and_cin,
-    mp.ctrl.ofst_and_cf,
-    mp.ctrl.sum_data,
-    mp.ctrl.nand_data,
-  ) {
-    (
-      Signal::Inactive,
-      Signal::Inactive,
-      Signal::Inactive,
-      Signal::Inactive,
-      Signal::Inactive,
-      Signal::Inactive,
-      Signal::Inactive,
-    ) => Signal::Active,
-    _ => Signal::Inactive,
-  };
   (mp.size_data, mp.set_cin) = match mp.ctrl.sum_data {
     Signal::Inactive => (mp.ctrl.size_and_cin, Signal::Inactive),
     Signal::Active => (Signal::Inactive, mp.ctrl.size_and_cin),
@@ -445,6 +428,23 @@ fn tick(
     (Signal::Inactive, Signal::Active) => (Signal::Inactive, Signal::Inactive, mp.ctrl.ofst_and_cf),
     _ => return Err(TickTrap::MicrocodeFault),
   };
+  let active_count = [
+    mp.size_data,
+    mp.ofst_data,
+    mp.ctrl.ip_data,
+    mp.ctrl.sp_data,
+    mp.ctrl.mem_data,
+    mp.ctrl.sum_data,
+    mp.ctrl.nand_data,
+  ]
+  .into_iter()
+  .filter(|s| *s == Signal::Active)
+  .count();
+  mp.ones_data = match active_count {
+    0 => Ok(Signal::Active),
+    1 => Ok(Signal::Inactive),
+    _ => Err(TickTrap::BusFault),
+  }?;
 
   // ones
   mp.ones = 0xFF;
@@ -608,6 +608,7 @@ fn u16_into_result(u16: u16) -> Result<ControlWord, TickTrap> {
     MICROCODE_FAULT_MAGIC => Err(TickTrap::MicrocodeFault),
     ILLEGAL_OPCODE_MAGIC => Err(TickTrap::IllegalOpcode),
     DEBUG_REQUEST_MAGIC => Err(TickTrap::DebugRequest),
+    BUS_FAULT_MAGIC => Err(TickTrap::BusFault),
     control_word => Ok(control_word.into()),
   }
 }
