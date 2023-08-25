@@ -4,7 +4,9 @@
 
 _A minimalist 8-bit microcomputer with stack-based microprocessor_
 
-## Repository Structure
+## Overview
+
+The Atto-8 is a small ecosystem of hardware and software living in symbiosis. The [Atto-8 microcomputer](spec/microcomputer.md) is a minimalist computer system based on the [Atto-8 microprocessor](spec/microprocessor.md), which is a stack-based processor implementing the [Atto-8 microarchitecture](spec/microarchitecture.md). Repository structure is as follows:
 
 - [/spec/](spec/) &mdash; Specification for Atto-8 microarchitecture, microprocessor and microcomputer
 - [/lib/](lib/) &mdash; Assembly standard library for Atto-8 microcomputer
@@ -55,6 +57,6 @@ python3 test.py checkerboard.hex enc emu
 python3 test.py errors.asm asm emu
 ```
 
-![Game of Life Demo](misc/assets/life.gif) ![Random Number Generator Demo](misc/assets/random.gif) ![Flappy Bird Demo](misc/assets/flappy.gif) ![Infinite Counter Demo](misc/assets/counter.gif)
+![Game of Life Simulation Demo](misc/assets/life.gif) ![Random Number Generator Demo](misc/assets/random.gif) ![Flappy Bird Demo](misc/assets/flappy.gif) ![Infinite Counter Demo](misc/assets/counter.gif)
 
 ![Atto-8 Microprocessor Diagram](misc/assets/microprocessor.png)

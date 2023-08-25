@@ -66,7 +66,22 @@ The control word is a 16-bit natural number output from `MIC`, the microcode ROM
 | `0x1` | `SUM_DATA`     | Sum to Data Bus                 |
 | `0x0` | `NAND_DATA`    | Not-And to Data Bus             |
 
-The control signals `SIZE_AND_CIN` and `OFST_AND_CF` are not directly used as control signals; rather, they produce derivations, which are then used as control signals. This mechanism allows the control word to be no more than 16 bits wide, reducing complexity.
+The control signals `SIZE_AND_CIN` and `OFST_AND_CF` are not directly used as control signals; rather, they produce derivations, which are then used as control signals. This mechanism allows the control word to be no more than 16 bits wide, reducing hardware complexity.
+
+It is worth noting that:
+
+- Pointers (`IP` and `SP`) are registers that can both read and write to `DATA`.
+- `SC` increments every clock cycle and may only be reset to `0x00`, through `CLR_SC`.
+- Latches (`IL`, `AL`, `XL`, `YL`, `ZL`) can only read from and cannot write to `DATA`.
+- `SUM` can only output `XL + YL` to `DATA`, and `NAND` can only output `~(YL & ZL)` to `DATA`.
+- The value of `CF` can only be set to the value of `ZERO` or to the value of `COUT`.
+
+It follows that:
+
+- `SP++`, `SP--` and `IP++` are non-trivial operations, requiring the use of `XL`, `YL` and `SUM`.
+- Reads from `XL`, `YL` and `ZL` are non-trivial operations, requiring the use of `SUM` and `NAND`.
+
+These design decisions greatly simplify the hardware complexity of the Atto-8 microprocessor, at the cost of performance and microcode complexity.
 
 ## Instruction Set
 
@@ -107,3 +122,5 @@ The instruction set of the Atto-8 microprocessor adheres to the Atto-8 microarch
 | `phn IMM`   | `10`    |
 
 The `rot` instruction requires `19` clock cycles to execute, plus another `19` for every bit rotated. Consequently, `rot` can be used as a stall instruction.
+
+Memory reads and writes around `SP` must be idempotent, and a memory read from an address around `SP` must yield the last value written to that address. That is, stack memory is expected to behave like "normal" memory. If this expectation is not fulfilled, the behavior of instructions accessing the stack is undefined.
