@@ -1,3 +1,7 @@
+#[path = "../misc/common/common.rs"]
+mod common;
+use common::{ControlWord, Signal, TickTrap};
+
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() != 2 {
@@ -12,7 +16,7 @@ fn main() {
 
   match errors[..] {
     [] => {
-      std::fs::write::<&String, [u8; 2 * MIC_SIZE]>(
+      std::fs::write::<&String, [u8; 2 * common::MIC_SIZE]>(
         microcode_image_file,
         microcode_image
           .iter()
@@ -39,58 +43,9 @@ fn main() {
   println!("Mic: Done");
 }
 
-const MIC_SIZE: usize = 0x80 * 0x02 * 0x20;
-const MICROCODE_FAULT_MAGIC: u16 = -1i16 as u16;
-const ILLEGAL_OPCODE_MAGIC: u16 = -2i16 as u16;
-const DEBUG_REQUEST_MAGIC: u16 = -3i16 as u16;
-const BUS_FAULT_MAGIC: u16 = -4i16 as u16;
-
-// TODO copied from `emu.rs`
-#[allow(dead_code)]
-#[derive(Clone, Copy, Debug)]
-enum TickTrap {
-  MicrocodeFault,
-  IllegalOpcode,
-  DebugRequest,
-  BusFault,
-}
-
-#[allow(dead_code)]
-#[derive(Clone, Copy, Debug, Default)]
-struct ControlWord {
-  clr_sc: Signal,       // clear to step counter
-  data_il: Signal,      // data bus to instruction latch
-  size_and_cin: Signal, // size and carry-in
-  ofst_and_cf: Signal,  // offset and carry-flag
-
-  ip_data: Signal, // instruction pointer to data bus
-  data_ip: Signal, // data bus to instruction pointer
-
-  sp_data: Signal, // stack pointer to data bus
-  data_sp: Signal, // data bus to stack pointer
-
-  data_al: Signal,  // data bus to address latch
-  mem_data: Signal, // data bus to memory
-  data_mem: Signal, // memory to data bus
-
-  data_xl: Signal,   // data bus to X latch
-  data_yl: Signal,   // data bus to Y latch
-  data_zl: Signal,   // data bus to Z latch
-  sum_data: Signal,  // sum to data bus
-  nand_data: Signal, // nand to data bus
-}
-
-#[allow(dead_code)]
-#[derive(Clone, Copy, Eq, PartialEq, Debug, Default)]
-enum Signal {
-  #[default]
-  Inactive,
-  Active,
-}
-
 struct Error(String);
 
-fn build_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
+fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
   // sets specified fields to `true` and wraps to ensure compatibility with `seq!`
   macro_rules! ControlWord {
     ($($field:ident),*) => {
@@ -115,13 +70,6 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
     seq
   }
 
-  // TODO document sum_data && ofst_and_cf is sum_data && cout_cf
-  // TODO document nand_data && ofst_and_cf is nand_data && zero_cf
-  // TODO document sum_data && size_and_cin is sum_data && cin
-
-  // TODO document `sim` expects memory around SP to behave normally, otherwise UB
-
-  // TODO order
   let nop = ControlWord! {};
   let sp_xl = ControlWord! {sp_data, data_xl};
   let ofst_yl = ControlWord! {ofst_and_cf, data_yl};
@@ -662,7 +610,7 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
     .try_into()
     .unwrap();
 
-  let microcode_image: [u16; MIC_SIZE] = microcode
+  let microcode_image: [u16; common::MIC_SIZE] = microcode
     .concat()
     .concat()
     .iter()
@@ -676,26 +624,4 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; MIC_SIZE] {
     .unwrap();
 
   microcode_image
-}
-
-impl Into<u16> for ControlWord {
-  fn into(self) -> u16 {
-    let control_word =
-      unsafe { std::mem::transmute::<ControlWord, [u8; std::mem::size_of::<ControlWord>()]>(self) };
-
-    control_word
-      .iter()
-      .fold(0, |acc, &byte| (acc << 1) | byte as u16)
-  }
-}
-
-impl Into<u16> for TickTrap {
-  fn into(self) -> u16 {
-    match self {
-      TickTrap::MicrocodeFault => MICROCODE_FAULT_MAGIC,
-      TickTrap::IllegalOpcode => ILLEGAL_OPCODE_MAGIC,
-      TickTrap::DebugRequest => DEBUG_REQUEST_MAGIC,
-      TickTrap::BusFault => BUS_FAULT_MAGIC,
-    }
-  }
 }

@@ -1,3 +1,6 @@
+#[path = "../misc/common/common.rs"]
+mod common;
+
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() != 3 {
@@ -32,9 +35,7 @@ fn main() {
   };
 }
 
-const MEM_SIZE: usize = 0x100;
-
-fn disassemble(memory: [u8; MEM_SIZE], entry_point: &str) -> String {
+fn disassemble(memory: [u8; common::MEM_SIZE], entry_point: &str) -> String {
   format!(
     "{}!\n{}",
     entry_point,

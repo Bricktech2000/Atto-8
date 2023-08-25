@@ -1,3 +1,6 @@
+#[path = "../misc/common/common.rs"]
+mod common;
+
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() != 3 {
@@ -18,7 +21,7 @@ fn main() {
 
   match errors[..] {
     [] => {
-      std::fs::write::<&String, [u8; MEM_SIZE]>(
+      std::fs::write::<&String, [u8; common::MEM_SIZE]>(
         memory_image_file,
         bytes
           .iter()
@@ -43,8 +46,6 @@ fn main() {
     }
   }
 }
-
-const MEM_SIZE: usize = 0x100;
 
 #[derive(Clone, Eq, PartialEq, Hash)]
 struct Label {
@@ -1389,17 +1390,17 @@ fn codegen(
   let mut bytes = bytes;
   let position = Pos("[codegen]".to_string(), 0);
 
-  if bytes.len() > MEM_SIZE {
+  if bytes.len() > common::MEM_SIZE {
     errors.push((
       position,
       Error(format!(
         "Program size `{:02X}` exceeds available memory of size `{:02X}`",
         bytes.len(),
-        MEM_SIZE
+        common::MEM_SIZE
       )),
     ));
   } else {
-    bytes.extend(vec![(position, 0x00); MEM_SIZE - bytes.len()]);
+    bytes.extend(vec![(position, 0x00); common::MEM_SIZE - bytes.len()]);
   }
 
   bytes
