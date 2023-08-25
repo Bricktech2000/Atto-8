@@ -4,7 +4,7 @@ _Test programs and test framework for Atto-8 microcomputer_
 
 ## Overview
 
-End-to-end testing of the Atto-8 microprocessor and microcomputer is done through `test.py`. The script takes as argument a list of operations to perform and filenames to load. The program is a stack machine, allowing arbitrary operations to be fed into one another. Operation execution begins only after the argument string is fully parsed and deemed well-formed. Warnings are emitted if operations return non-zero exit codes.
+End-to-end testing of the Atto-8 microcomputer is carried out by `test.py`. The script takes as argument a list of operations to perform and filenames to load. The program is a stack machine, allowing arbitrary operations to be fed into one another. Operation execution begins only after the argument string is fully parsed and deemed well-formed. Warnings are emitted if operations return non-zero exit codes.
 
 Available operations are as follows:
 

@@ -51,7 +51,7 @@ while input:
                           operation, assembly_source_file, memory_image_file)))
       case 'dasm':
         memory_image_file = filenames.pop()
-        disassembly_output_file = memory_image_file + '.dasm'
+        disassembly_output_file = memory_image_file + '.asm'
         filenames.append(disassembly_output_file)
         operations.append((operation, functools.partial(run_cargo, 'run', '--bin',
                           operation, memory_image_file, disassembly_output_file)))
