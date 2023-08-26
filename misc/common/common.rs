@@ -230,6 +230,21 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
   }
 }
 
+use std::sync::mpsc;
+use std::sync::mpsc::Receiver;
+fn spawn_input_channel() -> Receiver<console::Key> {
+  let stdout = console::Term::stdout();
+
+  let (tx, rx) = mpsc::channel::<console::Key>();
+  std::thread::spawn(move || loop {
+    if let Ok(key) = stdout.read_key() {
+      tx.send(key).unwrap();
+    }
+  });
+
+  rx
+}
+
 pub fn render_memory(memory: &[u8; MEM_SIZE], ip: u8, sp: u8, cf: bool) -> String {
   let mut fmt: String = "".to_string();
 
@@ -259,21 +274,6 @@ pub fn render_memory(memory: &[u8; MEM_SIZE], ip: u8, sp: u8, cf: bool) -> Strin
   }
 
   fmt
-}
-
-use std::sync::mpsc;
-use std::sync::mpsc::Receiver;
-fn spawn_input_channel() -> Receiver<console::Key> {
-  let stdout = console::Term::stdout();
-
-  let (tx, rx) = mpsc::channel::<console::Key>();
-  std::thread::spawn(move || loop {
-    if let Ok(key) = stdout.read_key() {
-      tx.send(key).unwrap();
-    }
-  });
-
-  rx
 }
 
 pub fn render_display(display: &[u8; 0x20]) -> String {
@@ -354,6 +354,11 @@ impl std::fmt::Display for Signal {
   }
 }
 
+const MICROCODE_FAULT_MAGIC: u16 = -1i16 as u16;
+const ILLEGAL_OPCODE_MAGIC: u16 = -2i16 as u16;
+const DEBUG_REQUEST_MAGIC: u16 = -3i16 as u16;
+const BUS_FAULT_MAGIC: u16 = -4i16 as u16;
+
 impl From<u16> for ControlWord {
   fn from(control_word: u16) -> Self {
     let control_word = (0..16)
@@ -380,22 +385,6 @@ impl Into<u16> for ControlWord {
   }
 }
 
-const MICROCODE_FAULT_MAGIC: u16 = -1i16 as u16;
-const ILLEGAL_OPCODE_MAGIC: u16 = -2i16 as u16;
-const DEBUG_REQUEST_MAGIC: u16 = -3i16 as u16;
-const BUS_FAULT_MAGIC: u16 = -4i16 as u16;
-
-impl Into<u16> for TickTrap {
-  fn into(self) -> u16 {
-    match self {
-      TickTrap::MicrocodeFault => MICROCODE_FAULT_MAGIC,
-      TickTrap::IllegalOpcode => ILLEGAL_OPCODE_MAGIC,
-      TickTrap::DebugRequest => DEBUG_REQUEST_MAGIC,
-      TickTrap::BusFault => BUS_FAULT_MAGIC,
-    }
-  }
-}
-
 pub fn u16_into_result(u16: u16) -> Result<ControlWord, TickTrap> {
   match u16 {
     MICROCODE_FAULT_MAGIC => Err(TickTrap::MicrocodeFault),
@@ -403,5 +392,15 @@ pub fn u16_into_result(u16: u16) -> Result<ControlWord, TickTrap> {
     DEBUG_REQUEST_MAGIC => Err(TickTrap::DebugRequest),
     BUS_FAULT_MAGIC => Err(TickTrap::BusFault),
     control_word => Ok(control_word.into()),
+  }
+}
+
+pub fn result_into_u16(result: Result<ControlWord, TickTrap>) -> u16 {
+  match result {
+    Err(TickTrap::MicrocodeFault) => MICROCODE_FAULT_MAGIC,
+    Err(TickTrap::IllegalOpcode) => ILLEGAL_OPCODE_MAGIC,
+    Err(TickTrap::DebugRequest) => DEBUG_REQUEST_MAGIC,
+    Err(TickTrap::BusFault) => BUS_FAULT_MAGIC,
+    Ok(control_word) => control_word.into(),
   }
 }

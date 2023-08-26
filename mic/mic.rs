@@ -5,7 +5,7 @@ use common::{ControlWord, Signal, TickTrap};
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() != 2 {
-    println!("Emu: Usage: mic <microcode image file>");
+    println!("Mic: Usage: mic <microcode image file>");
     std::process::exit(1);
   }
 
@@ -70,7 +70,6 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
     seq
   }
 
-  let nop = ControlWord! {};
   let sp_xl = ControlWord! {sp_data, data_xl};
   let ofst_yl = ControlWord! {ofst_and_cf, data_yl};
   let size_yl = ControlWord! {size_and_cin, data_yl};
@@ -120,28 +119,16 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
   let ip_mem = ControlWord! {ip_data, data_mem};
   let clr_sc = ControlWord! {clr_sc};
 
+  let noop = seq![ControlWord! {}];
   let fetch = seq![ip_alxl, cinsum_ip, mem_ilzl];
   let clr_yl = seq![set_ylzl, nand_yl];
-  let psh = seq![
-    // instruction is in ZL
-    sp_xl, set_yl, sum_spal, // SP-- -> AL
-    nand_zl, nand_mem, // IL -> *AL
-    clr_yl    //
-  ];
-  let pop = seq![
-    sp_xl, cinsum_sp // SP++
-  ];
-  let sec = seq![
-    set_ylzl, set_ylzl, nand_ylcf // 1 -> CF
-  ];
-  let clc = seq![
-    set_ylzl, nand_ylzl, nand_zlcf // 0 -> CF
-  ];
+  let set_cf = seq![set_ylzl, set_ylzl, nand_ylcf];
+  let clr_cf = seq![set_ylzl, nand_ylzl, nand_zlcf];
 
   let microcode: [[[Result<ControlWord, TickTrap>; 0x20]; 0x02]; 0x80] = [[[(); 0x20]; 0x02]; 0x80]
     .iter()
     .enumerate()
-    .map(|(instruction, rest)| (instruction as u8 | 0x80, rest))
+    .map(|(instruction, rest)| (instruction as u8 | 0x80, rest)) // map `psh` to `phn` as both have equivalent microcode
     .map(|(instruction, rest)| {
       rest
         .iter()
@@ -156,7 +143,7 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
               let seq = match (instruction & 0b10000000) >> 7 {
                 0b0 => {
                   // psh
-                  seq![fetch, psh]
+                  unreachable!()
                 }
                 0b1 => match (instruction & 0b01000000) >> 6 {
                   0b0 => {
@@ -207,7 +194,7 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                           cinsum_mem, // XL -> *AL
                           match carry {
                             true => seq![nand_ylzl, nand_zlcf], // 0 -> CF
-                            false => seq![nop, nand_ylcf],      // 1 -> CF
+                            false => seq![noop, nand_ylcf],     // 1 -> CF
                           }
                         ]
                       }
@@ -225,7 +212,7 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                           set_yl,
                           match carry {
                             true => seq![nand_zl, nand_xl], // ZL -> xL
-                            false => seq![nop, nop],        // no-op
+                            false => seq![noop, noop],      // no-op
                           },
                           cinsum_mem, // XL -> *AL
                           clr_yl
@@ -255,7 +242,7 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                           sum_memcf, // *SP - 1 -> *SP
                           match carry {
                             // not done. store shifted value
-                            true => seq![sp_xl, size_yl, sum_al, nop], // ZL -> *(SP + SIZE)
+                            true => seq![sp_xl, size_yl, sum_al, noop], // ZL -> *(SP + SIZE)
                             // done. ignore shifted value, pop counter, fetch next instruction
                             false => seq![clr_yl, sp_xl, cinsum_sp], // SP++
                           }
@@ -528,19 +515,19 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
 
                               0x9 => {
                                 // clc
-                                seq![fetch, clc]
+                                seq![fetch, clr_cf]
                               }
 
                               0xA => {
                                 // sec
-                                seq![fetch, sec]
+                                seq![fetch, set_cf]
                               }
 
                               0xB => {
                                 // flc
                                 match carry {
-                                  true => seq![fetch, clc],
-                                  false => seq![fetch, sec],
+                                  true => seq![fetch, clr_cf],
+                                  false => seq![fetch, set_cf],
                                 }
                               }
 
@@ -558,7 +545,10 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
 
                               0xD => {
                                 // pop
-                                seq![fetch, pop]
+                                seq![
+                                  fetch,
+                                  sp_xl, cinsum_sp // SP++
+                                ]
                               }
 
                               _ => vec![Err(TickTrap::IllegalOpcode)],
@@ -567,7 +557,12 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
 
                           0b1 => {
                             // phn
-                            seq![fetch, psh]
+                            seq![
+                              fetch, // instruction is in ZL
+                              sp_xl, set_yl, sum_spal, // SP-- -> AL
+                              nand_zl, nand_mem, // IL -> *AL
+                              clr_yl    //
+                            ]
                           }
 
                           _ => unreachable!(),
@@ -613,12 +608,8 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
   let microcode_image: [u16; common::MIC_SIZE] = microcode
     .concat()
     .concat()
-    .iter()
-    .map(|result| {
-      result
-        .map(|control_word| control_word.into())
-        .unwrap_or_else(|trap| trap.into())
-    })
+    .into_iter()
+    .map(common::result_into_u16)
     .collect::<Vec<_>>()
     .try_into()
     .unwrap();

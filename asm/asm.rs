@@ -31,8 +31,6 @@ fn main() {
           .unwrap(),
       )
       .unwrap();
-
-      println!("Asm: Done");
     }
     _ => {
       let errors = errors
@@ -45,6 +43,8 @@ fn main() {
       std::process::exit(1);
     }
   }
+
+  println!("Asm: Done");
 }
 
 #[derive(Clone, Eq, PartialEq, Hash)]

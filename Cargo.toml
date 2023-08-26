@@ -10,6 +10,10 @@ console = "0.14.1"
 path-clean = "1.0.1"
 
 [[bin]]
+name = "cc"
+path = "cc/cc.rs"
+
+[[bin]]
 name = "asm"
 path = "asm/asm.rs"
 

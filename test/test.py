@@ -37,6 +37,12 @@ while input:
   try:
     operation = input.pop()
     match operation:
+      case 'cc':
+        c_source_file = filenames.pop()
+        assembly_output_file = c_source_file + '.asm'
+        filenames.append(assembly_output_file)
+        operations.append((operation, functools.partial(run_cargo, 'run', '--bin',
+                          operation, c_source_file, assembly_output_file)))
       case 'enc':
         hex_file = filenames.pop()
         memory_image_file = hex_file + '.mem'
