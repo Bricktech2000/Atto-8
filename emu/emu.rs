@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 #[path = "../misc/common/common.rs"]
 mod common;
-use common::{TickTrap, Tickable};
+use common::{Instruction, TickTrap, Tickable};
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
@@ -112,287 +112,211 @@ impl Tickable for Microcomputer {
       }};
     }
 
-    let instruction = mem_read!(mp.ip);
+    let opcode = mem_read!(mp.ip);
     mp.ip = mp.ip.wrapping_add(1);
 
-    match (instruction & 0b10000000) >> 7 {
-      0b0 => {
-        // psh
-        let imm = instruction; // decode_imm
+    let instruction = common::opcode_to_instruction(opcode).map_err(|_| TickTrap::IllegalOpcode)?;
+
+    match instruction {
+      Instruction::Psh(imm) => {
+        let imm = 0b00000000 | imm;
         push!(imm);
         Ok(10)
       }
 
-      0b1 => {
-        match (instruction & 0b01000000) >> 6 {
-          0b0 => {
-            // (arithmetic and logic)
-            let size = 1 << (instruction & 0b00000011); // decode_size
-            let opcode = (instruction & 0b00111100) >> 2;
-            let size_pointer = mp.sp.wrapping_add(size);
-
-            match opcode {
-              0x0 => {
-                // add
-                let a = pop!();
-                let b = mem_read!(size_pointer);
-                let sum = b as u16 + a as u16 + mp.cf as u16;
-                mem_write!(size_pointer, sum as u8);
-                mp.cf = sum > 0xFF;
-                Ok(16)
-              }
-
-              0x1 => {
-                // sub
-                let a = pop!();
-                let b = mem_read!(size_pointer);
-                let diff = b as i16 - a as i16 - mp.cf as i16;
-                mem_write!(size_pointer, diff as u8);
-                mp.cf = diff < 0x00;
-                Ok(16)
-              }
-
-              0x4 => {
-                // iff
-                let a = pop!();
-                let b = mem_read!(size_pointer);
-                mem_write!(size_pointer, if mp.cf { a } else { b });
-                Ok(15)
-              }
-
-              0x5 => {
-                // rot
-                let a = pop!();
-                let b = mem_read!(size_pointer);
-                let shifted = (b as u16) << a % 8;
-                mem_write!(size_pointer, (shifted & 0xFF) as u8 | (shifted >> 8) as u8);
-                mp.cf = false;
-                Ok(19 * (a as u128 + 1))
-              }
-
-              0x8 => {
-                // orr
-                let a = pop!();
-                let b = mem_read!(size_pointer);
-                mem_write!(size_pointer, a | b);
-                mp.cf = mem_read!(size_pointer) == 0x00;
-                Ok(16)
-              }
-
-              0x9 => {
-                // and
-                let a = pop!();
-                let b = mem_read!(size_pointer);
-                mem_write!(size_pointer, a & b);
-                mp.cf = mem_read!(size_pointer) == 0x00;
-                Ok(13)
-              }
-
-              0xA => {
-                // xor
-                let a = pop!();
-                let b = mem_read!(size_pointer);
-                mem_write!(size_pointer, a ^ b);
-                mp.cf = mem_read!(size_pointer) == 0x00;
-                Ok(24)
-              }
-
-              0xB => {
-                // xnd
-                let _ = pop!();
-                mem_write!(size_pointer, 0x00);
-                mp.cf = mem_read!(size_pointer) == 0x00;
-                Ok(9)
-              }
-
-              _ => match (opcode, instruction & 0b00000011) {
-                // (size used as part of opcode)
-                (0xC, 0b00) => {
-                  // inc
-                  push!(pop!().wrapping_add(1));
-                  Ok(6)
-                }
-
-                (0xC, 0b01) => {
-                  // dec
-                  push!(pop!().wrapping_sub(1));
-                  Ok(8)
-                }
-
-                (0xC, 0b10) => {
-                  // neg
-                  push!(pop!().wrapping_neg());
-                  Ok(11)
-                }
-
-                (0xD, 0b00) => {
-                  // shl
-                  let a = pop!();
-                  push!(a.wrapping_shl(1) | (mp.cf as u8));
-                  mp.cf = a & 0b10000000 != 0x00;
-                  Ok(9)
-                }
-
-                (0xD, 0b01) => {
-                  // shr
-                  let a = pop!();
-                  push!(a.wrapping_shr(1) | (mp.cf as u8) << 7);
-                  mp.cf = a & 0b00000001 != 0x00;
-                  Ok(16)
-                }
-
-                (0xD, 0b10) => {
-                  // not
-                  push!(!pop!());
-                  mp.cf = mem_read!(mp.sp) == 0x00;
-                  Ok(8)
-                }
-
-                (0xD, 0b11) => {
-                  // buf
-                  push!(pop!());
-                  mp.cf = mem_read!(mp.sp) == 0x00;
-                  Ok(9)
-                }
-
-                (0b1110, 0b11) => {
-                  // dbg
-                  Err(TickTrap::DebugRequest)
-                }
-
-                _ => Err(TickTrap::IllegalOpcode),
-              },
-            }
-          }
-
-          0b1 => {
-            match (instruction & 0b00100000) >> 5 {
-              0b0 => {
-                // (offset operations)
-                let ofst = instruction & 0b00001111; // decode_ofst
-
-                match (instruction & 0b00010000) >> 4 {
-                  0b0 => {
-                    // ldo
-                    let ofst_pointer = mp.sp.wrapping_add(ofst);
-                    push!(mem_read!(ofst_pointer));
-                    Ok(14)
-                  }
-
-                  0b1 => {
-                    // sto
-                    let ofst_pointer = mp.sp.wrapping_add(ofst).wrapping_add(1);
-                    mem_write!(ofst_pointer, pop!());
-                    Ok(13)
-                  }
-
-                  _ => unreachable!(),
-                }
-              }
-
-              0b1 => {
-                match (instruction & 0b00010000) >> 4 {
-                  0b0 => {
-                    // (carry and flags and stack)
-                    match instruction & 0b00001111 {
-                      0x0 => {
-                        // lda
-                        push!(mem_read!(pop!()));
-                        Ok(9)
-                      }
-
-                      0x1 => {
-                        // sta
-                        mem_write!(pop!(), pop!());
-                        Ok(15)
-                      }
-
-                      0x2 => {
-                        // ldi
-                        push!(mp.ip);
-                        Ok(9)
-                      }
-
-                      0x3 => {
-                        // sti
-                        mp.ip = pop!();
-                        Ok(6)
-                      }
-
-                      0x4 => {
-                        // lds
-                        push!(mp.sp);
-                        Ok(10)
-                      }
-
-                      0x5 => {
-                        // sts
-                        mp.sp = pop!();
-                        Ok(5)
-                      }
-
-                      0x8 => {
-                        // nop
-                        Ok(3)
-                      }
-
-                      0x9 => {
-                        // clc
-                        mp.cf = false;
-                        Ok(6)
-                      }
-
-                      0xA => {
-                        // sec
-                        mp.cf = true;
-                        Ok(6)
-                      }
-
-                      0xB => {
-                        // flc
-                        mp.cf = !mp.cf;
-                        Ok(6)
-                      }
-
-                      0xC => {
-                        // swp
-                        let a = pop!();
-                        let b = pop!();
-                        push!(a);
-                        push!(b);
-                        Ok(15)
-                      }
-
-                      0xD => {
-                        // pop
-                        let _ = pop!();
-                        Ok(5)
-                      }
-
-                      _ => Err(TickTrap::IllegalOpcode),
-                    }
-                  }
-
-                  0b1 => {
-                    // phn
-                    let imm = instruction; // decode_imm
-                    push!(imm);
-                    Ok(10)
-                  }
-
-                  _ => unreachable!(),
-                }
-              }
-
-              _ => unreachable!(),
-            }
-          }
-
-          _ => unreachable!(),
-        }
+      Instruction::Add(size) => {
+        let size = mp.sp.wrapping_add(size);
+        let a = pop!();
+        let b = mem_read!(size);
+        let sum = b as u16 + a as u16 + mp.cf as u16;
+        mem_write!(size, sum as u8);
+        mp.cf = sum > 0xFF;
+        Ok(16)
       }
 
-      _ => unreachable!(),
+      Instruction::Sub(size) => {
+        let size = mp.sp.wrapping_add(size);
+        let a = pop!();
+        let b = mem_read!(size);
+        let diff = b as i16 - a as i16 - mp.cf as i16;
+        mem_write!(size, diff as u8);
+        mp.cf = diff < 0x00;
+        Ok(16)
+      }
+
+      Instruction::Iff(size) => {
+        let size = mp.sp.wrapping_add(size);
+        let a = pop!();
+        let b = mem_read!(size);
+        mem_write!(size, if mp.cf { a } else { b });
+        Ok(15)
+      }
+
+      Instruction::Rot(size) => {
+        let size = mp.sp.wrapping_add(size);
+        let a = pop!();
+        let b = mem_read!(size);
+        let shifted = (b as u16) << a % 8;
+        mem_write!(size, (shifted & 0xFF) as u8 | (shifted >> 8) as u8);
+        mp.cf = false;
+        Ok(19 * (a as u128 + 1))
+      }
+
+      Instruction::Orr(size) => {
+        let size = mp.sp.wrapping_add(size);
+        let a = pop!();
+        let b = mem_read!(size);
+        mem_write!(size, a | b);
+        mp.cf = mem_read!(size) == 0x00;
+        Ok(16)
+      }
+
+      Instruction::And(size) => {
+        let size = mp.sp.wrapping_add(size);
+        let a = pop!();
+        let b = mem_read!(size);
+        mem_write!(size, a & b);
+        mp.cf = mem_read!(size) == 0x00;
+        Ok(13)
+      }
+
+      Instruction::Xor(size) => {
+        let size = mp.sp.wrapping_add(size);
+        let a = pop!();
+        let b = mem_read!(size);
+        mem_write!(size, a ^ b);
+        mp.cf = mem_read!(size) == 0x00;
+        Ok(24)
+      }
+
+      Instruction::Xnd(size) => {
+        let size = mp.sp.wrapping_add(size);
+        let _ = pop!();
+        mem_write!(size, 0x00);
+        mp.cf = mem_read!(size) == 0x00;
+        Ok(9)
+      }
+
+      Instruction::Inc => {
+        push!(pop!().wrapping_add(1));
+        Ok(6)
+      }
+
+      Instruction::Dec => {
+        push!(pop!().wrapping_sub(1));
+        Ok(8)
+      }
+
+      Instruction::Neg => {
+        push!(pop!().wrapping_neg());
+        Ok(11)
+      }
+
+      Instruction::Shl => {
+        let a = pop!();
+        push!(a.wrapping_shl(1) | (mp.cf as u8));
+        mp.cf = a & 0b10000000 != 0x00;
+        Ok(9)
+      }
+
+      Instruction::Shr => {
+        let a = pop!();
+        push!(a.wrapping_shr(1) | (mp.cf as u8) << 7);
+        mp.cf = a & 0b00000001 != 0x00;
+        Ok(16)
+      }
+
+      Instruction::Not => {
+        push!(!pop!());
+        mp.cf = mem_read!(mp.sp) == 0x00;
+        Ok(8)
+      }
+
+      Instruction::Buf => {
+        push!(pop!());
+        mp.cf = mem_read!(mp.sp) == 0x00;
+        Ok(9)
+      }
+
+      Instruction::Dbg => Err(TickTrap::DebugRequest),
+
+      Instruction::Ldo(ofst) => {
+        let ofst = mp.sp.wrapping_add(ofst);
+        push!(mem_read!(ofst));
+        Ok(14)
+      }
+
+      Instruction::Sto(ofst) => {
+        let ofst = mp.sp.wrapping_add(ofst).wrapping_add(1);
+        mem_write!(ofst, pop!());
+        Ok(13)
+      }
+
+      Instruction::Lda => {
+        push!(mem_read!(pop!()));
+        Ok(9)
+      }
+
+      Instruction::Sta => {
+        mem_write!(pop!(), pop!());
+        Ok(15)
+      }
+
+      Instruction::Ldi => {
+        push!(mp.ip);
+        Ok(9)
+      }
+
+      Instruction::Sti => {
+        mp.ip = pop!();
+        Ok(6)
+      }
+
+      Instruction::Lds => {
+        push!(mp.sp);
+        Ok(10)
+      }
+
+      Instruction::Sts => {
+        mp.sp = pop!();
+        Ok(5)
+      }
+
+      Instruction::Nop => Ok(3),
+
+      Instruction::Clc => {
+        mp.cf = false;
+        Ok(6)
+      }
+
+      Instruction::Sec => {
+        mp.cf = true;
+        Ok(6)
+      }
+
+      Instruction::Flc => {
+        mp.cf = !mp.cf;
+        Ok(6)
+      }
+
+      Instruction::Swp => {
+        let a = pop!();
+        let b = pop!();
+        push!(a);
+        push!(b);
+        Ok(15)
+      }
+
+      Instruction::Pop => {
+        let _ = pop!();
+        Ok(5)
+      }
+
+      Instruction::Phn(imm) => {
+        let imm = 0b11110000 | imm;
+        push!(imm);
+        Ok(10)
+      }
     }
   }
 }

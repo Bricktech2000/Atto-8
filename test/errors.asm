@@ -14,9 +14,11 @@ main!
   #comment
   :label
   unused:
+  unused.
   !macro
   foobar
   dup: dup:
+  dup. dup.
   lda @const
   lda @org
   x00 @org

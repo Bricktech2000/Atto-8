@@ -1,6 +1,6 @@
 #[path = "../misc/common/common.rs"]
 mod common;
-use common::{ControlWord, Signal, TickTrap};
+use common::{ControlWord, Error, Instruction, Signal, TickTrap};
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
@@ -31,7 +31,7 @@ fn main() {
     _ => {
       let errors = errors
         .iter()
-        .map(|error| format!("Mic: Error: {}", error.0))
+        .map(|error| format!("Mic: Error: {}", error))
         .collect::<Vec<String>>()
         .join("\n");
 
@@ -42,8 +42,6 @@ fn main() {
 
   println!("Mic: Done");
 }
-
-struct Error(String);
 
 fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
   // sets specified fields to `true` and wraps to ensure compatibility with `seq!`
@@ -128,8 +126,8 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
   let microcode: [[[Result<ControlWord, TickTrap>; 0x20]; 0x02]; 0x80] = [[[(); 0x20]; 0x02]; 0x80]
     .iter()
     .enumerate()
-    .map(|(instruction, rest)| (instruction as u8 | 0x80, rest)) // map `psh` to `phn` as both have equivalent microcode
-    .map(|(instruction, rest)| {
+    .map(|(opcode, rest)| (opcode as u8 | 0x80, rest)) // map `psh` to `phn` as both have equivalent microcode
+    .map(|(opcode, rest)| {
       rest
         .iter()
         .enumerate()
@@ -140,450 +138,374 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
             .enumerate()
             .map(|(step, rest)| (step as usize, rest))
             .map(|(step, _rest)| {
-              let seq = match (instruction & 0b10000000) >> 7 {
-                0b0 => {
-                  // psh
-                  unreachable!()
-                }
-                0b1 => match (instruction & 0b01000000) >> 6 {
-                  0b0 => {
-                    // (arithmetic and logic)
-                    let opcode = (instruction & 0b00111100) >> 2;
-
-                    match opcode {
-                      0x0 => {
-                        // add
-                        seq![
-                          fetch, //
-                          sp_alxl,
-                          cinsum_sp, // SP++
-                          mem_zl,    // *SP -> ZL
-                          size_yl,
-                          sum_al, // SP + SIZE -> AL
-                          set_yl,
-                          nand_zl,
-                          nand_yl, // ZL -> YL
-                          mem_xl,  // *AL -> XL
-                          match carry {
-                            true => seq![cinsum_xlcf], // XL + YL -> XL
-                            false => seq![sum_xlcf],   // XL + YL -> XL
-                          },
-                          set_ylzl,
-                          cinsum_mem, // XL -> *AL
-                          nand_yl
-                        ]
-                      }
-
-                      0x1 => {
-                        // sub
-                        seq![
-                          fetch, //
-                          sp_alxl,
-                          cinsum_sp, // SP++
-                          mem_zl,    // *SP -> ZL
-                          size_yl,
-                          sum_al, // SP + SIZE -> AL
-                          set_yl,
-                          nand_yl, // ~ZL -> YL
-                          mem_xl,  // *AL -> XL
-                          match carry {
-                            true => seq![sum_xlcf],     // XL - YL -> XL
-                            false => seq![cinsum_xlcf], // XL - YL -> XL
-                          },
-                          set_ylzl,
-                          cinsum_mem, // XL -> *AL
-                          match carry {
-                            true => seq![nand_ylzl, nand_zlcf], // 0 -> CF
-                            false => seq![noop, nand_ylcf],     // 1 -> CF
-                          }
-                        ]
-                      }
-
-                      0x4 => {
-                        // iff
-                        seq![
-                          fetch, //
-                          sp_alxl,
-                          cinsum_sp, // SP++
-                          mem_zl,    // *SP -> ZL
-                          size_yl,
-                          sum_al, // SP + SIZE -> AL
-                          mem_xl, // *AL -> XL
-                          set_yl,
-                          match carry {
-                            true => seq![nand_zl, nand_xl], // ZL -> xL
-                            false => seq![noop, noop],      // no-op
-                          },
-                          cinsum_mem, // XL -> *AL
-                          clr_yl
-                        ]
-                      }
-
-                      0x5 => {
-                        // rot
-                        seq![
-                          match carry {
-                            true => seq![set_yl, nand_zl, nand_mem],
-                            false => seq![fetch],
-                          }, // continuation of match below
-                          sp_xl,
-                          size_yl,
-                          sum_al, // SP + SIZE -> AL
-                          mem_xlyl,
-                          sum_xlcf, // *AL + *AL -> XL
-                          clr_yl,
-                          match carry {
-                            true => seq![cinsum_zl], // XL + 1 -> ZL
-                            false => seq![sum_zl],   // XL -> ZL
-                          },
-                          sp_al,
-                          mem_xl,
-                          set_yl,
-                          sum_memcf, // *SP - 1 -> *SP
-                          match carry {
-                            // not done. store shifted value
-                            true => seq![sp_xl, size_yl, sum_al, noop], // ZL -> *(SP + SIZE)
-                            // done. ignore shifted value, pop counter, fetch next instruction
-                            false => seq![clr_yl, sp_xl, cinsum_sp], // SP++
-                          }
-                        ]
-                      }
-
-                      0x8 => {
-                        // orr
-                        seq![
-                          fetch, //
-                          sp_alxl, cinsum_sp, // SP++
-                          mem_zl,    // *SP -> ZL
-                          size_yl, sum_al, // SP + SIZE -> AL
-                          set_yl, nand_xl, // ~ZL -> XL
-                          mem_zl, nand_zl,    // ~*AL -> ZL
-                          cinsum_yl,  // XL -> YL
-                          nand_memcf, // YL NAND ZL -> *AL
-                          clr_yl      //
-                        ]
-                      }
-
-                      0x9 => {
-                        // and
-                        seq![
-                          fetch, //
-                          sp_alxl, cinsum_sp, // SP++
-                          mem_zl,    // *SP -> ZL
-                          size_yl, sum_al, // SP + SIZE -> AL
-                          mem_yl, // *AL -> YL
-                          nand_ylzl, nand_memcf, // ~(YL NAND ZL) -> *AL
-                          clr_yl      //
-                        ]
-                      }
-
-                      0xA => {
-                        // xor
-                        seq![
-                          fetch, //
-                          sp_alxl, cinsum_sp, // SP++
-                          mem_zl,    // *SP -> ZL
-                          size_yl, sum_al, // SP + SIZE -> AL
-                          set_yl, nand_zl, nand_xl, // ZL -> XL
-                          mem_zl, nand_zl,   // ~*AL -> ZL
-                          cinsum_yl, // XL -> YL
-                          nand_xl,   // YL NAND ZL -> XL
-                          // ---
-                          set_zl, nand_yl, // ~YL -> YL
-                          mem_zl,  // *AL -> ZL
-                          nand_zl, // YL NAND ZL -> ZL
-                          set_yl, cinsum_yl,  // XL -> YL
-                          nand_memcf, // ~(YL NAND ZL) -> *AL
-                          clr_yl      //
-                        ]
-                      }
-
-                      0xB => {
-                        // xnd
-                        seq![
-                          fetch, //
-                          sp_xl,
-                          cinsum_spal, // SP++
-                          yl_mem,      // 0x00 -> SP
-                          set_xlylzl,  // 0xFF -> XL; 0xFF -> YL; 0xFF -> ZL
-                          sum_xlcf,    // 1 -> CF
-                          nand_yl
-                        ]
-                      }
-
-                      _ => match (opcode, instruction & 0b00000011) {
-                        // (size used as part of opcode)
-                        (0xC, 0b00) => {
-                          // inc
-                          seq![
-                            fetch, //
-                            sp_al, mem_xl,     // *SP -> XL
-                            cinsum_mem  // XL + 1 -> *SP
-                          ]
-                        }
-
-                        (0xC, 0b01) => {
-                          // dec
-                          seq![
-                            fetch, //
-                            sp_al, mem_xl, // *SP -> XL
-                            set_ylzl, sum_mem, // XL + 0xFF -> *SP
-                            nand_yl  //
-                          ]
-                        }
-
-                        (0xC, 0b10) => {
-                          // neg
-                          seq![
-                            fetch, //
-                            set_ylzl, nand_xl, // 0x00 -> XL
-                            sp_al, mem_ylzl, nand_ylzl, cinsum_mem, // 0x00 - *SP -> *SP
-                            clr_yl      //
-                          ]
-                        }
-
-                        (0xD, 0b00) => {
-                          // shl
-                          seq![
-                            fetch, //
-                            sp_al,
-                            mem_xlyl, // *SP -> XL; *SP -> YL
-                            match carry {
-                              true => seq![cinsum_xlcf], // XL + XL -> XL
-                              false => seq![sum_xlcf],   // XL + XL -> XL
-                            },
-                            set_ylzl,
-                            cinsum_mem, // XL -> *SP
-                            nand_yl
-                          ]
-                        }
-
-                        (0xD, 0b01) => {
-                          // shr
-                          seq![
-                            fetch, //
-                            sp_al,
-                            mem_xlyl, // *SP -> XL; *SP -> YL
-                            match carry {
-                              true => std::iter::repeat(seq![cinsum_xlylcf])
-                                .take(8)
-                                .flatten()
-                                .collect::<Vec<_>>(), // XL + XL -> XL; XL + XL -> YL
-                              false => std::iter::repeat(seq![sum_xlylcf])
-                                .take(8)
-                                .flatten()
-                                .collect::<Vec<_>>(), // XL + XL -> XL; XL + XL -> YL
-                            },
-                            set_ylzl,
-                            cinsum_mem, // XL -> *SP
-                            nand_yl
-                          ]
-                        }
-
-                        (0xD, 0b10) => {
-                          // not
-                          seq![
-                            fetch, //
-                            sp_al, mem_ylzl, nand_memcf, // ~*SP -> *SP
-                            clr_yl      //
-                          ]
-                        }
-
-                        (0xD, 0b11) => {
-                          // buf
-                          seq![
-                            fetch, //
-                            sp_al, mem_ylzl, nand_ylzl, nand_memcf, // *SP -> *SP
-                            clr_yl      //
-                          ]
-                        }
-
-                        (0b1110, 0b11) => {
-                          // dbg
-                          seq![fetch, vec![Err(TickTrap::DebugRequest)]]
-                        }
-
-                        _ => seq![fetch, vec![Err(TickTrap::IllegalOpcode)]],
+              let seq =
+                match common::opcode_to_instruction(opcode).map_err(|_| TickTrap::IllegalOpcode)? {
+                  Instruction::Psh(_imm) => {
+                    unreachable!()
+                  }
+                  Instruction::Add(_size) => {
+                    seq![
+                      fetch, //
+                      sp_alxl,
+                      cinsum_sp, // SP++
+                      mem_zl,    // *SP -> ZL
+                      size_yl,
+                      sum_al, // SP + SIZE -> AL
+                      set_yl,
+                      nand_zl,
+                      nand_yl, // ZL -> YL
+                      mem_xl,  // *AL -> XL
+                      match carry {
+                        true => seq![cinsum_xlcf], // XL + YL -> XL
+                        false => seq![sum_xlcf],   // XL + YL -> XL
                       },
-                    }
+                      set_ylzl,
+                      cinsum_mem, // XL -> *AL
+                      nand_yl
+                    ]
                   }
 
-                  0b1 => {
-                    match (instruction & 0b00100000) >> 5 {
-                      0b0 => {
-                        // (offset operations)
-                        match (instruction & 0b00010000) >> 4 {
-                          0b0 => {
-                            // ldo
-                            seq![
-                              fetch, //
-                              sp_xl, ofst_yl, sum_al, // SP + OFST -> AL
-                              mem_zl, // *AL -> ZL
-                              sp_xl, set_yl, sum_spal, // SP-- -> AL
-                              nand_zl, nand_mem, // ZL -> *AL
-                              clr_yl    //
-                            ]
-                          }
-
-                          0b1 => {
-                            // sto
-                            seq![
-                              fetch, //
-                              sp_alxl,
-                              mem_zl, // *SP -> ZL
-                              cinsum_spxl,
-                              ofst_yl,
-                              sum_al, // ++SP + OFST -> AL
-                              set_yl,
-                              nand_zl,
-                              nand_mem, // ZL -> *AL
-                              clr_yl
-                            ]
-                          }
-
-                          _ => unreachable!(),
-                        }
+                  Instruction::Sub(_size) => {
+                    seq![
+                      fetch, //
+                      sp_alxl,
+                      cinsum_sp, // SP++
+                      mem_zl,    // *SP -> ZL
+                      size_yl,
+                      sum_al, // SP + SIZE -> AL
+                      set_yl,
+                      nand_yl, // ~ZL -> YL
+                      mem_xl,  // *AL -> XL
+                      match carry {
+                        true => seq![sum_xlcf],     // XL - YL -> XL
+                        false => seq![cinsum_xlcf], // XL - YL -> XL
+                      },
+                      set_ylzl,
+                      cinsum_mem, // XL -> *AL
+                      match carry {
+                        true => seq![nand_ylzl, nand_zlcf], // 0 -> CF
+                        false => seq![noop, nand_ylcf],     // 1 -> CF
                       }
-
-                      0b1 => {
-                        match (instruction & 0b00010000) >> 4 {
-                          0b0 => {
-                            // (carry and flags and stack)
-                            match instruction & 0b00001111 {
-                              0x0 => {
-                                // lda
-                                seq![
-                                  fetch, //
-                                  sp_al, mem_xl, // *SP -> XL
-                                  sum_al, mem_xl, // *XL -> XL
-                                  sp_al, sum_mem // XL -> *SP
-                                ]
-                              }
-
-                              0x1 => {
-                                // sta
-                                seq![
-                                  fetch, //
-                                  sp_alxl, cinsum_sp, mem_zl, // *SP++ -> ZL
-                                  sp_alxl, cinsum_sp, mem_xl, // *SP++ -> XL
-                                  set_yl, nand_zl, nand_al, // ZL -> AL
-                                  clr_yl, sum_mem // ZL -> *AL
-                                ]
-                              }
-
-                              0x2 => {
-                                // ldi
-                                seq![
-                                  fetch, //
-                                  sp_xl, set_yl, sum_spal, // SP-- -> AL
-                                  ip_mem,   // IP -> *AL
-                                  clr_yl    //
-                                ]
-                              }
-
-                              0x3 => {
-                                // sti
-                                seq![
-                                  fetch, //
-                                  sp_alxl, cinsum_sp, // SP++
-                                  mem_ip     // *SP -> IP
-                                ]
-                              }
-
-                              0x4 => {
-                                // lds
-                                seq![
-                                  fetch, //
-                                  sp_xlzl, set_yl, sum_spal, // SP -> ZL; SP-- -> AL
-                                  nand_zl, nand_mem, // ZL -> *AL
-                                  clr_yl    //
-                                ]
-                              }
-
-                              0x5 => {
-                                // sts
-                                seq![
-                                  fetch, //
-                                  sp_al, mem_sp // *SP -> SP
-                                ]
-                              }
-
-                              0x8 => {
-                                // nop
-                                seq![fetch]
-                              }
-
-                              0x9 => {
-                                // clc
-                                seq![fetch, clr_cf]
-                              }
-
-                              0xA => {
-                                // sec
-                                seq![fetch, set_cf]
-                              }
-
-                              0xB => {
-                                // flc
-                                match carry {
-                                  true => seq![fetch, clr_cf],
-                                  false => seq![fetch, set_cf],
-                                }
-                              }
-
-                              0xC => {
-                                // swp
-                                seq![
-                                  fetch, //
-                                  sp_al, mem_zl, // *SP -> ZL
-                                  sp_xl, cinsum_al, mem_xl, // *(SP + 1) -> *XL
-                                  set_yl, nand_zl, nand_mem, // ZL -> *(SP + 1)
-                                  sp_al, cinsum_mem, // XL -> *SP
-                                  clr_yl      //
-                                ]
-                              }
-
-                              0xD => {
-                                // pop
-                                seq![
-                                  fetch,
-                                  sp_xl, cinsum_sp // SP++
-                                ]
-                              }
-
-                              _ => vec![Err(TickTrap::IllegalOpcode)],
-                            }
-                          }
-
-                          0b1 => {
-                            // phn
-                            seq![
-                              fetch, // instruction is in ZL
-                              sp_xl, set_yl, sum_spal, // SP-- -> AL
-                              nand_zl, nand_mem, // IL -> *AL
-                              clr_yl    //
-                            ]
-                          }
-
-                          _ => unreachable!(),
-                        }
-                      }
-
-                      _ => unreachable!(),
-                    }
+                    ]
                   }
 
-                  _ => unreachable!(),
-                },
+                  Instruction::Iff(_size) => {
+                    seq![
+                      fetch, //
+                      sp_alxl,
+                      cinsum_sp, // SP++
+                      mem_zl,    // *SP -> ZL
+                      size_yl,
+                      sum_al, // SP + SIZE -> AL
+                      mem_xl, // *AL -> XL
+                      set_yl,
+                      match carry {
+                        true => seq![nand_zl, nand_xl], // ZL -> xL
+                        false => seq![noop, noop],      // no-op
+                      },
+                      cinsum_mem, // XL -> *AL
+                      clr_yl
+                    ]
+                  }
 
-                _ => unreachable!(),
-              };
+                  Instruction::Rot(_size) => {
+                    seq![
+                      match carry {
+                        true => seq![set_yl, nand_zl, nand_mem],
+                        false => seq![fetch],
+                      }, // continuation of match below
+                      sp_xl,
+                      size_yl,
+                      sum_al, // SP + SIZE -> AL
+                      mem_xlyl,
+                      sum_xlcf, // *AL + *AL -> XL
+                      clr_yl,
+                      match carry {
+                        true => seq![cinsum_zl], // XL + 1 -> ZL
+                        false => seq![sum_zl],   // XL -> ZL
+                      },
+                      sp_al,
+                      mem_xl,
+                      set_yl,
+                      sum_memcf, // *SP - 1 -> *SP
+                      match carry {
+                        // not done. store shifted value
+                        true => seq![sp_xl, size_yl, sum_al, noop], // ZL -> *(SP + SIZE)
+                        // done. ignore shifted value, pop counter, fetch next instruction
+                        false => seq![clr_yl, sp_xl, cinsum_sp], // SP++
+                      }
+                    ]
+                  }
+
+                  Instruction::Orr(_size) => {
+                    seq![
+                      fetch, //
+                      sp_alxl, cinsum_sp, // SP++
+                      mem_zl,    // *SP -> ZL
+                      size_yl, sum_al, // SP + SIZE -> AL
+                      set_yl, nand_xl, // ~ZL -> XL
+                      mem_zl, nand_zl,    // ~*AL -> ZL
+                      cinsum_yl,  // XL -> YL
+                      nand_memcf, // YL NAND ZL -> *AL
+                      clr_yl      //
+                    ]
+                  }
+
+                  Instruction::And(_size) => {
+                    seq![
+                      fetch, //
+                      sp_alxl, cinsum_sp, // SP++
+                      mem_zl,    // *SP -> ZL
+                      size_yl, sum_al, // SP + SIZE -> AL
+                      mem_yl, // *AL -> YL
+                      nand_ylzl, nand_memcf, // ~(YL NAND ZL) -> *AL
+                      clr_yl      //
+                    ]
+                  }
+
+                  Instruction::Xor(_size) => {
+                    seq![
+                      fetch, //
+                      sp_alxl, cinsum_sp, // SP++
+                      mem_zl,    // *SP -> ZL
+                      size_yl, sum_al, // SP + SIZE -> AL
+                      set_yl, nand_zl, nand_xl, // ZL -> XL
+                      mem_zl, nand_zl,   // ~*AL -> ZL
+                      cinsum_yl, // XL -> YL
+                      nand_xl,   // YL NAND ZL -> XL
+                      // ---
+                      set_zl, nand_yl, // ~YL -> YL
+                      mem_zl,  // *AL -> ZL
+                      nand_zl, // YL NAND ZL -> ZL
+                      set_yl, cinsum_yl,  // XL -> YL
+                      nand_memcf, // ~(YL NAND ZL) -> *AL
+                      clr_yl      //
+                    ]
+                  }
+
+                  Instruction::Xnd(_size) => {
+                    seq![
+                      fetch, //
+                      sp_xl,
+                      cinsum_spal, // SP++
+                      yl_mem,      // 0x00 -> SP
+                      set_xlylzl,  // 0xFF -> XL; 0xFF -> YL; 0xFF -> ZL
+                      sum_xlcf,    // 1 -> CF
+                      nand_yl
+                    ]
+                  }
+
+                  Instruction::Inc => {
+                    seq![
+                      fetch, //
+                      sp_al, mem_xl,     // *SP -> XL
+                      cinsum_mem  // XL + 1 -> *SP
+                    ]
+                  }
+
+                  Instruction::Dec => {
+                    seq![
+                      fetch, //
+                      sp_al, mem_xl, // *SP -> XL
+                      set_ylzl, sum_mem, // XL + 0xFF -> *SP
+                      nand_yl  //
+                    ]
+                  }
+
+                  Instruction::Neg => {
+                    seq![
+                      fetch, //
+                      set_ylzl, nand_xl, // 0x00 -> XL
+                      sp_al, mem_ylzl, nand_ylzl, cinsum_mem, // 0x00 - *SP -> *SP
+                      clr_yl      //
+                    ]
+                  }
+
+                  Instruction::Shl => {
+                    seq![
+                      fetch, //
+                      sp_al,
+                      mem_xlyl, // *SP -> XL; *SP -> YL
+                      match carry {
+                        true => seq![cinsum_xlcf], // XL + XL -> XL
+                        false => seq![sum_xlcf],   // XL + XL -> XL
+                      },
+                      set_ylzl,
+                      cinsum_mem, // XL -> *SP
+                      nand_yl
+                    ]
+                  }
+
+                  Instruction::Shr => {
+                    seq![
+                      fetch, //
+                      sp_al,
+                      mem_xlyl, // *SP -> XL; *SP -> YL
+                      match carry {
+                        true => std::iter::repeat(seq![cinsum_xlylcf])
+                          .take(8)
+                          .flatten()
+                          .collect::<Vec<_>>(), // XL + XL -> XL; XL + XL -> YL
+                        false => std::iter::repeat(seq![sum_xlylcf])
+                          .take(8)
+                          .flatten()
+                          .collect::<Vec<_>>(), // XL + XL -> XL; XL + XL -> YL
+                      },
+                      set_ylzl,
+                      cinsum_mem, // XL -> *SP
+                      nand_yl
+                    ]
+                  }
+
+                  Instruction::Not => {
+                    seq![
+                      fetch, //
+                      sp_al, mem_ylzl, nand_memcf, // ~*SP -> *SP
+                      clr_yl      //
+                    ]
+                  }
+
+                  Instruction::Buf => {
+                    seq![
+                      fetch, //
+                      sp_al, mem_ylzl, nand_ylzl, nand_memcf, // *SP -> *SP
+                      clr_yl      //
+                    ]
+                  }
+
+                  Instruction::Dbg => {
+                    seq![fetch, vec![Err(TickTrap::DebugRequest)]]
+                  }
+
+                  Instruction::Ldo(_ofst) => {
+                    seq![
+                      fetch, //
+                      sp_xl, ofst_yl, sum_al, // SP + OFST -> AL
+                      mem_zl, // *AL -> ZL
+                      sp_xl, set_yl, sum_spal, // SP-- -> AL
+                      nand_zl, nand_mem, // ZL -> *AL
+                      clr_yl    //
+                    ]
+                  }
+
+                  Instruction::Sto(_ofst) => {
+                    seq![
+                      fetch, //
+                      sp_alxl,
+                      mem_zl, // *SP -> ZL
+                      cinsum_spxl,
+                      ofst_yl,
+                      sum_al, // ++SP + OFST -> AL
+                      set_yl,
+                      nand_zl,
+                      nand_mem, // ZL -> *AL
+                      clr_yl
+                    ]
+                  }
+
+                  Instruction::Lda => {
+                    seq![
+                      fetch, //
+                      sp_al, mem_xl, // *SP -> XL
+                      sum_al, mem_xl, // *XL -> XL
+                      sp_al, sum_mem // XL -> *SP
+                    ]
+                  }
+
+                  Instruction::Sta => {
+                    seq![
+                      fetch, //
+                      sp_alxl, cinsum_sp, mem_zl, // *SP++ -> ZL
+                      sp_alxl, cinsum_sp, mem_xl, // *SP++ -> XL
+                      set_yl, nand_zl, nand_al, // ZL -> AL
+                      clr_yl, sum_mem // ZL -> *AL
+                    ]
+                  }
+
+                  Instruction::Ldi => {
+                    seq![
+                      fetch, //
+                      sp_xl, set_yl, sum_spal, // SP-- -> AL
+                      ip_mem,   // IP -> *AL
+                      clr_yl    //
+                    ]
+                  }
+
+                  Instruction::Sti => {
+                    seq![
+                      fetch, //
+                      sp_alxl, cinsum_sp, // SP++
+                      mem_ip     // *SP -> IP
+                    ]
+                  }
+
+                  Instruction::Lds => {
+                    seq![
+                      fetch, //
+                      sp_xlzl, set_yl, sum_spal, // SP -> ZL; SP-- -> AL
+                      nand_zl, nand_mem, // ZL -> *AL
+                      clr_yl    //
+                    ]
+                  }
+
+                  Instruction::Sts => {
+                    seq![
+                      fetch, //
+                      sp_al, mem_sp // *SP -> SP
+                    ]
+                  }
+
+                  Instruction::Nop => {
+                    seq![fetch]
+                  }
+
+                  Instruction::Clc => {
+                    seq![fetch, clr_cf]
+                  }
+
+                  Instruction::Sec => {
+                    seq![fetch, set_cf]
+                  }
+
+                  Instruction::Flc => match carry {
+                    true => seq![fetch, clr_cf],
+                    false => seq![fetch, set_cf],
+                  },
+
+                  Instruction::Swp => {
+                    seq![
+                      fetch, //
+                      sp_al, mem_zl, // *SP -> ZL
+                      sp_xl, cinsum_al, mem_xl, // *(SP + 1) -> *XL
+                      set_yl, nand_zl, nand_mem, // ZL -> *(SP + 1)
+                      sp_al, cinsum_mem, // XL -> *SP
+                      clr_yl      //
+                    ]
+                  }
+
+                  Instruction::Pop => {
+                    seq![
+                    fetch,
+                    sp_xl, cinsum_sp // SP++
+                  ]
+                  }
+
+                  Instruction::Phn(_imm) => {
+                    seq![
+                      fetch, // instruction is in ZL
+                      sp_xl, set_yl, sum_spal, // SP-- -> AL
+                      nand_zl, nand_mem, // IL -> *AL
+                      clr_yl    //
+                    ]
+                  }
+                };
+
               let seq = seq![seq, clr_sc];
               let rest = seq.get(0x20..seq.len() - 1).unwrap_or(&[]);
               if step == 0x00 && rest.len() > 0 {
                 errors.push(Error(format!(
-                  "Microcode for instruction `{:02X}` with carry `{:01X}` overflows by {} steps",
-                  instruction,
+                  "Microcode for opcode `{:02X}` with carry `{:01X}` overflows by {} steps",
+                  opcode,
                   carry as u8,
                   rest.len()
                 )));
