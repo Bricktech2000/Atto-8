@@ -55,18 +55,15 @@ fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -
   // remove comments and resolve includes
 
   use std::path::Path;
-  let source = match std::fs::read_to_string(&file.0) {
-    Ok(data) => data,
-    Err(_) => {
-      errors.push((
-        Pos(scope.unwrap_or("[bootstrap]").to_string(), 0),
-        Error(format!("Unable to read file `{}`", file)),
-      ));
-      "".to_string()
-    }
-  };
+  let assembly = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {
+    errors.push((
+      Pos(scope.unwrap_or("[bootstrap]").to_string(), 0),
+      Error(format!("Unable to read file `{}`", file)),
+    ));
+    "".to_string()
+  });
 
-  let source: String = source
+  let assembly: String = assembly
     .lines()
     .map(|line| line.strip_suffix("#").unwrap_or(line))
     .map(|line| line.split("# ").next().unwrap_or(line))
@@ -93,11 +90,11 @@ fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -
     .collect::<Vec<_>>()
     .join("\n");
 
-  source
+  assembly
 }
 
-fn mnemonize(source: String, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Mnemonic)> {
-  let mnemonics: Vec<(Pos, Mnemonic)> = source
+fn mnemonize(assembly: String, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Mnemonic)> {
+  let mnemonics: Vec<(Pos, Mnemonic)> = assembly
     .split_whitespace()
     .into_iter()
     .map(|mnemonic| Mnemonic(mnemonic.to_string()))

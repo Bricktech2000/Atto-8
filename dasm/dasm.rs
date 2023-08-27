@@ -12,13 +12,10 @@ fn main() {
   let memory_image_file: &String = &args[1];
   let disassembly_output_file: &String = &args[2];
 
-  let memory_image: Vec<u8> = match std::fs::read(memory_image_file) {
-    Ok(source) => source,
-    Err(_) => {
-      println!("Dasm: Error: Unable to read file `{}`", memory_image_file);
-      std::process::exit(1);
-    }
-  };
+  let memory_image: Vec<u8> = std::fs::read(memory_image_file).unwrap_or_else(|_| {
+    println!("Dasm: Error: Unable to read file `{}`", memory_image_file);
+    std::process::exit(1);
+  });
 
   match memory_image.try_into() {
     Ok(slice) => {
@@ -52,7 +49,7 @@ fn disassemble(memory_image: [u8; common::MEM_SIZE], entry_point: &str) -> Strin
 
   let mnemonics: Vec<Mnemonic> = tokens.into_iter().map(common::token_to_mnemonic).collect();
 
-  let source: String = format!(
+  let disassembly: String = format!(
     "{}\n{}",
     Token::MacroDef(Macro {
       identifier: entry_point.to_string(),
@@ -75,5 +72,5 @@ fn disassemble(memory_image: [u8; common::MEM_SIZE], entry_point: &str) -> Strin
       .join("\n")
   );
 
-  source
+  disassembly
 }
