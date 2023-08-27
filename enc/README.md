@@ -1,7 +1,7 @@
 # Enc
 
-_Hex-to-machine-code encoder for Atto-8 microarchitecture_
+_Hex-to-opcode encoder for Atto-8 microarchitecture_
 
 ## Overview
 
-The encoder directly encodes hexadecimal instructions (ASCII characters in the range `/[0-9A-F]/`) into binary format. It ignores both whitespace and comments of the forms `/# .*$/` and `/#$/`.
+The encoder encodes hexadecimal instructions (plain text characters in the range `/[0-9A-F]/`) from `argv[1]`, and outputs a memory image file to `argv[2]` which is exactly `0x100` bytes in size. It ignores both whitespace and comments of the forms `/# .*$/` and `/#$/`.

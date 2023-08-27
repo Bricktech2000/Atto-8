@@ -32,7 +32,7 @@ circ = circ.replace(rom_label, rom_label + b'\n<a name="contents">addr/data: 8 8
 with open(circuit_file, 'wb') as f:
   f.write(circ)
 
-print('Circ: Running Logisim...')
+print('Circ: Launching Logisim...')
 subprocess.run(['logisim-evolution', circuit_file], check=True)
 
 with open(circuit_file, 'rb') as f:

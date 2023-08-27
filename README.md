@@ -11,7 +11,8 @@ The Atto-8 is a small ecosystem of hardware and software living in symbiosis. Th
 - [/spec/](spec/) &mdash; Specification for Atto-8 microarchitecture, microprocessor and microcomputer
 - [/lib/](lib/) &mdash; Assembly standard library for Atto-8 microcomputer
 - [/cc/](cc/) &mdash; Rudimentary C99 compiler for Atto-8 microarchitecture
-- [/enc/](enc/) &mdash; Hex-to-machine-code encoder for Atto-8 microarchitecture
+- [/enc/](enc/) &mdash; Hex-to-opcode encoder for Atto-8 microarchitecture
+- [/dec/](dec/) &mdash; Opcode-to-hex decoder for Atto-8 microarchitecture
 - [/asm/](asm/) &mdash; Optimizing assembler for Atto-8 microarchitecture
 - [/dasm/](dasm/) &mdash; Elementary disassembler for Atto-8 microarchitecture
 - [/emu/](emu/) &mdash; Instruction-level emulator for Atto-8 microcomputer

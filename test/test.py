@@ -44,11 +44,17 @@ while input:
         operations.append((operation, functools.partial(run_cargo, 'run', '--bin',
                           operation, c_source_file, assembly_output_file)))
       case 'enc':
-        hex_file = filenames.pop()
-        memory_image_file = hex_file + '.mem'
+        hex_source_file = filenames.pop()
+        memory_image_file = hex_source_file + '.mem'
         filenames.append(memory_image_file)
         operations.append((operation, functools.partial(
-            run_python, rel_path(f'../{operation}/{operation}.py'), hex_file, memory_image_file)))
+            run_python, rel_path(f'../{operation}/{operation}.py'), hex_source_file, memory_image_file)))
+      case 'dec':
+        memory_image_file = filenames.pop()
+        hex_output_file = memory_image_file + '.hex'
+        filenames.append(hex_output_file)
+        operations.append((operation, functools.partial(
+            run_python, rel_path(f'../{operation}/{operation}.py'), memory_image_file, hex_output_file)))
       case 'asm':
         assembly_source_file = filenames.pop()
         memory_image_file = assembly_source_file + '.mem'

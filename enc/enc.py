@@ -10,7 +10,7 @@ def pad_or_slice(L, n):
 
 
 if len(sys.argv) != 3:
-  print("Enc: Usage: enc <hex source file> <memory image file>")
+  print('Enc: Usage: enc <hex source file> <memory image file>')
   sys.exit(1)
 
 hex_source_file = sys.argv[1]
@@ -19,6 +19,8 @@ memory_image_file = sys.argv[2]
 with open(hex_source_file, 'rb') as hex_source_file:
   with open(memory_image_file, 'wb') as memory_image_file:
     hex_source = hex_source_file.read().decode()
-    preprocessed = ''.join(line for line in hex_source.split('\n') if not line.startswith('# ') and line != '#')
+    preprocessed = ''.join(line.split('#')[0] for line in hex_source.split('\n'))
     memory_image = bytes(byte or 0x00 for byte in pad_or_slice(list(bytes.fromhex(preprocessed)), common.MEM_SIZE))
     memory_image_file.write(memory_image)
+
+print('Enc: Done')
