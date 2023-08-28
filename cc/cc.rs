@@ -4,6 +4,7 @@ use common::*;
 
 mod codegen;
 mod parse;
+mod preprocess;
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
@@ -15,17 +16,24 @@ fn main() {
   let c_source_file = &args[1];
   let assembly_output_file = &args[2];
 
-  let input = std::fs::read_to_string(c_source_file).unwrap_or_else(|_| {
+  let input: String = std::fs::read_to_string(c_source_file).unwrap_or_else(|_| {
     println!("CC: Error: Unable to read file `{}`", c_source_file);
     std::process::exit(1);
   });
 
-  let translation_unit = parse::parse(input).unwrap_or_else(|e| {
+  let preprocessed: String = preprocess::preprocess(input).unwrap_or_else(|e| {
     println!("CC: Error: {}", e);
     std::process::exit(1);
   });
 
-  let tokens = codegen::codegen(translation_unit, "main").unwrap_or_else(|e| {
+  let program: Program = parse::parse(preprocessed).unwrap_or_else(|e| {
+    println!("CC: Error: {}", e);
+    std::process::exit(1);
+  });
+
+  println!("{:#?}", program);
+
+  let tokens: Vec<Token> = codegen::codegen(program, "main").unwrap_or_else(|e| {
     println!("CC: Error: {}", e);
     std::process::exit(1);
   });
@@ -51,84 +59,36 @@ fn main() {
   println!("CC: Done");
 }
 
-#[derive(Debug)]
-pub enum TranslationUnit {
-  ExternalDeclarations(Vec<ExternalDeclaration>),
+#[derive(Clone, Debug)]
+pub struct Type;
+
+#[derive(Clone, Debug)]
+pub struct Program {
+  function_definitions: Vec<FunctionDefinition>,
 }
 
-#[derive(Debug)]
-pub enum ExternalDeclaration {
-  FunctionDefinition(FunctionDefinition),
-}
-
-#[derive(Debug)]
-pub enum FunctionDefinition {
-  NameBody(String, CompoundStatement), // TODO does not obey grammar
-}
-
-#[derive(Debug)]
-pub enum IntegerConstant {
+#[derive(Clone, Debug)]
+pub enum Expression {
+  Addition(Box<Expression>, Box<Expression>),
+  Subtraction(Box<Expression>, Box<Expression>),
+  Multiplication(Box<Expression>, Box<Expression>),
+  Division(Box<Expression>, Box<Expression>),
+  Modulo(Box<Expression>, Box<Expression>),
+  Negation(Box<Expression>),
+  BitwiseComplement(Box<Expression>),
+  LogicalNegation(Box<Expression>),
+  Cast(Type, Box<Expression>),
   IntegerConstant(u8),
 }
 
-#[derive(Debug)]
-pub enum CompoundStatement {
-  MagicReturn(MagicReturn), // TODO does not obey grammar
+#[derive(Clone, Debug)]
+pub enum Statement {
+  Expression(Expression),
+  MagicReturn(Expression),
 }
 
-#[derive(Debug)]
-pub enum MagicReturn {
-  AdditiveExpression(AdditiveExpression),
-}
-
-#[derive(Debug)]
-pub enum AdditiveExpression {
-  MultiplicativeExpression(MultiplicativeExpression),
-  AdditiveExpressionAdditiveOperatorMultiplicativeExpression(
-    Box<AdditiveExpression>,
-    AdditiveOperator,
-    MultiplicativeExpression,
-  ),
-}
-
-#[derive(Debug)]
-pub enum MultiplicativeExpression {
-  CastExpression(CastExpression),
-  MultiplicativeExpressionMultiplicativeOperatorCastExpression(
-    Box<MultiplicativeExpression>,
-    MultiplicativeOperator,
-    CastExpression,
-  ),
-}
-
-#[derive(Debug)]
-pub enum CastExpression {
-  UnaryExpression(UnaryExpression),
-}
-
-#[derive(Debug)]
-pub enum UnaryExpression {
-  UnaryOperatorCastExpression(UnaryOperator, Box<CastExpression>),
-  ParenAdditiveExpressionParen(Box<AdditiveExpression>), // TODO does not obey grammar
-  IntegerConstant(IntegerConstant),                      // TODO replaces PostfixExpression
-}
-
-#[derive(Debug)]
-pub enum UnaryOperator {
-  Negation,
-  BitwiseComplement,
-  LogicalNegation,
-}
-
-#[derive(Debug)]
-pub enum AdditiveOperator {
-  Addition,
-  Subtraction,
-}
-
-#[derive(Debug)]
-pub enum MultiplicativeOperator {
-  Multiplication,
-  Division,
-  Modulo,
+#[derive(Clone, Debug)]
+pub struct FunctionDefinition {
+  name: String,
+  body: Vec<Statement>,
 }

@@ -1,6 +1,6 @@
 use crate::*;
 
-pub fn codegen(translation_unit: TranslationUnit, entry_point: &str) -> Result<Vec<Token>, Error> {
+pub fn codegen(program: Program, entry_point: &str) -> Result<Vec<Token>, Error> {
   let entry_macro = Macro {
     identifier: entry_point.to_string(),
   };
@@ -22,7 +22,7 @@ pub fn codegen(translation_unit: TranslationUnit, entry_point: &str) -> Result<V
       Token::MacroRef(call_macro),
       Token::MacroRef(hlt_macro),
     ],
-    codegen::translation_unit(translation_unit),
+    codegen::program(program),
   ]
   .into_iter()
   .flatten()
@@ -31,20 +31,14 @@ pub fn codegen(translation_unit: TranslationUnit, entry_point: &str) -> Result<V
   Ok(tokens)
 }
 
-fn translation_unit(translation_unit: TranslationUnit) -> Vec<Token> {
-  match translation_unit {
-    TranslationUnit::ExternalDeclarations(external_declarations) => external_declarations
+fn program(program: Program) -> Vec<Token> {
+  match program {
+    Program {
+      function_definitions,
+    } => function_definitions
       .into_iter()
-      .flat_map(codegen::external_declaration)
+      .flat_map(codegen::function_definition)
       .collect(),
-  }
-}
-
-fn external_declaration(external_declaration: ExternalDeclaration) -> Vec<Token> {
-  match external_declaration {
-    ExternalDeclaration::FunctionDefinition(function_definition) => {
-      codegen::function_definition(function_definition)
-    }
   }
 }
 
@@ -54,138 +48,90 @@ fn function_definition(function_definition: FunctionDefinition) -> Vec<Token> {
   };
 
   match function_definition {
-    FunctionDefinition::NameBody(name, body) => vec![
+    FunctionDefinition { name, body } => vec![
       vec![Token::LabelDef(Label {
         identifier: name.clone(),
         scope_uid: None,
       })],
-      codegen::compound_statement(body),
+      body.into_iter().flat_map(codegen::statement).collect(),
       vec![Token::Swp, Token::MacroRef(ret_macro)],
-    ]
-    .into_iter()
-    .flatten()
-    .collect(),
-  }
-}
-
-fn compound_statement(compound_statement: CompoundStatement) -> Vec<Token> {
-  match compound_statement {
-    CompoundStatement::MagicReturn(magic_return) => codegen::magic_return(magic_return),
-  }
-}
-
-fn magic_return(magic_return: MagicReturn) -> Vec<Token> {
-  match magic_return {
-    MagicReturn::AdditiveExpression(additive_expression) => {
-      codegen::additive_expression(additive_expression)
-    }
-  }
-}
-
-fn additive_expression(additive_expression: AdditiveExpression) -> Vec<Token> {
-  match additive_expression {
-    AdditiveExpression::MultiplicativeExpression(multiplicative_expression) => {
-      codegen::multiplicative_expression(multiplicative_expression)
-    }
-    AdditiveExpression::AdditiveExpressionAdditiveOperatorMultiplicativeExpression(
-      additive_expression,
-      additive_operator,
-      multiplicative_expression,
-    ) => vec![
-      codegen::additive_expression(*additive_expression),
-      codegen::multiplicative_expression(multiplicative_expression),
-      codegen::additive_operator(additive_operator),
-    ]
-    .into_iter()
-    .flatten()
-    .collect(),
-  }
-}
-
-fn multiplicative_expression(multiplicative_expression: MultiplicativeExpression) -> Vec<Token> {
-  match multiplicative_expression {
-    MultiplicativeExpression::CastExpression(cast_expression) => {
-      codegen::cast_expression(cast_expression)
-    }
-    MultiplicativeExpression::MultiplicativeExpressionMultiplicativeOperatorCastExpression(
-      multiplicative_expression,
-      multiplicative_operator,
-      cast_expression,
-    ) => vec![
-      codegen::multiplicative_expression(*multiplicative_expression),
-      codegen::cast_expression(cast_expression),
-      codegen::multiplicative_operator(multiplicative_operator),
-    ]
-    .into_iter()
-    .flatten()
-    .collect(),
-  }
-}
-
-fn additive_operator(additive_operator: AdditiveOperator) -> Vec<Token> {
-  match additive_operator {
-    AdditiveOperator::Addition => vec![Token::Add],
-    AdditiveOperator::Subtraction => vec![Token::Sub],
-  }
-}
-
-fn multiplicative_operator(multiplicative_operator: MultiplicativeOperator) -> Vec<Token> {
-  match multiplicative_operator {
-    MultiplicativeOperator::Multiplication => vec![Token::MacroRef(Macro {
-      identifier: "mul".to_string(), // TODO implement operation
-    })],
-    MultiplicativeOperator::Division => vec![Token::MacroRef(Macro {
-      identifier: "div".to_string(), // TODO implement operation
-    })],
-    MultiplicativeOperator::Modulo => vec![Token::MacroRef(Macro {
-      identifier: "mod".to_string(), // TODO implement operation
-    })],
-  }
-}
-
-fn unary_expression(unary_expression: UnaryExpression) -> Vec<Token> {
-  match unary_expression {
-    UnaryExpression::UnaryOperatorCastExpression(unary_operator, cast_expression) => vec![
-      codegen::cast_expression(*cast_expression),
-      codegen::unary_operator(unary_operator),
-    ]
-    .into_iter()
-    .flatten()
-    .collect(),
-    UnaryExpression::ParenAdditiveExpressionParen(additive_expression) => {
-      codegen::additive_expression(*additive_expression)
-    }
-    UnaryExpression::IntegerConstant(integer_constant) => {
-      codegen::integer_constant(integer_constant)
-    }
-  }
-}
-
-fn cast_expression(cast_expression: CastExpression) -> Vec<Token> {
-  match cast_expression {
-    CastExpression::UnaryExpression(unary_expression) => {
-      codegen::unary_expression(unary_expression)
-    }
-  }
-}
-
-fn unary_operator(unary_operator: UnaryOperator) -> Vec<Token> {
-  match unary_operator {
-    // TODO type must match
-    UnaryOperator::Negation => vec![Token::Neg],
-    UnaryOperator::BitwiseComplement => vec![Token::Not],
-    UnaryOperator::LogicalNegation => vec![
-      Token::Buf,
-      Token::Pop,
-      Token::XXX(0x00),
-      Token::Shl,
-      Token::AtDyn,
     ],
   }
+  .into_iter()
+  .flatten()
+  .collect()
 }
 
-fn integer_constant(integer_constant: IntegerConstant) -> Vec<Token> {
-  match integer_constant {
-    IntegerConstant::IntegerConstant(value) => vec![Token::XXX(value)],
+fn statement(statement: Statement) -> Vec<Token> {
+  match statement {
+    Statement::MagicReturn(expression) => vec![codegen::expression(expression)],
+    Statement::Expression(expression) => vec![
+      codegen::expression(expression),
+      vec![Token::Pop], // TODO size must match
+    ],
   }
+  .into_iter()
+  .flatten()
+  .collect()
+}
+
+fn expression(expression: Expression) -> Vec<Token> {
+  let mul_macro = Macro {
+    identifier: "mul".to_string(), // TODO implement operation
+  };
+  let div_macro = Macro {
+    identifier: "div".to_string(), // TODO implement operation
+  };
+  let mod_macro = Macro {
+    identifier: "mod".to_string(), // TODO implement operation
+  };
+
+  match expression {
+    Expression::Addition(expression, expression_) => vec![
+      codegen::expression(*expression),
+      codegen::expression(*expression_),
+      vec![Token::Add],
+    ],
+    Expression::Subtraction(expression, expression_) => vec![
+      codegen::expression(*expression),
+      codegen::expression(*expression_),
+      vec![Token::Sub],
+    ],
+    Expression::Multiplication(expression, expression_) => vec![
+      codegen::expression(*expression),
+      codegen::expression(*expression_),
+      vec![Token::MacroRef(mul_macro)],
+    ],
+    Expression::Division(expression, expression_) => vec![
+      codegen::expression(*expression),
+      codegen::expression(*expression_),
+      vec![Token::MacroRef(div_macro)],
+    ],
+    Expression::Modulo(expression, expression_) => vec![
+      codegen::expression(*expression),
+      codegen::expression(*expression_),
+      vec![Token::MacroRef(mod_macro)],
+    ],
+    Expression::Negation(expression) => vec![codegen::expression(*expression), vec![Token::Neg]], // TODO type must match
+    Expression::BitwiseComplement(expression) => {
+      vec![codegen::expression(*expression), vec![Token::Not]] // TODO type must match
+    }
+    Expression::LogicalNegation(expression) => {
+      vec![
+        codegen::expression(*expression),
+        vec![
+          Token::Buf,
+          Token::Pop,
+          Token::XXX(0x00),
+          Token::Shl,
+          Token::AtDyn,
+        ],
+      ] // TODO type must match
+    }
+    Expression::Cast(_expression, _type) => todo!(),
+    Expression::IntegerConstant(integer_constant) => vec![vec![Token::XXX(integer_constant)]],
+  }
+  .into_iter()
+  .flatten()
+  .collect()
 }

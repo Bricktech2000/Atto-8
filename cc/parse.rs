@@ -43,7 +43,8 @@ fn char(char: char) -> Parser<()> {
 
 fn whitespace() -> Parser<()> {
   Rc::new(move |input: String| {
-    let (_, input) = parse::char(' ')(input.clone())
+    let (_, input) = Err(())
+      .or_else(|_| parse::char(' ')(input.clone()))
       .or_else(|_| parse::char('\n')(input.clone()))
       .or_else(|_| parse::char('\t')(input.clone()))?;
     Ok(((), input))
@@ -136,247 +137,203 @@ fn choice<T: 'static>(parser: Vec<Parser<T>>) -> Parser<T> {
 
 // C99 grammar
 
-fn translation_unit(input: String) -> ParseResult<TranslationUnit> {
+pub fn parse(input: String) -> Result<Program, Error> {
+  let (programm, input) = parse::translation_unit(input)?;
+
+  match &input[..] {
+    "" => Ok(programm),
+    _ => panic!("Input not fully parsed"),
+  }
+}
+
+fn translation_unit(input: String) -> ParseResult<Program> {
   // TODO should be `many` instead of `many1`
-  let (external_declarations, input) = parse::many1(Rc::new(parse::external_declaration))(input)?;
+  let (function_definitions, input) = parse::many1(Rc::new(parse::external_declaration))(input)?;
   let ((), input) = parse::whitespaces_eof()(input)?;
 
   Ok((
-    TranslationUnit::ExternalDeclarations(external_declarations),
+    Program {
+      function_definitions,
+    },
     input,
   ))
 }
 
-fn external_declaration(input: String) -> ParseResult<ExternalDeclaration> {
+fn external_declaration(input: String) -> ParseResult<FunctionDefinition> {
   let (function_definition, input) = parse::function_definition(input)?;
 
-  Ok((
-    ExternalDeclaration::FunctionDefinition(function_definition),
-    input,
-  ))
+  Ok((function_definition, input))
 }
 
 fn function_definition(input: String) -> ParseResult<FunctionDefinition> {
-  let (_, input) = parse::whitespaces_string("int")(input)?;
-  let (_, input) = parse::whitespaces_string("main")(input)?;
+  let name = "main";
+
+  let ((), input) = parse::whitespaces_string("int")(input)?;
+  let ((), input) = parse::whitespaces_string(name)(input)?;
   let ((), input) = parse::whitespaces_char('(')(input)?;
   let ((), input) = parse::whitespaces_char(')')(input)?;
-  let (compound_statement, input) = parse::compound_statement(input)?;
+  let (statements, input) = parse::compound_statement(input)?;
 
   Ok((
-    FunctionDefinition::NameBody("main".to_string(), compound_statement),
+    FunctionDefinition {
+      name: name.to_string(),
+      body: statements,
+    },
     input,
   ))
 }
 
-fn integer_constant(input: String) -> ParseResult<IntegerConstant> {
+fn integer_constant(input: String) -> ParseResult<Expression> {
   let (_, input) = parse::many(parse::whitespace())(input)?;
   let (digits, input) = parse::many1(parse::decimal_digit())(input)?;
-  let value = String::from_iter(digits).parse::<u8>().unwrap();
+  let value = String::from_iter(digits.clone()).parse().map_err(|_| {
+    Error(format!(
+      "Invalid integer constant `{}`",
+      digits.iter().collect::<String>()
+    ))
+  })?;
 
-  Ok((IntegerConstant::IntegerConstant(value), input))
+  Ok((Expression::IntegerConstant(value), input))
 }
 
-fn compound_statement(input: String) -> ParseResult<CompoundStatement> {
+fn compound_statement(input: String) -> ParseResult<Vec<Statement>> {
   let ((), input) = parse::whitespaces_char('{')(input)?;
-  let (magic_return, input) = parse::magic_return(input)?;
+  let (statement, input) = parse::magic_return(input)?;
   let ((), input) = parse::whitespaces_char('}')(input)?;
 
-  Ok((CompoundStatement::MagicReturn(magic_return), input))
+  Ok((vec![statement], input))
 }
 
-fn magic_return(input: String) -> ParseResult<MagicReturn> {
+fn magic_return(input: String) -> ParseResult<Statement> {
   let ((), input) = parse::whitespaces_string("return")(input)?;
-  let (additive_expression, input) = parse::additive_expression(input)?;
+  let (expression, input) = parse::additive_expression(input)?;
   let ((), input) = parse::whitespaces_char(';')(input)?;
 
-  Ok((MagicReturn::AdditiveExpression(additive_expression), input))
+  Ok((Statement::MagicReturn(expression), input)) // TODO does not obey grammar
 }
 
-fn additive_expression(input: String) -> ParseResult<AdditiveExpression> {
-  fn multiplicative_expression(input: String) -> ParseResult<AdditiveExpression> {
-    let (multiplicative_expression, input) = parse::multiplicative_expression(input)?;
+fn additive_expression(input: String) -> ParseResult<Expression> {
+  let (mut expression, mut input) = parse::multiplicative_expression(input.clone())?;
 
-    Ok((
-      AdditiveExpression::MultiplicativeExpression(multiplicative_expression),
-      input,
-    ))
-  }
-
-  fn additive_operator_multiplicative_expression(
-    input: String,
-  ) -> Result<((AdditiveOperator, MultiplicativeExpression), String), Error> {
-    let (additive_operator, input) = parse::additive_operator(input)?;
-    let (multiplicative_expression, input) = parse::multiplicative_expression(input)?;
-
-    Ok(((additive_operator, multiplicative_expression), input))
-  }
-
-  let (mut multiplicative_expression, mut input) = multiplicative_expression(input)?;
   loop {
-    match additive_operator_multiplicative_expression(input.clone()) {
-      Ok(((additive_operator, multiplicative_expression_), input_)) => {
-        multiplicative_expression =
-          AdditiveExpression::AdditiveExpressionAdditiveOperatorMultiplicativeExpression(
-            Box::new(multiplicative_expression),
-            additive_operator,
-            multiplicative_expression_,
-          );
+    let result = Err(())
+      .or_else(|_| {
+        parse::whitespaces_char('+')(input.clone()).and_then(|((), input)| {
+          parse::multiplicative_expression(input.clone()).map(|(expression_, input)| {
+            (
+              Expression::Addition(Box::new(expression.clone()), Box::new(expression_)),
+              input,
+            )
+          })
+        })
+      })
+      .or_else(|_| {
+        parse::whitespaces_char('-')(input.clone()).and_then(|((), input)| {
+          parse::multiplicative_expression(input.clone()).map(|(expression_, input)| {
+            (
+              Expression::Subtraction(Box::new(expression.clone()), Box::new(expression_)),
+              input,
+            )
+          })
+        })
+      })
+      .or_else(|_| Err(Error(format!("Could not parse additive expression"))));
+
+    match result {
+      Ok((expression_, input_)) => {
+        expression = expression_;
         input = input_;
       }
       Err(_) => break,
     }
   }
 
-  Ok((multiplicative_expression, input))
+  Ok((expression, input))
 }
 
-fn multiplicative_expression(input: String) -> ParseResult<MultiplicativeExpression> {
-  fn cast_expression(input: String) -> ParseResult<MultiplicativeExpression> {
-    let (cast_expression, input) = parse::cast_expression(input)?;
+fn multiplicative_expression(input: String) -> ParseResult<Expression> {
+  let (mut expression, mut input) = parse::cast_expression(input.clone())?;
 
-    Ok((
-      MultiplicativeExpression::CastExpression(cast_expression),
-      input,
-    ))
-  }
-
-  fn multiplicative_operator_cast_expression(
-    input: String,
-  ) -> Result<((MultiplicativeOperator, CastExpression), String), Error> {
-    let (multiplicative_operator, input) = parse::multiplicative_operator(input)?;
-    let (cast_expression, input) = parse::cast_expression(input)?;
-
-    Ok(((multiplicative_operator, cast_expression), input))
-  }
-
-  let (mut cast_expression, mut input) = cast_expression(input)?;
   loop {
-    match multiplicative_operator_cast_expression(input.clone()) {
-      Ok(((multiplicative_operator, cast_expression_), input_)) => {
-        cast_expression =
-          MultiplicativeExpression::MultiplicativeExpressionMultiplicativeOperatorCastExpression(
-            Box::new(cast_expression),
-            multiplicative_operator,
-            cast_expression_,
-          );
+    let result = Err(())
+      .or_else(|_| {
+        parse::whitespaces_char('*')(input.clone()).and_then(|((), input)| {
+          parse::cast_expression(input.clone()).map(|(expression_, input)| {
+            (
+              Expression::Multiplication(Box::new(expression.clone()), Box::new(expression_)),
+              input,
+            )
+          })
+        })
+      })
+      .or_else(|_| {
+        parse::whitespaces_char('/')(input.clone()).and_then(|((), input)| {
+          parse::cast_expression(input.clone()).map(|(expression_, input)| {
+            (
+              Expression::Division(Box::new(expression.clone()), Box::new(expression_)),
+              input,
+            )
+          })
+        })
+      })
+      .or_else(|_| {
+        parse::whitespaces_char('%')(input.clone()).and_then(|((), input)| {
+          parse::cast_expression(input.clone()).map(|(expression_, input)| {
+            (
+              Expression::Modulo(Box::new(expression.clone()), Box::new(expression_)),
+              input,
+            )
+          })
+        })
+      })
+      .or_else(|_| Err(Error(format!("Could not parse multiplicative expression"))));
+
+    match result {
+      Ok((expression_, input_)) => {
+        expression = expression_;
         input = input_;
       }
       Err(_) => break,
     }
   }
 
-  Ok((cast_expression, input))
+  Ok((expression, input))
 }
 
-fn cast_expression(input: String) -> ParseResult<CastExpression> {
-  let (unary_expression, input) = parse::unary_expression(input)?;
+fn cast_expression(input: String) -> ParseResult<Expression> {
+  let (expression, input) = parse::unary_expression(input)?;
 
-  Ok((CastExpression::UnaryExpression(unary_expression), input))
+  Ok((expression, input))
 }
 
-fn unary_expression(input: String) -> ParseResult<UnaryExpression> {
-  fn unary_operator_cast_expression(input: String) -> ParseResult<UnaryExpression> {
-    let (unary_operator, input) = parse::unary_operator(input)?;
-    let (cast_expression, input) = parse::cast_expression(input)?;
+fn unary_expression(input: String) -> ParseResult<Expression> {
+  let result = Err(())
+    .or_else(|_| {
+      parse::whitespaces_char('-')(input.clone())
+        .and_then(|((), input)| parse::cast_expression(input.clone()))
+        .map(|(expression, input)| (Expression::Negation(Box::new(expression)), input))
+    })
+    .or_else(|_| {
+      parse::whitespaces_char('~')(input.clone())
+        .and_then(|((), input)| parse::cast_expression(input.clone()))
+        .map(|(expression, input)| (Expression::BitwiseComplement(Box::new(expression)), input))
+    })
+    .or_else(|_| {
+      parse::whitespaces_char('!')(input.clone())
+        .and_then(|((), input)| parse::cast_expression(input.clone()))
+        .map(|(expression, input)| (Expression::LogicalNegation(Box::new(expression)), input))
+    })
+    .or_else(|_| {
+      parse::whitespaces_char('(')(input.clone()).and_then(|((), input)| {
+        parse::additive_expression(input.clone()).and_then(|(expression, input)| {
+          parse::whitespaces_char(')')(input.clone()).map(|((), input)| (expression, input))
+        })
+      })
+    })
+    .or_else(|_| parse::integer_constant(input.clone()))
+    .or_else(|_| Err(Error(format!("Could not parse unary expression"))));
 
-    Ok((
-      UnaryExpression::UnaryOperatorCastExpression(unary_operator, Box::new(cast_expression)),
-      input,
-    ))
-  }
+  let (expression, input) = result?;
 
-  fn paren_additive_expression_paren(input: String) -> ParseResult<UnaryExpression> {
-    let ((), input) = parse::whitespaces_char('(')(input)?;
-    let (additive_expression, input) = parse::additive_expression(input)?;
-    let ((), input) = parse::whitespaces_char(')')(input)?;
-
-    Ok((
-      UnaryExpression::ParenAdditiveExpressionParen(Box::new(additive_expression)),
-      input,
-    ))
-  }
-
-  fn integer_constant(input: String) -> ParseResult<UnaryExpression> {
-    let (integer_constant, input) = parse::integer_constant(input)?;
-
-    Ok((UnaryExpression::IntegerConstant(integer_constant), input))
-  }
-
-  unary_operator_cast_expression(input.clone())
-    .or_else(|_| paren_additive_expression_paren(input.clone()))
-    .or_else(|_| integer_constant(input.clone()))
-}
-
-fn unary_operator(input: String) -> ParseResult<UnaryOperator> {
-  fn negation(input: String) -> ParseResult<UnaryOperator> {
-    let ((), input) = parse::whitespaces_char('-')(input)?;
-
-    Ok((UnaryOperator::Negation, input))
-  }
-
-  fn bitwise_complement(input: String) -> ParseResult<UnaryOperator> {
-    let ((), input) = parse::whitespaces_char('~')(input)?;
-
-    Ok((UnaryOperator::BitwiseComplement, input))
-  }
-
-  fn logical_complement(input: String) -> ParseResult<UnaryOperator> {
-    let ((), input) = parse::whitespaces_char('!')(input)?;
-
-    Ok((UnaryOperator::LogicalNegation, input))
-  }
-
-  negation(input.clone())
-    .or_else(|_| bitwise_complement(input.clone()))
-    .or_else(|_| logical_complement(input.clone()))
-}
-
-fn additive_operator(input: String) -> ParseResult<AdditiveOperator> {
-  fn addition(input: String) -> ParseResult<AdditiveOperator> {
-    let ((), input) = parse::whitespaces_char('+')(input)?;
-
-    Ok((AdditiveOperator::Addition, input))
-  }
-
-  fn subtraction(input: String) -> ParseResult<AdditiveOperator> {
-    let ((), input) = parse::whitespaces_char('-')(input)?;
-
-    Ok((AdditiveOperator::Subtraction, input))
-  }
-
-  addition(input.clone()).or_else(|_| subtraction(input.clone()))
-}
-
-fn multiplicative_operator(input: String) -> ParseResult<MultiplicativeOperator> {
-  fn multiplication(input: String) -> ParseResult<MultiplicativeOperator> {
-    let ((), input) = parse::whitespaces_char('*')(input)?;
-
-    Ok((MultiplicativeOperator::Multiplication, input))
-  }
-
-  fn division(input: String) -> ParseResult<MultiplicativeOperator> {
-    let ((), input) = parse::whitespaces_char('/')(input)?;
-
-    Ok((MultiplicativeOperator::Division, input))
-  }
-
-  fn modulo(input: String) -> ParseResult<MultiplicativeOperator> {
-    let ((), input) = parse::whitespaces_char('%')(input)?;
-
-    Ok((MultiplicativeOperator::Modulo, input))
-  }
-
-  multiplication(input.clone())
-    .or_else(|_| division(input.clone()))
-    .or_else(|_| modulo(input.clone()))
-}
-
-pub fn parse(input: String) -> Result<TranslationUnit, Error> {
-  let (translation_unit, input) = parse::translation_unit(input)?;
-
-  match &input[..] {
-    "" => Ok(translation_unit),
-    _ => panic!("Input not fully parsed"),
-  }
+  Ok((expression, input))
 }
