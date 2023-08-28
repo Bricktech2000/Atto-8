@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 #[path = "../misc/common/common.rs"]
 mod common;
-use common::{ControlWord, Signal, TickTrap, Tickable};
+use common::*;
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();

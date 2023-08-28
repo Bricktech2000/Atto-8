@@ -1,6 +1,6 @@
 #[path = "../misc/common/common.rs"]
 mod common;
-use common::{Error, Instruction, Label, Macro, Mnemonic, Pos, Token};
+use common::*;
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();

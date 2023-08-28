@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 #[path = "../misc/common/common.rs"]
 mod common;
-use common::{Instruction, TickTrap, Tickable};
+use common::*;
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
@@ -13,7 +13,7 @@ fn main() {
 
   let memory_image_file: &String = &args[1];
 
-  let memory_image = std::fs::read(memory_image_file)
+  let memory_image: [u8; common::MEM_SIZE] = std::fs::read(memory_image_file)
     .unwrap_or_else(|_| {
       println!("Emu: Error: Unable to read file `{}`", memory_image_file);
       std::process::exit(1);
