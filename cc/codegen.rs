@@ -121,6 +121,7 @@ fn expression(expression: Expression) -> Vec<Token> {
         codegen::expression(*expression),
         vec![
           Token::Buf,
+          Token::AtDyn,
           Token::Pop,
           Token::XXX(0x00),
           Token::Shl,
@@ -128,7 +129,107 @@ fn expression(expression: Expression) -> Vec<Token> {
         ],
       ] // TODO type must match
     }
-    Expression::Cast(_expression, _type) => todo!(),
+    Expression::LogicalAnd(_, _) => todo!(), // TODO short circuit
+    Expression::LogicalOr(_, _) => todo!(),  // TODO short circuit
+    Expression::BitwiseAnd(expression, expression_) => vec![
+      codegen::expression(*expression),
+      codegen::expression(*expression_),
+      vec![Token::And],
+    ],
+    Expression::BitwiseInclusiveOr(expression, expression_) => vec![
+      codegen::expression(*expression),
+      codegen::expression(*expression_),
+      vec![Token::Orr],
+    ],
+    Expression::BitwiseExclusiveOr(expression, expression_) => vec![
+      codegen::expression(*expression),
+      codegen::expression(*expression_),
+      vec![Token::Xor],
+    ],
+    Expression::EqualTo(expression, expression_) => vec![
+      codegen::expression(*expression),
+      codegen::expression(*expression_),
+      vec![
+        Token::Xor,
+        Token::AtDyn,
+        Token::Pop,
+        Token::XXX(0x00),
+        Token::Shl,
+        Token::AtDyn,
+      ],
+    ],
+    Expression::NotEqualTo(expression, expression_) => vec![
+      codegen::expression(*expression),
+      codegen::expression(*expression_),
+      vec![
+        Token::Xor,
+        Token::AtDyn,
+        Token::Pop,
+        Token::Flc,
+        Token::XXX(0x00),
+        Token::Shl,
+        Token::AtDyn,
+      ],
+    ],
+    Expression::LessThan(expression, expression_) => vec![
+      codegen::expression(*expression),
+      codegen::expression(*expression_),
+      vec![
+        Token::Sub,
+        Token::AtDyn,
+        Token::Pop,
+        Token::XXX(0x00),
+        Token::Shl,
+        Token::AtDyn,
+      ],
+    ],
+    Expression::LessThanOrEqualTo(expression, expression_) => vec![
+      codegen::expression(*expression_),
+      codegen::expression(*expression),
+      vec![
+        Token::Sub,
+        Token::AtDyn,
+        Token::Pop,
+        Token::Flc,
+        Token::XXX(0x00),
+        Token::Shl,
+        Token::AtDyn,
+      ],
+    ],
+    Expression::GreaterThan(expression, expression_) => vec![
+      codegen::expression(*expression_),
+      codegen::expression(*expression),
+      vec![
+        Token::Sub,
+        Token::AtDyn,
+        Token::Pop,
+        Token::XXX(0x00),
+        Token::Shl,
+        Token::AtDyn,
+      ],
+    ],
+    Expression::GreaterThanOrEqualTo(expression, expression_) => vec![
+      codegen::expression(*expression),
+      codegen::expression(*expression_),
+      vec![
+        Token::Sub,
+        Token::AtDyn,
+        Token::Pop,
+        Token::Flc,
+        Token::XXX(0x00),
+        Token::Shl,
+        Token::AtDyn,
+      ],
+    ],
+    Expression::RightShift(_, _) => todo!(),
+    Expression::LeftShift(_, _) => todo!(),
+    Expression::Conditional(expression, expression_, expression__) => vec![
+      codegen::expression(*expression_),
+      codegen::expression(*expression__),
+      codegen::expression(*expression),
+      vec![Token::Buf, Token::AtDyn, Token::Pop, Token::Iff],
+    ], // TODO short circuit
+    Expression::Cast(_, _) => todo!(),
     Expression::IntegerConstant(integer_constant) => vec![vec![Token::XXX(integer_constant)]],
   }
   .into_iter()
