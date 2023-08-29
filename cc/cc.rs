@@ -59,50 +59,97 @@ fn main() {
   println!("CC: Done");
 }
 
-#[derive(Clone, Debug)]
-pub struct Type;
+#[derive(Clone, PartialEq, Debug)]
+pub enum StackEntry {
+  ProgramBoundary,
+  GlobalDeclaration(Type, String),
+  GlobalDefinition(Type, String),
+  FunctionDeclaration(Type, String),
+  FunctionDefinition(Type, String),
+  FunctionBoundary(Type, String),
+  LoopBoundary,
+  BlockBoundary,
+  Local(Type, String),
+  Temporary(Type),
+}
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
+pub enum BasicType {
+  Void,
+  Bool,
+  Char,
+  Short,
+  Int,
+  Long,
+  LongLong,
+  // TODO float, double
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum Type {
+  BasicType(BasicType),
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub struct Program {
   function_definitions: Vec<FunctionDefinition>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
+pub struct FunctionDefinition(Type, String, Vec<Statement>);
+
+#[derive(Clone, PartialEq, Debug)]
 pub enum Expression {
+  Negation(Box<Expression>),
+  LogicalNegation(Box<Expression>),
+  BitwiseComplement(Box<Expression>),
+
   Addition(Box<Expression>, Box<Expression>),
   Subtraction(Box<Expression>, Box<Expression>),
   Multiplication(Box<Expression>, Box<Expression>),
   Division(Box<Expression>, Box<Expression>),
   Modulo(Box<Expression>, Box<Expression>),
-  Negation(Box<Expression>),
-  BitwiseComplement(Box<Expression>),
-  LogicalNegation(Box<Expression>),
   LogicalAnd(Box<Expression>, Box<Expression>),
   LogicalOr(Box<Expression>, Box<Expression>),
   BitwiseAnd(Box<Expression>, Box<Expression>),
   BitwiseExclusiveOr(Box<Expression>, Box<Expression>),
   BitwiseInclusiveOr(Box<Expression>, Box<Expression>),
+  RightShift(Box<Expression>, Box<Expression>),
+  LeftShift(Box<Expression>, Box<Expression>),
+
   EqualTo(Box<Expression>, Box<Expression>),
   NotEqualTo(Box<Expression>, Box<Expression>),
   LessThan(Box<Expression>, Box<Expression>),
   LessThanOrEqualTo(Box<Expression>, Box<Expression>),
   GreaterThan(Box<Expression>, Box<Expression>),
   GreaterThanOrEqualTo(Box<Expression>, Box<Expression>),
-  RightShift(Box<Expression>, Box<Expression>),
-  LeftShift(Box<Expression>, Box<Expression>),
+
   Conditional(Box<Expression>, Box<Expression>, Box<Expression>),
+
   Cast(Type, Box<Expression>),
   IntegerConstant(u8),
+  Identifier(String),
+  FunctionCall(String),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Statement {
   Expression(Expression),
-  MagicReturn(Expression),
+  Return(Expression),
 }
 
-#[derive(Clone, Debug)]
-pub struct FunctionDefinition {
-  name: String,
-  body: Vec<Statement>,
+impl Type {
+  pub fn size(&self) -> usize {
+    match self {
+      Type::BasicType(basic_type) => match basic_type {
+        BasicType::Void => 0,
+        BasicType::Bool => 1,
+        BasicType::Char => 1,
+        BasicType::Short => 1,    // TODO nonstandard
+        BasicType::Int => 1,      // TODO nonstandard
+        BasicType::Long => 2,     // TODO potentially nonstandard
+        BasicType::LongLong => 4, // TODO potentially nonstandard
+      },
+    }
+  }
 }

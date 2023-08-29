@@ -51,8 +51,12 @@ fn whitespace() -> Parser<()> {
   })
 }
 
-fn decimal_digit() -> Parser<char> {
+fn digit() -> Parser<char> {
   parse::satisfy(Rc::new(move |x| x.is_digit(10)))
+}
+
+fn nondigit() -> Parser<char> {
+  parse::satisfy(Rc::new(move |x| x.is_alphabetic() || x == '_'))
 }
 
 fn string(string: &'static str) -> Parser<()> {
@@ -97,18 +101,18 @@ fn whitespaces_string(string: &'static str) -> Parser<()> {
 
 fn many<T: 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
   Rc::new(move |input: String| {
-    let mut result = vec![];
-    let mut input = input;
+    let mut result1 = vec![];
+    let mut input1 = input;
     loop {
-      match parser(input.clone()) {
-        Ok((result_, input_)) => {
-          result.push(result_);
-          input = input_;
+      match parser(input1.clone()) {
+        Ok((result, input)) => {
+          result1.push(result);
+          input1 = input;
         }
         Err(_) => break,
       }
     }
-    Ok((result, input))
+    Ok((result1, input1))
   })
 }
 
@@ -166,26 +170,21 @@ fn external_declaration(input: String) -> ParseResult<FunctionDefinition> {
 }
 
 fn function_definition(input: String) -> ParseResult<FunctionDefinition> {
-  let name = "main";
-
   let ((), input) = parse::whitespaces_string("int")(input)?;
-  let ((), input) = parse::whitespaces_string(name)(input)?;
+  let (identifier, input) = parse::identifier(input)?;
   let ((), input) = parse::whitespaces_char('(')(input)?;
   let ((), input) = parse::whitespaces_char(')')(input)?;
   let (statements, input) = parse::compound_statement(input)?;
 
   Ok((
-    FunctionDefinition {
-      name: name.to_string(),
-      body: statements,
-    },
+    FunctionDefinition(Type::BasicType(BasicType::Int), identifier, statements),
     input,
   ))
 }
 
 fn integer_constant(input: String) -> ParseResult<Expression> {
   let (_, input) = parse::many(parse::whitespace())(input)?;
-  let (digits, input) = parse::many1(parse::decimal_digit())(input)?;
+  let (digits, input) = parse::many1(parse::digit())(input)?;
   let value = String::from_iter(digits.clone()).parse().map_err(|_| {
     Error(format!(
       "Invalid integer constant `{}`",
@@ -198,18 +197,49 @@ fn integer_constant(input: String) -> ParseResult<Expression> {
 
 fn compound_statement(input: String) -> ParseResult<Vec<Statement>> {
   let ((), input) = parse::whitespaces_char('{')(input)?;
-  let (statement, input) = parse::magic_return(input)?;
+  let (statements, input) = parse::many(Rc::new(parse::statement))(input)?;
   let ((), input) = parse::whitespaces_char('}')(input)?;
 
-  Ok((vec![statement], input))
+  Ok((statements, input)) // TODO should be {<declaration>}* {<statement>}*
 }
 
-fn magic_return(input: String) -> ParseResult<Statement> {
-  let ((), input) = parse::whitespaces_string("return")(input)?;
-  let (expression, input) = parse::constant_expression(input)?; // TODO does not obey grammar
-  let ((), input) = parse::whitespaces_char(';')(input)?;
+fn statement(input: String) -> ParseResult<Statement> {
+  let result = Err(())
+    .or_else(|_| parse::jump_statement(input.clone()))
+    .or_else(|_| parse::expression_statement(input.clone()));
 
-  Ok((Statement::MagicReturn(expression), input)) // TODO does not obey grammar
+  let (statement, input) = result?;
+
+  Ok((statement, input)) // TODO cases missing
+}
+
+fn jump_statement(input: String) -> ParseResult<Statement> {
+  let result = Err(()).or_else(|_| {
+    parse::whitespaces_string("return")(input.clone()).and_then(|((), input)| {
+      parse::constant_expression(input) // TODO does not obey grammar
+        .and_then(|(expression, input)| {
+          parse::whitespaces_char(';')(input)
+            .map(|(_, input)| (Statement::Return(expression), input))
+        })
+    })
+  });
+
+  let (statement, input) = result?;
+
+  Ok((statement, input)) // TODO cases missing
+}
+
+fn expression_statement(input: String) -> ParseResult<Statement> {
+  let result = Err(()).or_else(|_| {
+    parse::expression(input.clone()).and_then(|(expression, input)| {
+      parse::whitespaces_char(';')(input)
+        .map(|(_, input)| (Statement::Expression(expression), input))
+    })
+  });
+
+  let (statement, input) = result?;
+
+  Ok((statement, input)) // TODO cases missing
 }
 
 fn constant_expression(input: String) -> ParseResult<Expression> {
@@ -221,16 +251,16 @@ fn constant_expression(input: String) -> ParseResult<Expression> {
 fn conditional_expression(input: String) -> ParseResult<Expression> {
   let result = Err(())
     .or_else(|_| {
-      parse::logical_or_expression(input.clone()).and_then(|(expression, input)| {
+      parse::logical_or_expression(input.clone()).and_then(|(expression1, input)| {
         parse::whitespaces_char('?')(input.clone()).and_then(|((), input)| {
-          parse::expression(input.clone()).and_then(|(expression_, input)| {
+          parse::expression(input.clone()).and_then(|(expression2, input)| {
             parse::whitespaces_char(':')(input.clone()).and_then(|((), input)| {
-              parse::conditional_expression(input.clone()).map(|(expression__, input)| {
+              parse::conditional_expression(input.clone()).map(|(expression3, input)| {
                 (
                   Expression::Conditional(
-                    Box::new(expression.clone()),
-                    Box::new(expression_),
-                    Box::new(expression__),
+                    Box::new(expression1.clone()),
+                    Box::new(expression2),
+                    Box::new(expression3),
                   ),
                   input,
                 )
@@ -249,15 +279,15 @@ fn conditional_expression(input: String) -> ParseResult<Expression> {
 }
 
 fn logical_or_expression(input: String) -> ParseResult<Expression> {
-  let (mut expression, mut input) = parse::logical_and_expression(input.clone())?;
+  let (mut expression1, mut input) = parse::logical_and_expression(input.clone())?;
 
   loop {
     let result = Err(())
       .or_else(|_| {
         parse::whitespaces_string("||")(input.clone()).and_then(|((), input)| {
-          parse::logical_and_expression(input.clone()).map(|(expression_, input)| {
+          parse::logical_and_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::LogicalOr(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::LogicalOr(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -267,27 +297,27 @@ fn logical_or_expression(input: String) -> ParseResult<Expression> {
       .or_else(|_| Err(Error(format!("Could not parse logical or expression"))));
 
     match result {
-      Ok((expression_, input_)) => {
-        expression = expression_;
+      Ok((expression, input_)) => {
+        expression1 = expression;
         input = input_;
       }
       Err(_) => break,
     }
   }
 
-  Ok((expression, input))
+  Ok((expression1, input))
 }
 
 fn logical_and_expression(input: String) -> ParseResult<Expression> {
-  let (mut expression, mut input) = parse::inclusive_or_expression(input.clone())?;
+  let (mut expression1, mut input) = parse::inclusive_or_expression(input.clone())?;
 
   loop {
     let result = Err(())
       .or_else(|_| {
         parse::whitespaces_string("&&")(input.clone()).and_then(|((), input)| {
-          parse::inclusive_or_expression(input.clone()).map(|(expression_, input)| {
+          parse::inclusive_or_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::LogicalAnd(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::LogicalAnd(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -297,27 +327,27 @@ fn logical_and_expression(input: String) -> ParseResult<Expression> {
       .or_else(|_| Err(Error(format!("Could not parse logical and expression"))));
 
     match result {
-      Ok((expression_, input_)) => {
-        expression = expression_;
+      Ok((expression, input_)) => {
+        expression1 = expression;
         input = input_;
       }
       Err(_) => break,
     }
   }
 
-  Ok((expression, input))
+  Ok((expression1, input))
 }
 
 fn inclusive_or_expression(input: String) -> ParseResult<Expression> {
-  let (mut expression, mut input) = parse::exclusive_or_expression(input.clone())?;
+  let (mut expression1, mut input) = parse::exclusive_or_expression(input.clone())?;
 
   loop {
     let result = Err(())
       .or_else(|_| {
         parse::whitespaces_char('|')(input.clone()).and_then(|((), input)| {
-          parse::exclusive_or_expression(input.clone()).map(|(expression_, input)| {
+          parse::exclusive_or_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::BitwiseInclusiveOr(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::BitwiseInclusiveOr(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -327,27 +357,27 @@ fn inclusive_or_expression(input: String) -> ParseResult<Expression> {
       .or_else(|_| Err(Error(format!("Could not parse inclusive or expression"))));
 
     match result {
-      Ok((expression_, input_)) => {
-        expression = expression_;
+      Ok((expression, input_)) => {
+        expression1 = expression;
         input = input_;
       }
       Err(_) => break,
     }
   }
 
-  Ok((expression, input))
+  Ok((expression1, input))
 }
 
 fn exclusive_or_expression(input: String) -> ParseResult<Expression> {
-  let (mut expression, mut input) = parse::and_expression(input.clone())?;
+  let (mut expression1, mut input) = parse::and_expression(input.clone())?;
 
   loop {
     let result = Err(())
       .or_else(|_| {
         parse::whitespaces_char('^')(input.clone()).and_then(|((), input)| {
-          parse::and_expression(input.clone()).map(|(expression_, input)| {
+          parse::and_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::BitwiseExclusiveOr(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::BitwiseExclusiveOr(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -357,27 +387,27 @@ fn exclusive_or_expression(input: String) -> ParseResult<Expression> {
       .or_else(|_| Err(Error(format!("Could not parse exclusive or expression"))));
 
     match result {
-      Ok((expression_, input_)) => {
-        expression = expression_;
+      Ok((expression, input_)) => {
+        expression1 = expression;
         input = input_;
       }
       Err(_) => break,
     }
   }
 
-  Ok((expression, input))
+  Ok((expression1, input))
 }
 
 fn and_expression(input: String) -> ParseResult<Expression> {
-  let (mut expression, mut input) = parse::equality_expression(input.clone())?;
+  let (mut expression1, mut input) = parse::equality_expression(input.clone())?;
 
   loop {
     let result = Err(())
       .or_else(|_| {
         parse::whitespaces_char('&')(input.clone()).and_then(|((), input)| {
-          parse::equality_expression(input.clone()).map(|(expression_, input)| {
+          parse::equality_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::BitwiseAnd(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::BitwiseAnd(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -387,27 +417,27 @@ fn and_expression(input: String) -> ParseResult<Expression> {
       .or_else(|_| Err(Error(format!("Could not parse and expression"))));
 
     match result {
-      Ok((expression_, input_)) => {
-        expression = expression_;
+      Ok((expression, input_)) => {
+        expression1 = expression;
         input = input_;
       }
       Err(_) => break,
     }
   }
 
-  Ok((expression, input))
+  Ok((expression1, input))
 }
 
 fn equality_expression(input: String) -> ParseResult<Expression> {
-  let (mut expression, mut input) = parse::relational_expression(input.clone())?;
+  let (mut expression1, mut input) = parse::relational_expression(input.clone())?;
 
   loop {
     let result = Err(())
       .or_else(|_| {
         parse::whitespaces_string("==")(input.clone()).and_then(|((), input)| {
-          parse::relational_expression(input.clone()).map(|(expression_, input)| {
+          parse::relational_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::EqualTo(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::EqualTo(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -415,9 +445,9 @@ fn equality_expression(input: String) -> ParseResult<Expression> {
       })
       .or_else(|_| {
         parse::whitespaces_string("!=")(input.clone()).and_then(|((), input)| {
-          parse::relational_expression(input.clone()).map(|(expression_, input)| {
+          parse::relational_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::NotEqualTo(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::NotEqualTo(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -427,27 +457,27 @@ fn equality_expression(input: String) -> ParseResult<Expression> {
       .or_else(|_| Err(Error(format!("Could not parse equality expression"))));
 
     match result {
-      Ok((expression_, input_)) => {
-        expression = expression_;
+      Ok((expression, input_)) => {
+        expression1 = expression;
         input = input_;
       }
       Err(_) => break,
     }
   }
 
-  Ok((expression, input))
+  Ok((expression1, input))
 }
 
 fn relational_expression(input: String) -> ParseResult<Expression> {
-  let (mut expression, mut input) = parse::shift_expression(input.clone())?;
+  let (mut expression1, mut input) = parse::shift_expression(input.clone())?;
 
   loop {
     let result = Err(())
       .or_else(|_| {
         parse::whitespaces_string("<=")(input.clone()).and_then(|((), input)| {
-          parse::shift_expression(input.clone()).map(|(expression_, input)| {
+          parse::shift_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::LessThanOrEqualTo(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::LessThanOrEqualTo(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -455,9 +485,12 @@ fn relational_expression(input: String) -> ParseResult<Expression> {
       })
       .or_else(|_| {
         parse::whitespaces_string(">=")(input.clone()).and_then(|((), input)| {
-          parse::shift_expression(input.clone()).map(|(expression_, input)| {
+          parse::shift_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::GreaterThanOrEqualTo(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::GreaterThanOrEqualTo(
+                Box::new(expression1.clone()),
+                Box::new(expression2),
+              ),
               input,
             )
           })
@@ -465,9 +498,9 @@ fn relational_expression(input: String) -> ParseResult<Expression> {
       })
       .or_else(|_| {
         parse::whitespaces_char('<')(input.clone()).and_then(|((), input)| {
-          parse::shift_expression(input.clone()).map(|(expression_, input)| {
+          parse::shift_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::LessThan(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::LessThan(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -475,9 +508,9 @@ fn relational_expression(input: String) -> ParseResult<Expression> {
       })
       .or_else(|_| {
         parse::whitespaces_char('>')(input.clone()).and_then(|((), input)| {
-          parse::shift_expression(input.clone()).map(|(expression_, input)| {
+          parse::shift_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::GreaterThan(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::GreaterThan(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -487,27 +520,27 @@ fn relational_expression(input: String) -> ParseResult<Expression> {
       .or_else(|_| Err(Error(format!("Could not parse relational expression"))));
 
     match result {
-      Ok((expression_, input_)) => {
-        expression = expression_;
+      Ok((expression, input_)) => {
+        expression1 = expression;
         input = input_;
       }
       Err(_) => break,
     }
   }
 
-  Ok((expression, input))
+  Ok((expression1, input))
 }
 
 fn shift_expression(input: String) -> ParseResult<Expression> {
-  let (mut expression, mut input) = parse::additive_expression(input.clone())?;
+  let (mut expression1, mut input) = parse::additive_expression(input.clone())?;
 
   loop {
     let result = Err(())
       .or_else(|_| {
         parse::whitespaces_string("<<")(input.clone()).and_then(|((), input)| {
-          parse::additive_expression(input.clone()).map(|(expression_, input)| {
+          parse::additive_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::LeftShift(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::LeftShift(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -515,9 +548,9 @@ fn shift_expression(input: String) -> ParseResult<Expression> {
       })
       .or_else(|_| {
         parse::whitespaces_string(">>")(input.clone()).and_then(|((), input)| {
-          parse::additive_expression(input.clone()).map(|(expression_, input)| {
+          parse::additive_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::RightShift(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::RightShift(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -527,15 +560,15 @@ fn shift_expression(input: String) -> ParseResult<Expression> {
       .or_else(|_| Err(Error(format!("Could not parse shift expression"))));
 
     match result {
-      Ok((expression_, input_)) => {
-        expression = expression_;
+      Ok((expression, input_)) => {
+        expression1 = expression;
         input = input_;
       }
       Err(_) => break,
     }
   }
 
-  Ok((expression, input))
+  Ok((expression1, input))
 }
 
 fn expression(input: String) -> ParseResult<Expression> {
@@ -545,15 +578,15 @@ fn expression(input: String) -> ParseResult<Expression> {
 }
 
 fn additive_expression(input: String) -> ParseResult<Expression> {
-  let (mut expression, mut input) = parse::multiplicative_expression(input.clone())?;
+  let (mut expression1, mut input) = parse::multiplicative_expression(input.clone())?;
 
   loop {
     let result = Err(())
       .or_else(|_| {
         parse::whitespaces_char('+')(input.clone()).and_then(|((), input)| {
-          parse::multiplicative_expression(input.clone()).map(|(expression_, input)| {
+          parse::multiplicative_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::Addition(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::Addition(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -561,9 +594,9 @@ fn additive_expression(input: String) -> ParseResult<Expression> {
       })
       .or_else(|_| {
         parse::whitespaces_char('-')(input.clone()).and_then(|((), input)| {
-          parse::multiplicative_expression(input.clone()).map(|(expression_, input)| {
+          parse::multiplicative_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::Subtraction(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::Subtraction(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -572,27 +605,27 @@ fn additive_expression(input: String) -> ParseResult<Expression> {
       .or_else(|_| Err(Error(format!("Could not parse additive expression"))));
 
     match result {
-      Ok((expression_, input_)) => {
-        expression = expression_;
+      Ok((expression, input_)) => {
+        expression1 = expression;
         input = input_;
       }
       Err(_) => break,
     }
   }
 
-  Ok((expression, input))
+  Ok((expression1, input))
 }
 
 fn multiplicative_expression(input: String) -> ParseResult<Expression> {
-  let (mut expression, mut input) = parse::cast_expression(input.clone())?;
+  let (mut expression1, mut input) = parse::cast_expression(input.clone())?;
 
   loop {
     let result = Err(())
       .or_else(|_| {
         parse::whitespaces_char('*')(input.clone()).and_then(|((), input)| {
-          parse::cast_expression(input.clone()).map(|(expression_, input)| {
+          parse::cast_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::Multiplication(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::Multiplication(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -600,9 +633,9 @@ fn multiplicative_expression(input: String) -> ParseResult<Expression> {
       })
       .or_else(|_| {
         parse::whitespaces_char('/')(input.clone()).and_then(|((), input)| {
-          parse::cast_expression(input.clone()).map(|(expression_, input)| {
+          parse::cast_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::Division(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::Division(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -610,9 +643,9 @@ fn multiplicative_expression(input: String) -> ParseResult<Expression> {
       })
       .or_else(|_| {
         parse::whitespaces_char('%')(input.clone()).and_then(|((), input)| {
-          parse::cast_expression(input.clone()).map(|(expression_, input)| {
+          parse::cast_expression(input.clone()).map(|(expression2, input)| {
             (
-              Expression::Modulo(Box::new(expression.clone()), Box::new(expression_)),
+              Expression::Modulo(Box::new(expression1.clone()), Box::new(expression2)),
               input,
             )
           })
@@ -621,15 +654,15 @@ fn multiplicative_expression(input: String) -> ParseResult<Expression> {
       .or_else(|_| Err(Error(format!("Could not parse multiplicative expression"))));
 
     match result {
-      Ok((expression_, input_)) => {
-        expression = expression_;
+      Ok((expression, input_)) => {
+        expression1 = expression;
         input = input_;
       }
       Err(_) => break,
     }
   }
 
-  Ok((expression, input))
+  Ok((expression1, input))
 }
 
 fn cast_expression(input: String) -> ParseResult<Expression> {
@@ -662,10 +695,42 @@ fn unary_expression(input: String) -> ParseResult<Expression> {
         })
       })
     })
+    .or_else(|_| {
+      parse::identifier(input.clone()).and_then(|(identifier, input)| {
+        parse::whitespaces_char('(')(input.clone()).and_then(|((), input)| {
+          parse::whitespaces_char(')')(input.clone())
+            .map(|((), input)| (Expression::FunctionCall(identifier), input)) // TODO does not obey grammar
+        })
+      })
+    })
     .or_else(|_| parse::integer_constant(input.clone()))
     .or_else(|_| Err(Error(format!("Could not parse unary expression"))));
 
   let (expression, input) = result?;
 
   Ok((expression, input))
+}
+
+fn identifier(input: String) -> ParseResult<String> {
+  let (_, input) = parse::many(parse::whitespace())(input.clone())?;
+
+  let (mut identifier1, mut input) =
+    parse::nondigit()(input.clone()).map(|(character, input)| (character.to_string(), input))?;
+
+  loop {
+    let result = Err(())
+      .or_else(|_| parse::digit()(input.clone()))
+      .or_else(|_| parse::nondigit()(input.clone()))
+      .or_else(|_| Err(Error(format!("Could not parse identifier"))));
+
+    match result {
+      Ok((character, input_)) => {
+        identifier1.push(character);
+        input = input_;
+      }
+      Err(_) => break,
+    }
+  }
+
+  Ok((identifier1, input))
 }
