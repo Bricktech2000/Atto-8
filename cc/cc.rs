@@ -135,6 +135,7 @@ pub enum Expression {
 
   Cast(Type, Box<Expression>),
   IntegerConstant(u8),
+  CharacterConstant(char),
   Identifier(String),
   FunctionCall(String),
 }

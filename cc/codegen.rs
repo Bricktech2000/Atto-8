@@ -238,6 +238,7 @@ fn expression(expression: Expression, stack: &Vec<StackEntry>) -> (Type, Vec<Tok
 
     Expression::Cast(type_, expression) => codegen::cast_expression(type_, *expression, stack),
     Expression::IntegerConstant(value) => codegen::integer_constant_expression(value, stack),
+    Expression::CharacterConstant(value) => codegen::character_constant_expression(value, stack),
     Expression::Identifier(_) => todo!(),
     Expression::FunctionCall(name) => codegen::function_call_expression(name, stack),
   }
@@ -249,7 +250,7 @@ fn negation_expression(expression: Expression, stack: &Vec<StackEntry>) -> (Type
   (
     type_.clone(),
     match type_ {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens)
         .chain(vec![Token::Neg])
         .collect(),
@@ -277,7 +278,7 @@ fn logical_negation_expression(
           Token::AtDyn,
         ])
         .collect(),
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens)
         .chain(vec![
           Token::Buf,
@@ -303,7 +304,7 @@ fn bitwise_complement_expression(
   (
     type_.clone(),
     match type_ {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens)
         .chain(vec![Token::Not])
         .collect(),
@@ -323,7 +324,7 @@ fn addition_expression(
   (
     type_.clone(),
     match type_ {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens1)
         .chain(tokens2)
         .chain(vec![Token::Add])
@@ -344,7 +345,7 @@ fn subtraction_expression(
   (
     type_.clone(),
     match type_ {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens1)
         .chain(tokens2)
         .chain(vec![Token::Sub])
@@ -369,7 +370,7 @@ fn multiplication_expression(
   (
     type_.clone(),
     match type_ {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens1)
         .chain(tokens2)
         .chain(vec![Token::MacroRef(mul_macro)])
@@ -394,7 +395,7 @@ fn division_expression(
   (
     type_.clone(),
     match type_ {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens1)
         .chain(tokens2)
         .chain(vec![Token::MacroRef(div_macro)])
@@ -419,7 +420,7 @@ fn modulo_expression(
   (
     type_.clone(),
     match type_ {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens1)
         .chain(tokens2)
         .chain(vec![Token::MacroRef(mod_macro)])
@@ -456,7 +457,7 @@ fn bitwise_and_expression(
   (
     type_.clone(),
     match type_ {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens1)
         .chain(tokens2)
         .chain(vec![Token::And])
@@ -477,7 +478,7 @@ fn bitwise_inclusive_or_expression(
   (
     type_.clone(),
     match type_ {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens1)
         .chain(tokens2)
         .chain(vec![Token::Orr])
@@ -498,7 +499,7 @@ fn bitwise_exclusive_or_expression(
   (
     type_.clone(),
     match type_ {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens1)
         .chain(tokens2)
         .chain(vec![Token::Xor])
@@ -540,7 +541,7 @@ fn equal_to_expression(
         .chain(tokens2)
         .chain(vec![Token::Xor, Token::Clc])
         .collect(),
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens1)
         .chain(tokens2)
         .chain(vec![
@@ -573,7 +574,7 @@ fn not_equal_to_expression(
         .chain(tokens2)
         .chain(vec![Token::Xor, Token::XXX(0x01), Token::Xor, Token::Clc])
         .collect(),
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens1)
         .chain(tokens2)
         .chain(vec![
@@ -602,7 +603,7 @@ fn less_than_expression(
   (
     Type::BasicType(BasicType::Bool),
     match type_ {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens1)
         .chain(tokens2)
         .chain(vec![
@@ -630,7 +631,7 @@ fn less_than_or_equal_to_expression(
   (
     Type::BasicType(BasicType::Bool),
     match type_ {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens1)
         .chain(tokens2)
         .chain(vec![
@@ -659,7 +660,7 @@ fn greater_than_expression(
   (
     Type::BasicType(BasicType::Bool),
     match type_ {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens1)
         .chain(tokens2)
         .chain(vec![
@@ -687,7 +688,7 @@ fn greater_than_or_equal_to_expression(
   (
     Type::BasicType(BasicType::Bool),
     match type_ {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens1)
         .chain(tokens2)
         .chain(vec![
@@ -718,7 +719,7 @@ fn conditional_expression(
   (
     type2.clone(),
     match type1 {
-      Type::BasicType(BasicType::Int) => std::iter::empty()
+      Type::BasicType(BasicType::Int) | Type::BasicType(BasicType::Char) => std::iter::empty()
         .chain(tokens3)
         .chain(tokens1)
         .chain(tokens2)
@@ -741,8 +742,12 @@ fn cast_expression(
     match (type1, type_) {
       (Type::BasicType(BasicType::Int), Type::BasicType(BasicType::Int))
       | (Type::BasicType(BasicType::Bool), Type::BasicType(BasicType::Bool))
-      | (Type::BasicType(BasicType::Bool), Type::BasicType(BasicType::Int)) => tokens1,
-      (Type::BasicType(BasicType::Int), Type::BasicType(BasicType::Bool)) => std::iter::empty()
+      | (Type::BasicType(BasicType::Bool), Type::BasicType(BasicType::Int))
+      | (Type::BasicType(BasicType::Bool), Type::BasicType(BasicType::Char))
+      | (Type::BasicType(BasicType::Int), Type::BasicType(BasicType::Char))
+      | (Type::BasicType(BasicType::Char), Type::BasicType(BasicType::Int)) => tokens1,
+      (Type::BasicType(BasicType::Int), Type::BasicType(BasicType::Bool))
+      | (Type::BasicType(BasicType::Char), Type::BasicType(BasicType::Bool)) => std::iter::empty()
         .chain(tokens1)
         .chain(vec![
           Token::Buf,
@@ -763,6 +768,13 @@ fn integer_constant_expression(value: u8, _stack: &Vec<StackEntry>) -> (Type, Ve
   (
     Type::BasicType(BasicType::Int), // TODO assumes all integer literals are ints
     vec![Token::XXX(value)],
+  )
+}
+
+fn character_constant_expression(value: char, _stack: &Vec<StackEntry>) -> (Type, Vec<Token>) {
+  (
+    Type::BasicType(BasicType::Char), // TODO character constants are `int`s in C
+    vec![Token::XXX(value as u8)],
   )
 }
 
@@ -799,11 +811,10 @@ fn usual_arithmetic_conversion(
   let (type1, tokens1) = codegen::expression(expression1, stack);
   let (type2, tokens2) = codegen::expression(expression2, stack);
   match (type1.clone(), type2.clone()) {
-    (Type::BasicType(BasicType::Int), Type::BasicType(BasicType::Int)) => {
+    (type1, type2) if type1 == type2 => (type1, tokens1, tokens2),
+    (Type::BasicType(BasicType::Char), Type::BasicType(BasicType::Int))
+    | (Type::BasicType(BasicType::Int), Type::BasicType(BasicType::Char)) => {
       (Type::BasicType(BasicType::Int), tokens1, tokens2)
-    }
-    (Type::BasicType(BasicType::Bool), Type::BasicType(BasicType::Bool)) => {
-      (Type::BasicType(BasicType::Bool), tokens1, tokens2)
     }
     _ => panic!(
       "Unimplemented usual arithmetic conversion between `{:?}` and `{:?}`",

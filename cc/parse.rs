@@ -422,6 +422,7 @@ fn unary_expression() -> Parser<Expression> {
       })
     })
     .or_else(|_| parse::integer_constant())
+    .or_else(|_| parse::character_constant())
 }
 
 fn identifier() -> Parser<String> {
@@ -438,6 +439,7 @@ fn identifier() -> Parser<String> {
 }
 
 fn integer_constant() -> Parser<Expression> {
+  // TODO does not ebey grammar
   parse::many(parse::whitespace())
     .and_then(|_| parse::many1(parse::digit()))
     .map(|digits| digits.into_iter().collect())
@@ -449,6 +451,28 @@ fn integer_constant() -> Parser<Expression> {
           .map_err(|_| Error(format!("Invalid integer constant `{}`", digits)))
       }))
     })
+}
+
+fn character_constant() -> Parser<Expression> {
+  // TODO currently only parsing <simple-escape-sequence>s
+  parse::many(parse::whitespace())
+    .and_then(|_| parse::char('\''))
+    .and_then(|_| {
+      Parser::error(Error("".to_string()))
+        .or_else(|_| parse::satisfy(|x| !"\'\\\n".contains(x)))
+        .or_else(|_| parse::string("\\\'").map(|_| '\''))
+        .or_else(|_| parse::string("\\\"").map(|_| '\"'))
+        .or_else(|_| parse::string("\\?").map(|_| '?'))
+        .or_else(|_| parse::string("\\\\").map(|_| '\\'))
+        .or_else(|_| parse::string("\\a").map(|_| '\x07'))
+        .or_else(|_| parse::string("\\b").map(|_| '\x08'))
+        .or_else(|_| parse::string("\\f").map(|_| '\x0C'))
+        .or_else(|_| parse::string("\\n").map(|_| '\n'))
+        .or_else(|_| parse::string("\\r").map(|_| '\r'))
+        .or_else(|_| parse::string("\\t").map(|_| '\t'))
+        .or_else(|_| parse::string("\\0").map(|_| '\0')) // TODO should be <octal-escape-sequence>
+    })
+    .and_then(|char| parse::char('\'').map(move |_| Expression::CharacterConstant(char)))
 }
 
 fn whitespace() -> Parser<()> {

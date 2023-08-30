@@ -1,9 +1,9 @@
-int foo() {
-  return 42;
+int space() {
+  return ' ';
 }
 
-int A() {
-  return 65;
+int foo() {
+  return 42;
 }
 
 int main() {
@@ -19,9 +19,12 @@ int main() {
 
   // return 2 > 1 == 4 >= 2;
 
-  asm (A(), 0) { add !putc }
-  asm (A(), 1) { add !putc }
-  asm (A(), 2) { add !putc }
+  asm ('A' + 32) { !putc }
+  asm ('B', ' ') { add !putc }
+  asm ('C' + space()) { !putc }
+  asm ('\r') { !putc }
+  asm ('\n') { !putc }
+  // asm ('\a') { !putc }
 
   1 + 2 == 3;
   return foo() + 1;
