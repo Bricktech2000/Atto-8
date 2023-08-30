@@ -739,13 +739,14 @@ fn cast_expression(
 
   (
     type_.clone(),
-    match (type1, type_) {
-      (Type::BasicType(BasicType::Int), Type::BasicType(BasicType::Int))
-      | (Type::BasicType(BasicType::Bool), Type::BasicType(BasicType::Bool))
-      | (Type::BasicType(BasicType::Bool), Type::BasicType(BasicType::Int))
+    match (type1.clone(), type_.clone()) {
+      (type1, type2) if type1 == type2 => tokens1,
+
+      (Type::BasicType(BasicType::Bool), Type::BasicType(BasicType::Int))
       | (Type::BasicType(BasicType::Bool), Type::BasicType(BasicType::Char))
       | (Type::BasicType(BasicType::Int), Type::BasicType(BasicType::Char))
       | (Type::BasicType(BasicType::Char), Type::BasicType(BasicType::Int)) => tokens1,
+
       (Type::BasicType(BasicType::Int), Type::BasicType(BasicType::Bool))
       | (Type::BasicType(BasicType::Char), Type::BasicType(BasicType::Bool)) => std::iter::empty()
         .chain(tokens1)
@@ -759,7 +760,11 @@ fn cast_expression(
           Token::AtDyn,
         ])
         .collect(),
-      _ => panic!("Unimplemented type cast"),
+
+      _ => panic!(
+        "Unimplemented type cast from `{:?}` to `{:?}`",
+        type1, type_
+      ),
     },
   )
 }
@@ -812,10 +817,12 @@ fn usual_arithmetic_conversion(
   let (type2, tokens2) = codegen::expression(expression2, stack);
   match (type1.clone(), type2.clone()) {
     (type1, type2) if type1 == type2 => (type1, tokens1, tokens2),
+
     (Type::BasicType(BasicType::Char), Type::BasicType(BasicType::Int))
     | (Type::BasicType(BasicType::Int), Type::BasicType(BasicType::Char)) => {
       (Type::BasicType(BasicType::Int), tokens1, tokens2)
     }
+
     _ => panic!(
       "Unimplemented usual arithmetic conversion between `{:?}` and `{:?}`",
       type1, type2

@@ -1,9 +1,10 @@
-int space() {
+char space() {
   return ' ';
 }
 
 int foo() {
   return 42;
+  space();
 }
 
 int main() {
@@ -23,11 +24,11 @@ int main() {
   asm ('B', ' ') { add !putc }
   asm ('C' + space()) { !putc }
   asm ('\r') { !putc }
-  asm ('\n') { !putc }
+  asm ((int)'\n') { !putc }
   // asm ('\a') { !putc }
 
   1 + 2 == 3;
-  return foo() + 1;
+  return foo() + (char)1;
   return 2 > 1 == 4 >= 2;
 
   asm () {

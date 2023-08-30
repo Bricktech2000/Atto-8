@@ -162,17 +162,40 @@ fn translation_unit() -> Parser<Program> {
 
 fn function_definition() -> Parser<FunctionDefinition> {
   Parser::return_(())
-    .and_then(|_| parse::whitespaces_string("int"))
-    .and_then(|_| parse::identifier())
-    .and_then(|identifier| {
-      Parser::return_(())
-        .and_then(|_| parse::whitespaces_char('('))
-        .and_then(|_| parse::whitespaces_char(')'))
-        .and_then(|_| parse::compound_statement())
-        .map(|statements| {
-          FunctionDefinition(Type::BasicType(BasicType::Int), identifier, statements)
-        })
+    .and_then(|_| parse::type_name())
+    .and_then(|type_name| {
+      parse::identifier().and_then(|identifier| {
+        Parser::return_(())
+          .and_then(|_| parse::whitespaces_char('('))
+          .and_then(|_| parse::whitespaces_char(')'))
+          .and_then(|_| parse::compound_statement())
+          .map(|statements| FunctionDefinition(type_name, identifier, statements))
+      })
     })
+}
+
+fn type_name() -> Parser<Type> {
+  // TODO does not obey grammar
+  Parser::error(Error("".to_string()))
+    .or_else(|_| {
+      parse::whitespaces_string("long long int")
+        .or_else(|_| parse::whitespaces_string("long long"))
+        .map(|_| Type::BasicType(BasicType::LongLong))
+    })
+    .or_else(|_| {
+      parse::whitespaces_string("long int")
+        .or_else(|_| parse::whitespaces_string("long"))
+        .map(|_| Type::BasicType(BasicType::Long))
+    })
+    .or_else(|_| parse::whitespaces_string("int").map(|_| Type::BasicType(BasicType::Int)))
+    .or_else(|_| {
+      parse::whitespaces_string("short int")
+        .or_else(|_| parse::whitespaces_string("short"))
+        .map(|_| Type::BasicType(BasicType::Short))
+    })
+    .or_else(|_| parse::whitespaces_string("char").map(|_| Type::BasicType(BasicType::Char)))
+    .or_else(|_| parse::whitespaces_string("bool").map(|_| Type::BasicType(BasicType::Bool)))
+    .or_else(|_| parse::whitespaces_string("void").map(|_| Type::BasicType(BasicType::Void)))
 }
 
 fn compound_statement() -> Parser<Vec<Statement>> {
@@ -379,7 +402,14 @@ fn multiplicative_expression() -> Parser<Expression> {
 }
 
 fn cast_expression() -> Parser<Expression> {
-  parse::unary_expression() // TODO does not obey grammar
+  parse::whitespaces_char('(')
+    .and_then(|_| parse::type_name())
+    .and_then(|type_name| {
+      parse::whitespaces_char(')')
+        .and_then(|_| parse::cast_expression())
+        .map(|cast_expression| Expression::Cast(type_name, Box::new(cast_expression)))
+    })
+    .or_else(|_| parse::unary_expression())
 }
 
 fn unary_expression() -> Parser<Expression> {
