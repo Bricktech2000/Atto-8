@@ -96,7 +96,6 @@ fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -
 fn mnemonize(assembly: String, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Mnemonic)> {
   let mnemonics: Vec<(Pos, Mnemonic)> = assembly
     .split_whitespace()
-    .into_iter()
     .map(|mnemonic| Mnemonic(mnemonic.to_string()))
     .enumerate()
     .map(|(index, mnemonic)| (Pos("[token stream]".to_string(), index), mnemonic))
