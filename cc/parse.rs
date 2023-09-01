@@ -169,7 +169,7 @@ fn function_definition() -> Parser<FunctionDefinition> {
           .and_then(|_| parse::whitespaces_char('('))
           .and_then(|_| parse::whitespaces_char(')'))
           .and_then(|_| parse::compound_statement())
-          .map(|statements| FunctionDefinition(type_name, identifier, statements))
+          .map(|statements| FunctionDefinition(Object(type_name, identifier), vec![], statements))
       })
     })
 }
@@ -180,22 +180,22 @@ fn type_name() -> Parser<Type> {
     .or_else(|_| {
       parse::whitespaces_string("long long int")
         .or_else(|_| parse::whitespaces_string("long long"))
-        .map(|_| Type::BasicType(BasicType::LongLong))
+        .map(|_| Type::LongLong)
     })
     .or_else(|_| {
       parse::whitespaces_string("long int")
         .or_else(|_| parse::whitespaces_string("long"))
-        .map(|_| Type::BasicType(BasicType::Long))
+        .map(|_| Type::Long)
     })
-    .or_else(|_| parse::whitespaces_string("int").map(|_| Type::BasicType(BasicType::Int)))
+    .or_else(|_| parse::whitespaces_string("int").map(|_| Type::Int))
     .or_else(|_| {
       parse::whitespaces_string("short int")
         .or_else(|_| parse::whitespaces_string("short"))
-        .map(|_| Type::BasicType(BasicType::Short))
+        .map(|_| Type::Short)
     })
-    .or_else(|_| parse::whitespaces_string("char").map(|_| Type::BasicType(BasicType::Char)))
-    .or_else(|_| parse::whitespaces_string("bool").map(|_| Type::BasicType(BasicType::Bool)))
-    .or_else(|_| parse::whitespaces_string("void").map(|_| Type::BasicType(BasicType::Void)))
+    .or_else(|_| parse::whitespaces_string("char").map(|_| Type::Char))
+    .or_else(|_| parse::whitespaces_string("bool").map(|_| Type::Bool))
+    .or_else(|_| parse::whitespaces_string("void").map(|_| Type::Void))
 }
 
 fn compound_statement() -> Parser<Vec<Statement>> {

@@ -67,21 +67,10 @@ fn main() {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum StackEntry {
-  ProgramBoundary,
-  GlobalDeclaration(Type, String),
-  GlobalDefinition(Type, String),
-  FunctionDeclaration(Type, String),
-  FunctionDefinition(Type, String),
-  FunctionBoundary(Type, String),
-  LoopBoundary,
-  BlockBoundary,
-  Local(Type, String),
-  Temporary(Type),
-}
+pub struct Object(Type, String);
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum BasicType {
+pub enum Type {
   Void,
   Bool,
   Char,
@@ -90,11 +79,11 @@ pub enum BasicType {
   Long,
   LongLong,
   // TODO float, double
-}
-
-#[derive(Clone, PartialEq, Debug)]
-pub enum Type {
-  BasicType(BasicType),
+  Array(Box<Type>),
+  Structure(Vec<Object>),
+  Union(Vec<Object>),
+  Function(Box<Type>, Vec<Object>),
+  Pointer(Box<Type>),
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -103,7 +92,7 @@ pub struct Program {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct FunctionDefinition(Type, String, Vec<Statement>);
+pub struct FunctionDefinition(Object, Vec<Object>, Vec<Statement>);
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Expression {
@@ -145,20 +134,4 @@ pub enum Statement {
   Expression(Expression),
   Return(Expression),
   Asm(Vec<Expression>, String),
-}
-
-impl Type {
-  pub fn size(&self) -> usize {
-    match self {
-      Type::BasicType(basic_type) => match basic_type {
-        BasicType::Void => 0,
-        BasicType::Bool => 1,
-        BasicType::Char => 1,
-        BasicType::Short => 1,    // TODO nonstandard
-        BasicType::Int => 1,      // TODO nonstandard
-        BasicType::Long => 2,     // TODO potentially nonstandard
-        BasicType::LongLong => 4, // TODO potentially nonstandard
-      },
-    }
-  }
 }
