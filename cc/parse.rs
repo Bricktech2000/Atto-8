@@ -1,22 +1,20 @@
 use crate::*;
 use std::rc::Rc;
 
-// `Parser`s are functions that might be called multiple times, hence `Fn` instead of `FnOnce`.
-// nested `Fn` closures cannot move data into themselves, hence the `clone`s and `+ Clone`s everywhere.
-// since parsers can be called anytime, closures must borrow their environment for `'static`. therefore,
-// with nested `Fn` closures, we need to use `move`s and `let X = X.clone()`s and `+ 'static`s
-// everywhere, allowing them to fully own their environment. clasures might hove to refer to `Parser`s
-// in their environment, hence `Parser` is `Clone`. `Box<dyn Fn ...>` is not `Clone`,
-// hence the use of `Rc<dyn Fn ...>`. "are we GC yet?"
-
 // utilities
 
-fn psi<T, U, V, F: Fn(T) -> U, G: Fn(U, U) -> V>(f: F, g: G) -> impl Fn(T, T) -> V {
-  move |x, y| g(f(x), f(y))
+fn psi<T, U, V, F: FnOnce(T) -> U + Clone + 'static, G: FnOnce(U, U) -> V + Clone + 'static>(
+  f: F,
+  g: G,
+) -> Rc<dyn Fn(T, T) -> V> {
+  Rc::new(move |x, y| g.clone()(f.clone()(x), f.clone()(y)))
 }
 
-fn bluebird<T, U, V, F: Fn(T) -> U, G: Fn(U) -> V>(f: F, g: G) -> impl Fn(T) -> V {
-  move |x| g(f(x))
+fn bluebird<T, U, V, F: FnOnce(T) -> U + Clone + 'static, G: FnOnce(U) -> V + Clone + 'static>(
+  f: F,
+  g: G,
+) -> Rc<dyn Fn(T) -> V> {
+  Rc::new(move |x| g.clone()(f.clone()(x)))
 }
 
 #[derive(Clone)]
@@ -24,28 +22,29 @@ struct Parser<T: Clone + 'static>(Rc<dyn Fn(String) -> ParseResult<T>>);
 type ParseResult<T> = Result<(T, String), Error>;
 
 impl<T: Clone + 'static> Parser<T> {
-  fn and_then<U: Clone, F: Fn(T) -> Parser<U> + 'static>(self, f: F) -> Parser<U> {
+  fn and_then<U: Clone + 'static, F: FnOnce(T) -> Parser<U> + Clone + 'static>(
+    self,
+    f: F,
+  ) -> Parser<U> {
     Parser(Rc::new(move |input: String| {
-      self.0(input).and_then(|(match_, input)| f(match_).0(input))
+      self.0(input).and_then(|(match_, input)| f.clone()(match_).0(input))
     }))
   }
 
-  fn or_else<F: Fn(Error) -> Parser<T> + 'static>(self, f: F) -> Parser<T> {
+  fn or_else<F: FnOnce(Error) -> Parser<T> + Clone + 'static>(self, f: F) -> Parser<T> {
     Parser(Rc::new(move |input: String| {
-      self.0(input.clone()).or_else(|error| f(error).0(input))
+      self.0(input.clone()).or_else(|error| f.clone()(error).0(input))
     }))
   }
 
-  fn map<U: Clone, F: Fn(T) -> U + 'static>(self, f: F) -> Parser<U> {
+  fn map<U: Clone + 'static, F: FnOnce(T) -> U + Clone + 'static>(self, f: F) -> Parser<U> {
     Parser(Rc::new(move |input: String| {
-      self.0(input).map(|(match_, input)| (f(match_), input))
+      self.0(input).map(|(match_, input)| (f.clone()(match_), input))
     }))
   }
 
   fn return_(value: T) -> Parser<T> {
-    Parser(Rc::new(move |input: String| {
-      Ok((value.clone(), input.clone()))
-    }))
+    Parser(Rc::new(move |input: String| Ok((value.clone(), input))))
   }
 
   fn error(error: Error) -> Parser<T> {
@@ -73,8 +72,7 @@ fn eof() -> Parser<()> {
 }
 
 fn satisfy<F: Fn(char) -> bool + Clone + 'static>(predicate: F) -> Parser<char> {
-  parse::any().and_then(move |char| {
-    let predicate = predicate.clone();
+  parse::any().and_then(|char| {
     Parser(Rc::new(move |input: String| match predicate(char) {
       true => Ok((char, input)),
       false => Err(Error(format!("Unexpected `{}`", char))),
@@ -86,38 +84,30 @@ fn char(char: char) -> Parser<()> {
   parse::satisfy(move |x| x == char).map(|_| ())
 }
 
-fn string(string: &str) -> Parser<()> {
+fn string(string: &'static str) -> Parser<()> {
   string
     .chars()
     .map(parse::char)
-    .reduce(|acc, parser| acc.and_then(move |_| parser.clone()))
+    .reduce(|acc, parser| acc.and_then(|_| parser))
     .unwrap()
 }
 
 // parser combinators
 
 fn many1<T: Clone + 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
-  parser.clone().and_then(move |first| {
-    parse::many(parser.clone()).map(move |rest| {
-      std::iter::once(first.clone())
-        .chain(rest.into_iter())
-        .collect()
-    })
+  parser.clone().and_then(|first| {
+    parse::many(parser).map(|rest| std::iter::once(first).chain(rest.into_iter()).collect())
   })
 }
 
 fn many<T: Clone + 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
-  parse::many1(parser.clone()).or_else(|_| Parser::return_(vec![]))
+  parse::many1(parser).or_else(|_| Parser::return_(vec![]))
 }
 
 fn sepby1<T: Clone + 'static>(parser: Parser<T>, separator: Parser<()>) -> Parser<Vec<T>> {
-  parser.clone().and_then(move |first| {
-    let parser = parser.clone();
-    parse::many(separator.clone().and_then(move |_| parser.clone())).map(move |rest| {
-      std::iter::once(first.clone())
-        .chain(rest.into_iter())
-        .collect()
-    })
+  parser.clone().and_then(|first| {
+    parse::many(separator.and_then(|_| parser))
+      .map(|rest| std::iter::once(first).chain(rest.into_iter()).collect())
   })
 }
 
@@ -127,28 +117,20 @@ fn sepby<T: Clone + 'static>(parser: Parser<T>, separator: Parser<()>) -> Parser
 
 fn binary_operation<T: Clone + 'static>(
   parser: Parser<T>,
-  separator: Parser<impl Fn(T, T) -> T + Clone + 'static>,
+  separator: Parser<Rc<dyn Fn(T, T) -> T>>,
 ) -> Parser<T> {
-  parser.clone().and_then(move |first| {
-    let parser = parser.clone();
-    parse::many(separator.clone().and_then(move |constructor| {
-      parser
-        .clone()
-        .map(move |second| (constructor.clone(), second.clone()))
-    }))
-    .map(move |rest| {
-      rest
-        .into_iter()
-        .fold(first.clone(), |acc, (constructor, second)| {
-          constructor(acc, second)
-        })
-    })
+  parser.clone().and_then(|first| {
+    parse::many(separator.and_then(|constructor| parser.map(|second| (constructor, second)))).map(
+      |rest| {
+        rest
+          .into_iter()
+          .fold(first, |acc, (constructor, second)| constructor(acc, second))
+      },
+    )
   })
 }
 
 // C99 grammar
-
-type EEE = fn(Expression, Expression) -> Expression;
 
 pub fn parse(input: String) -> Result<Program, Error> {
   parse::translation_unit().0(input).map(|(programm, input)| match &input[..] {
@@ -160,8 +142,8 @@ pub fn parse(input: String) -> Result<Program, Error> {
 fn translation_unit() -> Parser<Program> {
   // TODO should be `many` instead of `many1`
   parse::many1(parse::function_definition()).and_then(|function_definitions| {
-    parse::whitespaces_eof().map(move |_| Program {
-      function_definitions: function_definitions.clone(),
+    parse::whitespaces_eof().map(|_| Program {
+      function_definitions,
     })
   })
 }
@@ -170,19 +152,12 @@ fn function_definition() -> Parser<FunctionDefinition> {
   Parser::return_(())
     .and_then(|_| parse::type_name())
     .and_then(|type_name| {
-      parse::identifier().and_then(move |identifier| {
-        let type_name = type_name.clone();
+      parse::identifier().and_then(|identifier| {
         Parser::return_(())
           .and_then(|_| parse::whitespaces_char('('))
           .and_then(|_| parse::whitespaces_char(')'))
           .and_then(|_| parse::compound_statement())
-          .map(move |statements| {
-            FunctionDefinition(
-              Object(type_name.clone(), identifier.clone()),
-              vec![],
-              statements,
-            )
-          })
+          .map(|statements| FunctionDefinition(Object(type_name, identifier), vec![], statements))
       })
     })
 }
@@ -216,7 +191,7 @@ fn compound_statement() -> Parser<Vec<Statement>> {
   Parser::return_(())
     .and_then(|_| parse::whitespaces_char('{'))
     .and_then(|_| parse::many(parse::statement()))
-    .and_then(|statements| parse::whitespaces_char('}').map(move |_| statements.clone()))
+    .and_then(|statements| parse::whitespaces_char('}').map(|_| statements))
 }
 
 fn statement() -> Parser<Statement> {
@@ -232,18 +207,14 @@ fn jump_statement() -> Parser<Statement> {
   Parser::return_(())
     .and_then(|_| parse::whitespaces_string("return"))
     .and_then(|_| parse::expression()) // TODO does not obey grammar
-    .and_then(|expression| {
-      parse::whitespaces_char(';').map(move |_| Statement::Return(expression.clone()))
-    })
+    .and_then(|expression| parse::whitespaces_char(';').map(|_| Statement::Return(expression)))
 }
 
 fn expression_statement() -> Parser<Statement> {
   // TODO cases missing
   Parser::return_(())
     .and_then(|_| parse::expression())
-    .and_then(|expression| {
-      parse::whitespaces_char(';').map(move |_| Statement::Expression(expression.clone()))
-    })
+    .and_then(|expression| parse::whitespaces_char(';').map(|_| Statement::Expression(expression)))
 }
 
 fn asm_statement() -> Parser<Statement> {
@@ -257,10 +228,8 @@ fn asm_statement() -> Parser<Statement> {
         .and_then(|_| parse::whitespaces_char('{'))
         .and_then(|_| parse::many(parse::satisfy(|c| c != '}')))
         .map(|chars| chars.iter().collect())
-        .and_then(move |assembly: String| {
-          let expressions = expressions.clone();
-          parse::whitespaces_char('}')
-            .map(move |_| Statement::Asm(expressions.clone(), assembly.clone()))
+        .and_then(|assembly| {
+          parse::whitespaces_char('}').map(|_| Statement::Asm(expressions, assembly))
         })
     })
 }
@@ -278,14 +247,13 @@ fn conditional_expression() -> Parser<Expression> {
     .and_then(|expression1| {
       parse::whitespaces_char('?')
         .and_then(|_| parse::expression())
-        .and_then(move |expression2| {
-          let expression1 = expression1.clone();
+        .and_then(|expression2| {
           parse::whitespaces_char(':')
             .and_then(|_| parse::conditional_expression())
-            .map(move |expression3| {
+            .map(|expression3| {
               Expression::Conditional(
-                Box::new(expression1.clone()),
-                Box::new(expression2.clone()),
+                Box::new(expression1),
+                Box::new(expression2),
                 Box::new(expression3),
               )
             })
@@ -295,179 +263,129 @@ fn conditional_expression() -> Parser<Expression> {
 }
 
 fn logical_or_expression() -> Parser<Expression> {
-  fn make_logical_or(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::LogicalOr)(expression1, expression2)
-  }
-
   parse::binary_operation(
     parse::logical_and_expression(),
-    parse::whitespaces_string("||").and_then(|_| Parser::return_(make_logical_or as EEE)),
+    parse::whitespaces_string("||")
+      .and_then(|_| Parser::return_(psi(Box::new, Expression::LogicalOr))),
   )
 }
 
 fn logical_and_expression() -> Parser<Expression> {
-  fn make_logical_and(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::LogicalAnd)(expression1, expression2)
-  }
-
   parse::binary_operation(
     parse::bitwise_inclusive_or_expression(),
-    parse::whitespaces_string("&&").and_then(|_| Parser::return_(make_logical_and as EEE)),
+    parse::whitespaces_string("&&")
+      .and_then(|_| Parser::return_(psi(Box::new, Expression::LogicalAnd))),
   )
 }
 
 fn bitwise_inclusive_or_expression() -> Parser<Expression> {
-  fn make_bitwise_inclusive_or(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::BitwiseInclusiveOr)(expression1, expression2)
-  }
-
   parse::binary_operation(
     parse::bitwise_exclusive_or_expression(),
-    parse::whitespaces_char('|').and_then(|_| Parser::return_(make_bitwise_inclusive_or as EEE)),
+    parse::whitespaces_char('|')
+      .and_then(|_| Parser::return_(psi(Box::new, Expression::BitwiseInclusiveOr))),
   )
 }
 
 fn bitwise_exclusive_or_expression() -> Parser<Expression> {
-  fn make_bitwise_exclusive_or(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::BitwiseExclusiveOr)(expression1, expression2)
-  }
-
   parse::binary_operation(
     parse::bitwise_and_expression(),
-    parse::whitespaces_char('^').and_then(|_| Parser::return_(make_bitwise_exclusive_or as EEE)),
+    parse::whitespaces_char('^')
+      .and_then(|_| Parser::return_(psi(Box::new, Expression::BitwiseExclusiveOr))),
   )
 }
 
 fn bitwise_and_expression() -> Parser<Expression> {
-  fn make_bitwise_and(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::BitwiseAnd)(expression1, expression2)
-  }
-
   parse::binary_operation(
     parse::equality_expression(),
-    parse::whitespaces_char('&').and_then(|_| Parser::return_(make_bitwise_and as EEE)),
+    parse::whitespaces_char('&')
+      .and_then(|_| Parser::return_(psi(Box::new, Expression::BitwiseAnd))),
   )
 }
 
 fn equality_expression() -> Parser<Expression> {
-  fn make_equal_to(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::EqualTo)(expression1, expression2)
-  }
-
-  fn make_not_equal_to(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::NotEqualTo)(expression1, expression2)
-  }
-
   parse::binary_operation(
     parse::relational_expression(),
     Parser::error(Error("".to_string()))
       .or_else(|_| {
-        parse::whitespaces_string("==").and_then(|_| Parser::return_(make_equal_to as EEE))
+        parse::whitespaces_string("==")
+          .and_then(|_| Parser::return_(psi(Box::new, Expression::EqualTo)))
       })
       .or_else(|_| {
-        parse::whitespaces_string("!=").and_then(|_| Parser::return_(make_not_equal_to as EEE))
+        parse::whitespaces_string("!=")
+          .and_then(|_| Parser::return_(psi(Box::new, Expression::NotEqualTo)))
       }),
   )
 }
 
 fn relational_expression() -> Parser<Expression> {
-  fn make_greater_than_or_equal_to(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::GreaterThanOrEqualTo)(expression1, expression2)
-  }
-
-  fn make_greater_than(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::GreaterThan)(expression1, expression2)
-  }
-
-  fn make_less_than_or_equal_to(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::LessThanOrEqualTo)(expression1, expression2)
-  }
-
-  fn make_less_than(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::LessThan)(expression1, expression2)
-  }
-
   parse::binary_operation(
     parse::shift_expression(),
     Parser::error(Error("".to_string()))
       .or_else(|_| {
         parse::whitespaces_string(">=")
-          .and_then(|_| Parser::return_(make_greater_than_or_equal_to as EEE))
+          .and_then(|_| Parser::return_(psi(Box::new, Expression::GreaterThanOrEqualTo)))
       })
       .or_else(|_| {
-        parse::whitespaces_char('>').and_then(|_| Parser::return_(make_greater_than as EEE))
+        parse::whitespaces_char('>')
+          .and_then(|_| Parser::return_(psi(Box::new, Expression::GreaterThan)))
       })
       .or_else(|_| {
         parse::whitespaces_string("<=")
-          .and_then(|_| Parser::return_(make_less_than_or_equal_to as EEE))
+          .and_then(|_| Parser::return_(psi(Box::new, Expression::LessThanOrEqualTo)))
       })
       .or_else(|_| {
-        parse::whitespaces_char('<').and_then(|_| Parser::return_(make_less_than as EEE))
+        parse::whitespaces_char('<')
+          .and_then(|_| Parser::return_(psi(Box::new, Expression::LessThan)))
       }),
   )
 }
 
 fn shift_expression() -> Parser<Expression> {
-  fn make_left_shift(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::LeftShift)(expression1, expression2)
-  }
-
-  fn make_right_shift(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::RightShift)(expression1, expression2)
-  }
-
   parse::binary_operation(
     parse::additive_expression(),
     Parser::error(Error("".to_string()))
       .or_else(|_| {
-        parse::whitespaces_string("<<").and_then(|_| Parser::return_(make_left_shift as EEE))
+        parse::whitespaces_string("<<")
+          .and_then(|_| Parser::return_(psi(Box::new, Expression::LeftShift)))
       })
       .or_else(|_| {
-        parse::whitespaces_string(">>").and_then(|_| Parser::return_(make_right_shift as EEE))
+        parse::whitespaces_string(">>")
+          .and_then(|_| Parser::return_(psi(Box::new, Expression::RightShift)))
       }),
   )
 }
 
 fn additive_expression() -> Parser<Expression> {
-  fn make_addition(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::Addition)(expression1, expression2)
-  }
-
-  fn make_subtraction(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::Subtraction)(expression1, expression2)
-  }
-
   parse::binary_operation(
     parse::multiplicative_expression(),
     Parser::error(Error("".to_string()))
-      .or_else(|_| parse::whitespaces_char('+').and_then(|_| Parser::return_(make_addition as EEE)))
       .or_else(|_| {
-        parse::whitespaces_char('-').and_then(|_| Parser::return_(make_subtraction as EEE))
+        parse::whitespaces_char('+')
+          .and_then(|_| Parser::return_(psi(Box::new, Expression::Addition)))
+      })
+      .or_else(|_| {
+        parse::whitespaces_char('-')
+          .and_then(|_| Parser::return_(psi(Box::new, Expression::Subtraction)))
       }),
   )
 }
 
 fn multiplicative_expression() -> Parser<Expression> {
-  fn make_multiplication(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::Multiplication)(expression1, expression2)
-  }
-
-  fn make_division(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::Division)(expression1, expression2)
-  }
-
-  fn make_modulo(expression1: Expression, expression2: Expression) -> Expression {
-    psi(Box::new, Expression::Modulo)(expression1, expression2)
-  }
-
   parse::binary_operation(
     parse::cast_expression(),
     Parser::error(Error("".to_string()))
       .or_else(|_| {
-        parse::whitespaces_char('*').and_then(|_| Parser::return_(make_multiplication as EEE))
+        parse::whitespaces_char('*')
+          .and_then(|_| Parser::return_(psi(Box::new, Expression::Multiplication)))
       })
-      .or_else(|_| parse::whitespaces_char('/').and_then(|_| Parser::return_(make_division as EEE)))
-      .or_else(|_| parse::whitespaces_char('%').and_then(|_| Parser::return_(make_modulo as EEE))),
+      .or_else(|_| {
+        parse::whitespaces_char('/')
+          .and_then(|_| Parser::return_(psi(Box::new, Expression::Division)))
+      })
+      .or_else(|_| {
+        parse::whitespaces_char('%')
+          .and_then(|_| Parser::return_(psi(Box::new, Expression::Modulo)))
+      }),
   )
 }
 
@@ -477,7 +395,7 @@ fn cast_expression() -> Parser<Expression> {
     .and_then(|type_name| {
       parse::whitespaces_char(')')
         .and_then(|_| parse::cast_expression())
-        .map(move |cast_expression| Expression::Cast(type_name.clone(), Box::new(cast_expression)))
+        .map(|cast_expression| Expression::Cast(type_name, Box::new(cast_expression)))
     })
     .or_else(|_| parse::unary_expression())
 }
@@ -511,14 +429,14 @@ fn unary_expression() -> Parser<Expression> {
       Parser::return_(())
         .and_then(|_| parse::whitespaces_char('('))
         .and_then(|_| parse::expression()) // TODO does not obey grammar
-        .and_then(|expression| parse::whitespaces_char(')').map(move |_| expression.clone()))
+        .and_then(|expression| parse::whitespaces_char(')').map(|_| expression))
     })
     .or_else(|_| {
       parse::identifier().and_then(|identifier| {
         Parser::return_(())
           .and_then(|_| parse::whitespaces_char('('))
           .and_then(|_| parse::whitespaces_char(')'))
-          .map(move |_| Expression::FunctionCall(identifier.clone()))
+          .map(|_| Expression::FunctionCall(identifier))
       })
     })
     .or_else(|_| parse::integer_constant())
