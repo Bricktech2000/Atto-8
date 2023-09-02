@@ -25,7 +25,7 @@ compiler!
   main:
     !stdout # for call into `:code_buffer` way later
     :code_buffer # current end of the `dst` string
-    # wait for input from `stdin` and preseerve character
+    # wait for input from `stdin` and preserve character
     !char.null wait: !char.pop !getc !char.null xor :wait !bcs
     loop:
       # echo back character
