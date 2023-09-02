@@ -580,7 +580,7 @@ pub fn instruction_to_opcode(instruction: Result<Instruction, u8>) -> u8 {
     Ok(Instruction::Shr) => 0b10110101,
     Ok(Instruction::Not) => 0b10110110,
     Ok(Instruction::Buf) => 0b10110111,
-    Ok(Instruction::Dbg) => 0b10111101,
+    Ok(Instruction::Dbg) => 0b10111011,
     Ok(Instruction::Ldo(ofst)) => 0b11000000 | encode_ofst(ofst),
     Ok(Instruction::Sto(ofst)) => 0b11010000 | encode_ofst(ofst),
     Ok(Instruction::Lda) => 0b11100000,
