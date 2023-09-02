@@ -51,7 +51,7 @@ main!
     x04 x0F an4 rot or2 # copy into most significant nibble of `buffer`
     !char.null # previous character was consumed, push dummy character
   got_backspace:
-    pop # pop previous character
+    !char.pop # pop previous character
     x04 ro2 # swap `buffer` nibbles
   :getc_loop !jmp # do not pop previous character again
 
@@ -74,7 +74,7 @@ main!
 
   # pop previous character and fall through
   pop_loop:
-    pop
+    !char.pop
 
   getc_loop:
     !getc

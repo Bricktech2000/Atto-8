@@ -16,6 +16,7 @@ main!
   # :str_abc :strlen !call # 0x03
   # :str_abcdef :strlen !call # 0x06
   # :str_abcdef :str_buf :strcpy !call :str_buf :strlen !call # 0x06
+  # :str_abcdef :str_hello_world :strcat !call :str_hello_world :strlen !call # 0x12
   # :str_ac :str_ab :strcmp !call # 0x01
   # :str_ab :str_abc :strcmp !call # 0x9D
   # :str_abc :str_abc :strcmp !call # 0x00
@@ -40,6 +41,7 @@ main!
   # !strchr.def
   # !strlen.def
   # !strcpy.def
+  # !strcat.def
   # !strcmp.def
   # !memchr.def
   # !memset.def

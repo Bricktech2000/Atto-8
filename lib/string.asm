@@ -1,4 +1,13 @@
-strcat.def! strcat: @err # to be implemented
+strcat.def!
+  strcat: # strcat(*dst, *str)
+    # src += strlen(src)
+    ld1 for_c.
+      ld0 lda !char.null xor pop
+    inc .for_c !bcc dec st1
+    # copy src to dst
+    !strcpy.def
+    # use :strcpy label
+    :strcpy pop
 strchr.def!
   strchr: # *ptr = strchr(*str, char)
     ld1 for_c.
@@ -12,6 +21,7 @@ strchr.def!
   st2 !rt1
 strlen.def!
   strlen: # len = strlen(*str)
+    # find null byte
     ld1 for_c.
       ld0 lda !char.null xor pop
     inc .for_c !bcc
