@@ -14,7 +14,7 @@ Assembly consists of the following process:
 4. Compile IR to list of instructions while resolving labels.
 5. Generate binary and write it to file `argv[2]`.
 
-Labels are global by default; local labels are local to a macro. Macros are global. Macro definitions end either at the start of the next macro definition or at the end of the token stream; macro definitions may not be nested. The token stream must begin with a macro definition token so every token belongs to a macro. Tokens are to be separated by whitespace.
+Labels are global by default; local labels are local to a macro. Macros are global. Macro definitions end either at the start of the next macro definition or at the end of the token stream; macro definitions may not be nested. The token stream must begin with a macro definition token so every token belongs to a macro. Tokens are to be separated by whitespace; after preprocessing, all whitespace is equivalent.
 
 ## Preprocessing
 
@@ -74,3 +74,9 @@ Labels are global by default; local labels are local to a macro. Macros are glob
 | `flc`    | Emit instruction `flc`                            |
 | `swp`    | Emit instruction `swp`                            |
 | `pop`    | Emit instruction `pop`                            |
+
+## Conventions
+
+By convention, functions are called by pushing their arguments onto the stack in reverse order, pushing a return address onto the stack, and then jumping to the function's address. It is recommended that functions replace their arguments with their return values prior to returning as to mirror the behavior of instructions on the Atto-8 microarchitecture.
+
+The state of the carry flag is generally unspecified after a macro or function begins and before it returns, and macros and functions are not required to preserve the state of the carry flag.

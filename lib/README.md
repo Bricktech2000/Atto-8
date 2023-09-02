@@ -17,7 +17,7 @@ This library provides utilities and convenience macros for the Atto-8 microcompu
 
 Files in the standard library do not import their dependencies; they are to be imported by the user.
 
-Macros and labels ending in `.min` are hand-optimized for speed or size. Their API is often different from their non-minified counterparts and can be unintuitive and contain undocumented behavior. Their non-minified counterparts are more readable and are preferred unless speed or size is a concern.
+Macros and labels ending in `.min` are hand-optimized for speed or size. Their API is often different from their non-minified counterparts and may be unintuitive and contain undocumented behavior. Their non-minified counterparts are more readable and are preferred unless speed or size is a concern.
 
 Macros ending in `.dyn` may perform superfluous operations at runtime if their arguments are not constants. Their non-dynamic counterparts leverage the `@const` directive to perform these operations at assembly time. Macros ending in `.dyn` should only be used when the assembler fails to resolve a constant expression in their non-dynamic counterparts.
 

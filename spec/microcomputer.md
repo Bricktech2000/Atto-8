@@ -66,7 +66,3 @@ Primary  Secondary
  L + R     l + r
    D         d
 ```
-
-## Conventions
-
-By convention, functions are called by pushing their arguments onto the stack, pushing a return address onto the stack, and then jumping to the function's address. It is recommended that functions replace their arguments with their return values prior to returning as to mirror the behavior of instructions on the Atto-8 microarchitecture.
