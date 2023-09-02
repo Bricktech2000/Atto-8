@@ -4,6 +4,9 @@ endif
 
 let b:current_syntax = "atto-8"
 
+" every printable non-digit non-alpha character, except " !.:@"
+set iskeyword+=34,35,36,37,38,39,40,41,42,43,44,45,47,59,60,61,62,63,91,92,93,94,95,96,123,124,125,126
+
 syntax match atto8Instruction "\<\(add\|sub\|iff\|rot\|orr\|and\|xor\|xnd\|inc\|dec\|neg\|shl\|shr\|not\|buf\|lda\|sta\|ldi\|sti\|lds\|sts\|nop\|sec\|clc\|flc\|swp\|pop\)\>"
 syntax match atto8Instruction "\<\(ad\|su\|if\|ro\|or\|an\|xo\|xn\)[1248]\{1\}\>"
 syntax match atto8Instruction "\<\(ld\|st\)[0-9A-F]\{1\}\>"
