@@ -5,8 +5,16 @@ import functools
 import subprocess
 
 
+def cat(filename):
+  with open(filename, 'rb') as file:
+    print(f'Test: Output: {filename}')
+    sys.stdout.flush()
+    sys.stdout.buffer.write(file.read())
+
+
 def run(*args):
   print(f'Test: Running `{" ".join(args)}`')
+  sys.stdout.flush()
   subprocess.run([*args], check=True)
 
 
@@ -88,6 +96,9 @@ while input:
         filenames.pop()
       case 'dup':
         filenames.append(filenames[-1])
+      case 'cat':
+        filename = filenames.pop()
+        operations.append((operation, functools.partial(cat, filename)))
       case file:
         filenames.append(rel_path(target, file))
   except IndexError:

@@ -110,6 +110,7 @@ pub fn many<T: Clone + 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
   parse::many1(parser).or_else(|_| Parser::return_(vec![]))
 }
 
+#[allow(dead_code)]
 pub fn sepby1<T: Clone + 'static>(parser: Parser<T>, separator: Parser<()>) -> Parser<Vec<T>> {
   parser.clone().and_then(|first| {
     parse::many(separator.and_then(|_| parser))
@@ -117,6 +118,7 @@ pub fn sepby1<T: Clone + 'static>(parser: Parser<T>, separator: Parser<()>) -> P
   })
 }
 
+#[allow(dead_code)]
 pub fn sepby<T: Clone + 'static>(parser: Parser<T>, separator: Parser<()>) -> Parser<Vec<T>> {
   parse::sepby1(parser, separator).or_else(|_| Parser::return_(vec![]))
 }
