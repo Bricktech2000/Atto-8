@@ -51,11 +51,11 @@ compiler!
     # loop while `stdin` is not empty
     !char.pop !getc !char.null xor :loop !bcc !char.pop
 
-    # compute and substitute magic values
+    # compute and substitute sentinel values
     :code_buffer for_b:
       ld0 lda :default
-        ![_magic xo2 :[_magic iff ![_magic xo2
-        !]_magic xo2 :]_magic iff !]_magic xo2
+        ![_sentinel xo2 :[_sentinel iff ![_sentinel xo2
+        !]_sentinel xo2 :]_sentinel iff !]_sentinel xo2
         !char.null xo2
       st0 !jmp default:
     inc :for_b !bcc pop
@@ -67,15 +67,15 @@ compiler!
     # `head` and `!stdout` are already on the stack
     x00 :code_buffer !jmp
 
-    [_magic:
-      # create offset from current address and store to memory containing `!pad_magic`
+    [_sentinel:
+      # create offset from current address and store to memory containing `!pad_sentinel`
       ld0 x03 add ld1 dec sta
-      # save current address onto the stack for `:]_magic` later
+      # save current address onto the stack for `:]_sentinel` later
       ld0
     :default !jmp
 
-    ]_magic:
-      # compute offset to previous current address and save into memory contaning `!]_magic`
+    ]_sentinel:
+      # compute offset to previous current address and save into memory contaning `!]_sentinel`
       ld1 dec dec ld1 sta
       # pop previous current address from stack and store into it an offset to current address
       swp ld1 inc inc swp sta
@@ -90,13 +90,13 @@ compiler!
   # `!stdin` and `!stdout` are `'\0'` which is also `!char.null`
   .: ld0 ld3 !fputc !char.null
   ,: ld2 !fgetc st0 !char.null
-  [: buf !pad_magic ![_magic iff !jmp !char.null
-  ]: !]_magic !jmp !char.null
+  [: buf !pad_sentinel ![_sentinel iff !jmp !char.null
+  ]: !]_sentinel !jmp !char.null
   _: !char.null
 
-[_magic! @FF
-]_magic! @FE
-pad_magic! @FD
+[_sentinel! @FF
+]_sentinel! @FE
+pad_sentinel! @FD
 
 
 interpreter!

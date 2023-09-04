@@ -848,10 +848,10 @@ impl std::fmt::Display for Token {
   }
 }
 
-const MICROCODE_FAULT_MAGIC: u16 = -1i16 as u16;
-const ILLEGAL_OPCODE_MAGIC: u16 = -2i16 as u16;
-const DEBUG_REQUEST_MAGIC: u16 = -3i16 as u16;
-const BUS_FAULT_MAGIC: u16 = -4i16 as u16;
+const MICROCODE_FAULT_SENTINEL: u16 = -1i16 as u16;
+const ILLEGAL_OPCODE_SENTINEL: u16 = -2i16 as u16;
+const DEBUG_REQUEST_SENTINEL: u16 = -3i16 as u16;
+const BUS_FAULT_SENTINEL: u16 = -4i16 as u16;
 
 impl From<u16> for ControlWord {
   fn from(control_word: u16) -> Self {
@@ -881,20 +881,20 @@ impl Into<u16> for ControlWord {
 
 pub fn u16_into_result(u16: u16) -> Result<ControlWord, TickTrap> {
   match u16 {
-    MICROCODE_FAULT_MAGIC => Err(TickTrap::MicrocodeFault),
-    ILLEGAL_OPCODE_MAGIC => Err(TickTrap::IllegalOpcode),
-    DEBUG_REQUEST_MAGIC => Err(TickTrap::DebugRequest),
-    BUS_FAULT_MAGIC => Err(TickTrap::BusFault),
+    MICROCODE_FAULT_SENTINEL => Err(TickTrap::MicrocodeFault),
+    ILLEGAL_OPCODE_SENTINEL => Err(TickTrap::IllegalOpcode),
+    DEBUG_REQUEST_SENTINEL => Err(TickTrap::DebugRequest),
+    BUS_FAULT_SENTINEL => Err(TickTrap::BusFault),
     control_word => Ok(control_word.into()),
   }
 }
 
 pub fn result_into_u16(result: Result<ControlWord, TickTrap>) -> u16 {
   match result {
-    Err(TickTrap::MicrocodeFault) => MICROCODE_FAULT_MAGIC,
-    Err(TickTrap::IllegalOpcode) => ILLEGAL_OPCODE_MAGIC,
-    Err(TickTrap::DebugRequest) => DEBUG_REQUEST_MAGIC,
-    Err(TickTrap::BusFault) => BUS_FAULT_MAGIC,
+    Err(TickTrap::MicrocodeFault) => MICROCODE_FAULT_SENTINEL,
+    Err(TickTrap::IllegalOpcode) => ILLEGAL_OPCODE_SENTINEL,
+    Err(TickTrap::DebugRequest) => DEBUG_REQUEST_SENTINEL,
+    Err(TickTrap::BusFault) => BUS_FAULT_SENTINEL,
     Ok(control_word) => control_word.into(),
   }
 }
