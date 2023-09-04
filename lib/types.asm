@@ -164,6 +164,9 @@ char.vertical_line! x7C @const
 char.right_curly_bracket! x7D @const
 char.tilde! x7E @const
 char.delete! x7F @const
+char.digit_count! !char.digit_nine !char.digit_zero sub inc @const
+char.small_letter_count! !char.latin_small_letter_z !char.latin_small_letter_a sub inc @const
+char.capital_letter_count! !char.latin_capital_letter_z !char.latin_capital_letter_a sub inc @const
 
 u8.add! add
 u16.add! ad2 ad2
@@ -1722,13 +1725,40 @@ c4f4m4f4.norm! !i4f4.ld1 !i4f4.ld0 !i4f4.mul !i4f4.st1 !i4f4.ld0 !i4f4.mul !i4f4
 c8f8m8f8.norm! !i8f8.ld1 !i8f8.ld0 !i8f8.mul !i8f8.st1 !i8f8.ld0 !i8f8.mul !i4f4.add # i8f8 norm = c8f8m8f8.norm(c8f8m8f8 c)
 
 # converts `0x0..=0xF` to `'0'..='9', 'A'..='F'`. undefined for other values
-u4.to_char! x0A sub @dyn x41 @const x0A x30 add dec @const iff add
+u4.to_char!
+  !char.digit_count sub @dyn
+    !char.latin_capital_letter_a @const
+    !char.digit_count !char.digit_zero add dec @const
+  iff add
 # converts `'0'..='9', 'A'..='F'` to `0x0..=0xF`. undefined for other values
-char.to_u4! x41 sub @dyn x0A @const x41 x30 sub dec @const iff add
+char.to_u4!
+  !char.latin_capital_letter_a sub @dyn
+    !char.digit_count @const
+    !char.latin_capital_letter_a !char.digit_zero sub dec @const
+  iff add
 # converts `0x00..=0xFF` to `'00'..='FF'`
-u8.to_chars! ld0 x0F and clc !u4.to_char swp xF0 and x04 rot !u4.to_char
+u8.to_chars!
+  ld0 !u4u4.snd clc !u4.to_char
+  swp !u4u4.fst !u4.to_char
 # converts `'00'..='FF'` to `0x00..=0xFF`
-chars.to_u8! @err # to be implemented
+chars.to_u8!
+  @err # to be implemented
+
+
+# converts `'A'..='Z'` to `'a'..='z'`. leaves other values unchanged
+char.to_lower!
+  !char.latin_capital_letter_a sub clc
+  !char.capital_letter_count sub @dyn
+    !char.capital_letter_count !char.latin_capital_letter_a add @const
+    !char.capital_letter_count !char.latin_small_letter_a add dec @const
+  iff add
+# converts `'a'..='z'` to `'A'..='Z'`. leaves other values unchanged
+char.to_upper!
+  !char.latin_small_letter_a sub clc
+  !char.small_letter_count sub @dyn
+    !char.small_letter_count !char.latin_small_letter_a add @const
+    !char.small_letter_count !char.latin_capital_letter_a add dec @const
+  iff add
 
 u8.mul.def!
   u8.mul: clc # u16 product = u8.mul(u8 a, u8 b)

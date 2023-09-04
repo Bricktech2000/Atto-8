@@ -71,11 +71,11 @@ draw_circle! # draw_circle(u8 r, u4u4 cycy)
     # y += 1
     x10 dec ad2 # dec because carry was set above
     # t1 += y
-    !u4u4.ld1 xF0 and x04 rot !u8.add
+    !u4u4.ld1 !u4u4.fst !u8.add
     # push (x - 1, y)
     !u4u4.ld1 x01 !u8.sub # x will not underflow
     # push t1 - x
-    !u4u4.ld1 !u4u4.ld3 x0F and !u8.sub # will set carry if t1 - x < 0
+    !u4u4.ld1 !u4u4.ld3 !u4u4.snd !u8.sub # will set carry if t1 - x < 0
     # (x, t1) = t1 - x < 0 ? (x, t1) : (x - 1, t1 - x)
     flc !u8u8.iff clc
   # loop while x >= y
