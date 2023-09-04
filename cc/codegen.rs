@@ -93,29 +93,33 @@ fn program(program: Program, stack: &Vec<StackEntry>) -> Vec<Token> {
   let stack = stack.clone();
 
   match program {
-    Program {
-      function_definitions,
-    } => function_definitions
+    Program(globals) => globals
       .into_iter()
-      .scan(stack, |stack, function_definition| {
-        let FunctionDefinition(Object(type_, name), _, _body) = function_definition.clone();
-        stack.push(StackEntry::GlobalDeclaration(Object(
-          Type::Function(Box::new(type_.clone()), vec![]),
-          name.clone(),
-        )));
-        let old_stack = stack.clone();
-        stack.push(StackEntry::GlobalDefinition(Object(
-          Type::Function(Box::new(type_.clone()), vec![]),
-          name.clone(),
-        )));
-        Some((old_stack, function_definition))
+      .scan(stack, |stack, global| match global {
+        Global::FunctionDefinition(function_definition) => {
+          let FunctionDefinition(Object(type_, name), _, _body) = function_definition.clone();
+          stack.push(StackEntry::GlobalDeclaration(Object(
+            Type::Function(Box::new(type_.clone()), vec![]),
+            name.clone(),
+          )));
+          let old_stack = stack.clone();
+          stack.push(StackEntry::GlobalDefinition(Object(
+            Type::Function(Box::new(type_.clone()), vec![]),
+            name.clone(),
+          )));
+          Some((
+            stack.clone(),
+            codegen::function_definition(
+              function_definition,
+              with![old_stack, StackEntry::ProgramBoundary],
+            ),
+          ))
+        }
+        Global::AsmStatement(assembly) => {
+          Some((stack.clone(), codegen::asm_statement(assembly, stack)))
+        }
       })
-      .flat_map(|(stack, function_definition)| {
-        codegen::function_definition(
-          function_definition,
-          with![stack, StackEntry::ProgramBoundary],
-        )
-      })
+      .flat_map(|(_stack, tokens)| tokens)
       .collect(),
   }
 }
@@ -155,7 +159,7 @@ fn statement(statement: Statement, stack: &Vec<StackEntry>) -> Vec<Token> {
   match statement {
     Statement::Expression(expression) => codegen::expression_statement(expression, stack),
     Statement::Return(expression) => codegen::return_statement(expression, stack),
-    Statement::Asm(expressions, assembly) => codegen::asm_statement(expressions, assembly, stack),
+    Statement::Asm(assembly) => codegen::asm_statement(assembly, stack),
   }
 }
 
@@ -192,17 +196,7 @@ fn return_statement(expression: Expression, stack: &Vec<StackEntry>) -> Vec<Toke
   }
 }
 
-fn asm_statement(
-  expressions: Vec<Expression>,
-  assembly: String,
-  stack: &Vec<StackEntry>,
-) -> Vec<Token> {
-  let arguments: Vec<Token> = expressions
-    .into_iter()
-    .map(|expression| codegen::expression(expression, stack))
-    .flat_map(|(_type, tokens)| tokens)
-    .collect();
-
+fn asm_statement(assembly: String, _stack: &Vec<StackEntry>) -> Vec<Token> {
   let mnemonics: Vec<Mnemonic> = assembly
     .split_whitespace()
     .map(|mnemonic| Mnemonic(mnemonic.to_string()))
@@ -216,7 +210,7 @@ fn asm_statement(
     })
     .collect();
 
-  std::iter::empty().chain(arguments).chain(tokens).collect()
+  tokens
 }
 
 fn expression(expression: Expression, stack: &Vec<StackEntry>) -> (Type, Vec<Token>) {

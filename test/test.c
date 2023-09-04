@@ -1,3 +1,18 @@
+// char getc() {
+//   int ret;
+//   asm { !getc st0 } // call into `stdio.asm`
+//   return ret;
+// }
+//
+// void putc(char c) {
+//   asm { ld1 !putc } // call into `stdio.asm`
+//   return;
+// }
+
+#define CORE "lib/core.asm"
+#define TWO 2
+#define ADDITION 1 + TWO
+
 char space() {
   return ' ';
 }
@@ -20,25 +35,19 @@ int main() {
 
   // return 2 > 1 == 4 >= 2;
 
-  asm ('A' + 32) { !putc }
-  asm ('B', ' ') { add !putc }
-  asm ('C' + space()) { !putc }
-  asm ('\r') { !putc }
-  asm ((int)'\n') { !putc }
+  // asm ('A' + 32) { !putc }
+  // asm ('B', ' ') { add !putc }
+  // asm ('C' + space()) { !putc }
+  // asm ('\r') { !putc }
+  // asm ((int)'\n') { !putc }
   // asm ('\a') { !putc }
 
-  1 + 2 == 3;
+  ADDITION == 3;
   return foo() + (char)1;
   return 2 > 1 == 4 >= 2;
+}
 
-  asm () {
-    !display_buffer sts
-
-    xF0 // rand_seed
-
-    loop:
-      !rand ld0 !display_buffer !bit_addr !flip_bit
-      x10 !stall
-    :loop !jmp
-  }
+asm {
+  #include "lib/core.asm"
+  #include <lib/stdio.asm>
 }
