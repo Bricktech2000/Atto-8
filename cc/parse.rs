@@ -467,11 +467,11 @@ pub fn unary_expression() -> Parser<Expression> {
 
 pub fn identifier() -> Parser<String> {
   parse::many(parse::whitespace())
-    .and_then(|_| parse::alphabetic())
+    .and_then(|_| parse::alphabetic().or_else(|_| parse::satisfy(|c| c == '_')))
     .and_then(|first| {
       parse::many(
-        parse::digit()
-          .or_else(|_| parse::alphabetic())
+        parse::digit_10()
+          .or_else(|_| parse::alphabetic().or_else(|_| parse::satisfy(|c| c == '_')))
           .or_else(|_| Parser::error(Error(format!("Could not parse identifier")))),
       )
       .map(move |rest| std::iter::once(first).chain(rest).collect())
@@ -481,7 +481,7 @@ pub fn identifier() -> Parser<String> {
 pub fn integer_constant() -> Parser<Expression> {
   // TODO does not ebey grammar
   parse::many(parse::whitespace())
-    .and_then(|_| parse::many1(parse::digit()))
+    .and_then(|_| parse::many1(parse::digit_10()))
     .map(|digits| digits.into_iter().collect::<String>())
     .and_then(|digits| {
       Parser(Rc::new(move |input: String| {
@@ -522,12 +522,12 @@ pub fn whitespace() -> Parser<()> {
     .or_else(|_| parse::char('\n'))
 }
 
-pub fn digit() -> Parser<char> {
+pub fn digit_10() -> Parser<char> {
   parse::satisfy(|c| c.is_digit(10))
 }
 
 pub fn alphabetic() -> Parser<char> {
-  parse::satisfy(|c| c.is_alphabetic() || c == '_')
+  parse::satisfy(|c| c.is_alphabetic())
 }
 
 pub fn whitespaces_eof() -> Parser<()> {

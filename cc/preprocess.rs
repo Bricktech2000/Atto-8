@@ -120,7 +120,12 @@ fn define_directive() -> Parser<Directive> {
 
 fn identifier_directive() -> Parser<Directive> {
   // TODO does not obey grammar
-  parse::many1(parse::digit().or_else(|_| parse::alphabetic()))
-    .map(|chars| chars.iter().collect::<String>())
-    .map(|identifier| Directive::Identifier(identifier))
+  parse::many1(
+    Parser::error(Error("".to_string()))
+      .or_else(|_| parse::digit_10())
+      .or_else(|_| parse::alphabetic())
+      .or_else(|_| parse::satisfy(|c| c == '_')),
+  )
+  .map(|chars| chars.iter().collect::<String>())
+  .map(|identifier| Directive::Identifier(identifier))
 }

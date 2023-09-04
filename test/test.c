@@ -9,7 +9,6 @@
 //   return;
 // }
 
-#define CORE "lib/core.asm"
 #define TWO 2
 #define ADDITION 1 + TWO
 

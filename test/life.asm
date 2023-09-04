@@ -3,13 +3,13 @@
 @ lib/string.asm
 @ lib/display.asm
 
-# to count neighbours, display buffer is read from and back buffer is written to.
+# to count neighbors, display buffer is read from and back buffer is written to.
 # back buffer is copied to display buffer at the end of each iteration.
 #
 # rules used:
 #
 # ```rust
-# let next_state = match neighbour_count {
+# let next_state = match neighbor_count {
 #   3 => State::Alive,
 #   4 => current_state,
 #   _ => State::Dead,
@@ -24,15 +24,15 @@ main!
     !display_buffer !back_buffer sub @const !back_buffer !display_buffer :memcpy !call
     # loop through every cell
     x00 !u4u4 for_xy: dec
-      x00 # allocate neighbour count
+      x00 # allocate neighbor count
 
-      # count neighbours
-      !neighbours_len for_dxdy: dec
-        # neighbour_addr = *(neighbours + dxdy) + for_xy
-        :neighbours ld1 add !i4i4.lda !u4u4.ld3 !i4i4.add
-        # neighbour_value = load_bit(bit_addr(&DISPLAY_BUFFER, neighbour_addr))
+      # count neighbors
+      !neighbors_len for_dxdy: dec
+        # neighbor_addr = *(neighbors + dxdy) + for_xy
+        :neighbors ld1 add !i4i4.lda !u4u4.ld3 !i4i4.add
+        # neighbor_value = load_bit(bit_addr(&DISPLAY_BUFFER, neighbor_addr))
         !display_buffer !bit_addr !load_bit clc
-        # neighbour_count += neighbour_value
+        # neighbor_count += neighbor_value
         ad2
       buf :for_dxdy !bcc pop
 
@@ -42,11 +42,11 @@ main!
       !u4u4.ld2 !back_buffer !bit_addr !store_bit
       ignore:
 
-      pop # pop neighbour count
+      pop # pop neighbor count
     buf :for_xy !bcc pop
   :loop !jmp
 
-  neighbours:
+  neighbors:
     @FF !i4i4
     @F0 !i4i4
     @F1 !i4i4
@@ -56,7 +56,7 @@ main!
     @1F !i4i4
     @10 !i4i4
     @11 !i4i4
-  neighbours_end:
+  neighbors_end:
 
   !memcpy.def
 
@@ -70,7 +70,7 @@ main!
     # !diehard
     # !compact_pulsar
 
-neighbours_len! :neighbours_end :neighbours sub @const
+neighbors_len! :neighbors_end :neighbors sub @const
 back_buffer! xC0 @const
 
 
