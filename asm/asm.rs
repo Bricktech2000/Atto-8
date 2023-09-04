@@ -48,9 +48,6 @@ fn main() {
   println!("Asm: Done");
 }
 
-#[derive(Clone, Eq, PartialEq)]
-struct File(String);
-
 fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -> String {
   // remove comments and resolve includes
 
@@ -1126,16 +1123,4 @@ fn codegen(
   }
 
   opcodes
-}
-
-impl std::fmt::Display for File {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    use path_clean::PathClean;
-    use std::path::Path;
-    write!(
-      f,
-      "@{}",
-      Path::new(&self.0).clean().to_str().unwrap().to_string()
-    )
-  }
 }

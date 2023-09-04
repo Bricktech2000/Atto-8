@@ -345,6 +345,9 @@ pub fn render_controller(controller: &u8) -> String {
   fmt
 }
 
+#[derive(Clone, Eq, PartialEq)]
+pub struct File(pub String);
+
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Label {
   pub scope_uid: Option<usize>,
@@ -794,6 +797,18 @@ impl std::fmt::Display for Signal {
       Signal::Active => write!(f, "HI"),
       Signal::Inactive => write!(f, "LO"),
     }
+  }
+}
+
+impl std::fmt::Display for File {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    use path_clean::PathClean;
+    use std::path::Path;
+    write!(
+      f,
+      "@{}",
+      Path::new(&self.0).clean().to_str().unwrap().to_string()
+    )
   }
 }
 
