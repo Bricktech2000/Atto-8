@@ -111,8 +111,7 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
   let cinsum_zl = ControlWord! {size_and_cin, sum_data, data_zl};
   let sum_memcf = ControlWord! {sum_data, data_mem, ofst_and_cf};
   let sum_zl = ControlWord! {sum_data, data_zl};
-  let cinsum_spal = ControlWord! {size_and_cin, sum_data, data_sp, data_al};
-  let yl_mem = ControlWord! {data_yl, data_mem};
+  let nand_memyl = ControlWord! {nand_data, data_mem, data_yl};
   let set_xlylzl = ControlWord! {data_xl, data_yl, data_zl};
   let ip_mem = ControlWord! {ip_data, data_mem};
   let clr_sc = ControlWord! {clr_sc};
@@ -286,12 +285,11 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                   Instruction::Xnd(_size) => {
                     seq![
                       fetch, //
-                      sp_xl,
-                      cinsum_spal, // SP++
-                      yl_mem,      // 0x00 -> SP
-                      set_xlylzl,  // 0xFF -> XL; 0xFF -> YL; 0xFF -> ZL
-                      sum_xlcf,    // 1 -> CF
-                      nand_yl
+                      sp_alxl, cinsum_sp, // SP++
+                      size_yl, sum_al,     // SP + SIZE -> AL
+                      set_xlylzl, // 0xFF -> XL; 0xFF -> YL; 0xFF -> ZL
+                      sum_xlcf,   // 1 -> CF
+                      nand_memyl  // 0x00 -> YL; 0x00 -> *AL
                     ]
                   }
 

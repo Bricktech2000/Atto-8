@@ -50,6 +50,7 @@ python3 test.py mandelbrot.asm asm emu
 
 # test programs
 python3 test.py ore.asm asm emu
+python3 test.py stdin.asm asm emu
 python3 test.py allocation.asm asm emu
 python3 test.py optimization.asm asm emu
 python3 test.py multiplication.asm asm emu
