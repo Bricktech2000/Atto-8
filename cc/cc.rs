@@ -23,6 +23,8 @@ fn main() {
       std::process::exit(1);
     });
 
+  // println!("{:#?}", preprocessed);
+
   let program: Program = parse::parse(preprocessed).unwrap_or_else(|e| {
     println!("CC: Error: {}", e);
     std::process::exit(1);

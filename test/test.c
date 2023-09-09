@@ -1,13 +1,13 @@
-// char getc() {
-//   int ret;
-//   asm { !getc st0 } // call into `stdio.asm`
-//   return ret;
-// }
-//
-// void putc(char c) {
-//   asm { ld1 !putc } // call into `stdio.asm`
-//   return;
-// }
+char getc() {
+  int ret;
+  asm { !getc st0 } // call into `stdio.asm`
+  return ret;
+}
+
+void putc(char c) {
+  asm { ld1 !putc } // call into `stdio.asm`
+  return;
+}
 
 #define TWO 2
 #define ADDITION 1 + TWO
