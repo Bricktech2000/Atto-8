@@ -60,7 +60,7 @@ impl<T: Clone + 'static> Parser<T> {
     }))
   }
 
-  pub fn meta(self, meta: &'static str) -> Parser<T> {
+  pub fn meta(self, meta: String) -> Parser<T> {
     self.map_err(move |error| Error(format!("{}: {}", meta, error)))
   }
 
@@ -77,7 +77,7 @@ impl<T: Clone + 'static> Parser<T> {
 
 pub fn any() -> Parser<char> {
   Parser(Rc::new(|input: String| match &input[..] {
-    "" => Err(Error(format!("got end of input"))), // to be concatenated
+    "" => Err(Error(format!("got EOF"))), // to be concatenated
     _ => Ok((input.chars().next().unwrap(), input[1..].to_string())),
   }))
 }
@@ -85,10 +85,7 @@ pub fn any() -> Parser<char> {
 pub fn eof() -> Parser<()> {
   Parser(Rc::new(|input: String| match &input[..] {
     "" => Ok(((), input)),
-    _ => Err(Error(format!(
-      "Expected end of input, got `{}`",
-      input[0..1].to_string()
-    ))),
+    _ => Err(Error(format!("got `{}`", input[0..1].to_string()))), // to be concatenated
   }))
 }
 
@@ -104,7 +101,7 @@ pub fn satisfy<F: Fn(char) -> bool + Clone + 'static>(predicate: F) -> Parser<ch
 pub fn char(char: char) -> Parser<()> {
   parse::satisfy(move |c| c == char)
     .map(|_| ())
-    .map_err(move |error| Error(format!("Expected `{}`, {}", char, error)))
+    .meta(format!("Char '{}'", char))
 }
 
 pub fn string(string: &'static str) -> Parser<()> {
@@ -113,7 +110,7 @@ pub fn string(string: &'static str) -> Parser<()> {
     .map(parse::char)
     .reduce(|acc, parser| acc.and_then(|_| parser))
     .unwrap()
-    .map_err(move |error| Error(format!("String `{}`: {}", string, error))) // `meta` expects a `&'static str`
+    .meta(format!("String \"{}\"", string))
 }
 
 // parser combinators
@@ -223,7 +220,7 @@ pub fn function_definition() -> Parser<FunctionDefinition> {
           .map(|statements| FunctionDefinition(Object(type_name, identifier), vec![], statements))
       })
     })
-    .meta("Function Definition")
+    .meta(format!("Function Definition"))
 }
 
 pub fn type_name() -> Parser<Type> {
@@ -248,7 +245,7 @@ pub fn type_name() -> Parser<Type> {
     .or_else(|_| parse::whitespaces_string("char").map(|_| Type::Char))
     .or_else(|_| parse::whitespaces_string("bool").map(|_| Type::Bool))
     .or_else(|_| parse::whitespaces_string("void").map(|_| Type::Void))
-    .meta("Type Name")
+    .meta(format!("Type Name"))
 }
 
 pub fn compound_statement() -> Parser<Vec<Statement>> {
@@ -257,7 +254,7 @@ pub fn compound_statement() -> Parser<Vec<Statement>> {
     .and_then(|_| parse::whitespaces_char('{'))
     .and_then(|_| parse::many_and_then(parse::statement(), parse::whitespaces_char('}')))
     .map(|(statements, _)| statements)
-    .meta("Compound Statement")
+    .meta(format!("Compound Statement"))
 }
 
 pub fn statement() -> Parser<Statement> {
@@ -274,7 +271,7 @@ pub fn jump_statement() -> Parser<Statement> {
     .and_then(|_| parse::whitespaces_string("return"))
     .and_then(|_| parse::expression()) // TODO does not obey grammar
     .and_then(|expression| parse::whitespaces_char(';').map(|_| Statement::Return(expression)))
-    .meta("Jump Statement")
+    .meta(format!("Jump Statement"))
 }
 
 pub fn expression_statement() -> Parser<Statement> {
@@ -282,7 +279,7 @@ pub fn expression_statement() -> Parser<Statement> {
   Parser::return_(())
     .and_then(|_| parse::expression())
     .and_then(|expression| parse::whitespaces_char(';').map(|_| Statement::Expression(expression)))
-    .meta("Expression Statement")
+    .meta(format!("Expression Statement"))
 }
 
 pub fn asm_statement() -> Parser<Statement> {
@@ -305,7 +302,7 @@ pub fn asm_statement() -> Parser<Statement> {
         )
       })
     })
-    .meta("Asm Statement")
+    .meta(format!("Asm Statement"))
 }
 
 pub fn expression() -> Parser<Expression> {
@@ -528,7 +525,7 @@ pub fn identifier() -> Parser<String> {
       )
       .map(move |rest| std::iter::once(first).chain(rest).collect())
     })
-    .meta("Identifier")
+    .meta(format!("Identifier"))
 }
 
 pub fn integer_constant() -> Parser<Expression> {
@@ -541,10 +538,10 @@ pub fn integer_constant() -> Parser<Expression> {
         digits
           .parse()
           .map(|value| (Expression::IntegerConstant(value), input))
-          .map_err(|_| Error(format!("Invalid integer constant `{}`", digits)))
+          .map_err(|_| panic!("Could not parse integer constant"))
       }))
     })
-    .meta("Integer Constant")
+    .meta(format!("Integer Constant"))
 }
 
 pub fn character_constant() -> Parser<Expression> {
@@ -567,7 +564,7 @@ pub fn character_constant() -> Parser<Expression> {
         .or_else(|_| parse::string("\\0").map(|_| '\0')) // TODO should be <octal-escape-sequence>
     })
     .and_then(|char| parse::char('\'').map(move |_| Expression::CharacterConstant(char)))
-    .meta("Character Constant")
+    .meta(format!("Character Constant"))
 }
 
 pub fn whitespace() -> Parser<()> {
@@ -579,12 +576,12 @@ pub fn whitespace() -> Parser<()> {
 }
 
 pub fn digit_10() -> Parser<char> {
-  parse::satisfy(|c| c.is_digit(10)).map_err(|error| Error(format!("Expected digit, {}", error)))
+  parse::satisfy(|c| c.is_digit(10)).meta(format!("Digit"))
 }
 
 pub fn alphabetic() -> Parser<char> {
-  parse::satisfy(|c| c.is_alphabetic())
-    .map_err(|error| Error(format!("Expected alphabetic, {}", error)))
+  // `meta` expects a &'static str
+  parse::satisfy(|c| c.is_alphabetic()).meta(format!("Alphabetic"))
 }
 
 pub fn whitespaces_eof() -> Parser<()> {
