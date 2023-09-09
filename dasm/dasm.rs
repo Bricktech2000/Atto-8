@@ -59,9 +59,7 @@ fn main() {
 
   let disassembly = format!(
     "{}\n{}",
-    Token::MacroDef(Macro {
-      identifier: "main".to_string(),
-    }),
+    Token::MacroDef(Macro("main".to_string())),
     disassembly
   );
 

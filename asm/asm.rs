@@ -168,11 +168,9 @@ fn assemble(
 
   let entry_point = vec![(
     Pos("[bootstrap]".to_string(), 0),
-    Token::MacroRef(Macro {
-      identifier: entry_point.to_string(),
-    }),
+    Token::MacroRef(Macro(entry_point.to_string())),
   )];
-  let mut scope_uid: usize = 1;
+  let mut scope_uid: usize = 0;
   let mut parent_macros: Vec<Macro> = vec![];
   let tokens: Vec<(Pos, Token)> = expand_macros(
     &entry_point,
@@ -219,25 +217,13 @@ fn assemble(
             let tokens = tokens
               .into_iter()
               .map(|(pos, token)| match token {
-                Token::LabelDef(Label {
-                  scope_uid: Some(_),
-                  identifier,
-                }) => (
+                Token::LabelDef(Label::Local(identifier, _)) => (
                   pos,
-                  Token::LabelDef(Label {
-                    scope_uid: Some(*scope_uid),
-                    identifier,
-                  }),
+                  Token::LabelDef(Label::Local(identifier, Some(*scope_uid))),
                 ),
-                Token::LabelRef(Label {
-                  scope_uid: Some(_),
-                  identifier,
-                }) => (
+                Token::LabelRef(Label::Local(identifier, _)) => (
                   pos,
-                  Token::LabelRef(Label {
-                    scope_uid: Some(*scope_uid),
-                    identifier,
-                  }),
+                  Token::LabelRef(Label::Local(identifier, Some(*scope_uid))),
                 ),
                 _ => (pos, token),
               })
@@ -974,10 +960,7 @@ fn assemble(
           instructions_
         }
 
-        Root::LabelDef(Label {
-          scope_uid: Some(0),
-          identifier: _,
-        }) => panic!("Local label has no scope specified"),
+        Root::LabelDef(Label::Local(_, None)) => panic!("Local label has no scope specified"),
 
         Root::LabelDef(label) => {
           if label_definitions.contains_key(&label) {

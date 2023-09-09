@@ -1,19 +1,10 @@
 use crate::*;
 
 pub fn codegen(program: Program, entry_point: &str) -> Result<Vec<Token>, Error> {
-  let entry_macro = Macro {
-    identifier: entry_point.to_string(),
-  };
-  let entry_label = Label {
-    identifier: "main".to_string(),
-    scope_uid: None,
-  };
-  let call_macro = Macro {
-    identifier: "call".to_string(),
-  };
-  let hlt_macro = Macro {
-    identifier: "hlt".to_string(),
-  };
+  let entry_macro = Macro(entry_point.to_string());
+  let entry_label = Label::Global("main".to_string());
+  let call_macro = Macro("call".to_string());
+  let hlt_macro = Macro("hlt".to_string());
 
   let tokens: Vec<Token> = std::iter::empty()
     .chain(vec![
@@ -140,10 +131,7 @@ fn function_definition(
         .then(|| panic!("Function `{}` already defined", name.clone()));
 
       std::iter::empty()
-        .chain(vec![Token::LabelDef(Label {
-          identifier: name.clone(),
-          scope_uid: None,
-        })])
+        .chain(vec![Token::LabelDef(Label::Global(name.clone()))])
         .chain(body.into_iter().flat_map(|statement| {
           codegen::statement(
             statement,
@@ -171,9 +159,7 @@ fn expression_statement(expression: Expression, stack: &Vec<StackEntry>) -> Vec<
 }
 
 fn return_statement(expression: Expression, stack: &Vec<StackEntry>) -> Vec<Token> {
-  let ret_macro = Macro {
-    identifier: "ret".to_string(),
-  };
+  let ret_macro = Macro("ret".to_string());
 
   let type_ = stack
     .iter()
@@ -410,9 +396,7 @@ fn multiplication_expression(
   let (type_, tokens1, tokens2) =
     codegen::usual_arithmetic_conversion(expression1, expression2, stack);
 
-  let mul_macro = Macro {
-    identifier: "mul".to_string(), // TODO implement operation
-  };
+  let mul_macro = Macro("mul".to_string()); // TODO implement operation
 
   (
     type_.clone(),
@@ -435,9 +419,7 @@ fn division_expression(
   let (type_, tokens1, tokens2) =
     codegen::usual_arithmetic_conversion(expression1, expression2, stack);
 
-  let div_macro = Macro {
-    identifier: "div".to_string(), // TODO implement operation
-  };
+  let div_macro = Macro("div".to_string()); // TODO implement operation
 
   (
     type_.clone(),
@@ -460,9 +442,7 @@ fn modulo_expression(
   let (type_, tokens1, tokens2) =
     codegen::usual_arithmetic_conversion(expression1, expression2, stack);
 
-  let mod_macro = Macro {
-    identifier: "mod".to_string(), // TODO implement operation
-  };
+  let mod_macro = Macro("mod".to_string()); // TODO implement operation
 
   (
     type_.clone(),
@@ -835,9 +815,7 @@ fn character_constant_expression(value: char, _stack: &Vec<StackEntry>) -> (Type
 }
 
 fn function_call_expression(name: String, stack: &Vec<StackEntry>) -> (Type, Vec<Token>) {
-  let call_macro = Macro {
-    identifier: "call".to_string(),
-  };
+  let call_macro = Macro("call".to_string());
 
   let type_ = stack
     .iter()
@@ -852,10 +830,7 @@ fn function_call_expression(name: String, stack: &Vec<StackEntry>) -> (Type, Vec
   (
     type_.clone(),
     vec![
-      Token::LabelRef(Label {
-        identifier: name.clone(),
-        scope_uid: None,
-      }),
+      Token::LabelRef(Label::Global(name.clone())),
       Token::MacroRef(call_macro),
     ],
   )

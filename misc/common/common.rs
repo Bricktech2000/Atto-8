@@ -349,15 +349,13 @@ pub fn render_controller(controller: &u8) -> String {
 pub struct File(pub String);
 
 #[derive(Clone, Eq, PartialEq, Hash)]
-pub struct Label {
-  pub scope_uid: Option<usize>,
-  pub identifier: String,
+pub enum Label {
+  Local(String, Option<usize>),
+  Global(String),
 }
 
 #[derive(Clone, Eq, PartialEq, Hash)]
-pub struct Macro {
-  pub identifier: String,
-}
+pub struct Macro(pub String);
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct Error(pub String);
@@ -605,16 +603,19 @@ pub fn instruction_to_opcode(instruction: Result<Instruction, u8>) -> u8 {
 
 pub fn token_to_mnemonic(token: Token) -> Mnemonic {
   match token {
-    Token::LabelDef(label) => match label.scope_uid {
-      Some(scope_uid) => Mnemonic(format!("{}.{}.", label.identifier, scope_uid)),
-      None => Mnemonic(format!("{}:", label.identifier)),
-    },
-    Token::LabelRef(label) => match label.scope_uid {
-      Some(scope_uid) => Mnemonic(format!(".{}.{}", label.identifier, scope_uid)),
-      None => Mnemonic(format!(":{}", label.identifier)),
-    },
-    Token::MacroDef(macro_) => Mnemonic(format!("{}!", macro_.identifier)),
-    Token::MacroRef(macro_) => Mnemonic(format!("!{}", macro_.identifier)),
+    Token::LabelDef(Label::Local(identifier, Some(scope_uid))) => {
+      Mnemonic(format!("{}.{}.", identifier, scope_uid))
+    }
+    Token::LabelDef(Label::Local(identifier, None)) => Mnemonic(format!("{}.", identifier)),
+    Token::LabelDef(Label::Global(identifier)) => Mnemonic(format!("{}:", identifier)),
+
+    Token::LabelRef(Label::Local(identifier, Some(scope_uid))) => {
+      Mnemonic(format!(".{}.{}", identifier, scope_uid))
+    }
+    Token::LabelRef(Label::Local(identifier, None)) => Mnemonic(format!(".{}", identifier)),
+    Token::LabelRef(Label::Global(identifier)) => Mnemonic(format!(":{}", identifier)),
+    Token::MacroDef(Macro(macro_)) => Mnemonic(format!("{}!", macro_)),
+    Token::MacroRef(Macro(macro_)) => Mnemonic(format!("!{}", macro_)),
     Token::AtConst => Mnemonic(format!("@const")),
     Token::AtDyn => Mnemonic(format!("@dyn")),
     Token::AtOrg => Mnemonic(format!("@org")),
@@ -671,28 +672,24 @@ pub fn mnemonic_to_token(mnemonic: Mnemonic) -> Option<Token> {
   let mnemonic = mnemonic.0.as_str();
 
   match mnemonic {
-    _ if mnemonic.ends_with(":") => Some(Token::LabelDef(Label {
-      scope_uid: None,
-      identifier: mnemonic[..mnemonic.len() - 1].to_string(),
-    })),
-    _ if mnemonic.starts_with(":") => Some(Token::LabelRef(Label {
-      scope_uid: None,
-      identifier: mnemonic[1..].to_string(),
-    })),
-    _ if mnemonic.ends_with(".") => Some(Token::LabelDef(Label {
-      scope_uid: Some(0),
-      identifier: mnemonic[..mnemonic.len() - 1].to_string(),
-    })),
-    _ if mnemonic.starts_with(".") => Some(Token::LabelRef(Label {
-      scope_uid: Some(0),
-      identifier: mnemonic[1..].to_string(),
-    })),
-    _ if mnemonic.ends_with("!") => Some(Token::MacroDef(Macro {
-      identifier: mnemonic[..mnemonic.len() - 1].to_string(),
-    })),
-    _ if mnemonic.starts_with("!") => Some(Token::MacroRef(Macro {
-      identifier: mnemonic[1..].to_string(),
-    })),
+    _ if mnemonic.ends_with(":") => Some(Token::LabelDef(Label::Global(
+      mnemonic[..mnemonic.len() - 1].to_string(),
+    ))),
+    _ if mnemonic.starts_with(":") => {
+      Some(Token::LabelRef(Label::Global(mnemonic[1..].to_string())))
+    }
+    _ if mnemonic.ends_with(".") => Some(Token::LabelDef(Label::Local(
+      mnemonic[..mnemonic.len() - 1].to_string(),
+      None,
+    ))),
+    _ if mnemonic.starts_with(".") => Some(Token::LabelRef(Label::Local(
+      mnemonic[1..].to_string(),
+      None,
+    ))),
+    _ if mnemonic.ends_with("!") => Some(Token::MacroDef(Macro(
+      mnemonic[..mnemonic.len() - 1].to_string(),
+    ))),
+    _ if mnemonic.starts_with("!") => Some(Token::MacroRef(Macro(mnemonic[1..].to_string()))),
     "@const" => Some(Token::AtConst),
     "@dyn" => Some(Token::AtDyn),
     "@org" => Some(Token::AtOrg),
