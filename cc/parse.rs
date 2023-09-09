@@ -191,7 +191,7 @@ pub fn parse(input: String) -> Result<Program, Error> {
 
 pub fn translation_unit() -> Parser<Program> {
   parse::many_and_then(
-    Parser::error(Error("".to_string()))
+    Parser::error(Error(format!("")))
       .or_else(|_| {
         parse::function_definition()
           .map(|function_definition| Global::FunctionDefinition(function_definition))
@@ -225,7 +225,7 @@ pub fn function_definition() -> Parser<FunctionDefinition> {
 
 pub fn type_name() -> Parser<Type> {
   // TODO does not obey grammar
-  Parser::error(Error("".to_string()))
+  Parser::error(Error(format!("")))
     .or_else(|_| {
       parse::whitespaces_string("long long int")
         .or_else(|_| parse::whitespaces_string("long long"))
@@ -259,7 +259,7 @@ pub fn compound_statement() -> Parser<Vec<Statement>> {
 
 pub fn statement() -> Parser<Statement> {
   // TODO cases missing
-  Parser::error(Error("".to_string()))
+  Parser::error(Error(format!("")))
     .or_else(|_| parse::jump_statement())
     .or_else(|_| parse::expression_statement())
     .or_else(|_| parse::asm_statement()) // TODO does not obey grammar
@@ -376,7 +376,7 @@ pub fn bitwise_and_expression() -> Parser<Expression> {
 pub fn equality_expression() -> Parser<Expression> {
   parse::binary_operation(
     parse::relational_expression(),
-    Parser::error(Error("".to_string()))
+    Parser::error(Error(format!("")))
       .or_else(|_| {
         parse::whitespaces_string("==")
           .and_then(|_| Parser::return_(psi(Box::new, Expression::EqualTo)))
@@ -391,7 +391,7 @@ pub fn equality_expression() -> Parser<Expression> {
 pub fn relational_expression() -> Parser<Expression> {
   parse::binary_operation(
     parse::shift_expression(),
-    Parser::error(Error("".to_string()))
+    Parser::error(Error(format!("")))
       .or_else(|_| {
         parse::whitespaces_string(">=")
           .and_then(|_| Parser::return_(psi(Box::new, Expression::GreaterThanOrEqualTo)))
@@ -414,7 +414,7 @@ pub fn relational_expression() -> Parser<Expression> {
 pub fn shift_expression() -> Parser<Expression> {
   parse::binary_operation(
     parse::additive_expression(),
-    Parser::error(Error("".to_string()))
+    Parser::error(Error(format!("")))
       .or_else(|_| {
         parse::whitespaces_string("<<")
           .and_then(|_| Parser::return_(psi(Box::new, Expression::LeftShift)))
@@ -429,7 +429,7 @@ pub fn shift_expression() -> Parser<Expression> {
 pub fn additive_expression() -> Parser<Expression> {
   parse::binary_operation(
     parse::multiplicative_expression(),
-    Parser::error(Error("".to_string()))
+    Parser::error(Error(format!("")))
       .or_else(|_| {
         parse::whitespaces_char('+')
           .and_then(|_| Parser::return_(psi(Box::new, Expression::Addition)))
@@ -444,7 +444,7 @@ pub fn additive_expression() -> Parser<Expression> {
 pub fn multiplicative_expression() -> Parser<Expression> {
   parse::binary_operation(
     parse::cast_expression(),
-    Parser::error(Error("".to_string()))
+    Parser::error(Error(format!("")))
       .or_else(|_| {
         parse::whitespaces_char('*')
           .and_then(|_| Parser::return_(psi(Box::new, Expression::Multiplication)))
@@ -473,7 +473,7 @@ pub fn cast_expression() -> Parser<Expression> {
 }
 
 pub fn unary_expression() -> Parser<Expression> {
-  Parser::error(Error("".to_string()))
+  Parser::error(Error(format!("")))
     .or_else(|_| {
       Parser::return_(())
         .and_then(|_| parse::whitespaces_char('-'))
@@ -549,7 +549,7 @@ pub fn character_constant() -> Parser<Expression> {
   parse::many(parse::whitespace())
     .and_then(|_| parse::char('\''))
     .and_then(|_| {
-      Parser::error(Error("".to_string()))
+      Parser::error(Error(format!("")))
         .or_else(|_| parse::satisfy(|c| !"\'\\\n".contains(c)))
         .or_else(|_| parse::string("\\\'").map(|_| '\''))
         .or_else(|_| parse::string("\\\"").map(|_| '\"'))
@@ -568,7 +568,7 @@ pub fn character_constant() -> Parser<Expression> {
 }
 
 pub fn whitespace() -> Parser<()> {
-  Parser::error(Error("".to_string()))
+  Parser::error(Error(format!("")))
     .or_else(|_| parse::char(' '))
     .or_else(|_| parse::char('\r'))
     .or_else(|_| parse::char('\n'))

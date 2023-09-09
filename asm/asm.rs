@@ -57,7 +57,7 @@ fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -
       Pos(scope.unwrap_or("[bootstrap]").to_string(), 0),
       Error(format!("Unable to read file `{}`", file)),
     ));
-    "".to_string()
+    format!("")
   });
 
   let assembly: String = assembly

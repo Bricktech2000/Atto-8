@@ -10,7 +10,7 @@ pub fn preprocess(file: File, defines: &mut HashMap<String, String>) -> Result<S
     panic!("Unable to read file `{}`", file.0);
   });
 
-  let preprocessor = Parser::error(Error("".to_string()))
+  let preprocessor = Parser::error(Error(format!("")))
     .or_else(|_| preprocess::comment_directive())
     .or_else(|_| preprocess::include_directive())
     .or_else(|_| preprocess::define_directive())
@@ -89,7 +89,7 @@ fn include_directive() -> Parser<Directive> {
   // TODO does not obey grammar
   parse::whitespaces_string("#include")
     .and_then(|_| {
-      Parser::error(Error("".to_string()))
+      Parser::error(Error(format!("")))
         .or_else(|_| {
           parse::whitespaces_char('"')
             .and_then(|_| parse::many(parse::satisfy(|c| c != '"')))
@@ -121,7 +121,7 @@ fn define_directive() -> Parser<Directive> {
 fn identifier_directive() -> Parser<Directive> {
   // TODO does not obey grammar
   parse::many1(
-    Parser::error(Error("".to_string()))
+    Parser::error(Error(format!("")))
       .or_else(|_| parse::digit_10())
       .or_else(|_| parse::alphabetic())
       .or_else(|_| parse::satisfy(|c| c == '_')),

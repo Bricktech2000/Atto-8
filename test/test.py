@@ -4,10 +4,16 @@ import shutil
 import functools
 import subprocess
 
+sys.dont_write_bytecode = True
+sys.path.append('../misc/common/')
+import common  # noqa
+
+open_safe = common.open_safe('Test')
+
 
 def cat(filename):
-  with open(filename, 'rb') as file:
-    print(f'Test: Output: {filename}')
+  with open_safe(filename, 'rb') as file:
+    print(f'Cat: Output: {filename}')
     sys.stdout.flush()
     sys.stdout.buffer.write(file.read())
 

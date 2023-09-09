@@ -246,7 +246,7 @@ fn spawn_input_channel() -> Receiver<console::Key> {
 }
 
 pub fn render_memory(memory: &[u8; MEM_SIZE], ip: u8, sp: u8, cf: bool) -> String {
-  let mut fmt: String = "".to_string();
+  let mut fmt = "".to_string();
 
   fmt += "MEM\r\n";
   for y in 0..0x10 {
