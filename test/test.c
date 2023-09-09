@@ -9,8 +9,12 @@ void putc(char c) {
   return;
 }
 
-#define TWO 2
+// #define EMPTY
+// #include EMPTY<file.h>
+// EMPTY #include <file.h>
+
 #define ADDITION 1 + TWO
+#define TWO 2
 
 char space() {
   return ' ';
@@ -46,7 +50,9 @@ int main() {
   return 2 > 1 == 4 >= 2;
 }
 
+#define CORE "lib/core.asm"
+
 asm {
-  #include "lib/core.asm"
+  #include CORE
   #include <lib/stdio.asm>
 }

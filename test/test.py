@@ -13,7 +13,7 @@ open_safe = common.open_safe('Test')
 
 def cat(filename):
   with open_safe(filename, 'rb') as file:
-    print(f'Cat: Output: {filename}')
+    print(f'Cat: Output `{filename}`')
     sys.stdout.flush()
     sys.stdout.buffer.write(file.read())
 

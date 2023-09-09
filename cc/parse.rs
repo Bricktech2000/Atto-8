@@ -85,7 +85,8 @@ pub fn any() -> Parser<char> {
 pub fn eof() -> Parser<()> {
   Parser(Rc::new(|input: String| match &input[..] {
     "" => Ok(((), input)),
-    _ => Err(Error(format!("got `{}`", input[0..1].to_string()))), // to be concatenated
+    // TODO uses debug formatting
+    _ => Err(Error(format!("EOF: got {:?}", input[0..1].to_string()))), // to be concatenated
   }))
 }
 
@@ -93,7 +94,8 @@ pub fn satisfy<F: Fn(char) -> bool + Clone + 'static>(predicate: F) -> Parser<ch
   parse::any().and_then(|char| {
     Parser(Rc::new(move |input: String| match predicate(char) {
       true => Ok((char, input)),
-      false => Err(Error(format!("got `{}`", char))), // to be concatenated
+      // TODO uses debug formatting
+      false => Err(Error(format!("got {:?}", char))), // to be concatenated
     }))
   })
 }
@@ -101,7 +103,8 @@ pub fn satisfy<F: Fn(char) -> bool + Clone + 'static>(predicate: F) -> Parser<ch
 pub fn char(char: char) -> Parser<()> {
   parse::satisfy(move |c| c == char)
     .map(|_| ())
-    .meta(format!("Char '{}'", char))
+    // TODO uses debug formatting
+    .meta(format!("Char {:?}", char))
 }
 
 pub fn string(string: &'static str) -> Parser<()> {
@@ -110,7 +113,8 @@ pub fn string(string: &'static str) -> Parser<()> {
     .map(parse::char)
     .reduce(|acc, parser| acc.and_then(|_| parser))
     .unwrap()
-    .meta(format!("String \"{}\"", string))
+    // TODO uses debug formatting
+    .meta(format!("String {:?}", string))
 }
 
 // parser combinators
@@ -199,7 +203,6 @@ pub fn translation_unit() -> Parser<Program> {
       .or_else(|_| {
         parse::asm_statement().map(|statement| match statement {
           Statement::Asm(asm_statement) => Global::AsmStatement(asm_statement),
-          // TODO `Global::AsmStatement(statement)` in parameter instead?
           _ => panic!("`asm_statement` did not return `Statement::Asm`"),
         })
       }),
@@ -291,6 +294,8 @@ pub fn asm_statement() -> Parser<Statement> {
     .and_then(|assembly| {
       parse::whitespaces_char('}').map(move |_| {
         Statement::Asm(
+          // TODO copied from `asm.rs`
+          // TODO does not support file includes
           assembly
             .clone()
             .lines()
