@@ -1,20 +1,7 @@
 use crate::*;
 
-pub fn codegen(program: Program, entry_point: &str) -> Result<Vec<Token>, Error> {
-  let entry_macro = Macro(entry_point.to_string());
-  let entry_label = Label::Global("main".to_string());
-  let call_macro = Macro("call".to_string());
-  let hlt_macro = Macro("hlt".to_string());
-
-  let tokens: Vec<Token> = std::iter::empty()
-    .chain(vec![
-      Token::MacroDef(entry_macro),
-      Token::LabelRef(entry_label),
-      Token::MacroRef(call_macro),
-      Token::MacroRef(hlt_macro),
-    ])
-    .chain(codegen::program(program, &vec![]))
-    .collect();
+pub fn codegen(program: Program) -> Result<Vec<Token>, Error> {
+  let tokens: Vec<Token> = codegen::program(program, &vec![]);
 
   Ok(tokens)
 }
@@ -87,10 +74,19 @@ fn program(program: Program, stack: &Vec<StackEntry>) -> Vec<Token> {
     Program(globals) => globals
       .into_iter()
       .scan(stack, |stack, global| match global {
-        Global::FunctionDefinition(function_definition) => {
-          let FunctionDefinition(Object(type_, name), _, _body) = function_definition.clone();
+        Global::FunctionDeclaration(function_declaration) => {
+          let FunctionDeclaration(Object(type_, name), parameters) = function_declaration.clone();
           stack.push(StackEntry::GlobalDeclaration(Object(
-            Type::Function(Box::new(type_.clone()), vec![]),
+            Type::Function(Box::new(type_.clone()), parameters),
+            name.clone(),
+          )));
+          Some((stack.clone(), vec![]))
+        }
+        Global::FunctionDefinition(function_definition) => {
+          let FunctionDefinition(Object(type_, name), parameters, _body) =
+            function_definition.clone();
+          stack.push(StackEntry::GlobalDeclaration(Object(
+            Type::Function(Box::new(type_.clone()), parameters),
             name.clone(),
           )));
           let old_stack = stack.clone();
@@ -120,26 +116,34 @@ fn function_definition(
   stack: &Vec<StackEntry>,
 ) -> Vec<Token> {
   match function_definition {
-    FunctionDefinition(Object(type_, name), _, body) => {
-      stack
-        .iter()
-        .find(|entry| match entry {
-          StackEntry::GlobalDefinition(Object(Type::Function(_, _), name_)) => *name_ == name,
-          _ => false,
-        })
-        .is_some()
-        .then(|| panic!("Function `{}` already defined", name.clone()));
+    FunctionDefinition(Object(type_, name), parameters, body) => match parameters[..] {
+      [] => {
+        stack
+          .iter()
+          .find(|entry| match entry {
+            StackEntry::GlobalDefinition(Object(Type::Function(_, _), name_)) => *name_ == name,
+            _ => false,
+          })
+          .is_some()
+          .then(|| panic!("Function `{}` already defined", name.clone()));
 
-      std::iter::empty()
-        .chain(vec![Token::LabelDef(Label::Global(name.clone()))])
-        .chain(body.into_iter().flat_map(|statement| {
-          codegen::statement(
-            statement,
-            with![stack, StackEntry::FunctionBoundary(type_.clone())],
-          )
-        }))
-        .collect()
-    }
+        std::iter::empty()
+          .chain(vec![
+            Token::MacroDef(Macro(format!("{}.ref", name.clone()))),
+            Token::LabelRef(Label::Global(format!("{}", name.clone()))),
+            Token::MacroDef(Macro(format!("{}.def", name.clone()))),
+            Token::LabelDef(Label::Global(name.clone())),
+          ])
+          .chain(body.into_iter().flat_map(|statement| {
+            codegen::statement(
+              statement,
+              with![stack, StackEntry::FunctionBoundary(type_.clone())],
+            )
+          }))
+          .collect()
+      }
+      _ => panic!("Function parameters not yet supported"),
+    },
   }
 }
 
@@ -273,7 +277,9 @@ fn expression(expression: Expression, stack: &Vec<StackEntry>) -> (Type, Vec<Tok
     Expression::IntegerConstant(value) => codegen::integer_constant_expression(value, stack),
     Expression::CharacterConstant(value) => codegen::character_constant_expression(value, stack),
     Expression::Identifier(_) => todo!(),
-    Expression::FunctionCall(name) => codegen::function_call_expression(name, stack),
+    Expression::FunctionCall(name, arguments) => {
+      codegen::function_call_expression(name, arguments, stack)
+    }
   }
 }
 
@@ -814,25 +820,39 @@ fn character_constant_expression(value: char, _stack: &Vec<StackEntry>) -> (Type
   )
 }
 
-fn function_call_expression(name: String, stack: &Vec<StackEntry>) -> (Type, Vec<Token>) {
+fn function_call_expression(
+  name: String,
+  arguments: Vec<Expression>,
+  stack: &Vec<StackEntry>,
+) -> (Type, Vec<Token>) {
   let call_macro = Macro("call".to_string());
 
   let type_ = stack
     .iter()
     .find_map(|entry| match entry {
-      StackEntry::GlobalDeclaration(Object(Type::Function(type_, _), name_)) if *name_ == name => {
+      // TODO arguments are not type-checked against parameters
+      StackEntry::GlobalDeclaration(Object(Type::Function(type_, _parameters), name_))
+        if *name_ == name =>
+      {
         Some(*type_.clone())
       }
       _ => None,
     })
-    .unwrap_or_else(|| panic!("Function `{}` not found", name));
+    .unwrap_or_else(|| panic!("Declaration for function `{}` not found", name));
 
   (
     type_.clone(),
-    vec![
-      Token::LabelRef(Label::Global(name.clone())),
-      Token::MacroRef(call_macro),
-    ],
+    std::iter::empty()
+      .chain(
+        arguments
+          .into_iter()
+          .flat_map(|argument| codegen::expression(argument, stack).1),
+      )
+      .chain(vec![
+        Token::MacroRef(Macro(format!("{}.ref", name.clone()))),
+        Token::MacroRef(call_macro),
+      ])
+      .collect(),
   )
 }
 

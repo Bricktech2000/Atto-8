@@ -59,6 +59,7 @@ python3 test.py addition.hex enc emu
 python3 test.py checkerboard.hex enc emu
 python3 test.py errors.asm asm emu
 python3 test.py test.c cc asm emu
+python3 test.py pipe.c cc asm emu
 ```
 
 ![Game of Life Simulation Demo](misc/assets/life.gif) ![Random Number Generator Demo](misc/assets/random.gif) ![Flappy Bird Demo](misc/assets/flappy.gif) ![Infinite Counter Demo](misc/assets/counter.gif)

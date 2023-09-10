@@ -12,6 +12,8 @@ secondary_right! x80 @const
 
 fgetc! lda # char = fgetc(stream)
 getc! !stdin !fgetc # char = getc()
+fgetc.def! fgetc: @err # to be implemented
+getc.def! getc: !getc swp !ret # char = getc()
 fgets! # fgets(stream, *str)
   swp for_c.
     ld1 !fgetc
@@ -32,6 +34,8 @@ gets.min.def! gets.min: swp !gets.min !ret # gets.min(*str)
 
 fputc! sta # fputc(stream, char)
 putc! !stdout !fputc # putc(char)
+fputc.def! fputc: @err # to be implemented
+putc.def! putc: swp !putc !ret # putc(char)
 fputs! # fputs(stream, *str)
   swp for_c.
     ld0 lda

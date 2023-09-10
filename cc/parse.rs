@@ -40,9 +40,11 @@ impl<T: Clone + 'static> Parser<T> {
   pub fn or_else<F: FnOnce(Error) -> Parser<T> + Clone + 'static>(self, f: F) -> Parser<T> {
     Parser(Rc::new(move |input: String| {
       self.0(input.clone()).or_else(|error1| {
-        f.clone()(error1.clone()).0(input).or_else(|error2| match error1.0.as_str() {
-          "" => Err(error2), // TODO this is hacky
-          _ => Err(Error(format!("{}; {}", error1, error2))),
+        f.clone()(error1.clone()).0(input).or_else(|error2| {
+          match (error1.0.as_str(), error2.0.as_str()) {
+            ("", _) | (_, "") => Err(Error(format!("{}{}", error1, error2))),
+            _ => Err(Error(format!("{}; {}", error1, error2))),
+          }
         })
       })
     }))
@@ -164,7 +166,6 @@ pub fn sepby1<T: Clone + 'static>(parser: Parser<T>, separator: Parser<()>) -> P
   })
 }
 
-#[allow(dead_code)]
 pub fn sepby<T: Clone + 'static>(parser: Parser<T>, separator: Parser<()>) -> Parser<Vec<T>> {
   parse::sepby1(parser, separator).or_else(|_| Parser::return_(vec![]))
 }
@@ -197,6 +198,10 @@ pub fn translation_unit() -> Parser<Program> {
   parse::many_and_then(
     Parser::error(Error(format!("")))
       .or_else(|_| {
+        parse::function_declaration()
+          .map(|function_declaration| Global::FunctionDeclaration(function_declaration))
+      })
+      .or_else(|_| {
         parse::function_definition()
           .map(|function_definition| Global::FunctionDefinition(function_definition))
       })
@@ -211,19 +216,58 @@ pub fn translation_unit() -> Parser<Program> {
   .map(|(globals, _)| Program(globals))
 }
 
-pub fn function_definition() -> Parser<FunctionDefinition> {
+pub fn function_declaration() -> Parser<FunctionDeclaration> {
+  // TODO does not obey grammar
   Parser::return_(())
     .and_then(|_| parse::type_name())
     .and_then(|type_name| {
       parse::identifier().and_then(|identifier| {
         Parser::return_(())
           .and_then(|_| parse::whitespaces_char('('))
-          .and_then(|_| parse::whitespaces_char(')'))
-          .and_then(|_| parse::compound_statement())
-          .map(|statements| FunctionDefinition(Object(type_name, identifier), vec![], statements))
+          .and_then(|_| parse::parameter_list())
+          .and_then(|parameters| {
+            Parser::return_(())
+              .and_then(|_| parse::whitespaces_char(')'))
+              .and_then(|_| parse::whitespaces_char(';'))
+              .map(|_| FunctionDeclaration(Object(type_name, identifier), parameters))
+          })
       })
     })
     .meta(format!("Function Definition"))
+}
+
+pub fn function_definition() -> Parser<FunctionDefinition> {
+  // TODO does not obey grammar
+  Parser::return_(())
+    .and_then(|_| parse::type_name())
+    .and_then(|type_name| {
+      parse::identifier().and_then(|identifier| {
+        Parser::return_(())
+          .and_then(|_| parse::whitespaces_char('('))
+          .and_then(|_| parse::parameter_list())
+          .and_then(|parameters| {
+            Parser::return_(())
+              .and_then(|_| parse::whitespaces_char(')'))
+              .and_then(|_| parse::compound_statement())
+              .map(|statements| {
+                FunctionDefinition(Object(type_name, identifier), parameters, statements)
+              })
+          })
+      })
+    })
+    .meta(format!("Function Definition"))
+}
+
+pub fn parameter_list() -> Parser<Vec<Object>> {
+  // TODO does not obey grammar
+  parse::sepby(
+    parse::type_name().and_then(|type_name| {
+      parse::identifier()
+        .or_else(|_| Parser::return_(String::new()))
+        .map(|identifier| Object(type_name, identifier))
+    }),
+    parse::whitespaces_char(','),
+  )
 }
 
 pub fn type_name() -> Parser<Type> {
@@ -301,9 +345,8 @@ pub fn asm_statement() -> Parser<Statement> {
             .lines()
             .map(|line| line.strip_suffix("#").unwrap_or(line))
             .map(|line| line.split("# ").next().unwrap_or(line))
-            .map(|line| line.to_string())
-            .collect::<Vec<String>>()
-            .join("\n"),
+            .map(|line| line.to_string() + "\n")
+            .collect::<String>(),
         )
       })
     })
@@ -509,11 +552,14 @@ pub fn unary_expression() -> Parser<Expression> {
         .and_then(|expression| parse::whitespaces_char(')').map(|_| expression))
     })
     .or_else(|_| {
+      // TODO does not obey grammar
       parse::identifier().and_then(|identifier| {
         Parser::return_(())
           .and_then(|_| parse::whitespaces_char('('))
-          .and_then(|_| parse::whitespaces_char(')'))
-          .map(|_| Expression::FunctionCall(identifier))
+          .and_then(|_| parse::sepby(parse::expression(), parse::whitespaces_char(',')))
+          .and_then(|arguments| {
+            parse::whitespaces_char(')').map(|_| Expression::FunctionCall(identifier, arguments))
+          })
       })
     })
     .or_else(|_| parse::integer_constant())

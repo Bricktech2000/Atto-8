@@ -1,13 +1,11 @@
-char getc() {
-  int ret;
-  asm { !getc st0 } // call into `stdio.asm`
-  return ret;
+#define CORE "lib/core.asm"
+
+asm {
+  #include CORE
+  #include <lib/stdio.asm>
 }
 
-void putc(char c) {
-  asm { ld1 !putc } // call into `stdio.asm`
-  return;
-}
+#include <stdio.h>
 
 // #define EMPTY
 // #include EMPTY<file.h>
@@ -16,13 +14,9 @@ void putc(char c) {
 #define ADDITION 1 + TWO
 #define TWO 2
 
-char space() {
-  return ' ';
-}
-
 int foo() {
   return 42;
-  space();
+  foo();
 }
 
 int main() {
@@ -38,21 +32,7 @@ int main() {
 
   // return 2 > 1 == 4 >= 2;
 
-  // asm ('A' + 32) { !putc }
-  // asm ('B', ' ') { add !putc }
-  // asm ('C' + space()) { !putc }
-  // asm ('\r') { !putc }
-  // asm ((int)'\n') { !putc }
-  // asm ('\a') { !putc }
-
   ADDITION == 3;
   return foo() + (char)1;
   return 2 > 1 == 4 >= 2;
-}
-
-#define CORE "lib/core.asm"
-
-asm {
-  #include CORE
-  #include <lib/stdio.asm>
 }

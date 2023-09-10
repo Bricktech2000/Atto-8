@@ -32,7 +32,7 @@ fn main() {
 
   // println!("CC: Program: {:#?}", program);
 
-  let tokens: Vec<Token> = codegen::codegen(program, "main").unwrap_or_else(|e| {
+  let tokens: Vec<Token> = codegen::codegen(program).unwrap_or_else(|e| {
     println!("CC: Codegen Error: {}", e);
     std::process::exit(1);
   });
@@ -79,9 +79,13 @@ pub struct Program(Vec<Global>);
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Global {
+  FunctionDeclaration(FunctionDeclaration),
   FunctionDefinition(FunctionDefinition),
   AsmStatement(String),
 }
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct FunctionDeclaration(Object, Vec<Object>);
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct FunctionDefinition(Object, Vec<Object>, Vec<Statement>);
@@ -118,7 +122,7 @@ pub enum Expression {
   IntegerConstant(u8),
   CharacterConstant(char),
   Identifier(String),
-  FunctionCall(String),
+  FunctionCall(String, Vec<Expression>),
 }
 
 #[derive(Clone, PartialEq, Debug)]

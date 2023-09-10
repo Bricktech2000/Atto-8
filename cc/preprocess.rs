@@ -6,21 +6,24 @@ pub fn preprocess(file: File, defines: &mut HashMap<String, TextLine>) -> Result
   // remove comments and resolve includes and defines
 
   let preprocessor = Parser::error(Error(format!("")))
-    .or_else(|_| preprocess::comment_directive())
     .or_else(|_| preprocess::include_directive())
     .or_else(|_| preprocess::define_directive())
     .or_else(|_| preprocess::text_line_directive())
     .or_else(|_| parse::eof().map(|_| Directive::EOF));
 
-  let mut preprocessed = "".to_string();
-  let mut source = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {
+  let source = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {
     panic!("Unable to read file `{}`", file.0);
   });
 
+  let mut preprocessed = "".to_string();
+  let mut source = source
+    .lines()
+    .map(|line| line.split("//").next().unwrap_or(line))
+    .map(|line| line.to_string() + "\n")
+    .collect::<String>();
+
   loop {
     (preprocessed, source) = match preprocessor.0(source.clone()) {
-      Ok((Directive::Comment(_), input)) => (preprocessed, input),
-
       Ok((Directive::Include(text_line), input)) => (
         preprocessed + &preprocess_include_directive(text_line, &file, defines)?,
         input,
@@ -108,7 +111,6 @@ fn preprocess_include_directive(
 
 #[derive(Clone, PartialEq, Debug)]
 enum Directive {
-  Comment(String),
   Include(TextLine),
   Define(String, TextLine),
   TextLine(TextLine),
@@ -116,14 +118,6 @@ enum Directive {
 }
 
 type TextLine = Vec<Result<String, char>>;
-
-fn comment_directive() -> Parser<Directive> {
-  parse::whitespaces_string("//")
-    .and_then(|_| parse::many(parse::satisfy(|c| c != '\n')))
-    .map(|chars| chars.iter().collect::<String>())
-    .map(|comment| Directive::Comment(comment))
-    .meta(format!("Comment Directive"))
-}
 
 fn include_directive() -> Parser<Directive> {
   // TODO does not obey grammar

@@ -54,8 +54,8 @@ fn main() {
         Token::AtDD(opcode)
       )
     })
-    .collect::<Vec<String>>()
-    .join("\n");
+    .map(|line| line.to_string() + "\n")
+    .collect::<String>();
 
   let disassembly = format!(
     "{}\n{}",
