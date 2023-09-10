@@ -194,7 +194,7 @@ impl Tickable for Microcomputer {
         let _ = pop!();
         mem_write!(size, 0x00);
         mp.cf = mem_read!(size) == 0x00;
-        Ok(9)
+        Ok(10)
       }
 
       Instruction::Inc => {

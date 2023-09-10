@@ -97,7 +97,7 @@ The instruction set of the Atto-8 microprocessor adheres to the Atto-8 microarch
 | `orr SIZE`  | `16`    |
 | `and SIZE`  | `13`    |
 | `xor SIZE`  | `24`    |
-| `xnd SIZE`  | `9`     |
+| `xnd SIZE`  | `10`    |
 | `inc`       | `6`     |
 | `dec`       | `8`     |
 | `neg`       | `11`    |
