@@ -19,7 +19,7 @@ Available operations are as follows:
 - `circ` &mdash; See [/circ/](../circ/)
 - `pop` &mdash; Pop argument from the stack
 - `dup` &mdash; Duplicate argument on the stack
-- `cat` &mdash; Output file contents to stdout
+- `pipe` &mdash; Pipe file contents to stdout
 
 ## Examples
 

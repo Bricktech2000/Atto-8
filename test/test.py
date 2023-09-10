@@ -11,9 +11,9 @@ import common  # noqa
 open_safe = common.open_safe('Test')
 
 
-def cat(filename):
+def pipe(filename):
   with open_safe(filename, 'rb') as file:
-    print(f'Cat: Output `{filename}`')
+    print(f'Test: Pipe `{filename}`')
     sys.stdout.flush()
     sys.stdout.buffer.write(file.read())
 
@@ -42,6 +42,7 @@ input = sys.argv[1:][::-1]
 shutil.rmtree(rel_path(target), ignore_errors=True)
 shutil.copytree(rel_path('./'), rel_path(target), dirs_exist_ok=True)
 shutil.copytree(rel_path('../lib/'), rel_path('target/lib/'), dirs_exist_ok=True)
+shutil.copytree(rel_path('../cc/libc/'), rel_path('target/'), dirs_exist_ok=True)
 
 
 filenames = []
@@ -102,9 +103,9 @@ while input:
         filenames.pop()
       case 'dup':
         filenames.append(filenames[-1])
-      case 'cat':
+      case 'pipe':
         filename = filenames.pop()
-        operations.append((operation, functools.partial(cat, filename)))
+        operations.append((operation, functools.partial(pipe, filename)))
       case file:
         filenames.append(rel_path(target, file))
   except IndexError:
