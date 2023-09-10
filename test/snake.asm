@@ -46,24 +46,24 @@ main!
       # compute bit_addr of head_pos
       !u4u4.ld5 !display_buffer !bit_addr
       # game over if pixel at head_pos is set
-      !u8u8.ld0 !load_bit buf pop :game_over !bcc
+      !u8u8.ld0 !load_bit !is_zero :game_over !bcc
       # set pixel at head_pos
       !set_bit
-    buf :for_head_twice !bcc clc pop
+    !check_zero :for_head_twice !bcc clc pop
 
     # figure out where the tail is headed
     !directions_len for_dir: dec
       :directions ld1 add !i4i4.lda !i4i4.ld3
         !u4u4.ld5 !i4i4.ld2 !i4i4.add !display_buffer !bit_addr !load_bit
-      buf pop !i4i4.iff !i4i4.st2
-    buf :for_dir !bcc pop
+      !is_zero !i4i4.iff !i4i4.st2
+    !check_zero :for_dir !bcc pop
 
     x02 for_tail_twice: dec
       # tail_pas += tail_vel
       !u8u8.ld1 !i4i4.add !u4u4.st3
       # clear pixel at tail_pos
       !u4u4.ld3 !display_buffer !bit_addr !clear_bit
-    buf :for_tail_twice !bcc pop
+    !check_zero :for_tail_twice !bcc pop
 
     # sleep
     # x40 !delay

@@ -31,8 +31,8 @@ main!
   # str_ab: @61 @62 @00
   # str_ac: @61 @63 @00
   # str_abc: @61 @62 @63 @00
-  # str_abcdef: @61 @62 @63 @64 @65 @66 @00
-  # str_hello_world: @48 @65 @6C @6C @6F @20 @57 @6F @72 @6C @64 @21 @00
+  str_abcdef: @61 @62 @63 @64 @65 @66 @00
+  str_hello_world: @48 @65 @6C @6C @6F @20 @57 @6F @72 @6C @64 @21 @00
   # str_buf: @CC @CC @CC @CC @CC @CC @CC @CC
 
   # !fib.def

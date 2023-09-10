@@ -17,7 +17,7 @@ getc.def! getc: !getc swp !ret # char = getc()
 fgets! # fgets(stream, *str)
   swp for_c.
     ld1 !fgetc
-    !char.null xor
+    !char.check_null
     ld1 sta
   inc .for_c !bcc pop pop
 gets! !stdin !fgets # gets(*str)
@@ -27,7 +27,7 @@ gets.def! gets: swp !gets !ret # gets(*str)
 gets.min! # gets.min(*str)
   for_c.
     !getc
-    !char.null xor
+    !char.check_null
     ld1 sta
   inc .for_c !bcc pop
 gets.min.def! gets.min: swp !gets.min !ret # gets.min(*str)
@@ -39,7 +39,7 @@ putc.def! putc: swp !putc !ret # putc(char)
 fputs! # fputs(stream, *str)
   swp for_c.
     ld0 lda
-    !char.null xor
+    !char.check_null
     ld2 !fputc
   inc .for_c !bcc pop pop
 puts! !stdout !fputs # puts(*str)
@@ -49,12 +49,12 @@ puts.def! puts: swp !puts !ret # puts(*str)
 puts.min! # puts.min(*str)
   for_c.
     ld0 lda
-    !char.null xor
+    !char.check_null
     !putc
   inc .for_c !bcc pop
 puts.min.def! puts.min: swp !puts.min !ret # puts.min(*str)
 
 wait_char! @const !wait_char.dyn
-wait_char.dyn! .skip swp !getc !char.null xor pop iff !jmp skip.
+wait_char.dyn! .skip swp !getc !char.is_null iff !jmp skip.
 wait_null! @const !wait_null.dyn
-wait_null.dyn! .skip !getc !char.null xor pop iff !jmp skip.
+wait_null.dyn! .skip !getc !char.is_null iff !jmp skip.

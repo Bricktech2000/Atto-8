@@ -18,7 +18,7 @@ main!
 
   loop:
     # set y_vel to jump_vel if any button is pressed and y_pos > GROUND_POS
-    !getc !char.null xor pop !jump_vel !i4f4.ld1 !i4f4.iff !u4f4.ld2 !ground_pos sub pop !i4f4.ld1 !i4f4.iff !i4f4.st0
+    !getc !char.is_null !jump_vel !i4f4.ld1 !i4f4.iff !u4f4.ld2 !ground_pos sub pop !i4f4.ld1 !i4f4.iff !i4f4.st0
     # compute bit_addr of (DINO_POS, y_pos)
     !display_buffer !u4f4.ld2 !u4f4.in !u4f4.shl orr x07 !dino_pos sub @const
     # clear pixel at (x_pos, y_pos - 2)
@@ -41,7 +41,7 @@ main!
       ld0 inc lda shl pop # load carry
       ld0 lda shl ld1 sta inc
       ld0 lda shl ld1 sta inc
-    buf :for_addr !bcc pop
+    !check_zero :for_addr !bcc pop
 
     # shift in cactus from cactus_top and cactus_bot
     !display_buffer x17 add @const lda
@@ -54,14 +54,14 @@ main!
     # compute bit_addr of (DINO_POS, y_pos)
     !display_buffer !u4f4.ld2 !u4f4.in !u4f4.shl orr x07 !dino_pos sub @const
     # if pixel at (x_pos, y_pos) is set, game over
-    !u8u8.ld0 !load_bit buf pop :game_over !bcc
+    !u8u8.ld0 !load_bit !is_zero :game_over !bcc
     # set pixel at (x_pos, y_pos - 2)
     # ld1 dec dec ld1 !set_bit
     # set pixel at (x_pos, y_pos)
     !set_bit
 
     # if x_pos % 0x100 == 0, generate a new cactus
-    !u4f4.ld3 xFF and pop :ignore_cactus !bcc
+    !u4f4.ld3 !is_zero :ignore_cactus !bcc
       # generate a pointer to a random cactus
       # the x06 (0b00000110) below requires 4 cacti
       # x0E (0x00001110) could be used for 8 cacti
@@ -78,7 +78,7 @@ main!
     # invert screen
     !display_buffer for_i:
       ld0 lda not ld1 sta
-    inc buf !here :for_i swp iff !jmp
+    inc !check_zero !here :for_i swp iff !jmp
 
   cacti:
   # top bot

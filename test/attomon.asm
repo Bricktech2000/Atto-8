@@ -79,7 +79,7 @@ main!
   getc_loop:
     !getc
     # ignore empty `stdin`
-    !char.null xor :pop_loop !bcs
+    !char.check_null :pop_loop !bcs
     # print `stdin` to `stdout`
     !char.ld0 !putc
 

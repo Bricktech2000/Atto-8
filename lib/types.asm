@@ -1744,6 +1744,8 @@ u8.to_chars!
 chars.to_u8!
   @err # to be implemented
 
+char.check_null! !check_zero
+char.is_null! !is_zero
 
 # converts `'A'..='Z'` to `'a'..='z'`. leaves other values unchanged
 char.to_lower!
@@ -1770,7 +1772,7 @@ u8.mul.def!
       !u8.ld1+1 !u8.0 !u8.ld4+2 !u8.iff clc !u8.add
       # product >>= 1 (stairstep shift)
       !u8.ld1+1 !u16.shr !u16.st0+1
-    buf .for_bit !bcc pop
+    !check_zero .for_bit !bcc pop
   # return* product
   !u16.st0+1 !rt0
 i8.mul.def!
@@ -1793,7 +1795,7 @@ u16.mul.def!
       !u16.ld1+1 !u16.0 !u16.ld4+2 !u16.iff clc !u16.add
       # product >>= 1 (stairstep shift)
       !u16.ld1+1 !u32.shr !u32.st0+1
-    buf .for_bit !bcc pop
+    !check_zero .for_bit !bcc pop
   # return* product
   !u32.st0+1 !rt0
 i16.mul.def!

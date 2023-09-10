@@ -23,7 +23,6 @@ rt3! st2 pop pop !ret
 rt4! st3 pop pop pop !ret
 
 dbg! @BB # unofficial `0xBB` treated as debug request
-nop! nop @dyn
 here! lbl. .lbl
 hlt! !here !jmp
 pad! .lbl add lbl. @org

@@ -1,5 +1,5 @@
 # main!
-#   !nop
+#   nop @dyn
 #   start:
 #     x55 ld0 ld0 not ld0
 #   lds !display_buffer xor pop :start :stop iff !jmp

@@ -31,7 +31,7 @@ main!
     x30 !delay
 
     # wait until a controller button is pressed
-    x00 wait: pop !getc !char.null xor :wait !bcs
+    x00 wait: pop !getc !char.check_null :wait !bcs
     x00 # 0x00 as default
       !secondary_up xo2 x01 iff !secondary_up xo2
       !secondary_down xo2 xFF iff !secondary_down xo2

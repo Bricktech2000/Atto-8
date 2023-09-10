@@ -1,4 +1,5 @@
 @ lib/core.asm
+@ lib/stdlib.asm
 @ lib/types.asm
 @ lib/display.asm
 
@@ -17,7 +18,7 @@ main!
       !i4f4.add
       !is_in_set @dyn x00 shl @dyn
       ld1 !display_buffer x10 add !bit_addr !store_bit
-    buf :for_xy !bcc pop
+    !check_zero :for_xy !bcc pop
   :loop !jmp
 
 
@@ -36,7 +37,7 @@ is_in_set! clc # bool b = is_in_set(c4f4m4f4 c)
     !i4f4.sub clc !i4f4.ld4+1 !i4f4.add !i4f4.st1+1
     # !c4f4m4f4.ld0+1 !c4f4.norm x20 !i4f4 !i4f4.sub !i4f4.pop :ret !bcc
     # !c4f4m4f4.ld0+1 !c4f4.ld0 !c4f4.mul !c4f4.ld1+1 !c4f4.add !c4f4.st0+1
-  buf :for_i !bcc
+  !check_zero :for_i !bcc
   x00 x00
 ret:
   pop pop pop pop pop pop pop

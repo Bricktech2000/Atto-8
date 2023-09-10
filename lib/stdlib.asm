@@ -2,8 +2,8 @@ rand_bits! x1D
 
 # outputs every number in 0x00..=0xFF then repeats
 rand! clc # seed = rand(seed)
-  shl x00 !rand_bits iff swp
-  buf x00 !rand_bits iff
+  shl @dyn x00 !rand_bits iff swp
+  buf @dyn x00 !rand_bits iff
   xor xor
 
 # outputs every number in 0x01..=0xFF then repeats
@@ -13,15 +13,20 @@ rand.min! clc # seed = rand.min(seed)
   shl x00 !rand_bits iff xor
 
 
+check_zero! buf @dyn
+is_zero! buf @dyn pop
+
+
 delay! # delay(iterations)
   loop. x1F !stall x01 sub @dyn .loop !bcc pop
 
 delay_long! # delay_long(iterations)
   x00 loop. x1F !stall x00 x01 su2 su2 .loop !bcc pop pop
 
+
 popcnt! # count = popcnt(a)
   # count = a == 0 ? -1 : 0
-  buf @dyn x00 xFF iff
+  !check_zero x00 xFF iff
   # do { count++ } while (a != 0)
   while. inc
     # a &= a - 1
@@ -29,6 +34,7 @@ popcnt! # count = popcnt(a)
   .while !bcc
   # return* count
   st0
+
 
 sort.def!
   sort: clc # sort(len, arr)
@@ -45,9 +51,9 @@ sort.def!
             x01 st2
           continue.
         pop # pop pointer
-      buf .for_i !bcc pop
+      !check_zero .for_i !bcc pop
     # break if not swapped
-    buf .while !bcc pop
+    !check_zero .while !bcc pop
   # return*
   !rt2
 

@@ -1,6 +1,7 @@
 @ lib/core.asm
 @ lib/types.asm
 @ lib/string.asm
+@ lib/stdlib.asm
 @ lib/stdio.asm
 
 # - `+[>,.<]` pipes stdin to stdout
@@ -26,7 +27,7 @@ compiler!
     !stdout # for call into `:code_buffer` way later
     :code_buffer # current end of the `dst` string
     # wait for input from `stdin` and preserve character
-    !char.null wait: !char.pop !getc !char.null xor :wait !bcs
+    !char.null wait: !char.pop !getc !char.check_null :wait !bcs
     loop:
       # echo back character
       ld0 !putc
@@ -45,11 +46,11 @@ compiler!
       # both more performant and smaller in size than `strcat`
       ld2 for_c:
         # loop if *dst != '\xFF'
-        ld1 lda !char.null xor
+        ld1 lda !char.check_null
         ld1 sta
       inc swp inc swp @dyn :for_c !bcc dec st2 pop
     # loop while `stdin` is not empty
-    !char.pop !getc !char.null xor :loop !bcc !char.pop
+    !char.pop !getc !char.check_null :loop !bcc !char.pop
 
     # compute and substitute sentinel values
     :code_buffer for_b:
@@ -90,7 +91,7 @@ compiler!
   # `!stdin` and `!stdout` are `'\0'` which is also `!char.null`
   .: ld0 ld3 !fputc !char.null
   ,: ld2 !fgetc st0 !char.null
-  [: buf !pad_sentinel ![_sentinel iff !jmp !char.null
+  [: !check_zero !pad_sentinel ![_sentinel iff !jmp !char.null
   ]: !]_sentinel !jmp !char.null
   _: !char.null
 
@@ -105,7 +106,7 @@ interpreter!
   while:
     :source_buffer !gets.min
     :source_buffer !puts.min
-  :source_buffer lda buf pop :while !bcs
+  :source_buffer lda !is_zero :while !bcs
   !char.space !putc
   !char.latin_capital_letter_o !putc
   !char.latin_capital_letter_k !putc
@@ -135,7 +136,7 @@ interpreter!
     st0 !jmp
     got_left_square_bracket:
       # ignore if value at head is non-zero
-      ld1 lda buf pop :got_neither !bcc
+      ld1 lda !is_zero :got_neither !bcc
     got_right_square_bracket:
       x00 # nesting level
       for_c:
@@ -148,7 +149,7 @@ interpreter!
         # increment or decrement head depending on sign of nesting level
         shl ld1 dec ld2 inc iff st1 shr
         # loop if nesting level is non-zero
-      buf :for_c !bcc # 0x00 is left on the stack
+      !check_zero :for_c !bcc # 0x00 is left on the stack
       # we're at a right bracket if and only if we're coming from a left bracket.
       # if we're at a right bracket, increment head to skip over the right bracket
       ld1 inc lda !char.right_square_bracket xor pop add @dyn

@@ -1,5 +1,6 @@
 @ lib/core.asm
 @ lib/types.asm
+@ lib/stdlib.asm
 
 main!
   # xA0 !i4f4 xA8 !i4f4 !c4f4m4f4 x66 !i4f4 x5F !i4f4 !c4f4m4f4 !c4f4m4f4.mul

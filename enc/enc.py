@@ -21,7 +21,7 @@ memory_image_file = sys.argv[2]
 with open_safe(hex_source_file, 'rb') as hex_source_file:
   hex_source = hex_source_file.read()
 
-hex_source = hex_source_file.read().decode()
+hex_source = hex_source.decode()
 preprocessed = ''.join(line.split('#')[0] for line in hex_source.split('\n'))
 memory_image = bytes(byte or 0x00 for byte in pad_or_slice(list(bytes.fromhex(preprocessed)), common.MEM_SIZE))
 

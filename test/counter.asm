@@ -1,5 +1,6 @@
 @ lib/core.asm
 @ lib/types.asm
+@ lib/stdlib.asm
 @ lib/display.asm
 
 main!

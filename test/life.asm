@@ -1,6 +1,7 @@
 @ lib/core.asm
 @ lib/types.asm
 @ lib/string.asm
+@ lib/stdlib.asm
 @ lib/display.asm
 
 # to count neighbors, display buffer is read from and back buffer is written to.
@@ -34,7 +35,7 @@ main!
         !display_buffer !bit_addr !load_bit clc
         # neighbor_count += neighbor_value
         ad2
-      buf :for_dxdy !bcc pop
+      !check_zero :for_dxdy !bcc pop
 
       # apply rules outlined above
       x04 xor :ignore !bcs x04 xor
@@ -43,7 +44,7 @@ main!
       ignore:
 
       pop # pop neighbor count
-    buf :for_xy !bcc pop
+    !check_zero :for_xy !bcc pop
   :loop !jmp
 
   neighbors:

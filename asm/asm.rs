@@ -503,15 +503,26 @@ fn assemble(
 
     roots = match_replace(&roots, |window| match window {
       [Root::Instruction(Instruction::Nop)] => Some(vec![]),
+      [Root::Instruction(Instruction::Buf)] => Some(vec![]),
       _ => None,
     });
 
     roots =
       match_replace(&roots, |window| match window {
+        [Root::Node(node), Root::Instruction(Instruction::Orr(0x01))]
+          if eval(&node, &HashMap::new()) == Ok(0x00) =>
+        {
+          Some(vec![])
+        }
+        [Root::Node(node), Root::Instruction(Instruction::And(0x01))]
+          if eval(&node, &HashMap::new()) == Ok(0xFF) =>
+        {
+          Some(vec![])
+        }
         [Root::Node(node), Root::Instruction(Instruction::Xor(0x01))]
           if eval(&node, &HashMap::new()) == Ok(0x00) =>
         {
-          Some(vec![Root::Instruction(Instruction::Buf)])
+          Some(vec![])
         }
         [Root::Node(node), Root::Instruction(Instruction::Add(0x01))]
           if eval(&node, &HashMap::new()) == Ok(0x00) =>
