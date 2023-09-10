@@ -84,8 +84,8 @@ fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -
       }
       None => line.to_string(),
     })
-    .collect::<Vec<_>>()
-    .join("\n");
+    .map(|line| line.to_string() + "\n")
+    .collect::<String>();
 
   assembly
 }
@@ -920,7 +920,7 @@ fn assemble(
   let mut allocation_sizes: HashMap<Node, usize> = HashMap::new();
 
   'bruteforce: loop {
-    let mut location_counter: u8 = 0;
+    let mut location_counter: usize = 0;
     let mut label_definitions: HashMap<Label, u8> = HashMap::new();
     let mut unevaluated_nodes: HashMap<u8, (Pos, Node)> = HashMap::new();
 
@@ -930,7 +930,7 @@ fn assemble(
       .flat_map(|(pos, root)| match root {
         Root::Instruction(instruction) | Root::Dyn(Some(instruction)) => {
           let instructions_ = vec![(pos, Ok(instruction))];
-          location_counter = location_counter.wrapping_add(instructions_.len() as u8);
+          location_counter += instructions_.len();
           instructions_
         }
 
@@ -940,7 +940,7 @@ fn assemble(
               .into_iter()
               .map(|(pos, instruction)| (pos, Ok(instruction)))
               .collect::<Vec<_>>();
-            location_counter = location_counter.wrapping_add(instructions_.len() as u8);
+            location_counter += instructions_.len();
             instructions_
           }
           Err(_) => {
@@ -948,15 +948,15 @@ fn assemble(
               (pos.clone(), Ok(Instruction::Nop));
               allocation_sizes.get(&node).copied().unwrap_or(1)
             ];
-            unevaluated_nodes.insert(location_counter, (pos, node));
-            location_counter = location_counter.wrapping_add(instructions_.len() as u8);
+            unevaluated_nodes.insert(location_counter as u8, (pos, node));
+            location_counter += instructions_.len();
             instructions_
           }
         },
 
         Root::Opcode(opcode) => {
           let instructions_ = vec![(pos, Err(opcode))];
-          location_counter = location_counter.wrapping_add(instructions_.len() as u8);
+          location_counter += instructions_.len();
           instructions_
         }
 
@@ -969,21 +969,21 @@ fn assemble(
               Error(format!("Duplicate label definition `{}`", label)),
             ));
           }
-          label_definitions.insert(label, location_counter);
+          label_definitions.insert(label, location_counter as u8);
           vec![]
         }
 
         Root::Org(Some(node)) => match eval(&node, &label_definitions) {
           Ok(value) => {
-            if value >= location_counter {
-              let difference = value - location_counter;
+            if value as usize >= location_counter {
+              let difference = value as usize - location_counter;
               location_counter += difference;
               vec![(pos, Err(0x00)); difference as usize]
             } else {
               errors.push((
                 pos,
                 Error(format!(
-                  "`{}` cannot move location counter backward from `{}` to `{}`",
+                  "`{}` cannot move location counter backward from `{:02X}` to `{:02X}`",
                   Token::AtOrg,
                   location_counter,
                   value
