@@ -40,6 +40,7 @@ python3 test.py flappy.asm asm emu
 python3 test.py circle.asm asm emu
 python3 test.py life.asm asm emu
 python3 test.py dino.asm asm emu
+python3 test.py plane.asm asm emu
 python3 test.py ctf.asm asm emu
 python3 test.py fade.asm asm emu
 
