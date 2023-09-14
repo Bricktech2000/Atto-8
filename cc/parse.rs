@@ -88,7 +88,10 @@ pub fn eof() -> Parser<()> {
   Parser(Rc::new(|input: String| match &input[..] {
     "" => Ok(((), input)),
     // TODO uses debug formatting
-    _ => Err(Error(format!("EOF: got {:?}", input[0..1].to_string()))), // to be concatenated
+    _ => Err(Error(format!(
+      "EOF: got {:?}",
+      input[0..16].to_string() + "..."
+    ))), // to be concatenated
   }))
 }
 
@@ -233,7 +236,7 @@ pub fn function_declaration() -> Parser<FunctionDeclaration> {
           })
       })
     })
-    .meta(format!("Function Definition"))
+    .meta(format!("Function Declaration"))
 }
 
 pub fn function_definition() -> Parser<FunctionDefinition> {
@@ -338,7 +341,7 @@ pub fn asm_statement() -> Parser<Statement> {
     .and_then(|assembly| {
       parse::whitespaces_char('}').map(move |_| {
         Statement::Asm(
-          // TODO copied from `asm.rs`
+          // TODO partially copied from `asm.rs`
           // TODO does not support file includes
           assembly
             .clone()
@@ -362,23 +365,24 @@ pub fn constant_expression() -> Parser<Expression> {
 }
 
 pub fn conditional_expression() -> Parser<Expression> {
-  parse::logical_or_expression()
-    .and_then(|expression1| {
-      parse::whitespaces_char('?')
-        .and_then(|_| parse::expression())
-        .and_then(|expression2| {
-          parse::whitespaces_char(':')
-            .and_then(|_| parse::conditional_expression())
-            .map(|expression3| {
-              Expression::Conditional(
-                Box::new(expression1),
-                Box::new(expression2),
-                Box::new(expression3),
-              )
-            })
-        })
-    })
-    .or_else(|_| parse::logical_or_expression())
+  parse::logical_or_expression().and_then(|expression1| {
+    let expression = expression1.clone();
+    Parser::return_(())
+      .and_then(|_| parse::whitespaces_char('?'))
+      .and_then(|_| parse::expression())
+      .and_then(|expression2| {
+        parse::whitespaces_char(':')
+          .and_then(|_| parse::conditional_expression())
+          .map(|expression3| {
+            Expression::Conditional(
+              Box::new(expression1),
+              Box::new(expression2),
+              Box::new(expression3),
+            )
+          })
+      })
+      .or_else(|_| Parser::return_(expression))
+  })
 }
 
 pub fn logical_or_expression() -> Parser<Expression> {
