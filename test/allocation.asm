@@ -6,16 +6,16 @@
 
 main!
   pop pop !display_buffer sts
-  !wc x04 :malloc !call # allocate 0x04 bytes
-  !wc x05 :malloc !call # allocate 0x05 bytes
-  !wc :free !call       # free the 0x05 bytes
-  !wc x07 :malloc !call # allocate 0x07 bytes
-  !wc swp :free !call   # free the 0x04 bytes
-  !wc x0F :malloc !call # allocate 0x0F bytes
-  !wc :free !call       # free the 0x0F bytes
-  !wc :free !call       # free the 0x07 bytes
-  !wc x1E :malloc !call # allocate 0x1E bytes
-  !wc :free !call       # free the 0x1E bytes
+  !block_any x04 :malloc !call # allocate 0x04 bytes
+  !block_any x05 :malloc !call # allocate 0x05 bytes
+  !block_any :free !call       # free the 0x05 bytes
+  !block_any x07 :malloc !call # allocate 0x07 bytes
+  !block_any swp :free !call   # free the 0x04 bytes
+  !block_any x0F :malloc !call # allocate 0x0F bytes
+  !block_any :free !call       # free the 0x0F bytes
+  !block_any :free !call       # free the 0x07 bytes
+  !block_any x1E :malloc !call # allocate 0x1E bytes
+  !block_any :free !call       # free the 0x1E bytes
   !hlt
 
   !malloc.def
@@ -26,5 +26,3 @@ main!
 
   heap_start: !heap_unlimited
 heap_start! :heap_start @const
-
-wc! !here !wait_char

@@ -4,6 +4,7 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 @ lib/display.asm
+@ lib/controller.asm
 
 # controls:
 #
@@ -11,10 +12,10 @@
 # - Primary Down -- move circle down
 # - Primary Left -- move circle left
 # - Primary Right -- move circle right
-# - Secondary Up -- increase circle radius
-# - Secondary Down -- decrease circle radius
-# - Secondary Left -- do nothing
-# - Secondary Right -- do nothing
+# - Secondary Up -- do nothing
+# - Secondary Down -- do nothing
+# - Secondary Left -- decrease circle radius
+# - Secondary Right -- increase circle radius
 
 main!
   pop pop !display_buffer sts
@@ -26,22 +27,16 @@ main!
   loop:
     # clear display then draw circle
     !display_buffer_len x00 !display_buffer :memset !call
-    ld1 ld1 inc !draw_circle
+    ld1 ld1 inc !draw_circle # offsets `r` from `0..8` to `1..9`
 
     x30 !delay
 
-    # wait until a controller button is pressed
-    x00 wait: pop !getc !char.check_null :wait !bcs
-    x00 # 0x00 as default
-      !secondary_up xo2 x01 iff !secondary_up xo2
-      !secondary_down xo2 xFF iff !secondary_down xo2
-    ad2 x07 an2
-    x00 # 0x00 as default
-      !primary_up xo2 xF0 iff !primary_up xo2
-      !primary_down xo2 x10 iff !primary_down xo2
-      !primary_left xo2 xFF iff !primary_left xo2
-      !primary_right xo2 x01 iff !primary_right xo2
-    st0 ad2
+    # wait for controller input
+    !block_getc
+
+    x00 !secondary_to_delta ad2
+    x07 an2 # clamps `r` to `0..8`
+    x00 !primary_to_delta st0 ad2
   :loop !jmp
 
   !memset.def

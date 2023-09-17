@@ -12,6 +12,7 @@ This library provides utilities and convenience macros for the Atto-8 microcompu
 - [/lib/stdlib.asm](stdlib.asm) &mdash; Standard library functions inspired by the C header `stdlib.h` such as `malloc` and `rand`
 - [/lib/stdio.asm](stdio.asm) &mdash; Standard input/output functions inspired by the C header `stdio.h` such as `getc` and `puts`
 - [/lib/display.asm](display.asm) &mdash; Display utilities such as pixel manipulation macros and text rendering functions
+- [/lib/controller.asm](controller.asm) &mdash; Controller utilities such as controller button constants
 
 ## Conventions
 

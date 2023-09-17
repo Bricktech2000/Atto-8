@@ -266,7 +266,7 @@ pub fn parameter_list() -> Parser<Vec<Object>> {
   parse::sepby(
     parse::type_name().and_then(|type_name| {
       parse::identifier()
-        .or_else(|_| Parser::return_(String::new()))
+        .or_else(|_| Parser::return_("".to_string()))
         .map(|identifier| Object(type_name, identifier))
     }),
     parse::whitespaces_char(','),
@@ -635,7 +635,6 @@ pub fn digit_10() -> Parser<char> {
 }
 
 pub fn alphabetic() -> Parser<char> {
-  // `meta` expects a &'static str
   parse::satisfy(|c| c.is_alphabetic()).meta(format!("Alphabetic"))
 }
 

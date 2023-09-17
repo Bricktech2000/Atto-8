@@ -10,7 +10,7 @@ main!
   pop pop !display_buffer sts
 
   # wait and consume first two nibbles
-  !here !wait_char !getc !char.pop
+  !block_any !block_any
   # offset to start of video
   xFF !delay x80 !delay
 

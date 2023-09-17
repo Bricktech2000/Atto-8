@@ -26,13 +26,13 @@ compiler!
   main:
     !stdout # for call into `:code_buffer` way later
     :code_buffer # current end of the `dst` string
-    # wait for input from `stdin` and preserve character
-    !char.null wait: !char.pop !getc !char.check_null :wait !bcs
+    # wait for input
+    !block_getc
     loop:
       # echo back character
-      ld0 !putc
+      !char.ld0 !putc
 
-      :_ # default is an empty string
+      :_ # default: an empty string
         !char.greater_than_sign xo2 :> iff !char.greater_than_sign xo2
         !char.less_than_sign xo2 :< iff !char.less_than_sign xo2
         !char.plus_sign xo2 :+ iff !char.plus_sign xo2
@@ -117,12 +117,12 @@ interpreter!
   :source_buffer loop:
     ld0 lda # load source character
     # > <
-    ld2 # default is current head
+    ld2 # default: current head
       !char.greater_than_sign xo2 x00 sub @dyn !char.greater_than_sign xo2
       !char.less_than_sign xo2 x00 add @dyn !char.less_than_sign xo2
     st2
     # + -
-    ld2 lda # default is current cell value
+    ld2 lda # default: current cell value
       !char.plus_sign xo2 x00 add @dyn !char.plus_sign xo2
       !char.hyphen_minus xo2 x00 sub @dyn !char.hyphen_minus xo2
     ld3 sta

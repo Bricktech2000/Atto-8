@@ -10,12 +10,12 @@ main!
   x00 # rand_seed
 
   # seed rand by incrementing until keypress
-  wait: inc :wait !wait_char
+  wait: inc !getc !char.is_null :wait !bcs
 
   loop:
     !rand x13 ld1 :print_byte.min !call
     !rand x12 ld1 :print_byte.min !call
-    !here !wait_char
+    !block_any
   :loop !jmp
 
   !print_byte.min.def

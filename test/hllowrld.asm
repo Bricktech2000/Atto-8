@@ -10,9 +10,9 @@ main!
 
   loop:
     !display_data_len x00 !display_buffer :memset !call
-    !here !wait_char
+    !block_any
     !display_data_len :display_data !display_buffer :memcpy !call
-    !here !wait_null
+    !block_null
   :loop !jmp
 
   !memset.def

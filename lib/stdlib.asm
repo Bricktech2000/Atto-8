@@ -24,6 +24,14 @@ delay_long! # delay_long(iterations)
   x00 loop. x1F !stall x00 x01 su2 su2 .loop !bcc pop pop
 
 
+# block until a key is pressed
+block_any! block. !getc !char.is_null .block !bcs
+# block until no key is pressed
+block_null! block. !getc !char.is_null .block !bcc
+# block until a key is pressed then return it
+block_getc! !char.null block. !char.pop !getc !char.check_null .block !bcs
+
+
 popcnt! # count = popcnt(a)
   # count = a == 0 ? -1 : 0
   !check_zero x00 xFF iff

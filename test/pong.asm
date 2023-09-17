@@ -3,6 +3,7 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 @ lib/display.asm
+@ lib/controller.asm
 
 # missing second paddle, paddle bounds checks and ball bounce randomization
 

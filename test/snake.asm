@@ -3,6 +3,7 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 @ lib/display.asm
+@ lib/controller.asm
 
 # a few bytes short, but was working before removing `adn`s and having to add `clc`s.
 # has always been missing `!delay` call
@@ -30,9 +31,9 @@ main!
     # ignore if input is empty
     x0F and :ignore !bcs
       # vel = (input & 0b1010) ? 0x0F : 0x01
-      ld0 !primary_down !primary_right orr and pop x01 x0F iff !i4i4
+      ld0 !primary_down !primary_right orr @const and pop x01 x0F iff !i4i4
       # rot = (input & 0b0011) ? 0x04 : 0x00
-      ld1 !primary_up !primary_down orr and pop x04 x00 iff
+      ld1 !primary_up !primary_down orr @const and pop x04 x00 iff
       # head_vel = vel << rot
       rot !i4i4.st4
     # pop input

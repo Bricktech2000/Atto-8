@@ -53,9 +53,9 @@ main!
   got_backspace:
     !char.pop # pop previous character
     x04 ro2 # swap `buffer` nibbles
-  :getc_loop !jmp # do not pop previous character again
+  :loop !jmp # do not pop previous character again
 
-  # fall through to `buffer_print`
+  # prepare stack and fall through to `buffer_print`
   got_line_feed:
     !char.carriage_return !putc # `'\n'` was just printed, print `'\r'`
     !char.dollar_sign !putc
@@ -73,13 +73,11 @@ main!
     !putc
 
   # pop previous character and fall through
-  pop_loop:
-    !char.pop
+  !char.pop
 
-  getc_loop:
-    !getc
-    # ignore empty `stdin`
-    !char.check_null :pop_loop !bcs
+  loop:
+    # wait for input
+    !block_getc
     # print `stdin` to `stdout`
     !char.ld0 !putc
 

@@ -1,15 +1,6 @@
 stdin! x00 @const
 stdout! x00 @const
 
-primary_up! x01 @const
-primary_down! x02 @const
-primary_left! x04 @const
-primary_right! x08 @const
-secondary_up! x10 @const
-secondary_down! x20 @const
-secondary_left! x40 @const
-secondary_right! x80 @const
-
 fgetc! lda # char = fgetc(stream)
 getc! !stdin !fgetc # char = getc()
 fgetc.def! fgetc: @err # to be implemented
@@ -53,8 +44,3 @@ puts.min! # puts.min(*str)
     !putc
   inc .for_c !bcc pop
 puts.min.def! puts.min: swp !puts.min !ret # puts.min(*str)
-
-wait_char! @const !wait_char.dyn
-wait_char.dyn! .skip swp !getc !char.is_null iff !jmp skip.
-wait_null! @const !wait_null.dyn
-wait_null.dyn! .skip !getc !char.is_null iff !jmp skip.

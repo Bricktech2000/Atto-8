@@ -4,10 +4,10 @@
 @ lib/stdio.asm
 
 main!
-  !char.null loop: !char.pop
-    !getc !char.check_null :loop !bcs
+  loop:
+    !block_getc
     !u8.to_chars !putc !putc !char.space !putc
     # !char.to_lower !putc
     # !char.to_upper !putc
-    !here !wait_null
-  !char.null :loop !jmp
+    !block_null
+  :loop !jmp
