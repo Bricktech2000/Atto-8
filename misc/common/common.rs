@@ -205,9 +205,9 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
       }
     };
 
-    // print at most 30 times per second
+    // print at most 60 times per second
     if next_print_time <= std::time::Instant::now() || debug_mode {
-      next_print_time += std::time::Duration::from_millis(1000 / 30);
+      next_print_time += std::time::Duration::from_millis(1000 / 60);
 
       print!("\x1B[2J"); // clear screen
       print!("\x1B[1;1H"); // move cursor to top left

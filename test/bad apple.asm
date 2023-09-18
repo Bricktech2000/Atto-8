@@ -16,8 +16,8 @@ main!
 
   frame_loop:
     !display_buffer for_byte:
-      # assume input never empty
-      # assume input always well-formed
+      # assume input character never null
+      # assume input always well formed
       !getc !char.check_null :done !bcs
       !char.to_u4 x04 rot
       !getc !char.check_null :done !bcs

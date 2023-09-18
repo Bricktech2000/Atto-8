@@ -18,7 +18,7 @@
 # - typing any other character prints `'\b'`
 #
 #
-# thing to try:
+# compound commands to try:
 # - `00:45.` prints `E` to `stdout`
 # - `B0:01.B0!` moves the stack to the display buffer
 # - `F0:F0.E3.F0!` halts the processor at `0xF0`

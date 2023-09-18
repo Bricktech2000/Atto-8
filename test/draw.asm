@@ -25,7 +25,7 @@ main!
     clc ld0 ad2
 
     # invert pixel at xy_pos
-    !u4u4.ld1 !display_buffer !bit_addr !flip_bit
+    !u4u4.ld0+1 !display_buffer !bit_addr !flip_bit
 
     x20 !delay
   :loop !jmp
