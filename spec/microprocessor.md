@@ -87,40 +87,40 @@ These design decisions greatly simplify the hardware complexity of the Atto-8 mi
 
 The instruction set of the Atto-8 microprocessor adheres to the Atto-8 microarchitecture as defined in [/spec/microarchitecture.md](../spec/microarchitecture.md). Instruction clock cycle counts are detailed below.
 
-| Instruction | Clocks  |
-| ----------- | ------- |
-| `psh IMM`   | `10`    |
-| `add SIZE`  | `16`    |
-| `sub SIZE`  | `16`    |
-| `iff SIZE`  | `15`    |
-| `rot SIZE`  | &mdash; |
-| `orr SIZE`  | `16`    |
-| `and SIZE`  | `13`    |
-| `xor SIZE`  | `24`    |
-| `xnd SIZE`  | `10`    |
-| `inc`       | `6`     |
-| `dec`       | `8`     |
-| `neg`       | `11`    |
-| `shl`       | `9`     |
-| `shr`       | `16`    |
-| `not`       | `8`     |
-| `buf`       | `9`     |
-| `ldo OFST`  | `14`    |
-| `sto OFST`  | `13`    |
-| `lda`       | `9`     |
-| `sta`       | `15`    |
-| `ldi`       | `9`     |
-| `sti`       | `6`     |
-| `lds`       | `10`    |
-| `sts`       | `5`     |
-| `nop`       | `3`     |
-| `clc`       | `6`     |
-| `sec`       | `6`     |
-| `flc`       | `6`     |
-| `swp`       | `15`    |
-| `pop`       | `5`     |
-| `phn IMM`   | `10`    |
+| Instruction | Clocks                          |
+| ----------- | ------------------------------- |
+| `psh IMM`   | `10`                            |
+| `add SIZE`  | `14 + SIZE`                     |
+| `sub SIZE`  | `14 + SIZE`                     |
+| `iff SIZE`  | `13 + SIZE`                     |
+| `rot SIZE`  | `18 + SIZE + *SP * (18 + SIZE)` |
+| `orr SIZE`  | `14 + SIZE`                     |
+| `and SIZE`  | `11 + SIZE`                     |
+| `xor SIZE`  | `22 + SIZE`                     |
+| `xnd SIZE`  | `8 + SIZE`                      |
+| `inc`       | `6`                             |
+| `dec`       | `8`                             |
+| `neg`       | `11`                            |
+| `shl`       | `9`                             |
+| `shr`       | `16`                            |
+| `not`       | `8`                             |
+| `buf`       | `9`                             |
+| `ldo OFST`  | `12 + OFST`                     |
+| `sto OFST`  | `11 + OFST`                     |
+| `lda`       | `9`                             |
+| `sta`       | `15`                            |
+| `ldi`       | `9`                             |
+| `sti`       | `6`                             |
+| `lds`       | `10`                            |
+| `sts`       | `5`                             |
+| `nop`       | `3`                             |
+| `clc`       | `6`                             |
+| `sec`       | `6`                             |
+| `flc`       | `6`                             |
+| `swp`       | `15`                            |
+| `pop`       | `5`                             |
+| `phn IMM`   | `10`                            |
 
-The `rot` instruction requires `19` clock cycles to execute, plus another `19` for every bit rotated. Consequently, `rot` can be used as a stall instruction.
+The `rot SIZE` instruction requires `18 + SIZE` clock cycles to execute, plus another `18 + SIZE` for every bit rotated. Consequently, `rot` can be used as a stall instruction.
 
 Memory reads and writes around `SP` must be idempotent, and a memory read from an address around `SP` must yield the last value written to that address. That is, stack memory is expected to behave like "normal" memory. If this expectation is not fulfilled, the behavior of instructions accessing the stack is undefined.

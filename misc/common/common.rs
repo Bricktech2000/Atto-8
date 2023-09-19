@@ -455,7 +455,7 @@ pub enum Instruction {
 
 pub fn opcode_to_instruction(opcode: u8) -> Result<Instruction, u8> {
   fn decode_imm(opcode: u8) -> u8 {
-    return opcode & 0b1111111;
+    return opcode & 0b01111111;
   }
 
   fn decode_size(opcode: u8) -> u8 {

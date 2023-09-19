@@ -194,8 +194,9 @@ impl Tickable for Microcomputer {
       0b0 => mp.il | 0xF0, // map `psh` to `phn` as both have equivalent microcode
       _ => mp.il,          // not `psh`; pass through
     };
+    let il = il & 0x80 - 1; // ignore `psh`s as they have been mapped to `phn`s
     mp.ctrl = common::u16_into_result(
-      mp.mic[(il as usize & 0x80 - 1) * 0x02 * 0x20 | mp.cf as usize * 0x20 | mp.sc as usize],
+      mp.mic[il as usize * 0x02 * 0x20 | mp.cf as usize * 0x20 | mp.sc as usize],
     )?;
     (mp.size_data, mp.set_cin) = match mp.ctrl.sum_data {
       Signal::Inactive => (mp.ctrl.size_and_cin, Signal::Inactive),

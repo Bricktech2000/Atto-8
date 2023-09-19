@@ -125,76 +125,76 @@ impl Tickable for Microcomputer {
       }
 
       Instruction::Add(size) => {
-        let size = mp.sp.wrapping_add(size);
+        let s = mp.sp.wrapping_add(size);
         let a = pop!();
-        let b = mem_read!(size);
+        let b = mem_read!(s);
         let sum = b as u16 + a as u16 + mp.cf as u16;
-        mem_write!(size, sum as u8);
+        mem_write!(s, sum as u8);
         mp.cf = sum > 0xFF;
-        Ok(16)
+        Ok(14 + size as u128)
       }
 
       Instruction::Sub(size) => {
-        let size = mp.sp.wrapping_add(size);
+        let s = mp.sp.wrapping_add(size);
         let a = pop!();
-        let b = mem_read!(size);
+        let b = mem_read!(s);
         let diff = b as i16 - a as i16 - mp.cf as i16;
-        mem_write!(size, diff as u8);
+        mem_write!(s, diff as u8);
         mp.cf = diff < 0x00;
-        Ok(16)
+        Ok(14 + size as u128)
       }
 
       Instruction::Iff(size) => {
-        let size = mp.sp.wrapping_add(size);
+        let s = mp.sp.wrapping_add(size);
         let a = pop!();
-        let b = mem_read!(size);
-        mem_write!(size, if mp.cf { a } else { b });
-        Ok(15)
+        let b = mem_read!(s);
+        mem_write!(s, if mp.cf { a } else { b });
+        Ok(13 + size as u128)
       }
 
       Instruction::Rot(size) => {
-        let size = mp.sp.wrapping_add(size);
+        let s = mp.sp.wrapping_add(size);
         let a = pop!();
-        let b = mem_read!(size);
+        let b = mem_read!(s);
         let shifted = (b as u16) << a % 8;
-        mem_write!(size, (shifted & 0xFF) as u8 | (shifted >> 8) as u8);
+        mem_write!(s, (shifted & 0xFF) as u8 | (shifted >> 8) as u8);
         mp.cf = false;
-        Ok(19 * (a as u128 + 1))
+        Ok((18 + size as u128) * (a as u128 + 1))
       }
 
       Instruction::Orr(size) => {
-        let size = mp.sp.wrapping_add(size);
+        let s = mp.sp.wrapping_add(size);
         let a = pop!();
-        let b = mem_read!(size);
-        mem_write!(size, a | b);
-        mp.cf = mem_read!(size) == 0x00;
-        Ok(16)
+        let b = mem_read!(s);
+        mem_write!(s, a | b);
+        mp.cf = mem_read!(s) == 0x00;
+        Ok(14 + size as u128)
       }
 
       Instruction::And(size) => {
-        let size = mp.sp.wrapping_add(size);
+        let s = mp.sp.wrapping_add(size);
         let a = pop!();
-        let b = mem_read!(size);
-        mem_write!(size, a & b);
-        mp.cf = mem_read!(size) == 0x00;
-        Ok(13)
+        let b = mem_read!(s);
+        mem_write!(s, a & b);
+        mp.cf = mem_read!(s) == 0x00;
+        Ok(11 + size as u128)
       }
 
       Instruction::Xor(size) => {
-        let size = mp.sp.wrapping_add(size);
+        let s = mp.sp.wrapping_add(size);
         let a = pop!();
-        let b = mem_read!(size);
-        mem_write!(size, a ^ b);
-        mp.cf = mem_read!(size) == 0x00;
-        Ok(24)
+        let b = mem_read!(s);
+        mem_write!(s, a ^ b);
+        mp.cf = mem_read!(s) == 0x00;
+        Ok(22 + size as u128)
       }
 
       Instruction::Xnd(size) => {
-        let size = mp.sp.wrapping_add(size);
+        let s = mp.sp.wrapping_add(size);
         let _ = pop!();
-        mem_write!(size, 0x00);
-        mp.cf = mem_read!(size) == 0x00;
-        Ok(10)
+        mem_write!(s, 0x00);
+        mp.cf = mem_read!(s) == 0x00;
+        Ok(8 + size as u128)
       }
 
       Instruction::Inc => {
@@ -241,15 +241,15 @@ impl Tickable for Microcomputer {
       Instruction::Dbg => Err(TickTrap::DebugRequest),
 
       Instruction::Ldo(ofst) => {
-        let ofst = mp.sp.wrapping_add(ofst);
-        push!(mem_read!(ofst));
-        Ok(14)
+        let o = mp.sp.wrapping_add(ofst);
+        push!(mem_read!(o));
+        Ok(12 + ofst as u128)
       }
 
       Instruction::Sto(ofst) => {
-        let ofst = mp.sp.wrapping_add(ofst).wrapping_add(1);
-        mem_write!(ofst, pop!());
-        Ok(13)
+        let o = mp.sp.wrapping_add(ofst).wrapping_add(1);
+        mem_write!(o, pop!());
+        Ok(11 + ofst as u128)
       }
 
       Instruction::Lda => {

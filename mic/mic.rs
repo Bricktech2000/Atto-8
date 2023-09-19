@@ -59,6 +59,9 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
     ($($control_word:expr),*) => {
       vec![$($control_word.clone(),)*].concat()
     };
+    ($control_word:expr; $n:expr) => {
+      vec![$control_word.clone(); $n].concat()
+    };
   }
 
   // convenience function for printing instruction clocks
@@ -69,8 +72,6 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
   }
 
   let sp_xl = ControlWord! {sp_data, data_xl};
-  let ofst_yl = ControlWord! {ofst_and_cf, data_yl};
-  let size_yl = ControlWord! {size_and_cin, data_yl};
   let ip_alxl = ControlWord! {ip_data, data_al, data_xl};
   let mem_ilzl = ControlWord! {mem_data, data_il, data_zl};
   let nand_ylzl = ControlWord! {nand_data, data_yl, data_zl};
@@ -100,7 +101,8 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
   let nand_ylcf = ControlWord! {nand_data, data_yl, ofst_and_cf};
   let mem_xlyl = ControlWord! {mem_data, data_xl, data_yl};
   let nand_al = ControlWord! {nand_data, data_al};
-  let cinsum_spxl = ControlWord! {size_and_cin, sum_data, data_sp, data_xl};
+  let cinsum_spxl = ControlWord! {size_and_cin, sum_data, data_sp, data_al, data_xl};
+  let cinsum_alxl = ControlWord! {size_and_cin, sum_data, data_al, data_xl};
   let cinsum_al = ControlWord! {size_and_cin, sum_data, data_al};
   let nand_zlcf = ControlWord! {nand_data, data_zl, ofst_and_cf};
   let cinsum_xlcf = ControlWord! {size_and_cin, sum_data, data_xl, ofst_and_cf};
@@ -108,9 +110,8 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
   let cinsum_xlylcf = ControlWord! {size_and_cin, sum_data, data_xl, data_yl, ofst_and_cf};
   let sum_xlylcf = ControlWord! {sum_data, data_xl, data_yl, ofst_and_cf};
   let mem_yl = ControlWord! {mem_data, data_yl};
-  let cinsum_zl = ControlWord! {size_and_cin, sum_data, data_zl};
-  let sum_memcf = ControlWord! {sum_data, data_mem, ofst_and_cf};
-  let sum_zl = ControlWord! {sum_data, data_zl};
+  let cinsum_xl = ControlWord! {size_and_cin, sum_data, data_xl};
+  let sum_xl = ControlWord! {sum_data, data_xl};
   let nand_memyl = ControlWord! {nand_data, data_mem, data_yl};
   let set_xlylzl = ControlWord! {data_xl, data_yl, data_zl};
   let ip_mem = ControlWord! {ip_data, data_mem};
@@ -125,7 +126,7 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
   let microcode: [[[Result<ControlWord, TickTrap>; 0x20]; 0x02]; 0x80] = [[[(); 0x20]; 0x02]; 0x80]
     .iter()
     .enumerate()
-    .map(|(opcode, rest)| (opcode as u8 | 0x80, rest)) // map `psh` to `phn` as both have equivalent microcode
+    .map(|(opcode, rest)| (opcode as u8 | 0x80, rest)) // ignore `psh`s as they will be mapped to `phn`s by `sim`
     .map(|(opcode, rest)| {
       rest
         .iter()
@@ -136,20 +137,20 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
             .iter()
             .enumerate()
             .map(|(step, rest)| (step as usize, rest))
-            .map(|(step, _rest)| {
+            .map(|(step, rest)| {
+              let () = rest;
               let seq =
                 match common::opcode_to_instruction(opcode).map_err(|_| TickTrap::IllegalOpcode)? {
                   Instruction::Psh(_imm) => {
                     unreachable!()
                   }
-                  Instruction::Add(_size) => {
+                  Instruction::Add(size) => {
                     seq![
                       fetch, //
                       sp_alxl,
-                      cinsum_sp, // SP++
-                      mem_zl,    // *SP -> ZL
-                      size_yl,
-                      sum_al, // SP + SIZE -> AL
+                      cinsum_sp,                        // SP++
+                      mem_zl,                           // *SP -> ZL
+                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
                       set_yl,
                       nand_zl,
                       nand_yl, // ZL -> YL
@@ -164,14 +165,13 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Sub(_size) => {
+                  Instruction::Sub(size) => {
                     seq![
                       fetch, //
                       sp_alxl,
-                      cinsum_sp, // SP++
-                      mem_zl,    // *SP -> ZL
-                      size_yl,
-                      sum_al, // SP + SIZE -> AL
+                      cinsum_sp,                        // SP++
+                      mem_zl,                           // *SP -> ZL
+                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
                       set_yl,
                       nand_yl, // ~ZL -> YL
                       mem_xl,  // *AL -> XL
@@ -188,18 +188,17 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Iff(_size) => {
+                  Instruction::Iff(size) => {
                     seq![
                       fetch, //
                       sp_alxl,
-                      cinsum_sp, // SP++
-                      mem_zl,    // *SP -> ZL
-                      size_yl,
-                      sum_al, // SP + SIZE -> AL
-                      mem_xl, // *AL -> XL
+                      cinsum_sp,                        // SP++
+                      mem_zl,                           // *SP -> ZL
+                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
+                      mem_xl,                           // *AL -> XL
                       set_yl,
                       match carry {
-                        true => seq![nand_zl, nand_xl], // ZL -> xL
+                        true => seq![nand_zl, nand_xl], // ZL -> XL
                         false => seq![noop, noop],      // no-op
                       },
                       cinsum_mem, // XL -> *AL
@@ -207,89 +206,99 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Rot(_size) => {
+                  Instruction::Rot(size) => {
                     seq![
                       match carry {
-                        true => seq![set_yl, nand_zl, nand_mem],
+                        true => seq![clr_yl, noop],
                         false => seq![fetch],
                       }, // continuation of match below
-                      sp_xl,
-                      size_yl,
-                      sum_al, // SP + SIZE -> AL
+                      sp_alxl,
+                      mem_zl,                           // *SP -> ZL
+                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
                       mem_xlyl,
-                      sum_xlcf, // *AL + *AL -> XL
-                      clr_yl,
-                      match carry {
-                        true => seq![cinsum_zl], // XL + 1 -> ZL
-                        false => seq![sum_zl],   // XL -> ZL
-                      },
-                      sp_al,
-                      mem_xl,
+                      cinsum_xlcf, // *AL + *AL -> XL; XL++
                       set_yl,
-                      sum_memcf, // *SP - 1 -> *SP
                       match carry {
-                        // not done. store shifted value
-                        true => seq![sp_xl, size_yl, sum_al, noop], // ZL -> *(SP + SIZE)
-                        // done. ignore shifted value, pop counter, fetch next instruction
-                        false => seq![clr_yl, sp_xl, cinsum_sp], // SP++
+                        true => seq![cinsum_xl], // --XL + 1 -> XL
+                        false => seq![sum_xl],   // --XL -> XL
+                      },
+                      nand_zl,
+                      nand_zlcf, // test ZL == 0x00
+                      match carry {
+                        // done. ignore shifted value, pop counter, clear carry, fetch next instruction
+                        true => seq![clr_yl, sp_alxl, cinsum_sp, clr_cf], // SP++
+                        // not done. store shifted value, decrement counter, set carry
+                        false => seq![cinsum_mem, sp_al, mem_xl, sum_mem, set_cf], // XL -> *AL; *SP - 1 -> *SP
                       }
                     ]
                   }
 
-                  Instruction::Orr(_size) => {
+                  Instruction::Orr(size) => {
                     seq![
                       fetch, //
-                      sp_alxl, cinsum_sp, // SP++
-                      mem_zl,    // *SP -> ZL
-                      size_yl, sum_al, // SP + SIZE -> AL
-                      set_yl, nand_xl, // ~ZL -> XL
-                      mem_zl, nand_zl,    // ~*AL -> ZL
+                      sp_alxl,
+                      cinsum_sp,                        // SP++
+                      mem_zl,                           // *SP -> ZL
+                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
+                      set_yl,
+                      nand_xl, // ~ZL -> XL
+                      mem_zl,
+                      nand_zl,    // ~*AL -> ZL
                       cinsum_yl,  // XL -> YL
                       nand_memcf, // YL NAND ZL -> *AL
                       clr_yl      //
                     ]
                   }
 
-                  Instruction::And(_size) => {
+                  Instruction::And(size) => {
                     seq![
                       fetch, //
-                      sp_alxl, cinsum_sp, // SP++
-                      mem_zl,    // *SP -> ZL
-                      size_yl, sum_al, // SP + SIZE -> AL
-                      mem_yl, // *AL -> YL
-                      nand_ylzl, nand_memcf, // ~(YL NAND ZL) -> *AL
-                      clr_yl      //
-                    ]
-                  }
-
-                  Instruction::Xor(_size) => {
-                    seq![
-                      fetch, //
-                      sp_alxl, cinsum_sp, // SP++
-                      mem_zl,    // *SP -> ZL
-                      size_yl, sum_al, // SP + SIZE -> AL
-                      set_yl, nand_zl, nand_xl, // ZL -> XL
-                      mem_zl, nand_zl,   // ~*AL -> ZL
-                      cinsum_yl, // XL -> YL
-                      nand_xl,   // YL NAND ZL -> XL
-                      // ---
-                      set_zl, nand_yl, // ~YL -> YL
-                      mem_zl,  // *AL -> ZL
-                      nand_zl, // YL NAND ZL -> ZL
-                      set_yl, cinsum_yl,  // XL -> YL
+                      sp_alxl,
+                      cinsum_sp,                        // SP++
+                      mem_zl,                           // *SP -> ZL
+                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
+                      mem_yl,                           // *AL -> YL
+                      nand_ylzl,
                       nand_memcf, // ~(YL NAND ZL) -> *AL
                       clr_yl      //
                     ]
                   }
 
-                  Instruction::Xnd(_size) => {
+                  Instruction::Xor(size) => {
                     seq![
                       fetch, //
-                      sp_alxl, cinsum_sp, // SP++
-                      size_yl, sum_al,     // SP + SIZE -> AL
-                      set_xlylzl, // 0xFF -> XL; 0xFF -> YL; 0xFF -> ZL
-                      sum_xlcf,   // 1 -> CF
-                      nand_memyl  // 0x00 -> YL; 0x00 -> *AL
+                      sp_alxl,
+                      cinsum_sp,                        // SP++
+                      mem_zl,                           // *SP -> ZL
+                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
+                      set_yl,
+                      nand_zl,
+                      nand_xl, // ZL -> XL
+                      mem_zl,
+                      nand_zl,   // ~*AL -> ZL
+                      cinsum_yl, // XL -> YL
+                      nand_xl,   // YL NAND ZL -> XL
+                      // ---
+                      set_zl,
+                      nand_yl, // ~YL -> YL
+                      mem_zl,  // *AL -> ZL
+                      nand_zl, // YL NAND ZL -> ZL
+                      set_yl,
+                      cinsum_yl,  // XL -> YL
+                      nand_memcf, // ~(YL NAND ZL) -> *AL
+                      clr_yl      //
+                    ]
+                  }
+
+                  Instruction::Xnd(size) => {
+                    seq![
+                      fetch, //
+                      sp_alxl,
+                      cinsum_sp,                        // SP++
+                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
+                      set_xlylzl,                       // 0xFF -> XL; 0xFF -> YL; 0xFF -> ZL
+                      sum_xlcf,                         // 1 -> CF
+                      nand_memyl                        // 0x00 -> YL; 0x00 -> *AL
                     ]
                   }
 
@@ -340,14 +349,8 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                       sp_al,
                       mem_xlyl, // *SP -> XL; *SP -> YL
                       match carry {
-                        true => std::iter::repeat(seq![cinsum_xlylcf])
-                          .take(8)
-                          .flatten()
-                          .collect::<Vec<_>>(), // XL + XL -> XL; XL + XL -> YL
-                        false => std::iter::repeat(seq![sum_xlylcf])
-                          .take(8)
-                          .flatten()
-                          .collect::<Vec<_>>(), // XL + XL -> XL; XL + XL -> YL
+                        true => seq![cinsum_xlylcf; 8], // XL + XL -> XL; XL + XL -> YL
+                        false => seq![sum_xlylcf; 8],   // XL + XL -> XL; XL + XL -> YL
                       },
                       set_ylzl,
                       cinsum_mem, // XL -> *SP
@@ -375,25 +378,28 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                     seq![fetch, vec![Err(TickTrap::DebugRequest)]]
                   }
 
-                  Instruction::Ldo(_ofst) => {
+                  Instruction::Ldo(ofst) => {
                     seq![
                       fetch, //
-                      sp_xl, ofst_yl, sum_al, // SP + OFST -> AL
-                      mem_zl, // *AL -> ZL
-                      sp_xl, set_yl, sum_spal, // SP-- -> AL
-                      nand_zl, nand_mem, // ZL -> *AL
+                      sp_alxl,
+                      seq![cinsum_alxl; ofst as usize], // SP + OFST -> AL
+                      mem_zl,                           // *AL -> ZL
+                      sp_xl,
+                      set_yl,
+                      sum_spal, // SP-- -> AL
+                      nand_zl,
+                      nand_mem, // ZL -> *AL
                       clr_yl    //
                     ]
                   }
 
-                  Instruction::Sto(_ofst) => {
+                  Instruction::Sto(ofst) => {
                     seq![
                       fetch, //
                       sp_alxl,
                       mem_zl, // *SP -> ZL
                       cinsum_spxl,
-                      ofst_yl,
-                      sum_al, // ++SP + OFST -> AL
+                      seq![cinsum_alxl; ofst as usize], // ++SP + OFST -> AL
                       set_yl,
                       nand_zl,
                       nand_mem, // ZL -> *AL
@@ -483,9 +489,9 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
 
                   Instruction::Pop => {
                     seq![
-                    fetch,
-                    sp_xl, cinsum_sp // SP++
-                  ]
+                      fetch,
+                      sp_xl, cinsum_sp // SP++
+                    ]
                   }
 
                   Instruction::Phn(_imm) => {
