@@ -509,22 +509,22 @@ fn assemble(
 
     roots =
       match_replace(&roots, |window| match window {
-        [Root::Node(node), Root::Instruction(Instruction::Orr(0x01))]
+        [Root::Node(node), Root::Instruction(Instruction::Orr(_size))]
           if eval(&node, &HashMap::new()) == Ok(0x00) =>
         {
           Some(vec![])
         }
-        [Root::Node(node), Root::Instruction(Instruction::And(0x01))]
+        [Root::Node(node), Root::Instruction(Instruction::And(_size))]
           if eval(&node, &HashMap::new()) == Ok(0xFF) =>
         {
           Some(vec![])
         }
-        [Root::Node(node), Root::Instruction(Instruction::Xor(0x01))]
+        [Root::Node(node), Root::Instruction(Instruction::Xor(_size))]
           if eval(&node, &HashMap::new()) == Ok(0x00) =>
         {
           Some(vec![])
         }
-        [Root::Node(node), Root::Instruction(Instruction::Add(0x01))]
+        [Root::Node(node), Root::Instruction(Instruction::Add(_size))]
           if eval(&node, &HashMap::new()) == Ok(0x00) =>
         {
           Some(vec![])
@@ -534,7 +534,7 @@ fn assemble(
         {
           Some(vec![Root::Instruction(Instruction::Inc)])
         }
-        [Root::Node(node), Root::Instruction(Instruction::Sub(0x01))]
+        [Root::Node(node), Root::Instruction(Instruction::Sub(_size))]
           if eval(&node, &HashMap::new()) == Ok(0x00) =>
         {
           Some(vec![])

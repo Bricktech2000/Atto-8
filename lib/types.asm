@@ -168,10 +168,10 @@ char.digit_count! !char.digit_nine !char.digit_zero sub inc @const
 char.small_letter_count! !char.latin_small_letter_z !char.latin_small_letter_a sub inc @const
 char.capital_letter_count! !char.latin_capital_letter_z !char.latin_capital_letter_a sub inc @const
 
-u8.add! add
-u16.add! ad2 ad2
-u32.add! ad4 ad4 ad4 ad4
-u64.add! ad8 ad8 ad8 ad8 ad8 ad8 ad8 ad8
+u8.add! add @dyn
+u16.add! ad2 @dyn ad2 @dyn
+u32.add! ad4 @dyn ad4 @dyn ad4 @dyn ad4 @dyn
+u64.add! ad8 @dyn ad8 @dyn ad8 @dyn ad8 @dyn ad8 @dyn ad8 @dyn ad8 @dyn ad8 @dyn
 i8.add! !u8.add
 i16.add! !u16.add
 i32.add! !u32.add
@@ -184,14 +184,14 @@ u4f4.add! !u8.add
 u8f8.add! !u16.add
 i4f4.add! !i8.add
 i8f8.add! !i16.add
-c4f4m4f4.add! ad4 ad4 clc ad4 ad4
-c8f8m8f8.add! ad4 ad4 clc ad4 ad4
+c4f4m4f4.add! ad4 @dyn ad4 @dyn clc ad4 @dyn ad4 @dyn
+c8f8m8f8.add! ad4 @dyn ad4 @dyn clc ad4 @dyn ad4 @dyn
 char.add! !u8.add
 
-u8.sub! sub
-u16.sub! su2 su2
-u32.sub! su4 su4 su4 su4
-u64.sub! su8 su8 su8 su8 su8 su8 su8 su8
+u8.sub! sub @dyn
+u16.sub! su2 @dyn su2 @dyn
+u32.sub! su4 @dyn su4 @dyn su4 @dyn su4 @dyn
+u64.sub! su8 @dyn su8 @dyn su8 @dyn su8 @dyn su8 @dyn su8 @dyn su8 @dyn su8 @dyn
 i8.sub! !u8.sub
 i16.sub! !u16.sub
 i32.sub! !u32.sub
@@ -204,8 +204,8 @@ u4f4.sub! !u8.sub
 u8f8.sub! !u16.sub
 i4f4.sub! !i8.sub
 i8f8.sub! !i16.sub
-c4f4m4f4.sub! su4 su4 clc su4 su4
-c8f8m8f8.sub! su4 su4 clc su4 su4
+c4f4m4f4.sub! su4 @dyn su4 @dyn clc su4 @dyn su4 @dyn
+c8f8m8f8.sub! su4 @dyn su4 @dyn clc su4 @dyn su4 @dyn
 char.sub! !u8.sub
 
 u8.iff! iff
