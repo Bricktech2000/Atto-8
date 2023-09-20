@@ -21,7 +21,7 @@ delay! # delay(iterations)
   loop. x1F !stall x01 sub @dyn .loop !bcc pop
 
 delay_long! # delay_long(iterations)
-  x00 loop. x1F !stall x00 x01 su2 su2 .loop !bcc pop pop
+  x00 loop. x1F !stall x00 x01 su2 @dyn su2 @dyn .loop !bcc pop pop
 
 
 # block until a key is pressed

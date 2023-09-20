@@ -12,7 +12,7 @@ main!
   # wait and consume first two nibbles
   !block_any !block_any
   # offset to start of video
-  xFF !delay x80 !delay
+  x03 !delay_long x01 !delay x00 !stall
 
   frame_loop:
     !display_buffer for_byte:
@@ -27,7 +27,7 @@ main!
     inc !check_zero :for_byte !bcc pop
 
     # stall until next frame
-    x02 !delay x15 !stall
+    x09 !delay x17 !stall
   :frame_loop !jmp
 
   done: !hlt
