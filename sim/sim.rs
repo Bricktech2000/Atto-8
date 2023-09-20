@@ -60,16 +60,9 @@ fn main() {
       zl: 0x00,
 
       ctrl: ControlWord::default(),
-      size_data: Signal::Inactive,
-      ofst_data: Signal::Inactive,
-      set_cin: Signal::Inactive,
-      cout_cf: Signal::Inactive,
-      zero_cf: Signal::Inactive,
-      ones_data: Signal::Inactive,
+      pull: Signal::Inactive,
 
       ones: 0x00,
-      size: 0x00,
-      ofst: 0x00,
       sum: 0x00,
       nand: 0x00,
       cin: false,
@@ -114,16 +107,9 @@ struct Microprocessor {
   zl: u8,   // Z latch
 
   ctrl: ControlWord, // control word derivation
-  size_data: Signal, // size-to-data derivation
-  ofst_data: Signal, // offset-to-data derivation
-  set_cin: Signal,   // set-to-carry-in derivation
-  cout_cf: Signal,   // carry-out-to-carry-flag derivation
-  zero_cf: Signal,   // zero-to-carry-flag derivation
-  ones_data: Signal, // ones-to-data derivation
+  pull: Signal,      // pull-up derivation
 
   ones: u8,   // ones derivation
-  size: u8,   // size derivation
-  ofst: u8,   // offset derivation
   sum: u8,    // sum derivation
   nand: u8,   // not-and derivation
   cin: bool,  // sum carry-in derivation
@@ -198,25 +184,7 @@ impl Tickable for Microcomputer {
     mp.ctrl = common::u16_into_result(
       mp.mic[il as usize * 0x02 * 0x20 | mp.cf as usize * 0x20 | mp.sc as usize],
     )?;
-    (mp.size_data, mp.set_cin) = match mp.ctrl.sum_data {
-      Signal::Inactive => (mp.ctrl.size_and_cin, Signal::Inactive),
-      Signal::Active => (Signal::Inactive, mp.ctrl.size_and_cin),
-    };
-    (mp.ofst_data, mp.cout_cf, mp.zero_cf) = match (mp.ctrl.sum_data, mp.ctrl.nand_data) {
-      (Signal::Inactive, Signal::Inactive) => {
-        (mp.ctrl.ofst_and_cf, Signal::Inactive, Signal::Inactive)
-      }
-      (Signal::Active, Signal::Inactive) => {
-        (Signal::Inactive, mp.ctrl.ofst_and_cf, Signal::Inactive)
-      }
-      (Signal::Inactive, Signal::Active) => {
-        (Signal::Inactive, Signal::Inactive, mp.ctrl.ofst_and_cf)
-      }
-      _ => return Err(TickTrap::MicrocodeFault),
-    };
     let active_count = [
-      mp.size_data,
-      mp.ofst_data,
       mp.ctrl.ip_data,
       mp.ctrl.sp_data,
       mp.ctrl.mem_data,
@@ -229,7 +197,7 @@ impl Tickable for Microcomputer {
       Signal::Inactive => false,
     })
     .count();
-    mp.ones_data = match active_count {
+    mp.pull = match active_count {
       0 => Ok(Signal::Active),
       1 => Ok(Signal::Inactive),
       _ => Err(TickTrap::BusFault),
@@ -237,7 +205,7 @@ impl Tickable for Microcomputer {
 
     // ones
     mp.ones = 0xFF;
-    if let Signal::Active = mp.ones_data {
+    if let Signal::Active = mp.pull {
       self.data = mp.ones;
     }
 
@@ -250,18 +218,10 @@ impl Tickable for Microcomputer {
     if let Signal::Active = mp.ctrl.clr_sc {
       mp.sc = 0x00; // asynchronous
     }
-    if let Signal::Active = mp.size_data {
-      self.data = mp.size;
-    }
-    if let Signal::Active = mp.ofst_data {
-      self.data = mp.ofst;
-    }
     if let Reset::Asserted = self.rst {
       mp.il = 0x00;
       mp.sc = 0x00;
     }
-    mp.size = 1 << (mp.il & 0b00000011); // decode_size
-    mp.ofst = mp.il & 0b00001111; // decode_ofst
 
     // instruction pointer
     if let Clock::Rising = self.clk {
@@ -291,11 +251,12 @@ impl Tickable for Microcomputer {
 
     // carry flag
     if let Clock::Rising = self.clk {
-      if let Signal::Active = mp.cout_cf {
-        mp.cf = mp.cout;
-      }
-      if let Signal::Active = mp.zero_cf {
-        mp.cf = mp.zero;
+      if let Signal::Active = mp.ctrl.data_cf {
+        mp.cf = match (mp.ctrl.sum_data, mp.ctrl.nand_data) {
+          (Signal::Active, Signal::Inactive) => Ok(mp.cout),
+          (Signal::Inactive, Signal::Active) => Ok(mp.zero),
+          _ => Err(TickTrap::BusFault),
+        }?;
       }
     }
     if let Reset::Asserted = self.rst {
@@ -346,7 +307,7 @@ impl Tickable for Microcomputer {
     mp.cout = sum > 0xFF;
     mp.nand = nand;
     mp.zero = nand == 0x00;
-    mp.cin = match mp.ctrl.size_and_cin {
+    mp.cin = match mp.ctrl.set_cin {
       Signal::Active => true,
       Signal::Inactive => false,
     };
@@ -405,33 +366,27 @@ impl std::fmt::Display for Microprocessor {
         self.ip, self.sp, self.cf as u8, self.il, self.sc, self.al, self.xl, self.yl, self.zl
       ),
       format!(
-        "CTRL  {} {} {} {} {} {} {} {}  {} {} {}\r\n      {} {} {} {} {} {} {} {}  {} {} {}\r\n",
+        "CTRL  {} {} {} {} {} {} {} {}\r\n      {} {} {} {} {} {} {} {}\r\n",
         self.ctrl.clr_sc,
         self.ctrl.data_il,
-        self.ctrl.size_and_cin,
-        self.ctrl.ofst_and_cf,
+        self.ctrl.data_cf,
         self.ctrl.ip_data,
         self.ctrl.data_ip,
         self.ctrl.sp_data,
         self.ctrl.data_sp,
-        self.size_data,
-        self.ofst_data,
-        self.set_cin,
         self.ctrl.data_al,
         self.ctrl.mem_data,
         self.ctrl.data_mem,
         self.ctrl.data_xl,
         self.ctrl.data_yl,
         self.ctrl.data_zl,
+        self.ctrl.set_cin,
         self.ctrl.sum_data,
         self.ctrl.nand_data,
-        self.cout_cf,
-        self.zero_cf,
-        self.ones_data,
       ),
       format!(
-        "ONES  SIZE  OFST  SUM  NAND  CIN  COUT  ZERO\r\n{:02X}    {:02X}    {:02X}    {:02X}   {:02X}    {:01X}    {:01X}     {:01X}\r\n",
-        self.ones, self.size, self.ofst, self.sum, self.nand, self.cin as u8, self.cout as u8, self.zero as u8,
+        "PULL  ONES  SUM  NAND  CIN  COUT  ZERO\r\n{}    {:02X}    {:02X}   {:02X}    {:01X}    {:01X}     {:01X}\r\n",
+        self.pull, self.ones, self.sum, self.nand, self.cin as u8, self.cout as u8, self.zero as u8,
       ),
       format!(
         "MIC  ({} B)\r\n",

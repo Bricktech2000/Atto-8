@@ -8,10 +8,9 @@ pub const DISPLAY_BUFFER: usize = 0xE0;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ControlWord {
-  pub clr_sc: Signal,       // clear to step counter
-  pub data_il: Signal,      // data bus to instruction latch
-  pub size_and_cin: Signal, // size and carry in
-  pub ofst_and_cf: Signal,  // offset and carry flag
+  pub clr_sc: Signal,  // clear to step counter
+  pub data_il: Signal, // data bus to instruction latch
+  pub data_cf: Signal, // data bus to carry flag
 
   pub ip_data: Signal, // instruction pointer to data bus
   pub data_ip: Signal, // data bus to instruction pointer
@@ -26,6 +25,7 @@ pub struct ControlWord {
   pub data_xl: Signal,   // data bus to X latch
   pub data_yl: Signal,   // data bus to Y latch
   pub data_zl: Signal,   // data bus to Z latch
+  pub set_cin: Signal,   // set to carry in
   pub sum_data: Signal,  // sum to data bus
   pub nand_data: Signal, // not-and to data bus
 }

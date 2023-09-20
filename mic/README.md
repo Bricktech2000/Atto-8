@@ -11,3 +11,5 @@ Unofficial instruction `0xBB` is mapped to unofficial control word `0xFFFD` for 
 ## Conventions
 
 The fetch cycle assumes that `YL` is set to `0x00`, which allows it to be significantly shorter. Consequently, every instruction must reset `YL` to `0x00` before clearing `SC` and fetching the next instruction.
+
+Microcode branches are performed by matching against `CF` and microcode loops are performed by setting `SC` to `0x00` through `CLR_SC`.
