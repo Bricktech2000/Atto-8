@@ -209,8 +209,10 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
     if next_print_time <= std::time::Instant::now() || debug_mode {
       next_print_time += std::time::Duration::from_millis(1000 / 60);
 
-      print!("\x1B[2J"); // clear screen
-      print!("\x1B[1;1H"); // move cursor to top left
+      let term = console::Term::stdout();
+      term.clear_screen().unwrap();
+      term.move_cursor_to(0, 0).unwrap();
+
       print!("{}\r\n", status_line);
       print!("\r\n");
       if show_state || debug_mode {
