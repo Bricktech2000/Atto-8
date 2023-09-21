@@ -494,7 +494,7 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Phn(_imm) => {
+                  Instruction::Phn(_nimm) => {
                     seq![
                       fetch, // instruction is in ZL
                       sp_xl, set_yl, sum_spal, // SP-- -> AL

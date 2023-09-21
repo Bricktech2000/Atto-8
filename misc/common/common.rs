@@ -468,6 +468,10 @@ pub fn opcode_to_instruction(opcode: u8) -> Result<Instruction, u8> {
     return opcode & 0b00001111;
   }
 
+  fn decode_nimm(opcode: u8) -> u8 {
+    return opcode | 0b11110000;
+  }
+
   match (opcode & 0b10000000) >> 7 {
     0b0 => Ok(Instruction::Psh(decode_imm(opcode))),
     0b1 => {
@@ -527,7 +531,7 @@ pub fn opcode_to_instruction(opcode: u8) -> Result<Instruction, u8> {
                     _ => Err(opcode),
                   }
                 }
-                0b1 => Ok(Instruction::Phn(decode_ofst(opcode))),
+                0b1 => Ok(Instruction::Phn(decode_nimm(opcode))),
                 _ => unreachable!(),
               }
             }
@@ -551,10 +555,7 @@ pub fn instruction_to_opcode(instruction: Result<Instruction, u8>) -> u8 {
 
   fn encode_size(size: u8) -> u8 {
     match size {
-      0x01 => 0x00,
-      0x02 => 0x01,
-      0x04 => 0x02,
-      0x08 => 0x03,
+      0x01 | 0x02 | 0x04 | 0x08 => size.trailing_zeros() as u8,
       _ => panic!("Invalid SIZE operand in Instruction"),
     }
   }
@@ -563,6 +564,13 @@ pub fn instruction_to_opcode(instruction: Result<Instruction, u8>) -> u8 {
     match ofst {
       0b00000000..=0b00001111 => ofst,
       _ => panic!("Invalid OFST operand in Instruction"),
+    }
+  }
+
+  fn encode_nimm(nimm: u8) -> u8 {
+    match nimm {
+      0b11110000..=0b11111111 => nimm & 0b00001111,
+      _ => panic!("Invalid NIMM operand in Instruction"),
     }
   }
 
@@ -598,7 +606,7 @@ pub fn instruction_to_opcode(instruction: Result<Instruction, u8>) -> u8 {
     Ok(Instruction::Flc) => 0b11101011,
     Ok(Instruction::Swp) => 0b11101100,
     Ok(Instruction::Pop) => 0b11101101,
-    Ok(Instruction::Phn(imm)) => 0b11110000 | encode_ofst(imm),
+    Ok(Instruction::Phn(nimm)) => 0b11110000 | encode_nimm(nimm),
     Err(opcode) => opcode,
   }
 }
@@ -785,7 +793,7 @@ pub fn instruction_to_token(instruction: Result<Instruction, u8>) -> Token {
     Ok(Instruction::Flc) => Token::Flc,
     Ok(Instruction::Swp) => Token::Swp,
     Ok(Instruction::Pop) => Token::Pop,
-    Ok(Instruction::Phn(imm)) => Token::XXX(0b11110000 | imm),
+    Ok(Instruction::Phn(nimm)) => Token::XXX(nimm),
     Err(opcode) => Token::AtDD(opcode),
   }
 }

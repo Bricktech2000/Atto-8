@@ -317,6 +317,20 @@ fn assemble(
     }
   }
 
+  #[allow(dead_code)]
+  fn assert_nimm(nimm: u8, errors: &mut Vec<(Pos, Error)>, pos: &Pos) -> u8 {
+    match nimm {
+      0b11110000..=0b11111111 => nimm,
+      _ => {
+        errors.push((
+          pos.clone(),
+          Error(format!("Invalid NIMM operand `{:02X}`", nimm)),
+        ));
+        0b00000000
+      }
+    }
+  }
+
   #[derive(Clone, Eq, PartialEq)]
   enum Root {
     Instruction(Instruction),
@@ -891,7 +905,7 @@ fn assemble(
       Node::Orr(node1, node2) => eval(node2, label_definitions)? | eval(node1, label_definitions)?,
       Node::And(node1, node2) => eval(node2, label_definitions)? & eval(node1, label_definitions)?,
       Node::Xor(node1, node2) => eval(node2, label_definitions)? ^ eval(node1, label_definitions)?,
-      Node::Xnd(_, _) => 0,
+      Node::Xnd(_node1, _node2) => 0,
       Node::Shl(node) => eval(node, label_definitions)?.wrapping_shl(1),
       Node::Shr(node) => eval(node, label_definitions)?.wrapping_shl(1),
       Node::Not(node) => !eval(node, label_definitions)?,
@@ -903,22 +917,17 @@ fn assemble(
     // we then optionally use `Neg` and `Inc` to get the ability to push arbitrary 8-bit
     // values. we also use `Phn` as a shorthand when possible.
 
-    if value & 0b11110000 == 0b11110000 {
-      vec![(pos.clone(), Instruction::Phn(value & 0b00001111))]
-    } else if value == 0b10000000 {
-      vec![
-        (pos.clone(), Instruction::Psh(0b01111111)),
+    match value {
+      0b11110000..=0b11111111 => vec![(pos.clone(), Instruction::Phn(value))],
+      0b10000000..=0b10000000 => vec![
+        (pos.clone(), Instruction::Psh(value.wrapping_sub(1))),
         (pos.clone(), Instruction::Inc),
-      ]
-    } else {
-      match value & 0b10000000 {
-        0b00000000 => vec![(pos.clone(), Instruction::Psh(value & 0b01111111))],
-        0b10000000 => vec![
-          (pos.clone(), Instruction::Psh(value.wrapping_neg())),
-          (pos.clone(), Instruction::Neg),
-        ],
-        _ => unreachable!(),
-      }
+      ],
+      0b00000000..=0b01111111 => vec![(pos.clone(), Instruction::Psh(value))],
+      0b10000000..=0b11111111 => vec![
+        (pos.clone(), Instruction::Psh(value.wrapping_neg())),
+        (pos.clone(), Instruction::Neg),
+      ],
     }
   }
 

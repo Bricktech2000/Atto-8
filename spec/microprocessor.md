@@ -110,7 +110,7 @@ The instruction set of the Atto-8 microprocessor adheres to the Atto-8 microarch
 | `flc`       | `6`                             |
 | `swp`       | `15`                            |
 | `pop`       | `5`                             |
-| `phn IMM`   | `10`                            |
+| `phn NIMM`  | `10`                            |
 
 The `rot SIZE` instruction requires `18 + SIZE` clock cycles to execute, plus another `18 + SIZE` for every bit rotated. Consequently, `rot` can be used as a stall instruction.
 
