@@ -38,6 +38,7 @@ python3 test.py brainfuck.asm asm emu
 python3 test.py run-length.asm asm emu
 python3 test.py attomon.asm asm emu
 python3 test.py flappy.asm asm emu
+python3 test.py snake.asm asm emu
 python3 test.py circle.asm asm emu
 python3 test.py life.asm asm emu
 python3 test.py dino.asm asm emu
@@ -48,9 +49,7 @@ python3 test.py pixedit.asm asm emu
 
 # incomplete programs
 python3 test.py pong.asm asm emu
-python3 test.py snake.asm asm emu
 python3 test.py mandelbrot.asm asm emu
-python3 test.py pipe.c cc asm emu
 
 # test programs
 python3 test.py ore.asm asm emu
@@ -61,8 +60,9 @@ python3 test.py multiplication.asm asm emu
 python3 test.py nop.hex enc emu
 python3 test.py addition.hex enc emu
 python3 test.py checkerboard.hex enc emu
-python3 test.py errors.asm asm emu
+python3 test.py pipe.c cc asm emu
 python3 test.py test.c cc asm emu
+python3 test.py errors.asm asm emu
 ```
 
 ![Game of Life Simulation Demo](misc/assets/life.gif) ![Random Number Generator Demo](misc/assets/random.gif) ![Flappy Bird Demo](misc/assets/flappy.gif) ![Infinite Counter Demo](misc/assets/counter.gif)

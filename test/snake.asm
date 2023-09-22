@@ -5,78 +5,96 @@
 @ lib/display.asm
 @ lib/controller.asm
 
-# a few bytes short, but was working before removing `adn`s and having to add `clc`s.
-# has always been missing `!delay` call
-
 main!
-  pop !display_buffer sts
+  pop pop !display_buffer sts
 
-  x77 !u4u4 # head_pos
-  xF0 !i4i4 # head_vel
-  x77 !u4u4 # tail_pos
-  xF0 !i4i4 # tail_vel
+  xE7 !u4u4 # tail_pos
+  xE7 !u4u4 # head_pos
+  xF0 !u8 # head_vel
 
-  xF0 # rand_seed
-      # food_pos = rand_seed | 0x11
+  # seeds determined through trial and error
+  x15 # rand_seed, 14 steps
+  # x2A # rand_seed, 13 steps
+  # x54 # rand_seed, 12 steps
+  # food_pos = rand_seed | 0x11
 
-  x00 food: pop
-    !rand.min
+  x00 not @const # frame parity
 
-  loop:
-    # draw food at food_ps
-    ld0 x11 orr !display_buffer !bit_addr !set_bit
+  food:
+    ld1 !rand.min st1
 
-    # input = getc()
-    !getc
-    # ignore if input is empty
-    x0F and :ignore !bcs
-      # vel = (input & 0b1010) ? 0x0F : 0x01
-      ld0 !primary_down !primary_right orr @const and pop x01 x0F iff !i4i4
-      # rot = (input & 0b0011) ? 0x04 : 0x00
-      ld1 !primary_up !primary_down orr @const and pop x04 x00 iff
-      # head_vel = vel << rot
-      rot !i4i4.st4
-    # pop input
-    ignore: pop
+  loop: not
+    x12 !delay
 
-    x02 for_head_twice: dec
-      # head_pas += head_vel
-      !u8u8.ld2 !i4i4.add !u4u4.st5
-      # if head_pos == food_pos, spawn a new food
-      ld1 x11 orr !u4u4.ld6 xor pop :food !bcs
-      # compute bit_addr of head_pos
-      !u4u4.ld5 !display_buffer !bit_addr
-      # game over if pixel at head_pos is set
-      !u8u8.ld0 !load_bit !is_zero :game_over !bcc
-      # set pixel at head_pos
-      !set_bit
-    !check_zero :for_head_twice !bcc clc pop
+    # draw food at food_pos
+    ld1 x11 orr !display_buffer !bit_addr !set_bit
+
+    # default: `head_vel`
+    !getc !u8.ld0+3 !primary_to_delta st0
+    # on even frame parity, ignore user input
+    !u8.ld0+3 ld2 !is_zero !u8.iff !u8.st0+2
+    # head_pos += head_vel
+    clc ld2 ad4
+
+    # not enough memory to avoid snake wrapping around
+    # !u4u4.ld1+2 !u4u4.fst !is_zero :game_over !bcs
+    # !u4u4.ld1+2 !u4u4.snd !is_zero :game_over !bcs
+
+    # # if head_pos == food_pos, spawn a new food
+    ld1 x11 orr !u4u4.ld1+3 xor pop :food !bcs
+    # compute bit_addr of head_pos
+    !u4u4.ld1+2 !display_buffer !bit_addr
+    # game over if pixel at head_pos is set
+    !u8u8.ld0 !load_bit !is_zero :game_over !bcc
+    # set pixel at head_pos
+    !set_bit
+
+    # clear pixel at tail_pos
+    !u4u4.ld4 !display_buffer !bit_addr !clear_bit clc
 
     # figure out where the tail is headed
+    !u4u4.ld4 # default: tail_pos
     !directions_len for_dir: dec
-      :directions ld1 add !i4i4.lda !i4i4.ld3
-        !u4u4.ld5 !i4i4.ld2 !i4i4.add !display_buffer !bit_addr !load_bit
-      !is_zero !i4i4.iff !i4i4.st2
+      :directions ld1 add !u8.lda !u4u4.ld7 !u8.add
+      !u4u4.ld0 !display_buffer !bit_addr !load_bit
+      shr @dyn pop if2
     !check_zero :for_dir !bcc pop
 
-    x02 for_tail_twice: dec
-      # tail_pas += tail_vel
-      !u8u8.ld1 !i4i4.add !u4u4.st3
-      # clear pixel at tail_pos
-      !u4u4.ld3 !display_buffer !bit_addr !clear_bit
-    !check_zero :for_tail_twice !bcc pop
+    # save computed `tail_pos`
+    !u4u4.st4
 
-    # sleep
-    # x40 !delay
   :loop !jmp
 
   game_over:
-    # !hlt
+    !hlt
 
   directions:
-    @01 !i4i4
-    @0F !i4i4
-    @10 !i4i4
     @F0 !i4i4
+    @10 !i4i4
+    @FF !i4i4
+    @01 !i4i4
   directions_end:
+
+  !display_buffer @org
+    # not enough memory to avoid snake wrapping around.
+    # i4i4 addition breaks when wrapping horizontally.
+    # this one-pixel border prevents wrapping by making
+    # the snake believe it has run into its body
+    @00 @00
+    @7F @FF
+    @40 @01
+    @40 @01
+    @40 @01
+    @40 @01
+    @40 @01
+    @40 @01
+    @40 @01
+    @40 @01
+    @40 @01
+    @40 @01
+    @40 @01
+    @40 @01
+    @40 @01
+    @7F @FF
+
 directions_len! :directions_end :directions sub @const
