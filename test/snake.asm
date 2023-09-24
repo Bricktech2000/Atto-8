@@ -8,19 +8,19 @@
 main!
   pop pop !display_buffer sts
 
-  xE7 !u4u4 # tail_pos
-  xE7 !u4u4 # head_pos
-  xF0 !u8 # head_vel
+  x37 !u4u4 # tail_pos
+  x27 !u4u4 # head_pos
+  x10 !u8 # head_vel
 
-  xCD # rand_seed
+  x26 # rand_seed
       # food_pos = rand_seed | 0x11
 
   x00 not @const # frame parity
 
   food:
     ld1
-      # not enough memory to increment score
-      # x00 ad8 @dyn # clears carry
+      # increment score
+      x00 ad8 @dyn # clears carry
       # `!rand.min`, but with hand-tuned `rand_seed` and `!rand_bits` that
       # maximizes cycle length while ensuring food never spawns on a wall
       shl x01 x00 iff xor
