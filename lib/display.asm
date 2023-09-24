@@ -3,7 +3,7 @@ display_buffer_len! x20 @const
 
 bit_addr! # (rot, addr) = bit_addr(buffer, index)
   # addr = index // 8 + buffer
-  ld1 x07 not and clc x05 rot add
+  ld1 x07 not and x05 rot add
   # rot = ~index % 8
   swp not x07 and
   # return* (rot, addr)
@@ -79,11 +79,11 @@ print_char.def!
   print_char: # print_char(index, buffer, pos)
     x03 for_i. dec
       # src = i + index * 3
-      ld0 ld3 ld0 x01 rot clc add clc add
+      ld0 ld3 ld0 x01 rot add add
       # nibble = load_nibble(nibble_addr(buffer, src))
       ld4 !nibble_addr !load_nibble
       # dst = i * 4 + pos // 4 * 16 + pos % 4
-      ld1 x02 rot ld6 x02 rot xF0 and clc add ld6 x03 and clc add
+      ld1 x02 rot ld6 x3C and x02 rot add ld6 x03 and clc add
       # store_nibble(nibble_addr(&DISPLAY_BUFFER, dst), nibble)
       !display_buffer !nibble_addr !store_nibble
     !check_zero .for_i !bcc pop
@@ -113,7 +113,7 @@ print_byte.min.def!
     @EC @CE @A6 @8E @6E @4C @EC @EE # top row
     @A4 @46 @E4 @E2 @EE @EE @8A @CC # middle row
     @EE @6E @2C @E2 @E2 @AE @EC @E8 # bottom row
-  print_byte.min: clc # print_byte.min(byte, addr)
+  print_byte.min: # print_byte.min(byte, addr)
     # loop through rows
     x03 for_row. dec
       # nth_row = hex_chars + row * 8
