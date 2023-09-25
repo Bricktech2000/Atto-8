@@ -152,7 +152,7 @@ interpreter!
       !check_zero :for_c !bcc # 0x00 is left on the stack
       # we're at a right bracket if and only if we're coming from a left bracket.
       # if we're at a right bracket, increment head to skip over the right bracket
-      ld1 inc lda !char.right_square_bracket xor pop add @dyn
+      ld1 inc lda !char.right_square_bracket !is_equal add @dyn
     # loop if current source char is not null
     got_neither:
   inc !here :loop swp iff !jmp

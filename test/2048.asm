@@ -39,7 +39,7 @@ main!
         ld5 !primary_up !primary_down orr @const and pop
         x06 x00 iff # orientation
         # if ((curr >> orientation & 0x03) == equality) continue;
-        ld2 swp rot x03 and xor pop :continue !bcs
+        ld2 swp rot x03 and !is_equal :continue !bcs
         # curr = &board + curr
         :board add
         # `offset += curr` to produce `prev`
@@ -49,7 +49,7 @@ main!
         ld1 lda # board[curr]
 
         !check_zero :zero !bcs
-        xor pop :equal !bcs
+        !is_equal :equal !bcs
         :continue !jmp
 
         zero: # `board[prev]` and `board[curr]` on the stack

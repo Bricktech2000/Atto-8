@@ -63,7 +63,7 @@ collatz.def!
     x00 for_s.
       ld2 ld0 shl add inc
       ld3 shr ld1 iff st3
-      x04 xor pop # if `3 * n + 1 == 4` then `n == 1`
+      x04 !is_equal # if `3 * n + 1 == 4` then `n == 1`
     inc .for_s !bcc
   # return* steps
   st1 !rt0

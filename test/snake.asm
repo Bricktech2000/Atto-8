@@ -44,7 +44,7 @@ main!
     ld1 x11 orr ld0 !display_buffer !bit_addr !set_bit # bleeds `food_pos` onto the stack
 
     # if head_pos == food_pos, spawn new food
-    !u4u4.ld4 xor pop :food !bcs # consumes `food_pos` from the stack
+    !u4u4.ld4 !is_equal :food !bcs # consumes `food_pos` from the stack
     # compute bit_addr of head_pos
     !u4u4.ld3 !display_buffer !bit_addr
     # game over if pixel at head_pos is set
@@ -72,7 +72,7 @@ main!
     # not enough memory to check if food spawned on snake body.
     # therefore, if food_pos == tail_pos, generate new food somewhere else.
     # otherwise, the algorithm above confuses food for the snake body.
-    ld1 x11 orr !u4u4.ld5 xor pop
+    ld1 x11 orr !u4u4.ld5 !is_equal
   :loop :food iff !jmp
 
   directions:

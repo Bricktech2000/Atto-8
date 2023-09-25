@@ -15,6 +15,8 @@ rand.min! clc # seed = rand.min(seed)
 
 check_zero! buf @dyn
 is_zero! buf @dyn pop
+check_equal! ld1 ld1 xor @dyn pop
+is_equal! xor @dyn pop
 
 
 delay! # delay(iterations)

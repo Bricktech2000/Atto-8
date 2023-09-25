@@ -55,7 +55,7 @@ memchr.def!
     ld3 for_i. dec
       # break if *buf == char
       ld2 ld1 sub lda
-      ld4 xor pop .break !bcs
+      ld4 !is_equal .break !bcs
     # loop if i > 0
     !check_zero .for_i !bcc pop ld1 break. clc
     # compute *ptr
