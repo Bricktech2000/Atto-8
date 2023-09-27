@@ -15,7 +15,7 @@ rand.min! clc # seed = rand.min(seed)
 
 check_zero! buf @dyn
 is_zero! buf @dyn pop
-check_equal! ld1 ld1 xor @dyn pop
+check_equal! xor @dyn
 is_equal! xor @dyn pop
 
 
@@ -61,9 +61,9 @@ sort.def!
             x01 st2
           continue.
         pop # pop pointer
-      !check_zero .for_i !bcc pop
+      !check_zero .for_i !bcc # bleed `0x00`
     # break if not swapped
-    !check_zero .while !bcc pop
+    !check_equal .while !bcc pop
   # return*
   !rt2
 

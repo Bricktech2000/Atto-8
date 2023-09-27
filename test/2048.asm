@@ -9,13 +9,12 @@
 # - numbers on tiles are the base-2 logarithm of the number on the original -- we only have one character per tile
 # - implementation has `0`-tiles (would be equivalent to `1`-tiles in the original) -- ensures only educated people can play
 # - implementation has greedy merge, meaning tiles are merged multiple times within a single move -- simplest way to implement
-# - new tiles are generated regardless of whether the board has changed -- currenttly not enough memory to perform the check
 # - only `0`-tiles (equivalent to `2`-tiles in the original) are generated -- currently not enough memory for generating `1`-tiles
 #
 # when no room is left for a new tile, the program stalls in an infinite loop, which indicates the game is over
 
 main!
-  pop pop !display_buffer sts
+  pop pop !display_buffer dec dec @const sts # (rand_seed, moved)
 
   !primary_up # direction
 
@@ -49,46 +48,48 @@ main!
         ld1 lda # board[curr]
 
         !check_zero :zero !bcs
-        !is_equal :equal !bcs
-        :continue !jmp
+        !is_equal :continue :equal iff !jmp
 
         zero: # `board[prev]` and `board[curr]` on the stack
           # board[curr] = board[prev] - 1
           pop dec ld1 sta
         equal: # `board[prev]` and `board[curr]` popped off the stack
           # board[curr] = board[curr] + 1
-          ld0 lda inc ld1 sta
+          ld0 lda inc
+            # if (board[curr] != 0) moved = true;
+            !check_zero x00 flc shl @dyn or8
+          ld1 sta
           # board[prev] = 0
           x00 ld2 sta
           # `prev` and `curr` are bled onto the stack for `continue` below,
           # which happens to pop two bytes off the stack
 
         continue: pop pop
-      !check_zero :for_n !bcc pop
+      !check_zero :for_n !bcc # bleed `0x00`
 
-      # if we're at the last iteration, generate a `0x01` tile.
-      # otherwise, generate a `0x00` tile, which is a no-op
-      !check_zero x00 shl @dyn
-      # poke into the display buffer and `xor` two randomly chosen
-      # bytes to produce a random value
-      ld4 ldF xor
+      # if we're at on last iteration and `moved` is `true`, generate a
+      # `0x01` tile. otherwise, generate a `0x00` tile, which is a no-op.
+      # note that making an invalid move when no room is left for a new
+      # tile will cause an infinite stall even though the game shouldn't
+      # be over yet
+      !check_equal x00 shl @dyn ld4 and
 
-      # keep adding `&board` to the random byte, modulo `0x10` to prevent
+      # keep adding `&board` to `rand_seed`, modulo `0x10` to prevent
       # out-of-bounds access, until we find a zero tile. the cycle length
       # of this operation is `0x10` if and only if `&board & 0x0F` is
       # coprime with `0x10`. this is guaranteed at assembly time. see below
-      generate:
+      ld3 generate:
         x0F and clc :board add
       ld0 lda !is_zero :generate !bcc sta
 
       !display_buffer_len for_byte: dec
         x00 # result
         x00 for_nibble:
-          # tile = board[&board + byte]
+          # tile = board[(byte & ~0x06)]
           :board ld3 x06 not @const and clc shr x00 shl @dyn xFF xo4 shl @dyn orr clc add lda
           # 2048_char = 2048_chars[tile]
           :2048_chars add lda
-          # nibble = (2048_char << (byte & 0x06}) & 0x60
+          # nibble = (2048_char << (byte & 0x06)) & 0x60
           # we use `0x60` as a mask to center the character horizontally.
           # this is also why `shl @const` is used in `2048_chars` below
           ld3 x06 and rot x60 and
@@ -98,14 +99,18 @@ main!
         !check_zero :for_nibble !bcc pop
         # display_buffer[byte] = result
         !display_buffer dec @const ld2 add sta
-      !check_zero :for_byte !bcc pop
+      !check_zero :for_byte !bcc # bleed `0x00`
 
-    !check_zero :for_iteration !bcc pop
+    !check_equal :for_iteration !bcc # bleed `0x00`
+
+    # moved = false
+    st2
 
     # the controller being in any state other than `0x01 | 0x02 | 0x04 | 0x08`
-    # unfortunately breaks the game logic. not much we can do about that
-    pop !block_getc # direction
-  :while !jmp
+    # unfortunately breaks the game logic. not much we can do about that.
+    # below is similar to `!block_getc` but updates `rand_seed` while waiting
+    block: !char.add !getc !char.check_null :block
+  :while swp iff !jmp
 
   # characters below are 2x4 pixels in size. the bits of their encoding from MSB to LSB correspond
   # to the pixels of the font from left to right, top to bottom. the padding for the font is at the
@@ -133,8 +138,12 @@ main!
   # `x` is coprime with `0x10` if and only if `x` is odd. therefore we ensure
   # that `&board & 0x0F` is odd by setting its least significant bit to `1`
   !here x01 orr @org
+
+  # `moved` is initialized to `false` and the initial controller input is set
+  # to `!primary_up`, and so the board must contain at least one `0x01` tile,
+  # ideally on the top row
   board:
-    @00 @00 @00 @00
+    @01 @00 @00 @00
     @00 @00 @00 @00
     @00 @00 @00 @00
     @00 @00 @00 @00
