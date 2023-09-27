@@ -66,6 +66,4 @@ python3 test.py test.c cc asm emu
 python3 test.py errors.asm asm emu
 ```
 
-![Game of Life Simulation Demo](misc/assets/life.gif) ![Random Number Generator Demo](misc/assets/random.gif) ![Flappy Bird Demo](misc/assets/flappy.gif) ![Infinite Counter Demo](misc/assets/counter.gif)
-
-![Atto-8 Microprocessor Diagram](misc/assets/microprocessor.png)
+![Bad Apple Playback Demo](misc/assets/bad%20apple.gif) ![Brainfuck Standard Output Demo](misc/assets/brainfuck.gif) ![Snake Game Demo](misc/assets/snake.gif) ![2048 Clone Demo](misc/assets/2048.gif) ![Flappy Bird Clone Demo](misc/assets/flappy.gif) ![Game of Life Simulation Demo](misc/assets/life.gif)
