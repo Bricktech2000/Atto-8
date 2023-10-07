@@ -128,6 +128,6 @@ pub enum Expression {
 #[derive(Clone, PartialEq, Debug)]
 pub enum Statement {
   Expression(Expression),
-  Return(Expression),
+  Return(Option<Expression>),
   Asm(String),
 }

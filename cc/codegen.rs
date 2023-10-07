@@ -162,7 +162,7 @@ fn expression_statement(expression: Expression, stack: &Vec<StackEntry>) -> Vec<
   tokens
 }
 
-fn return_statement(expression: Expression, stack: &Vec<StackEntry>) -> Vec<Token> {
+fn return_statement(expression: Option<Expression>, stack: &Vec<StackEntry>) -> Vec<Token> {
   let ret_macro = Macro("ret".to_string());
 
   let type_ = stack
@@ -174,10 +174,18 @@ fn return_statement(expression: Expression, stack: &Vec<StackEntry>) -> Vec<Toke
     })
     .unwrap_or_else(|| panic!("`return` outside of function"));
 
-  let (type_, tokens) =
-    codegen::expression(Expression::Cast(type_.clone(), Box::new(expression)), stack);
+  let (type_, tokens) = match expression {
+    Some(expression) => {
+      codegen::expression(Expression::Cast(type_.clone(), Box::new(expression)), stack)
+    }
+    None => (Type::Void, vec![]),
+  };
 
   match type_ {
+    type_ if type_.size() == 0 => std::iter::empty()
+      .chain(tokens)
+      .chain(vec![Token::MacroRef(ret_macro)])
+      .collect(), // TODO check function boundary
     type_ if type_.size() == 1 => std::iter::empty()
       .chain(tokens)
       .chain(vec![Token::Swp, Token::MacroRef(ret_macro)])

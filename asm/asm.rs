@@ -141,15 +141,18 @@ fn assemble(
   for (pos, token) in tokens.into_iter() {
     match token {
       Token::MacroDef(macro_) => {
-        if macro_definitions.contains_key(&macro_) {
-          errors.push((
-            pos.clone(),
-            Error(format!("Duplicate macro definition `{}`", macro_)),
-          ));
-        }
         current_macro = Some(macro_.clone());
-        macro_definitions.entry(macro_).or_insert(vec![]);
+        macro_definitions
+          .entry(macro_.clone())
+          .and_modify(|_| {
+            errors.push((
+              pos.clone(),
+              Error(format!("Duplicate macro definition `{}`", macro_)),
+            ));
+          })
+          .or_insert(vec![]);
       }
+
       _ => match current_macro
         .as_ref()
         .and_then(|macro_| macro_definitions.get_mut(&macro_))
@@ -166,16 +169,13 @@ fn assemble(
     }
   }
 
-  let entry_point = vec![(
-    Pos("[bootstrap]".to_string(), 0),
-    Token::MacroRef(Macro(entry_point.to_string())),
-  )];
-  let mut scope_uid: usize = 0;
-  let mut parent_macros: Vec<Macro> = vec![];
-  let tokens: Vec<(Pos, Token)> = expand_macros(
-    &entry_point,
-    &mut scope_uid,
-    &mut parent_macros,
+  let tokens = expand_macros(
+    &vec![(
+      Pos("[bootstrap]".to_string(), 0),
+      Token::MacroRef(Macro(entry_point.to_string())),
+    )],
+    &mut 0,
+    &mut vec![],
     &macro_definitions,
     errors,
   );
@@ -191,7 +191,7 @@ fn assemble(
       .into_iter()
       .flat_map(|(pos, token)| match token {
         Token::MacroRef(macro_) => {
-          if parent_macros.contains(macro_) {
+          if parent_macros.contains(&macro_) {
             errors.push((
               pos.clone(),
               Error(format!(
@@ -204,44 +204,46 @@ fn assemble(
                 macro_
               )),
             ));
-            vec![]
-          } else {
-            let tokens = match macro_definitions.get(macro_) {
-              Some(tokens) => tokens.clone(),
-              None => {
-                errors.push((pos.clone(), Error(format!("Undefined macro `{}`", macro_))));
-                vec![]
-              }
-            };
-
-            let tokens = tokens
-              .into_iter()
-              .map(|(pos, token)| match token {
-                Token::LabelDef(Label::Local(identifier, _)) => (
-                  pos,
-                  Token::LabelDef(Label::Local(identifier, Some(*scope_uid))),
-                ),
-                Token::LabelRef(Label::Local(identifier, _)) => (
-                  pos,
-                  Token::LabelRef(Label::Local(identifier, Some(*scope_uid))),
-                ),
-                _ => (pos, token),
-              })
-              .collect();
-
-            *scope_uid += 1;
-            parent_macros.push(macro_.clone());
-            let expanded = expand_macros(
-              &tokens,
-              scope_uid,
-              parent_macros,
-              &macro_definitions,
-              errors,
-            );
-            parent_macros.pop();
-            expanded
+            return vec![];
           }
+
+          let tokens = match macro_definitions.get(&macro_) {
+            Some(tokens) => tokens.clone(),
+            None => {
+              errors.push((pos.clone(), Error(format!("Undefined macro `{}`", macro_))));
+              vec![]
+            }
+          };
+
+          let tokens = tokens
+            .into_iter()
+            .map(|(pos, token)| match token {
+              Token::LabelDef(Label::Local(identifier, _)) => (
+                pos,
+                Token::LabelDef(Label::Local(identifier, Some(*scope_uid))),
+              ),
+              Token::LabelRef(Label::Local(identifier, _)) => (
+                pos,
+                Token::LabelRef(Label::Local(identifier, Some(*scope_uid))),
+              ),
+              _ => (pos, token),
+            })
+            .collect();
+
+          *scope_uid += 1;
+          parent_macros.push(macro_.clone());
+          let tokens = expand_macros(
+            &tokens,
+            scope_uid,
+            parent_macros,
+            &macro_definitions,
+            errors,
+          );
+          parent_macros.pop();
+
+          tokens
         }
+
         Token::AtErr => {
           errors.push((
             pos.clone(),
@@ -1060,11 +1062,6 @@ fn assemble(
       })
       .collect();
 
-    // abort brute force if errors were found
-    if errors.len() > 0 {
-      break 'bruteforce;
-    }
-
     // poke into `instructions` and evaluate the nodes that couldn't be evaluated before
     'poke: {
       for (location_counter, (pos, node)) in unevaluated_nodes.iter() {
@@ -1093,6 +1090,11 @@ fn assemble(
       // all unevaluated nodes have been evaluated, break out of the bruteforce loop
       break 'bruteforce;
     }
+
+    // abort brute force if errors were encountered
+    if errors.len() > 0 {
+      break 'bruteforce;
+    }
   }
 
   instructions
@@ -1112,17 +1114,18 @@ fn codegen(
   let mut opcodes = opcodes;
   let pos = Pos("[codegen]".to_string(), 0);
 
-  if opcodes.len() > common::MEM_SIZE {
-    errors.push((
-      pos,
-      Error(format!(
-        "Program size `{:02X}` exceeds available memory of size `{:02X}`",
-        opcodes.len(),
-        common::MEM_SIZE
-      )),
-    ));
-  } else {
-    opcodes.extend(vec![(pos, 0x00); common::MEM_SIZE - opcodes.len()]);
+  match common::MEM_SIZE.checked_sub(opcodes.len()) {
+    Some(padding) => opcodes.extend(vec![(pos, 0x00); padding]),
+    None => {
+      errors.push((
+        pos,
+        Error(format!(
+          "Program size `{:02X}` exceeds available memory of size `{:02X}`",
+          opcodes.len(),
+          common::MEM_SIZE
+        )),
+      ));
+    }
   }
 
   opcodes

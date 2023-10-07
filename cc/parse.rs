@@ -125,9 +125,9 @@ pub fn string(string: &'static str) -> Parser<()> {
 // parser combinators
 
 pub fn many1<T: Clone + 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
-  parser.clone().and_then(|first| {
-    parse::many(parser).map(|rest| std::iter::once(first).chain(rest.into_iter()).collect())
-  })
+  parser
+    .clone()
+    .and_then(|first| parse::many(parser).map(|rest| std::iter::once(first).chain(rest).collect()))
 }
 
 pub fn many<T: Clone + 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
@@ -165,7 +165,7 @@ pub fn many_and_then<T: Clone + 'static, U: Clone + 'static>(
 pub fn sepby1<T: Clone + 'static>(parser: Parser<T>, separator: Parser<()>) -> Parser<Vec<T>> {
   parser.clone().and_then(|first| {
     parse::many(separator.and_then(|_| parser))
-      .map(|rest| std::iter::once(first).chain(rest.into_iter()).collect())
+      .map(|rest| std::iter::once(first).chain(rest).collect())
   })
 }
 
@@ -319,7 +319,11 @@ pub fn jump_statement() -> Parser<Statement> {
   // TODO cases missing
   Parser::return_(())
     .and_then(|_| parse::whitespaces_string("return"))
-    .and_then(|_| parse::expression()) // TODO does not obey grammar
+    .and_then(|_| {
+      parse::expression()
+        .and_then(|expression| Parser::return_(Some(expression)))
+        .or_else(|_| Parser::return_(None))
+    }) // TODO does not obey grammar
     .and_then(|expression| parse::whitespaces_char(';').map(|_| Statement::Return(expression)))
     .meta(format!("Jump Statement"))
 }
