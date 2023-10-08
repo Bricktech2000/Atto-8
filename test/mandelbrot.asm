@@ -3,23 +3,27 @@
 @ lib/types.asm
 @ lib/display.asm
 
-# using display buffer as extra memory. missing `size` and `pos` from C implementation
+# currently missing `size` and `pos` from C implementation
 
 main!
-  pop pop !display_buffer x10 add @const sts
+  pop pop !display_buffer sts
 
-  loop:
-    x80 !u4u4 for_xy: dec
-      !u4u4.ld0 !u4u4.snd x03 rot clc x40 sub !i4f4 # c_re
-      x00 !i4f4 # pos_re
-      !i4f4.add
-      !u4u4.ld1 !u4u4.fst x03 rot clc x40 sub !i4f4 # c_im
-      x07 !i4f4 # pos_im
-      !i4f4.add
-      !is_in_set @dyn x00 shl @dyn
-      ld1 !display_buffer x10 add !bit_addr !store_bit
-    !check_zero :for_xy !bcc pop
-  :loop !jmp
+  x00 !u4u4 for_xy: dec
+    # !u4u4.ld0 !u4u4.snd x03 rot x40 sub !i4f4 # c_re
+    !u4u4.ld0 !u4u4.snd x01 rot x10 sub !i4f4 # c_re (zoomed)
+    xFB !i4f4 # pos_re
+    # add # reduces size but not idiomatic
+    clc !i4f4.add
+
+    # !u4u4.ld1 !u4u4.fst x03 rot x40 sub !i4f4 # c_im
+    !u4u4.ld1 !u4u4.fst x01 rot x10 sub !i4f4 # c_im (zoomed)
+    x00 !i4f4 # pos_im
+    # add # reduces size but not idiomatic
+    clc !i4f4.add
+
+    !is_in_set @dyn x00 shl @dyn
+    ld1 !display_buffer !bit_addr !store_bit
+  !check_zero !here :for_xy swp iff !jmp
 
 
   !u8.mul.def
@@ -30,13 +34,11 @@ is_in_set! clc # bool b = is_in_set(c4f4m4f4 c)
   !i4f4.0 # z_re
   !i4f4.0 # z_im
   x10 for_i: dec
-    !i4f4.ld1+1 !i4f4.ld0 !i4f4.mul clc # z_re2
-    !i4f4.ld1+1 !i4f4.ld0 !i4f4.mul clc # z_im2
-    !i4f4.ld1 !i4f4.ld1 !i4f4.add clc x20 !i4f4 !i4f4.sub !i4f4.pop :ret !bcc clc
-    !i4f4.ld3+1 !i4f4.ld3+1 !i4f4.mul clc !i4f4.ld5+1 !i4f4.add clc x01 rot !i4f4.st2+1
+    !i4f4.ld1+1 !i4f4.ld0 !i4f4.mul # z_re2
+    !i4f4.ld1+1 !i4f4.ld0 !i4f4.mul # z_im2
+    !i4f4.ld1 !i4f4.ld1 !i4f4.add x18 !i4f4 !i4f4.sub !i4f4.pop :ret !bcc
+    !i4f4.ld3+1 !i4f4.ld3+1 !i4f4.mul shl clc !i4f4.ld4+2 !i4f4.add clc !i4f4.st2+1
     !i4f4.sub clc !i4f4.ld4+1 !i4f4.add !i4f4.st1+1
-    # !c4f4m4f4.ld0+1 !c4f4.norm x20 !i4f4 !i4f4.sub !i4f4.pop :ret !bcc
-    # !c4f4m4f4.ld0+1 !c4f4.ld0 !c4f4.mul !c4f4.ld1+1 !c4f4.add !c4f4.st0+1
   !check_zero :for_i !bcc
   x00 x00
 ret:
