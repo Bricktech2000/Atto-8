@@ -44,13 +44,11 @@ python3 test.py life.asm asm emu
 python3 test.py dino.asm asm emu
 python3 test.py 2048.asm asm emu
 python3 test.py plane.asm asm emu
+python3 test.py pong.asm asm emu
 python3 test.py ctf.asm asm emu
 python3 test.py fade.asm asm emu
 python3 test.py pixedit.asm asm emu
 python3 test.py mandelbrot.asm asm emu
-
-# incomplete programs
-python3 test.py pong.asm asm emu
 
 # test programs
 python3 test.py ore.asm asm emu
