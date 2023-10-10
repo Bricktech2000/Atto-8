@@ -389,7 +389,7 @@ impl std::fmt::Display for Microprocessor {
         self.pull, self.ones, self.sum, self.nand, self.cin as u8, self.cout as u8, self.zero as u8,
       ),
       format!(
-        "MIC  ({} B)\r\n",
+        "MIC  ({:#X} words)\r\n",
         self.mic.len()
       ),
     )
