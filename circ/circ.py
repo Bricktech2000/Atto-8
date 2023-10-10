@@ -38,8 +38,12 @@ circ = circ.replace(rom_label, rom_label + b'\n<a name="contents">addr/data: 8 8
 with open_safe(circuit_file, 'wb') as f:
   f.write(circ)
 
-print('Circ: Launching Logisim...')
-subprocess.run(['logisim-evolution', circuit_file], check=True)
+try:
+  print('Circ: Launching Logisim...')
+  subprocess.run(['logisim-evolution', circuit_file], check=True)
+except FileNotFoundError:
+  print('Circ: Error: Could not find binary `logisim-evolution`')
+  sys.exit(1)
 
 with open_safe(circuit_file, 'rb') as f:
   circ = f.read()
