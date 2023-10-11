@@ -35,7 +35,7 @@ main!
         !display_buffer !bit_addr !load_bit clc
         # neighbor_count += neighbor_value
         ad2
-      !check_zero :for_dxdy !bcc pop
+      !z :for_dxdy !bcc pop
 
       # apply rules outlined above
       x04 xor :ignore !bcs x04 xor
@@ -44,7 +44,7 @@ main!
       ignore:
 
       pop # pop neighbor count
-    !check_zero :for_xy !bcc pop
+    !z :for_xy !bcc pop
   :loop !jmp
 
   neighbors:

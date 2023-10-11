@@ -1744,8 +1744,8 @@ u8.to_chars!
 chars.to_u8!
   @err # to be implemented
 
-char.check_null! !check_zero
-char.is_null! !is_zero
+char.check_null! !z
+char.is_null! !zr
 
 # converts `'A'..='Z'` to `'a'..='z'`. leaves other values unchanged
 char.to_lower!
@@ -1772,7 +1772,7 @@ u8.mul.def!
       !u8.ld1+1 !u8.0 !u8.ld4+2 !u8.iff clc !u8.add
       # product >>= 1 (stairstep shift)
       !u8.ld1+1 !u16.shr !u16.st0+1
-    !check_zero .for_bit !bcc pop
+    !z .for_bit !bcc pop
   # return* product
   !u16.st0+1 !rt0
 i8.mul.def!
@@ -1780,9 +1780,9 @@ i8.mul.def!
     # u16 product = (u8)a * (u8)b
     !u16.ld0+1 !u8.mul
     # product -= (a & 0x80 ? b << 0x08 : 0x00)
-    ld3 shl pop !u16.0 !u8.ld5+1 !u8.0 !u16.iff clc !u16.sub
+    ld3 !ng !u16.0 !u8.ld5+1 !u8.0 !u16.iff clc !u16.sub
     # product -= (b & 0x80 ? a << 0x08 : 0x00)
-    ld4 shl pop !u16.0 !u8.ld4+1 !u8.0 !u16.iff clc !u16.sub
+    ld4 !ng !u16.0 !u8.ld4+1 !u8.0 !u16.iff clc !u16.sub
   # return* product
   !u16.st0+1 !rt0
 u16.mul.def!
@@ -1795,7 +1795,7 @@ u16.mul.def!
       !u16.ld1+1 !u16.0 !u16.ld4+2 !u16.iff clc !u16.add
       # product >>= 1 (stairstep shift)
       !u16.ld1+1 !u32.shr !u32.st0+1
-    !check_zero .for_bit !bcc pop
+    !z .for_bit !bcc pop
   # return* product
   !u32.st0+1 !rt0
 i16.mul.def!
@@ -1803,9 +1803,9 @@ i16.mul.def!
     # u32 product = (u16)a * (u16)b
     !u32.ld0+1 !u16.mul
     # product -= (a & 0x8000 ? b << 0x10 : 0x00)
-    ld6 shl pop !u32.0 !u16.ld5+1 !u16.0 !u32.iff clc !u32.sub
+    ld6 !ng !u32.0 !u16.ld5+1 !u16.0 !u32.iff clc !u32.sub
     # product -= (b & 0x8000 ? a << 0x10 : 0x00)
-    ld8 shl pop !u32.0 !u16.ld4+1 !u16.0 !u32.iff clc !u32.sub
+    ld8 !ng !u32.0 !u16.ld4+1 !u16.0 !u32.iff clc !u32.sub
   # return* product
   !u32.st0+1 !rt0
 u4f4.mul.def!

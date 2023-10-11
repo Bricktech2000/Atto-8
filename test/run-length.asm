@@ -38,9 +38,9 @@ rle_puts!
     # while (count--) putc(char)
     for_r. dec
       ld1 !putc
-    !check_zero .for_r !bcc # bleed `0x00`
+    !z .for_r !bcc # bleed `0x00`
     # loop if *ptr != '\0'
-    !is_equal
+    !eq
   inc .for_c !bcc pop
 
 00! @80 01! @81 02! @82 03! @83 04! @84 05! @85 06! @86 07! @87

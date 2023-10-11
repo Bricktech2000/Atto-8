@@ -13,12 +13,6 @@ rand.min! clc # seed = rand.min(seed)
   shl x00 !rand_bits iff xor
 
 
-check_zero! buf @dyn
-is_zero! buf @dyn pop
-check_equal! xor @dyn
-is_equal! xor @dyn pop
-
-
 delay! # delay(iterations)
   loop. x1F !stall x01 sub @dyn .loop !bcc pop
 
@@ -36,7 +30,7 @@ block_getc! !char.null block. !char.pop !getc !char.check_null .block !bcs
 
 popcnt! # count = popcnt(a)
   # count = a == 0 ? -1 : 0
-  !check_zero x00 xFF iff
+  !z x00 xFF iff
   # do { count++ } while (a != 0)
   while. inc
     # a &= a - 1
@@ -61,9 +55,9 @@ sort.def!
             x01 st2
           continue.
         pop # pop pointer
-      !check_zero .for_i !bcc # bleed `0x00`
+      !z .for_i !bcc # bleed `0x00`
     # break if not swapped
-    !check_equal .while !bcc pop
+    !e .while !bcc pop
   # return*
   !rt2
 
@@ -104,7 +98,7 @@ malloc.def!
       # next_header = next_block.header
       ld1 lda swp # swap curr_block and next_header
       # coalesced_header = next_header + curr_header + 1
-      ld1 ld1 lda add inc # if addition overflows then both blocks are free
+      ld1 ld1 lda add @dyn inc # if addition overflows then both blocks are free
       # stack (top down): coalesced_header, curr_block, next_header, next_block, ret_addr, size
       # working_header = both_free ? coalesced_header | IS_FREE_MASK : next_header
       # working_block  = both_free ? curr_block : next_block

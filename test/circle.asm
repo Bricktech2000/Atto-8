@@ -74,6 +74,6 @@ draw_circle! # draw_circle(u8 r, u4u4 cycy)
     # (x, t1) = t1 - x < 0 ? (x, t1) : (x - 1, t1 - x)
     flc !u8u8.iff clc
   # loop while x >= y
-  ld1 x04 rot ld2 sub pop .while !bcc
+  ld1 x04 rot ld2 !gt .while !bcc
   # return*
   pop pop pop

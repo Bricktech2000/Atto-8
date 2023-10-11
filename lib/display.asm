@@ -86,7 +86,7 @@ print_char.def!
       ld1 x02 rot ld6 x3C and x02 rot add ld6 x03 and clc add
       # store_nibble(nibble_addr(&DISPLAY_BUFFER, dst), nibble)
       !display_buffer !nibble_addr !store_nibble
-    !check_zero .for_i !bcc pop
+    !z .for_i !bcc pop
   # return*
   !rt3
 
@@ -128,6 +128,6 @@ print_byte.min.def!
       !display_buffer ld5 add ld2 x01 rot add
       # *dst = row
       sta
-    !check_zero .for_row !bcc pop
+    !z .for_row !bcc pop
   # return*
   !rt2

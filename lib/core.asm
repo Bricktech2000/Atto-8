@@ -1,12 +1,29 @@
-rneg! xF8 orr neg # prepares for rotate right
+rneg! x07 not @const orr neg # prepares for rotate right
 norr! orr not
 nand! and not
 xnorr! xor not
 xnand! xnd not
 abs! ld0 x01 rot x01 and neg swp ld1 add xor @const
-abs.dyn! ld0 neg ld1 shl @dyn pop iff
-min.dyn! ld1 ld1 sub @dyn pop flc iff
-max.dyn! ld1 ld1 sub @dyn pop iff
+abs.dyn! ld0 neg ld1 !ng iff
+min.dyn! ld1 ld1 !le iff
+max.dyn! ld1 ld1 !gt iff
+
+z! buf @dyn               # check zero
+e! xor @dyn               # check equal
+gt! sub @dyn pop          # greater than
+ngt! sub @dyn pop flc     # non-greater than
+lt! swp sub @dyn pop      # less than
+nlt! swp sub @dyn pop flc # non-less than
+zr! buf @dyn pop          # zero
+nzr! buf @dyn pop flc     # non-zero
+eq! xor @dyn pop          # equal to
+neq! xor @dyn pop flc     # non-equal to
+ng! shl @dyn pop          # negative
+nng! shl @dyn pop flc     # non-negative
+ps! neg shl @dyn pop      # positive
+nps! neg shl @dyn pop flc # non-positive
+cl! and @dyn pop          # cleared in
+ncl! and @dyn pop flc     # non-cleared in
 
 jmp! sti
 bcc! @const !bcc.dyn

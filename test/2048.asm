@@ -30,15 +30,15 @@ main!
         !primary_down xo4 x04 neg @const iff !primary_down xo4
         !primary_left xo4 x01 nop @const iff !primary_left xo4
         # !primary_right xo4 x01 neg @const iff !primary_right xo4
-        ld3 !primary_up !primary_left orr @const and pop
+        ld3 !primary_up !primary_left orr @const !cl
         x0F x00 iff # negator
         x03 x00 iff # equality
         # `negator ^= n` to produce `curr`
         ld3 xo2
-        ld5 !primary_up !primary_down orr @const and pop
+        ld5 !primary_up !primary_down orr @const !cl
         x06 x00 iff # orientation
         # if ((curr >> orientation & 0x03) == equality) continue;
-        ld2 swp rot x03 and !is_equal :continue !bcs
+        ld2 swp rot x03 and !eq :continue !bcs
         # curr = &board + curr
         :board add
         # `offset += curr` to produce `prev`
@@ -47,8 +47,8 @@ main!
         ld1 lda # board[prev]
         ld1 lda # board[curr]
 
-        !check_zero :zero !bcs
-        !is_equal :continue :equal iff !jmp
+        !z :zero !bcs
+        !eq :continue :equal iff !jmp
 
         zero: # `board[prev]` and `board[curr]` on the stack
           # board[curr] = board[prev] - 1
@@ -57,7 +57,7 @@ main!
           # board[curr] = board[curr] + 1
           ld0 lda inc
             # if (board[curr] != 0) moved = true;
-            !check_zero x00 flc shl @dyn or8
+            !z x00 flc shl @dyn or8
           ld1 sta
           # board[prev] = 0
           x00 ld2 sta
@@ -65,14 +65,14 @@ main!
           # which happens to pop two bytes off the stack
 
         continue: pop pop
-      !check_zero :for_n !bcc # bleed `0x00`
+      !z :for_n !bcc # bleed `0x00`
 
       # if we're at on last iteration and `moved` is `true`, generate a
       # `0x01` tile. otherwise, generate a `0x00` tile, which is a no-op.
       # note that making an invalid move when no room is left for a new
       # tile will cause an infinite stall even though the game shouldn't
       # be over yet
-      !check_equal x00 shl @dyn ld4 and
+      !e x00 shl @dyn ld4 and
 
       # keep adding `&board` to `rand_seed`, modulo `0x10` to prevent
       # out-of-bounds access, until we find a zero tile. the cycle length
@@ -80,7 +80,7 @@ main!
       # coprime with `0x10`. this is guaranteed at assembly time. see below
       ld3 generate:
         x0F and clc :board add
-      ld0 lda !is_zero :generate !bcc sta
+      ld0 lda !zr :generate !bcc sta
 
       !display_buffer_len for_byte: dec
         x00 # result
@@ -96,12 +96,12 @@ main!
           # result |= nibble
           # result <<= 4
           or2 x04 ro2
-        !check_zero :for_nibble !bcc pop
+        !z :for_nibble !bcc pop
         # display_buffer[byte] = result
         !display_buffer dec @const ld2 add sta
-      !check_zero :for_byte !bcc # bleed `0x00`
+      !z :for_byte !bcc # bleed `0x00`
 
-    !check_equal :for_iteration !bcc # bleed `0x00`
+    !e :for_iteration !bcc # bleed `0x00`
 
     # moved = false
     st2

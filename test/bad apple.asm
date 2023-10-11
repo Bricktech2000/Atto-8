@@ -24,7 +24,7 @@ main!
       !char.to_u4 orr !u8
       # write byte to display buffer
       ld1 !u8.sta
-    inc !check_zero :for_byte !bcc pop
+    inc !z :for_byte !bcc pop
 
     # stall until next frame
     x09 !delay x17 !stall

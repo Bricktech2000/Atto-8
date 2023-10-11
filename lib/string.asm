@@ -42,7 +42,7 @@ strcmp.def!
   strcmp: clc # cpm = strcmp(*str1, *str2)
     ld2 ld2 for_c.
       # break if *str1 != *str2
-      ld1 lda ld1 lda sub !check_zero st4 .break !bcc
+      ld1 lda ld1 lda sub !z st4 .break !bcc
       # loop if *str1 != '\0'
       ld0 lda !char.is_null
     inc swp inc swp @dyn .for_c !bcc break. pop pop
@@ -55,9 +55,9 @@ memchr.def!
     ld3 for_i. dec
       # break if *buf == char
       ld2 ld1 sub lda
-      ld4 !is_equal .break !bcs
+      ld4 !eq .break !bcs
     # loop if i > 0
-    !check_zero .for_i !bcc pop ld1 break. clc
+    !z .for_i !bcc pop ld1 break. clc
     # compute *ptr
     su2
   # return* ptr
@@ -68,7 +68,7 @@ memset.def!
       # *ptr = val
       ld3 ld1 ld4 add sta
     # loop if i > 0
-    !check_zero .for_i !bcc pop
+    !z .for_i !bcc pop
   # return*
   !rt3
 memcpy.def!
@@ -78,7 +78,7 @@ memcpy.def!
       ld3 ld1 add lda
       ld3 ld2 add sta
     # loop if i > 0
-    !check_zero .for_i !bcc pop
+    !z .for_i !bcc pop
   # return*
   !rt3
 memcmp.def!
@@ -87,8 +87,8 @@ memcmp.def!
       # break if *ptr1 != *ptr2
       ld3 ld1 add lda
       ld3 ld2 add lda
-      sub !check_zero st4 .break !bcc
+      sub !z st4 .break !bcc
     # loop if i > 0
-    !check_zero .for_i !bcc break. pop
+    !z .for_i !bcc break. pop
   # return* *ptr1 - *ptr2
   !rt2

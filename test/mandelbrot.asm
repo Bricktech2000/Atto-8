@@ -23,7 +23,7 @@ main!
 
     !is_in_set @dyn x00 shl @dyn
     ld1 !display_buffer !bit_addr !store_bit
-  !check_zero !here :for_xy swp iff !jmp
+  !z !here :for_xy swp iff !jmp
 
 
   !u8.mul.def
@@ -36,10 +36,10 @@ is_in_set! clc # bool b = is_in_set(c4f4m4f4 c)
   x10 for_i: dec
     !i4f4.ld1+1 !i4f4.ld0 !i4f4.mul # z_re2
     !i4f4.ld1+1 !i4f4.ld0 !i4f4.mul # z_im2
-    !i4f4.ld1 !i4f4.ld1 !i4f4.add x18 !i4f4 !i4f4.sub !i4f4.pop :ret !bcc
+    !i4f4.ld1 !i4f4.ld1 !i4f4.add x18 !i4f4 !i4f4.sub @dyn !i4f4.pop :ret !bcc
     !i4f4.ld3+1 !i4f4.ld3+1 !i4f4.mul shl clc !i4f4.ld4+2 !i4f4.add clc !i4f4.st2+1
     !i4f4.sub clc !i4f4.ld4+1 !i4f4.add !i4f4.st1+1
-  !check_zero :for_i !bcc
+  !z :for_i !bcc
   x00 x00
 ret:
   pop pop pop pop pop pop pop

@@ -17,7 +17,7 @@ main!
 
   loop:
     # set y_vel to flap_vel if no button was pressed previously but some button is pressed now
-    !getc !char.check_null !i4f4.ld1 !flap_vel !i4f4.ld3 !i4f4.iff ld8 !is_zero !i4f4.iff !i4f4.st1 st5
+    !getc !char.check_null !i4f4.ld1 !flap_vel !i4f4.ld3 !i4f4.iff ld8 !zr !i4f4.iff !i4f4.st1 st5
     # compute bit_addr of (BIRD_POS, y_pos)
     !display_buffer !u4f4.ld2 !u4f4.in clc !u4f4.shl orr x07 !bird_pos sub @const
     # clear pixel at (x_pos, y_pos)
@@ -31,27 +31,27 @@ main!
     !u8u8.ld0 !u4f4.add !u4f4.st1
 
     # if x_pos % 0x10 == 0, rotate entire screen left by 1 pixel
-    !u4f4.ld3 x0F and pop :ignore_shift !bcc
+    !u4f4.ld3 x0F !cl :ignore_shift !bcc
       !display_buffer for_addr:
-        ld0 inc lda shl pop # load carry
+        ld0 inc lda shl @dyn pop # load carry
         ld0 lda shl ld1 sta inc
         ld0 lda shl ld1 sta inc
-      !check_zero :for_addr !bcc pop
+      !z :for_addr !bcc pop
     ignore_shift:
 
     # compute bit_addr of (BIRD_POS, y_pos)
     !display_buffer !u4f4.ld2 !u4f4.in clc !u4f4.shl orr x07 !bird_pos sub @const
     # if pixel at (x_pos, y_pos) is set, game over
-    !u8u8.ld0 !load_bit !is_zero :game_over !bcc
+    !u8u8.ld0 !load_bit !zr :game_over !bcc
     # set pixel at (x_pos, y_pos)
     !set_bit
 
     # if x_pos % 0x80 == 0, generate a new pipe
-    !u4f4.ld3 x7F and pop :ignore_pipe !bcc
+    !u4f4.ld3 x7F !cl :ignore_pipe !bcc
       # fill right side of the screen with 0x01
       x0C for_i: dec
         x01 !display_buffer ld2 x01 rot orr inc sta
-      !check_zero :for_i !bcc pop
+      !z :for_i !bcc pop
       # remove a few pixels at a random height
       ld4 !rand.min st4 ld4
       x00 swp # for `sta` below

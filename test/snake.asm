@@ -32,23 +32,23 @@ main!
     # default: `head_vel`
     !getc !u8.ld3 !primary_to_delta st0
     # on even frame parity, ignore user input
-    !u8.ld3 ld2 !is_zero !u8.iff !u8.st2
+    !u8.ld3 ld2 !zr !u8.iff !u8.st2
     # head_pos += head_vel
     clc ld2 ad4
 
     # not enough memory to avoid snake wrapping around
-    # !u4u4.ld3 !u4u4.fst !is_zero !here !bcs
-    # !u4u4.ld3 !u4u4.snd !is_zero !here !bcs
+    # !u4u4.ld3 !u4u4.fst !zr !here !bcs
+    # !u4u4.ld3 !u4u4.snd !zr !here !bcs
 
     # draw food at `food_pos`
     ld1 x11 orr ld0 !display_buffer !bit_addr !set_bit # bleeds `food_pos` onto the stack
 
     # if head_pos == food_pos, spawn new food
-    !u4u4.ld4 !is_equal :food !bcs # consumes `food_pos` from the stack
+    !u4u4.ld4 !eq :food !bcs # consumes `food_pos` from the stack
     # compute bit_addr of head_pos
     !u4u4.ld3 !display_buffer !bit_addr
     # game over if pixel at head_pos is set
-    !u8u8.ld0 !load_bit !is_zero !here !bcc
+    !u8u8.ld0 !load_bit !zr !here !bcc
     # set pixel at head_pos
     !set_bit
 
@@ -63,8 +63,8 @@ main!
       # load pixel at test_pos
       !u4u4.ld0 !display_buffer !bit_addr !load_bit
       # store test_pos if pixel is set
-      shr @dyn pop if2
-    !check_zero :for_dir !bcc pop
+      !nzr if2
+    !z :for_dir !bcc pop
 
     # save computed `tail_pos`
     !u4u4.st4
@@ -72,7 +72,7 @@ main!
     # not enough memory to check if food spawned on snake body.
     # therefore, if food_pos == tail_pos, generate new food somewhere else.
     # otherwise, the algorithm above confuses food for the snake body.
-    ld1 x11 orr !u4u4.ld5 !is_equal
+    ld1 x11 orr !u4u4.ld5 !eq
   :loop :food iff !jmp
 
   directions:

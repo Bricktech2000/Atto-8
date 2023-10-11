@@ -91,7 +91,7 @@ compiler!
   # `!stdin` and `!stdout` are `'\0'` which is also `!char.null`
   .: ld0 ld3 !fputc !char.null
   ,: ld2 !fgetc st0 !char.null
-  [: !check_zero !pad_sentinel ![_sentinel iff !jmp !char.null
+  [: !z !pad_sentinel ![_sentinel iff !jmp !char.null
   ]: !]_sentinel !jmp !char.null
   _: !char.null
 
@@ -106,7 +106,7 @@ interpreter!
   while:
     :source_buffer !gets.min
     :source_buffer !puts.min
-  :source_buffer lda !is_zero :while !bcs
+  :source_buffer lda !zr :while !bcs
   !char.space !putc
   !char.latin_capital_letter_o !putc
   !char.latin_capital_letter_k !putc
@@ -136,7 +136,7 @@ interpreter!
     st0 !jmp
     got_left_square_bracket:
       # ignore if value at head is non-zero
-      ld1 lda !is_zero :got_neither !bcc
+      ld1 lda !zr :got_neither !bcc
     got_right_square_bracket:
       x00 # nesting level
       for_c:
@@ -149,10 +149,10 @@ interpreter!
         # increment or decrement head depending on sign of nesting level
         shl ld1 dec ld2 inc iff st1 shr
         # loop if nesting level is non-zero
-      !check_zero :for_c !bcc # 0x00 is left on the stack
+      !z :for_c !bcc # 0x00 is left on the stack
       # we're at a right bracket if and only if we're coming from a left bracket.
       # if we're at a right bracket, increment head to skip over the right bracket
-      ld1 inc lda !char.right_square_bracket !is_equal add @dyn
+      ld1 inc lda !char.right_square_bracket !eq add @dyn
     # loop if current source char is not null
     got_neither:
   inc !here :loop swp iff !jmp

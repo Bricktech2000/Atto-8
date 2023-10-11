@@ -36,7 +36,7 @@ main!
       !block_getc !char.to_u4 orr !u8
       # write byte to display buffer
       ld1 !u8.sta
-    inc !check_zero :for_load !bcc pop
+    inc !z :for_load !bcc pop
     # fall through
 
   store:
@@ -44,7 +44,7 @@ main!
     # output display buffer as hex string
     !display_buffer for_store:
       ld0 !u8.lda !u8.to_chars !putc !putc
-    inc !check_zero :for_store !bcc pop
+    inc !z :for_store !bcc pop
     !char.carriage_return !putc !char.line_feed !putc
     # fall through
 

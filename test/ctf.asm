@@ -29,7 +29,7 @@ main!
     xor clc
     # store byte
     :payload ld2 add sta
-  !check_zero :for_i !bcc pop
+  !z :for_i !bcc pop
 
   # !dbg
   pop # pop rand_seed

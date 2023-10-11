@@ -469,12 +469,70 @@ fn assemble(
     output
   }
 
-  // convenience function, returns `true` if the given root effectively just pushes a value onto the stack
-  fn just_pushes(root: &Root) -> bool {
+  #[derive(Clone, Eq, PartialEq)]
+  enum OpType {
+    NoOp,     // 0 -> 0
+    PushOp,   // 0 -> 1
+    PopOp,    // 1 -> 0
+    UnaryOp,  // 1 -> 1
+    BinaryOp, // 2 -> 1
+    DualOp,   // 2 -> 2
+    Impure,   // has side effects
+  }
+
+  // this function maps roots to the effect they have on the stack. if a root is not to be optimized away
+  // because it produces a side effect in the form of a write to memory or to a register, it is mapped to
+  // `Impure`. writing to `CF` and reading from memory or from a register are not considered side effects
+  fn op_type(root: &Root) -> OpType {
     match root {
-      Root::Instruction(Instruction::Ldo(_)) => true,
-      Root::Node(_) => true,
-      _ => false,
+      Root::Instruction(instruction) => match instruction {
+        Instruction::Psh(_imm) => OpType::PushOp,
+        Instruction::Add(0x01) => OpType::BinaryOp,
+        Instruction::Add(_size) => OpType::Impure,
+        Instruction::Sub(0x01) => OpType::BinaryOp,
+        Instruction::Sub(_size) => OpType::Impure,
+        Instruction::Iff(0x01) => OpType::BinaryOp,
+        Instruction::Iff(_size) => OpType::Impure,
+        Instruction::Rot(0x01) => OpType::BinaryOp,
+        Instruction::Rot(_size) => OpType::Impure,
+        Instruction::Orr(0x01) => OpType::BinaryOp,
+        Instruction::Orr(_size) => OpType::Impure,
+        Instruction::And(0x01) => OpType::BinaryOp,
+        Instruction::And(_size) => OpType::Impure,
+        Instruction::Xor(0x01) => OpType::BinaryOp,
+        Instruction::Xor(_size) => OpType::Impure,
+        Instruction::Xnd(0x01) => OpType::BinaryOp,
+        Instruction::Xnd(_size) => OpType::Impure,
+        Instruction::Inc => OpType::UnaryOp,
+        Instruction::Dec => OpType::UnaryOp,
+        Instruction::Neg => OpType::UnaryOp,
+        Instruction::Shl => OpType::UnaryOp,
+        Instruction::Shr => OpType::UnaryOp,
+        Instruction::Not => OpType::UnaryOp,
+        Instruction::Buf => OpType::NoOp,
+        Instruction::Dbg => OpType::Impure,
+        Instruction::Ldo(_ofst) => OpType::PushOp,
+        Instruction::Sto(_ofst) => OpType::Impure,
+        Instruction::Lda => OpType::UnaryOp,
+        Instruction::Sta => OpType::Impure,
+        Instruction::Ldi => OpType::PushOp,
+        Instruction::Sti => OpType::Impure,
+        Instruction::Lds => OpType::PushOp,
+        Instruction::Sts => OpType::Impure,
+        Instruction::Nop => OpType::NoOp,
+        Instruction::Clc => OpType::Impure, // `clc` is to be left unaltered
+        Instruction::Sec => OpType::Impure, // `sec` is to be left unaltered
+        Instruction::Flc => OpType::Impure, // `flc` is to be left unaltered
+        Instruction::Swp => OpType::DualOp,
+        Instruction::Pop => OpType::PopOp,
+        Instruction::Phn(_nimm) => OpType::PushOp,
+      },
+      Root::LabelDef(_) => OpType::Impure,
+      Root::Node(_) => OpType::PushOp,
+      Root::Opcode(_) => OpType::Impure,
+      Root::Const => OpType::Impure,
+      Root::Dyn(_) => OpType::Impure,
+      Root::Org(_) => OpType::Impure,
     }
   }
 
@@ -498,6 +556,9 @@ fn assemble(
           .map(|(_, instruction)| Root::Dyn(Some(instruction.clone())))
           .collect(),
       ),
+      [Root::Dyn(Some(instruction)), Root::Dyn(None)] => {
+        Some(vec![Root::Dyn(Some(instruction.clone()))])
+      }
       [Root::Opcode(opcode), Root::Dyn(None)] => Some(vec![Root::Opcode(opcode.clone())]),
       [Root::Node(node), Root::Org(None)] => Some(vec![Root::Org(Some(node.clone()))]),
       _ => None,
@@ -518,50 +579,49 @@ fn assemble(
     });
 
     roots = match_replace(&roots, |window| match window {
-      [Root::Instruction(Instruction::Nop)] => Some(vec![]),
-      [Root::Instruction(Instruction::Buf)] => Some(vec![]),
+      [zero_to_zero] if op_type(zero_to_zero) == OpType::NoOp => Some(vec![]),
       _ => None,
     });
 
     roots =
       match_replace(&roots, |window| match window {
-        [Root::Node(node), Root::Instruction(Instruction::Add(_size))]
-          if eval(&node, &HashMap::new()) == Ok(0x00) =>
+        [Root::Node(x00), Root::Instruction(Instruction::Add(_size))]
+          if eval(&x00, &HashMap::new()) == Ok(0x00) =>
         {
           Some(vec![])
         }
-        [Root::Node(node), Root::Instruction(Instruction::Add(0x01))]
-          if eval(&node, &HashMap::new()) == Ok(0x01) =>
+        [Root::Node(x01), Root::Instruction(Instruction::Add(0x01))]
+          if eval(&x01, &HashMap::new()) == Ok(0x01) =>
         {
           Some(vec![Root::Instruction(Instruction::Inc)])
         }
-        [Root::Node(node), Root::Instruction(Instruction::Sub(_size))]
-          if eval(&node, &HashMap::new()) == Ok(0x00) =>
+        [Root::Node(x00), Root::Instruction(Instruction::Sub(_size))]
+          if eval(&x00, &HashMap::new()) == Ok(0x00) =>
         {
           Some(vec![])
         }
-        [Root::Node(node), Root::Instruction(Instruction::Sub(0x01))]
-          if eval(&node, &HashMap::new()) == Ok(0x01) =>
+        [Root::Node(x01), Root::Instruction(Instruction::Sub(0x01))]
+          if eval(&x01, &HashMap::new()) == Ok(0x01) =>
         {
           Some(vec![Root::Instruction(Instruction::Dec)])
         }
-        [Root::Node(node), Root::Instruction(Instruction::Rot(_size))]
-          if eval(&node, &HashMap::new()).map(|value| value % 8) == Ok(0x00) =>
+        [Root::Node(div_by_eight), Root::Instruction(Instruction::Rot(_size))]
+          if eval(&div_by_eight, &HashMap::new()).map(|value| value % 8) == Ok(0x00) =>
         {
           Some(vec![])
         }
-        [Root::Node(node), Root::Instruction(Instruction::Orr(_size))]
-          if eval(&node, &HashMap::new()) == Ok(0x00) =>
+        [Root::Node(x00), Root::Instruction(Instruction::Orr(_size))]
+          if eval(&x00, &HashMap::new()) == Ok(0x00) =>
         {
           Some(vec![])
         }
-        [Root::Node(node), Root::Instruction(Instruction::And(_size))]
-          if eval(&node, &HashMap::new()) == Ok(0xFF) =>
+        [Root::Node(ff), Root::Instruction(Instruction::And(_size))]
+          if eval(&ff, &HashMap::new()) == Ok(0xFF) =>
         {
           Some(vec![])
         }
-        [Root::Node(node), Root::Instruction(Instruction::Xor(_size))]
-          if eval(&node, &HashMap::new()) == Ok(0x00) =>
+        [Root::Node(x00), Root::Instruction(Instruction::Xor(_size))]
+          if eval(&x00, &HashMap::new()) == Ok(0x00) =>
         {
           Some(vec![])
         }
@@ -604,7 +664,16 @@ fn assemble(
         }
         [Root::Instruction(Instruction::Flc), Root::Instruction(Instruction::Flc)] => Some(vec![]),
         [Root::Instruction(Instruction::Swp), Root::Instruction(Instruction::Swp)] => Some(vec![]),
-        [Root::Node(_), Root::Instruction(Instruction::Pop)] => Some(vec![]),
+        [push_op, one_to_zero]
+          if op_type(push_op) == OpType::PushOp && op_type(one_to_zero) == OpType::PopOp =>
+        {
+          Some(vec![])
+        }
+        [one_to_one, one_to_zero]
+          if op_type(one_to_one) == OpType::UnaryOp && op_type(one_to_zero) == OpType::PopOp =>
+        {
+          Some(vec![one_to_zero.clone()])
+        }
         _ => None,
       });
 
@@ -663,11 +732,13 @@ fn assemble(
           Box::new(node1.clone()),
         ))])
       }
-      [Root::Node(node1), root, Root::Instruction(Instruction::Ldo(0x01))] if just_pushes(root) => {
+      [Root::Node(node), push_op, Root::Instruction(Instruction::Ldo(0x01))]
+        if op_type(push_op) == OpType::PushOp =>
+      {
         Some(vec![
-          Root::Node(node1.clone()),
-          root.clone(),
-          Root::Node(node1.clone()),
+          Root::Node(node.clone()),
+          push_op.clone(),
+          Root::Node(node.clone()),
         ])
       }
       [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Swp)] => {
@@ -697,166 +768,187 @@ fn assemble(
           Root::Instruction(Instruction::Ldo(*ofst1 + 1)),
         ])
       }
-      [Root::Instruction(Instruction::Pop), Root::Node(node), Root::Instruction(Instruction::Sto(0x07))]
-      | [Root::Node(node), Root::Instruction(Instruction::Sto(0x08)), Root::Instruction(Instruction::Pop)]
-        if eval(&node, &HashMap::new()) == Ok(0x00) =>
+      // OpType::PopOp
+      [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(0x07))]
+      | [Root::Node(x00), Root::Instruction(Instruction::Sto(0x08)), Root::Instruction(Instruction::Pop)]
+        if eval(&x00, &HashMap::new()) == Ok(0x00) =>
       {
         Some(vec![Root::Instruction(Instruction::Xnd(0x08))])
       }
-      [Root::Instruction(Instruction::Pop), Root::Node(node), Root::Instruction(Instruction::Sto(0x03))]
-      | [Root::Node(node), Root::Instruction(Instruction::Sto(0x04)), Root::Instruction(Instruction::Pop)]
-        if eval(&node, &HashMap::new()) == Ok(0x00) =>
+      // OpType::PopOp
+      [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(0x03))]
+      | [Root::Node(x00), Root::Instruction(Instruction::Sto(0x04)), Root::Instruction(Instruction::Pop)]
+        if eval(&x00, &HashMap::new()) == Ok(0x00) =>
       {
         Some(vec![Root::Instruction(Instruction::Xnd(0x04))])
       }
-      [Root::Instruction(Instruction::Pop), Root::Node(node), Root::Instruction(Instruction::Sto(0x01))]
-      | [Root::Node(node), Root::Instruction(Instruction::Sto(0x02)), Root::Instruction(Instruction::Pop)]
-        if eval(&node, &HashMap::new()) == Ok(0x00) =>
+      // OpType::PopOp
+      [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(0x01))]
+      | [Root::Node(x00), Root::Instruction(Instruction::Sto(0x02)), Root::Instruction(Instruction::Pop)]
+        if eval(&x00, &HashMap::new()) == Ok(0x00) =>
       {
         Some(vec![Root::Instruction(Instruction::Xnd(0x02))])
       }
-      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(node)]
-      | [Root::Instruction(Instruction::Pop), Root::Node(node), Root::Instruction(Instruction::Sto(0x00))]
-      | [Root::Node(node), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
-        if eval(&node, &HashMap::new()) == Ok(0x00) =>
+      // OpType::PopOp
+      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(x00)]
+      | [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(0x00))]
+      | [Root::Node(x00), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
+        if eval(&x00, &HashMap::new()) == Ok(0x00) =>
       {
         Some(vec![Root::Instruction(Instruction::Xnd(0x01))])
       }
-      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(node)]
-      | [Root::Instruction(Instruction::Pop), Root::Node(node), Root::Instruction(Instruction::Sto(0x00))]
-      | [Root::Node(node), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
-        if eval(&node, &HashMap::new()) == Ok(0x01) =>
+      // OpType::PopOp
+      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(x01)]
+      | [Root::Instruction(Instruction::Pop), Root::Node(x01), Root::Instruction(Instruction::Sto(0x00))]
+      | [Root::Node(x01), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
+        if eval(&x01, &HashMap::new()) == Ok(0x01) =>
       {
         Some(vec![
           Root::Instruction(Instruction::Xnd(0x01)),
           Root::Instruction(Instruction::Shl),
         ])
       }
-      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(node)]
-      | [Root::Instruction(Instruction::Pop), Root::Node(node), Root::Instruction(Instruction::Sto(0x00))]
-      | [Root::Node(node), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
-        if eval(&node, &HashMap::new()) == Ok(0x80) =>
+      // OpType::PopOp
+      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(x80)]
+      | [Root::Instruction(Instruction::Pop), Root::Node(x80), Root::Instruction(Instruction::Sto(0x00))]
+      | [Root::Node(x80), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
+        if eval(&x80, &HashMap::new()) == Ok(0x80) =>
       {
         Some(vec![
           Root::Instruction(Instruction::Xnd(0x01)),
           Root::Instruction(Instruction::Shr),
         ])
       }
-      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(node)]
-      | [Root::Instruction(Instruction::Pop), Root::Node(node), Root::Instruction(Instruction::Sto(0x00))]
-      | [Root::Node(node), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
-        if eval(&node, &HashMap::new()) == Ok(0xFF) =>
+      // OpType::PopOp
+      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(xff)]
+      | [Root::Instruction(Instruction::Pop), Root::Node(xff), Root::Instruction(Instruction::Sto(0x00))]
+      | [Root::Node(xff), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
+        if eval(&xff, &HashMap::new()) == Ok(0xFF) =>
       {
         Some(vec![
           Root::Instruction(Instruction::Xnd(0x01)),
           Root::Instruction(Instruction::Not),
         ])
       }
+      [push_op, two_to_one, one_to_zero]
+        if op_type(push_op) == OpType::PushOp
+          && op_type(two_to_one) == OpType::BinaryOp
+          && op_type(one_to_zero) == OpType::PopOp =>
+      {
+        Some(vec![one_to_zero.clone()])
+      }
+      [two_to_two, one_to_zero1, one_to_zero2]
+        if op_type(two_to_two) == OpType::DualOp
+          && op_type(one_to_zero1) == OpType::PopOp
+          && op_type(one_to_zero2) == OpType::PopOp =>
+      {
+        Some(vec![])
+      }
       _ => None,
     });
 
     roots = match_replace(&roots, |window| match window {
-      [Root::Node(node1), Root::Instruction(Instruction::Add(size1)), Root::Node(node2), Root::Instruction(Instruction::Add(size2))]
-        if size1 == size2 =>
+      [Root::Node(node1), Root::Instruction(Instruction::Add(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Add(same_size2))]
+        if same_size1 == same_size2 =>
       {
         Some(vec![
           Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Add(*size1)),
+          Root::Instruction(Instruction::Add(*same_size1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::Add(size1)), Root::Node(node2), Root::Instruction(Instruction::Sub(size2))]
-        if size1 == size2 =>
+      [Root::Node(node1), Root::Instruction(Instruction::Add(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Sub(same_size2))]
+        if same_size1 == same_size2 =>
       {
         Some(vec![
           Root::Node(Node::Sub(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Add(*size1)),
+          Root::Instruction(Instruction::Add(*same_size1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::Sub(size1)), Root::Node(node2), Root::Instruction(Instruction::Sub(size2))]
-        if size1 == size2 =>
+      [Root::Node(node1), Root::Instruction(Instruction::Sub(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Sub(same_size2))]
+        if same_size1 == same_size2 =>
       {
         Some(vec![
           Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Sub(*size1)),
+          Root::Instruction(Instruction::Sub(*same_size1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::Sub(size1)), Root::Node(node2), Root::Instruction(Instruction::Add(size2))]
-        if size1 == size2 =>
+      [Root::Node(node1), Root::Instruction(Instruction::Sub(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Add(same_size2))]
+        if same_size1 == same_size2 =>
       {
         Some(vec![
           Root::Node(Node::Sub(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Sub(*size1)),
+          Root::Instruction(Instruction::Sub(*same_size1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::Rot(size1)), Root::Node(node2), Root::Instruction(Instruction::Rot(size2))]
-        if size1 == size2 =>
+      [Root::Node(node1), Root::Instruction(Instruction::Rot(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Rot(same_size2))]
+        if same_size1 == same_size2 =>
       {
         Some(vec![
           Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Rot(*size1)),
+          Root::Instruction(Instruction::Rot(*same_size1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::Orr(size1)), Root::Node(node2), Root::Instruction(Instruction::Orr(size2))]
-        if size1 == size2 =>
+      [Root::Node(node1), Root::Instruction(Instruction::Orr(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Orr(same_size2))]
+        if same_size1 == same_size2 =>
       {
         Some(vec![
           Root::Node(Node::Orr(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Orr(*size1)),
+          Root::Instruction(Instruction::Orr(*same_size1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::And(size1)), Root::Node(node2), Root::Instruction(Instruction::And(size2))]
-        if size1 == size2 =>
+      [Root::Node(node1), Root::Instruction(Instruction::And(same_size1)), Root::Node(node2), Root::Instruction(Instruction::And(same_size2))]
+        if same_size1 == same_size2 =>
       {
         Some(vec![
           Root::Node(Node::And(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::And(*size1)),
+          Root::Instruction(Instruction::And(*same_size1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::Xor(size1)), Root::Node(node2), Root::Instruction(Instruction::Xor(size2))]
-        if size1 == size2 =>
+      [Root::Node(node1), Root::Instruction(Instruction::Xor(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Xor(same_size2))]
+        if same_size1 == same_size2 =>
       {
         Some(vec![
           Root::Node(Node::Xor(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Xor(*size1)),
+          Root::Instruction(Instruction::Xor(*same_size1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::Xnd(size1)), Root::Node(node2), Root::Instruction(Instruction::Xnd(size2))]
-        if size1 == size2 =>
+      [Root::Node(node1), Root::Instruction(Instruction::Xnd(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Xnd(same_size2))]
+        if same_size1 == same_size2 =>
       {
         Some(vec![
           Root::Node(Node::Xnd(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Xnd(*size1)),
+          Root::Instruction(Instruction::Xnd(*same_size1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::And(size1)), Root::Node(node2), Root::Instruction(Instruction::Orr(size2))]
-        if size1 == size2
+      [Root::Node(node1), Root::Instruction(Instruction::And(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Orr(same_size2))]
+        if same_size1 == same_size2
           && eval(&node1, &HashMap::new())
             .and_then(|value1| eval(&node2, &HashMap::new()).map(|value2| value1 ^ value2 == 0xFF))
             .unwrap_or(false) =>
       {
         Some(vec![
           Root::Node(node2.clone()),
-          Root::Instruction(Instruction::Orr(*size1)),
+          Root::Instruction(Instruction::Orr(*same_size1)),
         ])
       }
-      [Root::Node(node1), Root::Instruction(Instruction::Orr(size1)), Root::Node(node2), Root::Instruction(Instruction::And(size2))]
-        if size1 == size2
+      [Root::Node(node1), Root::Instruction(Instruction::Orr(same_size1)), Root::Node(node2), Root::Instruction(Instruction::And(same_size2))]
+        if same_size1 == same_size2
           && eval(&node1, &HashMap::new())
             .and_then(|value1| eval(&node2, &HashMap::new()).map(|value2| value1 ^ value2 == 0xFF))
             .unwrap_or(false) =>
       {
         Some(vec![
           Root::Node(node2.clone()),
-          Root::Instruction(Instruction::And(*size1)),
+          Root::Instruction(Instruction::And(*same_size1)),
         ])
       }
-      [Root::Node(node1), root1, root2, Root::Instruction(Instruction::Ldo(0x02))]
-        if just_pushes(root1) && just_pushes(root2) =>
+      [Root::Node(node1), push_op1, push_op2, Root::Instruction(Instruction::Ldo(0x02))]
+        if op_type(push_op1) == OpType::PushOp && op_type(push_op2) == OpType::PushOp =>
       {
         Some(vec![
           Root::Node(node1.clone()),
-          root1.clone(),
-          root2.clone(),
+          push_op1.clone(),
+          push_op2.clone(),
           Root::Node(node1.clone()),
         ])
       }
@@ -871,8 +963,8 @@ fn assemble(
     last_roots = roots.clone();
 
     roots = match_replace(&roots, |window| match window {
-      [Root::Node(node1), Root::Node(node2)] if node1 == node2 => Some(vec![
-        Root::Node(node1.clone()),
+      [Root::Node(same_node1), Root::Node(same_node2)] if same_node1 == same_node2 => Some(vec![
+        Root::Node(same_node1.clone()),
         Root::Instruction(Instruction::Ldo(0x00)),
       ]),
       [Root::Instruction(Instruction::Swp), Root::Instruction(Instruction::Pop)] => {
@@ -882,10 +974,12 @@ fn assemble(
     });
 
     roots = match_replace(&roots, |window| match window {
-      [Root::Node(node1), root, Root::Node(node2)] if node1 == node2 && just_pushes(root) => {
+      [Root::Node(same_node1), push_op, Root::Node(same_node2)]
+        if same_node1 == same_node2 && op_type(push_op) == OpType::PushOp =>
+      {
         Some(vec![
-          Root::Node(node1.clone()),
-          root.clone(),
+          Root::Node(same_node1.clone()),
+          push_op.clone(),
           Root::Instruction(Instruction::Ldo(0x01)),
         ])
       }
@@ -893,13 +987,15 @@ fn assemble(
     });
 
     roots = match_replace(&roots, |window| match window {
-      [Root::Node(node1), root1, root2, Root::Node(node2)]
-        if node1 == node2 && just_pushes(root1) && just_pushes(root2) =>
+      [Root::Node(same_node1), push_op1, push_op2, Root::Node(same_node2)]
+        if same_node1 == same_node2
+          && op_type(push_op1) == OpType::PushOp
+          && op_type(push_op2) == OpType::PushOp =>
       {
         Some(vec![
-          Root::Node(node1.clone()),
-          root1.clone(),
-          root2.clone(),
+          Root::Node(same_node1.clone()),
+          push_op1.clone(),
+          push_op2.clone(),
           Root::Instruction(Instruction::Ldo(0x02)),
         ])
       }

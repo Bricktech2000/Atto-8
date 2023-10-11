@@ -28,23 +28,23 @@ main!
     !u4f4.ld3 !u4f4.in !u4f4.ld2 !u4f4.in x04 rot orr clc !u4u4
       # if (y_pos ^ y_pos << 1) & 0xE0 == 0 { y_vel = -y_vel }
       # this checks if y_pos & 0xF0 is either 0x00 of 0xF0
-      !u4f4.ld2 !u4f4.ld0 shl xor xE0 and pop
+      !u4f4.ld2 !u4f4.ld0 shl xor xE0 !cl
       !u4f4.ld1 !u4f4.ld0 !u4f4.neg !u4f4.iff !u4f4.st1 clc
       # if (x_pos ^ x_pos << 1) & 0xE0 != 0 { goto ignore_check }
       # this only checks paddle bounces if the ball is on either side of the screen
-      !u4f4.ld4 !u4f4.ld0 shl xor xE0 and pop
+      !u4f4.ld4 !u4f4.ld0 shl xor xE0 !cl
       :ignore_check !bcc
         # x_vel = -x_vel
         !u4f4.ld3 !u4f4.neg !u4f4.st3
         # if the byte in memory where the ball sits is not 0, game over
         !display_buffer !u4u4.ld1 xF8 and x03 !rneg @const rot add lda
-        !is_zero :game_over !bcs
+        !zr :game_over !bcs
       ignore_check:
 
       # loop through paddles
       x00 for_paddle:
         # byte_to_store = paddle ? 0x80 : 0x01
-        !check_zero x80 x01 iff
+        !z x80 x01 iff
         # base_addr = DISPLAY_BUFFER + (paddle ? 2 * paddle_a : 2 * paddle_b + 1)
         !display_buffer !u8.ld9 !u8.ld9 iff ld0 add add
           # draw paddle using `byte_to_store`
@@ -55,7 +55,7 @@ main!
         sta
 
         # paddle_pos = paddle ? paddle_a : paddle_b
-        !check_zero !u8.ld7 !u8.ld7 iff
+        !z !u8.ld7 !u8.ld7 iff
           # get user input and conditionally swap nibbles depending on `paddle`
           !getc x04 x00 iff rot
           # compute `paddle_vel` based on user input
