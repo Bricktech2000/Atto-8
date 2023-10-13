@@ -13,6 +13,34 @@ rand.min! clc # seed = rand.min(seed)
   shl x00 !rand_bits iff xor
 
 
+mul_10! # u8 product = mul_10(u8 n)
+  # n <<= 1
+  shl # 2 n
+  # n += n << 2
+  ld0 shl shl add # 10 n
+# return* n
+
+div_10! # u8 quotient = div_10(u8 n)
+  # n >>= 1
+  shr clc # 1/2 n = 0.5 n
+  # n += n >> 2; n += 1 // round up
+  ld0 shr sec add @dyn # 3/4 n = 0.75 n
+  # n += n >> 4
+  ld0 xF0 and x04 rot # 51/64 n =~ 0.7969 n
+  # n += n >> 7
+  ld1 shl @dyn pop add @dyn # 411/512 n =~ 0.8027 n
+  # n >>= 8
+  xF8 and x05 rot # 411/4096 n =~ 0.1003 n
+# return* n
+
+div_10.min! # u8 quotient = div_10.min(u8 n)
+  # n *= 205
+  xCD !u8 !u8.mul # 205 n
+  # n >>= 11
+  pop xF8 and x05 rot # 205/2048 n =~ 0.1001 n
+# return* n
+
+
 delay! # delay(iterations)
   loop. x1F !stall x01 sub @dyn .loop !bcc pop
 
