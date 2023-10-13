@@ -24,19 +24,20 @@ main!
     x04 for_iteration: dec
       # refer to C implementation for this main loop
       x10 for_n: dec
-        # the fourth `case` is not needed if we set `default` to its value
-        x01 neg @const # offset
-        !primary_up xo4 x04 nop @const iff !primary_up xo4
-        !primary_down xo4 x04 neg @const iff !primary_down xo4
-        !primary_left xo4 x01 nop @const iff !primary_left xo4
-        # !primary_right xo4 x01 neg @const iff !primary_right xo4
-        ld3 !primary_up !primary_left orr @const !cl
-        x0F x00 iff # negator
-        x03 x00 iff # equality
-        # `negator ^= n` to produce `curr`
-        ld3 xo2
-        ld5 !primary_up !primary_down orr @const !cl
+        ld2 !primary_up !primary_down orr @const !cl
+        x04 x01 iff # soon-to-be offset
+        ld1 # soon-to-be curr
+        x03 # soon-to-be equality
         x06 x00 iff # orientation
+        ld3 neg # -offset
+        x0F xo4 ld5 # curr ^ 0x0F
+        ld8 !primary_up !primary_left orr @const !cl
+        # set `curr` to either `curr` or `curr ^ 0x0F`
+        if4
+        # set `offset` to either `offset` or `-offset`
+        if4
+        # set `equality` to either `0x00` or `0x03`
+        x00 if2
         # if ((curr >> orientation & 0x03) == equality) continue;
         ld2 swp rot x03 and !eq :continue !bcs
         # curr = &board + curr
@@ -126,13 +127,13 @@ main!
     x1B shl @const # 6
     x35 shl @const # 7
     x3F shl @const # 8
-    # x3D shl @const # 9
-    # x27 shl @const # A
-    # x2F shl @const # B
-    # x19 shl @const # C
-    # x1F shl @const # D
-    # x29 shl @const # E
-    # x1A shl @const # F
+    x3D shl @const # 9
+    x27 shl @const # A
+    x2F shl @const # B
+    x19 shl @const # C
+    x1F shl @const # D
+    x39 shl @const # E
+    x1A shl @const # F
 
   # `&board & 0x0F` must be coprime with `0x10` for random number generation.
   # `x` is coprime with `0x10` if and only if `x` is odd. therefore we ensure
