@@ -61,7 +61,7 @@ The control word is a 16-bit natural number output from `MIC`, the microcode ROM
 
 It is worth noting that:
 
-- Pointers (`IP` and `SP`) are registers that can both read and write to `DATA`.
+- Pointers (`IP` and `SP`) are registers that can both read from and write to `DATA`.
 - `SC` increments every clock cycle and may only be reset to `0x00`, through `CLR_SC`.
 - Latches (`IL`, `AL`, `XL`, `YL`, `ZL`) can only read from and cannot write to `DATA`.
 - `SUM` can only output `XL + YL` to `DATA`, and `NAND` can only output `~(YL & ZL)` to `DATA`.

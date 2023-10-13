@@ -1706,7 +1706,7 @@ c8f8m8f8.im! !u16.st0 # i8f8 imaginary_part = c8f8m8f8.im(c8f8m8f8 c)
 
 u8.mul! :u8.mul !call # u16 product = u8.mul(u8 a, u8 b)
 u16.mul! :u16.mul !call # u32 product = u16.mul(u16 a, u16 b)
-i8.mul! :i8.mul !call # u16 product = u8.mul(u8 a, u8 b)
+i8.mul! :i8.mul !call # i16 product = i8.mul(i8 a, i8 b)
 i16.mul! :i16.mul !call # i32 product = i16.mul(i16 a, i16 b)
 u4f4.mul! :u4f4.mul !call # u4f4 product = u4f4.mul(u4f4 a, u4f4 b)
 u8f8.mul! :u8f8.mul !call # u8f8 product = u8f8.mul(u8f8 a, u8f8 b)

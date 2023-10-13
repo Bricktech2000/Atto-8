@@ -92,9 +92,9 @@ main!
       !char.exclamation_mark xo2 ld3 iff !char.exclamation_mark xo2
     !jmp default:
     x3A !char.sub clc # map '0'..='9' to 0xF6..=0xFF
-    x0A !char.add :got_hex !bcs # branch if adding 0x0A wrapped around
+    x0A !char.add @dyn :got_hex !bcs # branch if adding 0x0A wrapped around
     x11 !char.sub clc # map 'A'..='F' to 0x00..=0x05
-    x06 !char.sub :got_hex !bcs # branch if subtracting 0x06 wrapped around
+    x06 !char.sub @dyn :got_hex !bcs # branch if subtracting 0x06 wrapped around
     !char.backspace :stall_print !jmp # invalid character, print `'\b'`
 
   !user_buffer @org # memory writeable by user

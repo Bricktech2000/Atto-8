@@ -44,7 +44,7 @@ main!
       ignore:
 
       pop # pop neighbor count
-    !z :for_xy !bcc pop
+    !z :for_xy !bcc !u4u4.pop
   :loop !jmp
 
   neighbors:
