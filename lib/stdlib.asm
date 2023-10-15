@@ -13,34 +13,6 @@ rand.min! clc # seed = rand.min(seed)
   shl x00 !rand_bits iff xor
 
 
-mul_10! # u8 product = mul_10(u8 n)
-  # n <<= 1
-  shl # 2 n
-  # n += n << 2
-  ld0 shl shl add # 10 n
-# return* n
-
-div_10! # u8 quotient = div_10(u8 n)
-  # n >>= 1
-  shr clc # 1/2 n = 0.5 n
-  # n += n >> 2; n += 1 // round up
-  ld0 shr sec add @dyn # 3/4 n = 0.75 n
-  # n += n >> 4
-  ld0 xF0 and x04 rot # 51/64 n =~ 0.7969 n
-  # n += n >> 7
-  ld1 shl @dyn pop add @dyn # 411/512 n =~ 0.8027 n
-  # n >>= 8
-  xF8 and x05 rot # 411/4096 n =~ 0.1003 n
-# return* n
-
-div_10.min! # u8 quotient = div_10.min(u8 n)
-  # n *= 205
-  xCD !u8 !u8.mul # 205 n
-  # n >>= 11
-  pop xF8 and x05 rot # 205/2048 n =~ 0.1001 n
-# return* n
-
-
 delay! # delay(iterations)
   loop. x1F !stall x01 sub @dyn .loop !bcc pop
 
@@ -56,16 +28,64 @@ block_null! block. !getc !char.is_null .block !bcc
 block_getc! !char.null block. !char.pop !getc !char.check_null .block !bcs
 
 
-popcnt! # count = popcnt(a)
-  # count = a == 0 ? -1 : 0
-  !z x00 xFF iff
-  # do { count++ } while (a != 0)
-  while. inc
-    # a &= a - 1
-    ld1 dec an2 # unsets lowest set bit
-  .while !bcc
-  # return* count
-  st0
+popcnt! # count = popcnt(n, init)
+  # count = init
+  while.
+    # shift out lowest bit and add to count
+    shr @dyn x00 ad2 @dyn
+  # loop while n != 0
+  !z .while !bcc
+  # set carry flag if count == 0x00
+  orr
+
+
+mul! clc # product = mul(a, b)
+  x00 inc @const loop.
+    ld1 add
+    .loop x01 su4 @dyn
+    .break iff !jmp
+  break. st1 sub
+
+div! clc # quotient = div(a, b)
+  x00 dec @const loop.
+    x01 add
+    .loop ld2 su4 @dyn
+    .break iff !jmp
+  break. st1 pop
+
+mod! clc # remainder = mod(a, b)
+  loop.
+    ld0 su2 @dyn
+  .loop !bcc clc add
+
+
+mul_10! clc # product = mul_10(n)
+  # n <<= 1
+  shl # 2 n
+  # n += n << 2
+  ld0 shl shl add # 10 n
+  # return* n
+
+div_10! clc # quotient = div_10(n)
+  # n >>= 1
+  shr clc # 1/2 n = 0.5 n
+  # n += n >> 2; n += 1 // round up
+  ld0 shr sec add @dyn # 3/4 n = 0.75 n
+  # n += n >> 4
+  ld0 xF0 and x04 rot # 51/64 n =~ 0.7969 n
+  # n += n >> 7
+  ld1 shl @dyn pop add @dyn # 411/512 n =~ 0.8027 n
+  # n >>= 8
+  xF8 and x05 rot # 411/4096 n =~ 0.1003 n
+  # return* n
+
+div_10.min! # quotient = div_10.min(n)
+  # n *= 205
+  xCD !u8 !u8.mul # 205 n
+  # n >>= 11
+  pop xF8 and x05 rot # 205/2048 n =~ 0.1001 n
+  # return* n
+
 
 
 sort.def!

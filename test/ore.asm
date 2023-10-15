@@ -1,53 +1,29 @@
 @ lib/core.asm
 @ lib/types.asm
-@ lib/string.asm
 @ lib/stdlib.asm
 @ lib/stdio.asm
 
 main!
-  # x05 :fib !call # 0x05
-  # x0A :fib !call # 0x37
-  # x0D :fib !call # 0xE9
-  # x0C :collatz !call # 0x0A
-  # x41 x42 x43 x04 :hanoi !call
+  x00 x06 !popcnt # 0x02
+  x00 xE5 !popcnt # 0x05
+  x05 :fib !call # 0x05
+  x0A :fib !call # 0x37
+  x0D :fib !call # 0xE9
+  x0C :collatz !call # 0x09
+  :str_Atto_8 ld0 !str_Atto_8_len dec :sort !call :str_Atto_8 !puts
+  !char.carriage_return !putc !char.line_feed !putc
+  x41 x42 x43 x04 :hanoi !call
   # x41 x42 x43 x08 :hanoi !call
-  # x63 :str_abcdef :strchr !call :strlen !call # 0x04
-  # xCC :str_abcdef :strchr !call # 0x00
-  # :str_abc :strlen !call # 0x03
-  # :str_abcdef :strlen !call # 0x06
-  # :str_abcdef :str_buf :strcpy !call :str_buf :strlen !call # 0x06
-  # :str_abcdef :str_hello_world :strcat !call :str_hello_world :strlen !call # 0x12
-  # :str_ac :str_ab :strcmp !call # 0x01
-  # :str_ab :str_abc :strcmp !call # 0x9D
-  # :str_abc :str_abc :strcmp !call # 0x00
-  # x06 x63 :str_abcdef :memchr !call :strlen !call # 0x04
-  # x06 xCC :str_abcdef :memchr !call # 0x00
-  # x06 :str_abcdef :str_buf :memcmp !call # 0x00
-  # x03 :str_ac :str_ab :memcmp !call # 0x01
-  # :str_hello_world ld0 ld0 :strlen !call :sort !call !puts
   !hlt
 
 
-  # str_ab: @61 @62 @00
-  # str_ac: @61 @63 @00
-  # str_abc: @61 @62 @63 @00
-  # str_abcdef: @61 @62 @63 @64 @65 @66 @00
-  # str_hello_world: @48 @65 @6C @6C @6F @20 @57 @6F @72 @6C @64 @21 @00
-  # str_buf: @CC @CC @CC @CC @CC @CC @CC @CC
+  !fib.def
+  !collatz.def
+  !hanoi.def
+  !sort.def
 
-  # !fib.def
-  # !collatz.def
-  # !hanoi.def
-  # !strchr.def
-  # !strlen.def
-  # !strcpy.def
-  # !strcat.def
-  # !strcmp.def
-  # !memchr.def
-  # !memset.def
-  # !memcpy.def
-  # !memcmp.def
-  # !sort.def
+  str_Atto_8: @41 @74 @74 @6F @2D @38 @00 str_Atto_8_end:
+str_Atto_8_len! :str_Atto_8_end :str_Atto_8 sub @const
 
 fib.def!
   fib: clc # u8 f = fib(u8 n)
@@ -61,19 +37,19 @@ fib.def!
 collatz.def!
   collatz: clc # u8 steps = collatz(u8 n)
     x00 for_s.
-      ld2 ld0 shl add inc
-      ld3 shr ld1 iff st3
+      ld2 shl # 2 * n
+      ld3 shr @dyn neg # -n / 2
+      ld1 iff ad4 @dyn # `n += CF ? 2*n+CF : -n/2`
       x04 !eq # if `3 * n + 1 == 4` then `n == 1`
     inc .for_s !bcc
   # return* steps
   st1 !rt0
 
 hanoi.def!
-  str_arrow. @20 @2D @3E @20 @00
+  str. src. @20 @20 @2D @3E @20 dst. @20 @0D @0A @00
   hanoi: clc # hanoi(u8 n, char dst, char via, char src)
-    x00 xo2 .break !bcs
+    x00 xo2 @dyn .break !bcs
     ld4 ld3 ld5 ld4 dec :hanoi !call # `n - 1` from `src` to `via`
-    ld4 !putc .str_arrow !puts ld2 !putc
-    !char.carriage_return !putc !char.line_feed !putc
+    ld4 .src sta ld2 .dst sta .str !puts.min # `1` from `src` to `dst`
     ld3 ld5 ld4 ld4 dec :hanoi !call # `n - 1` from `via` to `dst`
   break. !rt4
