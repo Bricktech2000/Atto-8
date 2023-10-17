@@ -100,8 +100,7 @@ main!
 
     got_plus_sign: !u8.add :ret !jmp
     got_hyphen_minus: !u8.sub :ret !jmp
-    # TODO implement overflow detection for multiplication
-    got_asterisk: !mul :ret !jmp
+    got_asterisk: !mul clc :ret !jmp
     got_solidus: !div clc :ret !jmp
     got_percent_sign: !mod clc :ret !jmp
 

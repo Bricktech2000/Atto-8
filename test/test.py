@@ -42,6 +42,7 @@ input = sys.argv[1:][::-1]
 shutil.rmtree(rel_path(target), ignore_errors=True)
 shutil.copytree(rel_path('./'), rel_path(target), dirs_exist_ok=True)
 shutil.copytree(rel_path('../lib/'), rel_path('target/lib/'), dirs_exist_ok=True)
+shutil.copytree(rel_path('../misc/'), rel_path('target/misc/'), dirs_exist_ok=True)
 shutil.copytree(rel_path('../cc/libc/'), rel_path('target/'), dirs_exist_ok=True)
 
 

@@ -3,11 +3,12 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 @ lib/display.asm
+@ misc/common/common.asm
 
 main!
   pop pop !display_buffer sts
 
-  xF0 # rand_seed
+  !rand_seed.min # rand_seed
 
   !u8u8.0 # cactus_top, cactus_bot
 
@@ -88,38 +89,14 @@ main!
     @00 @00 !u8u8 # ________
 
   !display_buffer @org
-    # !void
+    # !deep_void
     !planet_and_stars
     # !clouds_and_sun
     # !stars_and_moon
-    # !light_ground
-    !dark_ground
+    # !day_desert
+    !night_desert
 
 dino_pos! x02 # from left edge of the screen
 y_accel! x04 !i4f4 # gravity
 jump_vel! xE8 !i4f4 # upward velocity when jumping
 ground_pos! xB0 !u8f8 # y_pos of the ground
-
-void!
-  @00 @00 @00 @00 @00 @00 @00 @00
-  @00 @00 @00 @00 @00 @00 @00 @00
-
-planet_and_stars!
-  @01 @08 @60 @08 @60 @36 @04 @08
-  @00 @08 @00 @00 @00 @00 @00 @00
-
-clouds_and_sun!
-  @70 @0C @FC @1E @00 @1E @03 @0C
-  @07 @80 @00 @00 @00 @00 @00 @00
-
-stars_and_moon!
-  @04 @18 @00 @30 @40 @32 @01 @3E
-  @00 @1C @00 @00 @00 @00 @00 @00
-
-dark_ground!
-  @00 @00 @00 @00 @00 @00 @00 @00
-  @FF @FF @02 @04 @90 @80 @24 @4A
-
-light_ground!
-  @00 @00 @00 @00 @00 @00 @00 @00
-  @FF @FF @FD @FB @6F @7F @DB @B5

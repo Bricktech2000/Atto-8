@@ -30,9 +30,8 @@ This project is a work in progress. Try it out by running any of the following c
 # completed programs
 python3 test.py draw.asm asm emu
 python3 test.py random.asm asm emu
-python3 test.py hllowrld.asm asm emu
 python3 test.py counter.asm asm emu
-python3 test.py mushroom.asm asm emu
+python3 test.py slideshow.asm asm emu
 python3 test.py bad\ apple.asm asm emu
 python3 test.py brainfuck.asm asm emu
 python3 test.py run-length.asm asm emu
@@ -58,7 +57,6 @@ python3 test.py strings.asm asm emu
 python3 test.py allocation.asm asm emu
 python3 test.py optimization.asm asm emu
 python3 test.py multiplication.asm asm emu
-python3 test.py nop.hex enc emu
 python3 test.py addition.hex enc emu
 python3 test.py checkerboard.hex enc emu
 python3 test.py pipe.c cc asm emu

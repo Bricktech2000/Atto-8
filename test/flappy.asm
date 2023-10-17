@@ -3,12 +3,13 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 @ lib/display.asm
+@ misc/common/common.asm
 
 main!
   pop pop !display_buffer sts
   x00 # previous char
 
-  xF0 # rand_seed
+  !rand_seed.min # rand_seed
 
   x00 !u4f4 # x_pos
   x02 !i4f4 # x_vel
@@ -42,7 +43,7 @@ main!
     # compute bit_addr of (BIRD_POS, y_pos)
     !display_buffer !u4f4.ld2 !u4f4.in clc !u4f4.shl orr x07 !bird_pos sub @const
     # if pixel at (x_pos, y_pos) is set, game over
-    !u8u8.ld0 !load_bit !zr :game_over !bcc
+    !u8u8.ld0 !load_bit !z :game_over !bcc pop
     # set pixel at (x_pos, y_pos)
     !set_bit
 
@@ -66,28 +67,17 @@ main!
 
   game_over:
     # blink pixel at (x_pos, y_pos)
-    blink:
+    blink: pop
       !u8u8.ld0 !flip_bit
-      x1F !stall x1F !stall x1F !stall
-    :blink !jmp
+      # `!delay`, but with optimized conditional jump
+      x20 stall: x1F !stall x01 sub @dyn
+    :stall :blink iff !jmp
 
   !display_buffer @org
-    !void
-    !light_ground
-    # !dark ground
+    !deep_void
+    !day_desert
+    # !night_desert
 
 bird_pos! x02 # from left edge of the screen
 y_accel! x01 !i4f4 # gravity
 flap_vel! xF8 !i4f4 # upward velocity when flapping
-
-void!
-  @00 @00 @00 @00 @00 @00 @00 @00
-  @00 @00 @00 @00 @00 @00 @00 @00
-
-dark_ground!
-  @00 @00 @00 @00 @00 @00 @00 @00
-  @FF @FF @02 @04 @90 @80 @24 @4A
-
-light_ground!
-  @00 @00 @00 @00 @00 @00 @00 @00
-  @FF @FF @FD @FB @6F @7F @DB @B5

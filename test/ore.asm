@@ -10,7 +10,7 @@ main!
   x0A :fib !call # 0x37
   x0D :fib !call # 0xE9
   x0C :collatz !call # 0x09
-  :str_Atto_8 ld0 !str_Atto_8_len dec :sort !call :str_Atto_8 !puts
+  :str_Atto-8 ld0 !str_Atto-8_len dec :sort !call :str_Atto-8 !puts
   !char.carriage_return !putc !char.line_feed !putc
   x41 x42 x43 x04 :hanoi !call
   # x41 x42 x43 x08 :hanoi !call
@@ -22,8 +22,8 @@ main!
   !hanoi.def
   !sort.def
 
-  str_Atto_8: @41 @74 @74 @6F @2D @38 @00 str_Atto_8_end:
-str_Atto_8_len! :str_Atto_8_end :str_Atto_8 sub @const
+  str_Atto-8: @41 @74 @74 @6F @2D @38 @00 str_Atto-8_end:
+str_Atto-8_len! :str_Atto-8_end :str_Atto-8 sub @const
 
 fib.def!
   fib: clc # u8 f = fib(u8 n)

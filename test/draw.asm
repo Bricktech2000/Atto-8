@@ -4,11 +4,12 @@
 @ lib/stdio.asm
 @ lib/display.asm
 @ lib/controller.asm
+@ misc/common/common.asm
 
 main!
   pop pop !display_buffer sts
 
-  # xF0 # rand_seed
+  # !rand_seed.min # rand_seed
 
   x77 !u4u4 # xy_pos
   x00 !u8 # xy_vel

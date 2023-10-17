@@ -4,6 +4,7 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 @ lib/display.asm
+@ misc/common/common.asm
 
 # Challenge Description
 # ---------------------
@@ -17,7 +18,7 @@
 main!
   pop pop !display_buffer sts
 
-  xF0 # rand_seed
+  !rand_seed.min # rand_seed
 
   # loop through payload
   !payload_len for_i: dec

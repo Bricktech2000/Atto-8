@@ -92,3 +92,15 @@ memcmp.def!
     !z .for_i !bcc break. pop
   # return* *ptr1 - *ptr2
   !rt2
+memswp.def!
+  memswp: clc # memswp(*ptr1, *ptr2, len)
+    ld3 for_i. dec
+      # swap *ptr1 and *ptr2
+      ld2 ld1 add lda
+      ld4 ld2 add lda
+      ld4 ld3 add sta
+      ld4 ld2 add sta
+    # loop if i > 0
+    !z .for_i !bcc pop
+  # return*
+  !rt3

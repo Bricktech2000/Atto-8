@@ -72,55 +72,47 @@ main!
     # !compact_pulsar
 
 neighbors_len! :neighbors_end :neighbors sub @const
-back_buffer! xC0 @const
+back_buffer! !display_buffer !display_buffer_len sub @const
 
 
-glider!
-  x0C !pad
+glider! x0C !pad
   @07 @00
   @01 @00
   @02 @00
 
-blinker!
-  x0C !pad
+blinker! x0C !pad
   @07 @00
 
-diehard!
+diehard! x0C !pad
   # already advanced 2 generations
-  x0C !pad
   @30 @80
   @31 @C0
 
-r-pentomino!
-  x0C !pad
+r-pentomino! x0C !pad
   @06 @00
   @0C @00
   @04 @00
 
-lightweight_spaceship!
-  x0A !pad
+lightweight_spaceship! x0A !pad
   @00 @09
   @00 @10
   @00 @11
   @00 @1E
 
-heavyweight_spaceship!
-  x0A !pad
+heavyweight_spaceship! x0A !pad
   @00 @0C
   @00 @21
   @00 @40
   @00 @41
   @00 @7E
 
-compact_pulsar!
+compact_pulsar! x0C !pad
   # pattern that turns into a pulsar
-  x0C !pad
   @07 @C0
   @08 @40
   @07 @C0
 
-copperhead!
-  x08 !pad
+copperhead! x08 !pad
   @06 @60
   @01 @80
   @01 @80

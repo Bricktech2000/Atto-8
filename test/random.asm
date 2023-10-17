@@ -3,11 +3,12 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 @ lib/display.asm
+@ misc/common/common.asm
 
 main!
   pop pop !display_buffer sts
 
-  x00 # rand_seed
+  !rand_seed # rand_seed
 
   # seed rand by incrementing until keypress
   wait: inc !getc !char.is_null :wait !bcs
@@ -22,8 +23,7 @@ main!
 
   !display_buffer @org
     # @EE @EC @EC @AA @8A @AE # PRNG
-    @E4 @EC @CE @AA @AA @AC # RAND
-    @00 @00 @FF @FF         # ----
-    @00 @00 @00 @00 @00 @00 @00 @00 # (empty lines)
-    # @EA @00 @A4 @00 @EA @00 # 0X
-    @00 @00 @05 @40 # ...
+    @C4 @CC @EE @AA @AA @AC @00 @00 # RAND
+    @FF @FF @00 @00                 # ----
+    @00 @00 @00 @00 @00 @00 @00 @00 # empty
+    @05 @40 @00 @00                 # ...

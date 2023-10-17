@@ -25,8 +25,7 @@
 # - `B0!` or simply `!` on startup warm restarts AttoMon
 # - `00:????????????????` prints the first 16 bytes of memory
 # - `D5:4F.B0!` restarts AttoMon but prints `OttoMon` instead
-# - `E0:CC....33....CC....33....` displays a checkerboard pattern
-# - `E0:4E.EE.E4.4A.A4.4E.00.00.` renders the text _ATTO_ on the display
+# - `E0:CC....33....CC....33....CC....33....CC....33....` displays a checkerboard pattern
 # - `E0:18.B6.4F.B6.3F.B6.E3.20.41.74.74.6F.2D.38.00.E0!` prints _Atto-8_ and returns to AttoMon
 
 main!

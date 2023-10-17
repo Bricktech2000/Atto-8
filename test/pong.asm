@@ -43,17 +43,6 @@ main!
 
       # loop through paddles
       x00 for_paddle:
-        # byte_to_store = paddle ? 0x80 : 0x01
-        !z x80 x01 iff
-        # base_addr = DISPLAY_BUFFER + (paddle ? 2 * paddle_a : 2 * paddle_b + 1)
-        !display_buffer !u8.ld9 !u8.ld9 iff ld0 add add
-          # draw paddle using `byte_to_store`
-          x00 ld1 x04 sub sta
-          ld1 ld1 x02 sub sta
-          ld1 ld1 x02 add sta
-          x00 ld1 x04 add sta
-        sta
-
         # paddle_pos = paddle ? paddle_a : paddle_b
         !z !u8.ld7 !u8.ld7 iff
           # get user input and conditionally swap nibbles depending on `paddle`
@@ -68,6 +57,17 @@ main!
         !u8.ld1 !u8.add x0F and swp iff
         # store `paddle_pos` to either `paddle_a` or `paddle_b` depending on `paddle`
         x00 xo2 @dyn lds x08 neg @const sub @dyn sta
+
+        # byte_to_store = paddle ? 0x80 : 0x01
+        !z x80 x01 iff
+        # base_addr = DISPLAY_BUFFER + (paddle ? 2 * paddle_a : 2 * paddle_b + 1)
+        !display_buffer !u8.ld9 !u8.ld9 iff ld0 add add
+          # draw paddle using `byte_to_store`
+          x00 ld1 x04 sub sta
+          ld1 ld1 x02 sub sta
+          ld1 ld1 x02 add sta
+          x00 ld1 x04 add sta
+        sta
       not :for_paddle !bcc pop
 
     # compute bit_addr of (x_pos >> 4, y_pos >> 4) and consume (x_pos >> 4, y_pos >> 4)

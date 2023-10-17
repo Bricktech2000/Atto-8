@@ -5,7 +5,7 @@
 @ lib/display.asm
 @ lib/controller.asm
 
-# PixEdit, a pixel editor
+# PixEdit, the Atto-8 pixel editor
 #
 # controls are as follows:
 # - use the primary controller to move the cursor around
@@ -13,13 +13,17 @@
 # - type or paste a bitmap into `stdin` to load it
 # - type `'\n'` to output the current bitmap to `stdout`
 #
-# designs to try:
-# - `X00000000FFFE00001D501D2011500000765C654876480000FFFE000000000000` loads "PIXEDIT"
-# - `XCCCCCCCC33333333CCCCCCCC33333333CCCCCCCC33333333CCCCCCCC33333333` loads a checkerboard pattern
-# - `XA88EE88AAEEE0000AE8CEC8AEAEC000000000000000000000000000000000000` loads "HLLO WRLD" from `hllowrld.asm`
-# - `X4EEEE44AA44E0000000600EE000E000000000000000000000000000000000000` loads "ATTO-8" from `hllowrld.asm`
-# - `X07E01878387C703E679E8FC18FCDCFDFE79FE00DCFF1724E2244200410080FF0` loads the mushroom from `mushroom.asm`
-# - `X07C01FF03FF87C7C783CF83EF83EFC7EFBBEE38E610C610C2108101000000000` loads the avatar from `run-length.asm`
+# most designs from `misc/common/common.asm` can be loaded into PixEdit by directly
+# pasting them in. below is a sample design spelling out "PIXEDIT" in the Atto-8 font:
+#
+# ```
+# @00 @00 @00 @00
+# @FF @FE @00 @00 @1D @50 @1D @20
+# @11 @50 @00 @00 @76 @5C @65 @48
+# @76 @48 @00 @00 @FF @FE @00 @00
+# @00 @00 @00 @00
+# ```
+
 
 main!
   pop pop !display_buffer sts
@@ -30,20 +34,27 @@ main!
   :store !jmp # do not `load` yet
 
   load:
-    !display_buffer for_load:
+    !display_buffer for_load: clc
       # assume input always well formed
-      !block_getc !char.to_u4 x04 rot
-      !block_getc !char.to_u4 orr !u8
+      !getc !char.to_u4 x04 rot
+      !getc !char.to_u4 orr !u8
       # write byte to display buffer
       ld1 !u8.sta
-    inc !z :for_load !bcc pop
+    inc !z :break !bcs
+      # block until `'@'` is sent through `stdin`
+      block: !getc !char.commercial_at !eq :block
+    :for_load iff !jmp break: pop
     # fall through
 
   store:
-    !char.latin_capital_letter_x !putc
     # output display buffer as hex string
     !display_buffer for_store:
+      # ld0 x07 !cl # every 8 bytes
+      # !char.space !char.line_feed iff !putc
+      # !char.null !char.carriage_return iff !putc
+      !char.commercial_at !putc
       ld0 !u8.lda !u8.to_chars !putc !putc
+      !char.space !putc
     inc !z :for_store !bcc pop
     !char.carriage_return !putc !char.line_feed !putc
     # fall through
@@ -57,7 +68,7 @@ main!
     :default
       !char.space xo2 :ignore iff !char.space xo2
       !char.line_feed xo2 :store iff !char.line_feed xo2
-      !char.latin_capital_letter_x xo2 :load iff !char.latin_capital_letter_x xo2
+      !char.commercial_at xo2 :load iff !char.commercial_at xo2
     !jmp default:
       # first flip pixel at xy_pos
       !u4u4.ld0+1 !display_buffer !bit_addr !flip_bit
