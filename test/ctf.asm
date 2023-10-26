@@ -50,6 +50,7 @@ payload_len! :payload_end :payload sub @const
 
 
 source!
+  :str_api_key pop
   :str_message :puts.min !call
   :exit !jmp
 
@@ -62,4 +63,4 @@ source!
   exit:
 
 payload!
-  @B6 @56 @11 @FF @6C @B5 @6E @24 @A4 @D2 @AE @82 @A0 @1E @7D @91 @4C @8D @DA @76 @82 @2E @70 @D1 @30 @E6 @92 @8F @96 @A5 @B7 @09 @CA @FA @A2 @8E @4A @5B @D4 @99 @50 @D1 @B2 @94 @0A @C7 @81 @D5 @1D @77 @EF @49 @E4 @3A @D0 @3A @40 @F4 @2A @88 @20 @45 @35 @F7 @27 @44 @BE @27 @CC @A8 @08 @99 @51 @24 @5E @F1 @EC @07 @43 @E7 @A0 @8D @04 @48 @B3 @B3 @85 @91 @0F @1E @6F @F3 @A1 @00 @CF @B1 @05 @14 @73 @7E @A8 @33 @4D @63 @ED @2A @C1 @BE @C2 @10 @C5 @7B @CA @B1 @95 @9B @11 @D5 @B3 @0F @95 @DE @ED @FD
+  @58 @21 @A4 @2B @06 @80 @FA @6E @81 @4E @E0 @A5 @3D @DE @1D @A1 @54 @81 @DC @75 @0D @E7 @9A @A4 @84 @BC @BF @17 @DA @83 @A4 @8E @07 @12 @D6 @B4 @57 @DB @94 @B9 @40 @D9 @B6 @96 @0B @49 @C6 @78 @C5 @1B @D9 @52 @67 @F5 @39 @C0 @3D @44 @72 @A4 @36 @4E @BE @3C @CC @BF @4D @D0 @39 @5C @72 @A4 @C1 @6C @7A @E3 @E5 @8D @06 @4B @F6 @A6 @9F @8B @5C @4A @77 @E8 @BD @47 @CD @A2 @07 @53 @68 @6C @E5 @64 @4B @62 @A6 @34 @C0 @AB @89 @18 @D8 @3C @83 @BE @92 @DE @16 @DF @A2 @0E @D5 @B7 @82 @99 @DE @75 @36 @1E

@@ -26,7 +26,8 @@ main!
       ld1 !u8.sta
     inc !z :for_byte !bcc pop
 
-    # stall until next frame
+    # stall until next frame.
+    # delay determined through trial and error
     x09 !delay x17 !stall
   :frame_loop !jmp
 

@@ -12,7 +12,7 @@ main!
   # :str_ac :str_abcdef :strcat !call :str_abcdef :strlen !call # 0x08
   # :str_ac :str_ab :strcmp !call # 0x01
   :str_ab :str_abc :strcmp !call # 0x9D
-  # :str_abc :str_abc :strcmp !call # 0x00
+  :str_abc :str_abc :strcmp !call # 0x00
   x06 x63 :str_abcdef :memchr !call :strlen !call # 0x04
   # x06 xCC :str_abcdef :memchr !call # 0x00
   x04 :str_abc :str_buf :memcmp !call # 0x00
