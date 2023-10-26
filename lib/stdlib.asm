@@ -34,7 +34,7 @@ popcnt! # count = popcnt(n, init)
     # shift out lowest bit and add to count
     shr @dyn x00 ad2 @dyn
   # loop while n != 0
-  !z .while !bcc
+  !z .while !bcc # bleed `0x00`
   # set carry flag if count == 0x00
   orr
 
@@ -59,11 +59,11 @@ mod! clc # remainder = mod(a, b)
   .loop !bcc clc add
 
 
-mul_10! clc # product = mul_10(n)
-  # n <<= 1
-  shl # 2 n
+mul_10! # product = mul_10(n)
   # n += n << 2
-  ld0 shl shl add # 10 n
+  ld0 x02 rot add # 5 n
+  # n <<= 1
+  shl # 10 n
   # return* n
 
 div_10! clc # quotient = div_10(n)

@@ -75,8 +75,8 @@ flip_nibble! # flip_nibble(rot, addr)
   ld0 lda xo2 sta
   # return*
 
-print_char.def!
-  print_char: # print_char(index, buffer, pos)
+display_char.def!
+  display_char: # display_char(index, buffer, pos)
     x03 for_i. dec
       # src = i + index * 3
       ld0 ld3 ld0 x01 rot add add
@@ -90,7 +90,7 @@ print_char.def!
   # return*
   !rt3
 
-print_byte.def!
+display_byte.def!
   hex_chars.
   # t m b t m b
     @EA @EC @4E # 0 1
@@ -101,19 +101,19 @@ print_byte.def!
     @4E @AC @EE # A B
     @E8 @EC @AC # C D
     @EC @EE @C8 # E F
-  print_byte: # print_byte(byte, pos)
-    ld2 inc .hex_chars ld3 !u4u4.snd :print_char !call
-    ld2 .hex_chars ld3 !u4u4.fst :print_char !call
+  display_byte: # display_byte(byte, pos)
+    ld2 inc .hex_chars ld3 !u4u4.snd :display_char !call
+    ld2 .hex_chars ld3 !u4u4.fst :display_char !call
   # return*
   !rt2
 
-print_byte.min.def!
+display_byte.min.def!
   hex_chars.
   # 0 1 2 3 4 5 6 7 8 9 A B C D E F
     @EC @CE @A6 @8E @6E @4C @EC @EE # top row
     @A4 @46 @E4 @E2 @EE @EE @8A @CC # middle row
     @EE @6E @2C @E2 @E2 @AE @EC @E8 # bottom row
-  print_byte.min: # print_byte.min(byte, addr)
+  display_byte.min: # display_byte.min(byte, addr)
     # loop through rows
     x03 for_row. dec
       # nth_row = hex_chars + row * 8

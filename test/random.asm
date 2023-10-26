@@ -14,12 +14,12 @@ main!
   wait: inc !getc !char.is_null :wait !bcs
 
   loop:
-    !rand x13 ld1 :print_byte.min !call
-    !rand x12 ld1 :print_byte.min !call
+    !rand x13 ld1 :display_byte.min !call
+    !rand x12 ld1 :display_byte.min !call
     !block_any
   :loop !jmp
 
-  !print_byte.min.def
+  !display_byte.min.def
 
   !display_buffer @org
     # @EE @EC @EC @AA @8A @AE # PRNG

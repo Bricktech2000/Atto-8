@@ -36,6 +36,7 @@ is_in_set! clc # bool b = is_in_set(c4f4m4f4 c)
   x10 for_i: dec
     !i4f4.ld1+1 !i4f4.ld0 !i4f4.mul # z_re2
     !i4f4.ld1+1 !i4f4.ld0 !i4f4.mul # z_im2
+    # radius of `0x18` aka `1.5` yields neater result than `0x20` aka `2.0`
     !i4f4.ld1 !i4f4.ld1 !i4f4.add x18 !i4f4 !i4f4.sub @dyn !i4f4.pop :ret !bcc
     !i4f4.ld3+1 !i4f4.ld3+1 !i4f4.mul shl clc !i4f4.ld4+2 !i4f4.add clc !i4f4.st2+1
     !i4f4.sub clc !i4f4.ld4+1 !i4f4.add !i4f4.st1+1

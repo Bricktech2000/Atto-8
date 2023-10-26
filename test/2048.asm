@@ -83,10 +83,18 @@ main!
         x0F and clc :board add
       ld0 lda !zr :generate !bcc sta
 
+      # instead of looping through the board and displaying tiles, we loop
+      # through nibbles of the display buffer and figure out what to display
+      # as we go along. we figure out which tile occupies that nibble, then
+      # figure out which row of the tile's sprite data we need for the nibble,
+      # and finally display that row. this is done to save memory
       !display_buffer_len for_byte: dec
         x00 # result
         x00 for_nibble:
-          # tile = board[(byte & ~0x06)]
+          # tile = board[((byte & ~0x07) >> 1) | ((byte & 0x01) << 1) | nibble]
+          # first term maps every byte to the first element of its board row. second term moves right by
+          # two if the byte is on the right half of the display. third term moves right by one if the current
+          # nibble is the second nibble of the byte. this gives a pointer to the tile we're looking for
           :board ld3 x06 not @const and clc shr x00 shl @dyn xFF xo4 shl @dyn orr clc add lda
           # 2048_char = 2048_chars[tile]
           :2048_chars add lda
