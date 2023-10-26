@@ -29,7 +29,7 @@ def rel_path(*args):
   return os.path.relpath(os.path.join(os.path.dirname(__file__), *args), os.getcwd())
 
 
-run_cargo = functools.partial(run, 'cargo', '--quiet')
+run_cargo = functools.partial(run, 'cargo', '--quiet', 'run', '--release', '--bin')
 run_python = functools.partial(run, 'python3')
 
 
@@ -57,8 +57,7 @@ while input:
         c_source_file = filenames.pop()
         assembly_output_file = c_source_file + '.asm'
         filenames.append(assembly_output_file)
-        operations.append((operation, functools.partial(run_cargo, 'run', '--bin',
-                          operation, c_source_file, assembly_output_file)))
+        operations.append((operation, functools.partial(run_cargo, operation, c_source_file, assembly_output_file)))
       case 'enc':
         hex_source_file = filenames.pop()
         memory_image_file = hex_source_file + '.mem'
@@ -75,26 +74,24 @@ while input:
         assembly_source_file = filenames.pop()
         memory_image_file = assembly_source_file + '.mem'
         filenames.append(memory_image_file)
-        operations.append((operation, functools.partial(run_cargo, 'run', '--bin',
-                          operation, assembly_source_file, memory_image_file)))
+        operations.append((operation, functools.partial(run_cargo, operation, assembly_source_file, memory_image_file)))
       case 'dasm':
         memory_image_file = filenames.pop()
         disassembly_output_file = memory_image_file + '.asm'
         filenames.append(disassembly_output_file)
-        operations.append((operation, functools.partial(run_cargo, 'run', '--bin',
-                          operation, memory_image_file, disassembly_output_file)))
+        operations.append((operation, functools.partial(
+            run_cargo, operation, memory_image_file, disassembly_output_file)))
       case 'emu':
         memory_image_file = filenames.pop()
-        operations.append((operation, functools.partial(run_cargo, 'run', '--bin', operation, memory_image_file)))
+        operations.append((operation, functools.partial(run_cargo, operation, memory_image_file)))
       case 'mic':
         microcode_image_file = rel_path(target, 'microcode.mic')
         filenames.append(microcode_image_file)
-        operations.append((operation, functools.partial(run_cargo, 'run', '--bin', operation, microcode_image_file)))
+        operations.append((operation, functools.partial(run_cargo, operation, microcode_image_file)))
       case 'sim':
         microcode_image_file = filenames.pop()
         memory_image_file = filenames.pop()
-        operations.append((operation, functools.partial(run_cargo, 'run', '--bin',
-                          operation, memory_image_file, microcode_image_file)))
+        operations.append((operation, functools.partial(run_cargo, operation, memory_image_file, microcode_image_file)))
       case 'circ':
         microcode_image_file = filenames.pop()
         memory_image_file = filenames.pop()
