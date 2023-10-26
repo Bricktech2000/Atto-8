@@ -89,24 +89,116 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
         acc | ((timestamp.is_some() as u8) << index)
       });
 
-    match mc.tick(&mut stdin, &mut stdout, &mut display, &mut controller) {
-      Ok(clocks) => {
-        current_clocks += clocks;
-      }
-      Err(tick_trap) => {
-        debug_mode = true;
-        status_line = match tick_trap {
-          TickTrap::MicrocodeFault => format!("Microcode fault"),
-          TickTrap::IllegalOpcode => format!("Illegal opcode"),
-          TickTrap::DebugRequest => format!("Debug request"),
-          TickTrap::BusFault => format!("Bus fault"),
-        }
-      }
-    };
-
     // call `std::Instant::now()` and `input_channel.try_recv()` at most 1000 times per second
     if next_call_clocks <= current_clocks || debug_mode {
       next_call_clocks += if debug_mode { 0 } else { clock_speed / 1000 };
+
+      let timestamp_threshold = std::time::Duration::from_millis(200);
+      controller_timestamps = controller_timestamps
+        .iter()
+        .map(|timestamp: &Option<std::time::Instant>| {
+          timestamp.and_then(|t| (t.elapsed() < timestamp_threshold).then_some(t))
+        })
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap();
+
+      let realtime = std::cmp::max(initial_time.elapsed().as_millis(), 1); // prevent division by zero
+      let realtime_offset = (1000 * current_clocks / clock_speed) as i128 - realtime as i128;
+      let realtime_ratio = realtime_offset as f64 / realtime as f64;
+      std::thread::sleep(std::time::Duration::from_millis(
+        std::cmp::max(realtime_offset, 0) as u64,
+      ));
+
+      if !debug_mode {
+        let realtime_tolerance = 0.01;
+        status_line = if -realtime_ratio > realtime_tolerance {
+          format!("Execution behind by {:.0}%", -realtime_ratio * 100.0)
+        } else if realtime_ratio > realtime_tolerance {
+          format!("Execution ahead by {:.0}%", realtime_ratio * 100.0)
+        } else {
+          format!("Execution on time")
+        };
+      }
+
+      'until_empty: loop {
+        use std::sync::mpsc::TryRecvError;
+        match input_channel.try_recv() {
+          Ok(console::Key::Del) => {
+            stdout = VecDeque::new();
+          }
+
+          Ok(console::Key::Tab) => {
+            show_state = !show_state;
+          }
+
+          Ok(console::Key::Escape) => {
+            debug_mode = !debug_mode;
+            status_line = "Force debug".to_string();
+          }
+
+          Ok(key) => {
+            let keys = [
+              console::Key::ArrowUp,
+              console::Key::ArrowDown,
+              console::Key::ArrowLeft,
+              console::Key::ArrowRight,
+              console::Key::PageUp,
+              console::Key::PageDown,
+              console::Key::Home,
+              console::Key::End,
+            ];
+
+            controller_timestamps = keys
+              .iter()
+              .map(|k| (k == &key).then_some(std::time::Instant::now()))
+              .zip(controller_timestamps.iter())
+              .map(|(next, curr)| next.or(*curr))
+              .collect::<Vec<_>>()
+              .try_into()
+              .unwrap();
+
+            stdin.extend(match key {
+              console::Key::Char(c) => vec![c as u8],
+              console::Key::Backspace => vec![0x08],
+              console::Key::Enter => vec![0x0A],
+              console::Key::Tab => vec![0x09],
+              console::Key::Del => vec![0x7F],
+              _ => vec![],
+            });
+          }
+
+          Err(TryRecvError::Empty) => break 'until_empty,
+          Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
+        }
+      }
+
+      // print at most 60 times per second
+      if next_print_time <= std::time::Instant::now() || debug_mode {
+        next_print_time += std::time::Duration::from_millis(if debug_mode { 0 } else { 1000 / 60 });
+
+        let term = console::Term::stdout();
+        term.clear_screen().unwrap();
+        term.move_cursor_to(0, 0).unwrap();
+
+        print!("{}\r\n", status_line);
+        if show_state || debug_mode {
+          print!("Clocks: {}\r\n", current_clocks);
+          print!("\r\n");
+          print!("{}", mc);
+        } else {
+          print!("\r\n");
+          print!(
+            "{}\r\n{}",
+            render_display(&display),
+            render_controller(&controller)
+          );
+        }
+        print!("\r\n");
+        print!("{}", stdout.iter().map(|c| *c as char).collect::<String>());
+        use std::io::Write;
+        std::io::stdout().flush().unwrap();
+      }
 
       if debug_mode {
         'until_valid: loop {
@@ -135,108 +227,22 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
         current_clocks = 0;
         next_call_clocks = 0;
       }
-
-      use std::sync::mpsc::TryRecvError;
-      match input_channel.try_recv() {
-        Ok(console::Key::Del) => {
-          stdout = VecDeque::new();
-        }
-
-        Ok(console::Key::Tab) => {
-          show_state = !show_state;
-        }
-
-        Ok(console::Key::Escape) => {
-          debug_mode = !debug_mode;
-          status_line = "Force debug".to_string();
-        }
-
-        Ok(key) => {
-          let keys = [
-            console::Key::ArrowUp,
-            console::Key::ArrowDown,
-            console::Key::ArrowLeft,
-            console::Key::ArrowRight,
-            console::Key::PageUp,
-            console::Key::PageDown,
-            console::Key::Home,
-            console::Key::End,
-          ];
-
-          controller_timestamps = keys
-            .iter()
-            .map(|k| (k == &key).then_some(std::time::Instant::now()))
-            .zip(controller_timestamps.iter())
-            .map(|(next, curr)| next.or(*curr))
-            .collect::<Vec<_>>()
-            .try_into()
-            .unwrap();
-
-          stdin.extend(match key {
-            console::Key::Char(c) => vec![c as u8],
-            console::Key::Backspace => vec![0x08],
-            console::Key::Enter => vec![0x0A],
-            console::Key::Tab => vec![0x09],
-            console::Key::Del => vec![0x7F],
-            _ => vec![],
-          });
-        }
-
-        Err(TryRecvError::Empty) => (),
-        Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
-      }
-
-      let timestamp_threshold = std::time::Duration::from_millis(200);
-      controller_timestamps = controller_timestamps
-        .iter()
-        .map(|timestamp| timestamp.and_then(|t| (t.elapsed() < timestamp_threshold).then_some(t)))
-        .collect::<Vec<_>>()
-        .try_into()
-        .unwrap();
-
-      let realtime = std::cmp::max(initial_time.elapsed().as_millis(), 1); // prevent division by zero
-      let realtime_offset = (1000 * current_clocks / clock_speed) as i128 - realtime as i128;
-      let realtime_ratio = realtime_offset as f64 / realtime as f64;
-      std::thread::sleep(std::time::Duration::from_millis(
-        std::cmp::max(realtime_offset, 0) as u64,
-      ));
-
-      if !debug_mode {
-        let realtime_tolerance = 0.01;
-        status_line = if -realtime_ratio > realtime_tolerance {
-          format!("Execution behind by {:.0}%", -realtime_ratio * 100.0)
-        } else if realtime_ratio > realtime_tolerance {
-          format!("Execution ahead by {:.0}%", realtime_ratio * 100.0)
-        } else {
-          format!("Execution on time")
-        };
-      }
-
-      // print at most 60 times per second
-      if next_print_time <= std::time::Instant::now() || debug_mode {
-        next_print_time += std::time::Duration::from_millis(if debug_mode { 0 } else { 1000 / 60 });
-
-        let term = console::Term::stdout();
-        term.clear_screen().unwrap();
-        term.move_cursor_to(0, 0).unwrap();
-
-        print!("{}\r\n", status_line);
-        print!("\r\n");
-        if show_state || debug_mode {
-          print!("{}", mc);
-        } else {
-          print!(
-            "{}\r\n{}",
-            render_display(&display),
-            render_controller(&controller)
-          );
-        }
-        print!("\r\n");
-        print!("{}", stdout.iter().map(|c| *c as char).collect::<String>());
-        use std::io::Write;
-        std::io::stdout().flush().unwrap();
-      }
     }
+
+    match mc.tick(&mut stdin, &mut stdout, &mut display, &mut controller) {
+      Ok(clocks) => {
+        current_clocks += clocks;
+      }
+      Err(tick_trap) => {
+        debug_mode = true;
+        status_line = match tick_trap {
+          TickTrap::MicrocodeFault => format!("Microcode fault"),
+          TickTrap::IllegalOpcode => format!("Illegal opcode"),
+          TickTrap::DebugRequest => format!("Debug request"),
+          TickTrap::BusFault => format!("Bus fault"),
+        }
+      }
+    };
   }
 }
 
