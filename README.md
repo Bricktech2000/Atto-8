@@ -48,6 +48,7 @@ python3 test.py ctf.asm asm emu
 python3 test.py fade.asm asm emu
 python3 test.py calc.asm asm emu
 python3 test.py pixedit.asm asm emu
+python3 test.py stopwatch.asm asm emu
 python3 test.py mandelbrot.asm asm emu
 
 # test programs

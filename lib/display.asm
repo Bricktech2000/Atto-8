@@ -91,6 +91,11 @@ display_char.def!
   !rt3
 
 display_byte.def!
+  display_byte: # display_byte(byte, pos)
+    ld2 inc .hex_chars ld3 !u4u4.snd :display_char !call
+    ld2 .hex_chars ld3 !u4u4.fst :display_char !call
+  # return*
+  !rt2
   hex_chars.
   # t m b t m b
     @EA @EC @4E # 0 1
@@ -101,18 +106,8 @@ display_byte.def!
     @4E @AC @EE # A B
     @E8 @EC @AC # C D
     @EC @EE @C8 # E F
-  display_byte: # display_byte(byte, pos)
-    ld2 inc .hex_chars ld3 !u4u4.snd :display_char !call
-    ld2 .hex_chars ld3 !u4u4.fst :display_char !call
-  # return*
-  !rt2
 
 display_byte.min.def!
-  hex_chars.
-  # 0 1 2 3 4 5 6 7 8 9 A B C D E F
-    @EC @CE @A6 @8E @6E @4C @EC @EE # top row
-    @A4 @46 @E4 @E2 @EE @EE @8A @CC # middle row
-    @EE @6E @2C @E2 @E2 @AE @EC @E8 # bottom row
   display_byte.min: # display_byte.min(byte, addr)
     # loop through rows
     x03 for_row. dec
@@ -131,3 +126,8 @@ display_byte.min.def!
     !z .for_row !bcc pop
   # return*
   !rt2
+  hex_chars.
+  # 0 1 2 3 4 5 6 7 8 9 A B C D E F
+    @EC @CE @A6 @8E @6E @4C @EC @EE # top row
+    @A4 @46 @E4 @E2 @EE @EE @8A @CC # middle row
+    @EE @6E @2C @E2 @E2 @AE @EC @E8 # bottom row
