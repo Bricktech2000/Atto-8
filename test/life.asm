@@ -62,26 +62,27 @@ main!
   !memcpy.def
 
   !back_buffer @org
-    # !glider
     # !blinker
+    # !glider
+    # !diehard
     # !r-pentomino
     # !lightweight_spaceship
     !heavyweight_spaceship
-    # !copperhead
-    # !diehard
     # !compact_pulsar
+    # !copperhead
+    # !figure_eight
 
 neighbors_len! :neighbors_end :neighbors sub @const
 back_buffer! !display_buffer !display_buffer_len sub @const
 
 
+blinker! x0C !pad
+  @07 @00
+
 glider! x0C !pad
   @07 @00
   @01 @00
   @02 @00
-
-blinker! x0C !pad
-  @07 @00
 
 diehard! x0C !pad
   # already advanced 2 generations
@@ -125,3 +126,11 @@ copperhead! x08 !pad
   @00 @00
   @01 @80
   @01 @80
+
+figure_eight! x0A !pad
+  @00 @E0
+  @00 @E0
+  @00 @E0
+  @07 @00
+  @07 @00
+  @07 @00
