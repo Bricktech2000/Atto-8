@@ -1,5 +1,5 @@
 display_buffer! xE0 @const
-display_buffer_len! x20 @const
+display_buffer.len! x20 @const
 
 bit_addr! # (rot, addr) = bit_addr(buffer, index)
   # addr = index // 8 + buffer

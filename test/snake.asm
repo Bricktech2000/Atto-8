@@ -57,7 +57,7 @@ main!
 
     # figure out where the tail is headed
     !u4u4.ld4 # default: tail_pos
-    !directions_len for_dir: dec
+    !directions.len for_dir: dec
       # compute test_pos = tail_pos + direction
       :directions ld1 add !u8.lda !u4u4.ld7 !u8.add
       # load pixel at test_pos
@@ -80,7 +80,7 @@ main!
     @10 !i4i4
     @FF !i4i4
     @01 !i4i4
-  directions_end:
+  directions.end:
 
   !display_buffer @org
     # not enough memory to avoid snake wrapping around.
@@ -104,4 +104,4 @@ main!
     @40 @01
     @7F @FF
 
-directions_len! :directions_end :directions sub @const
+directions.len! :directions.end :directions sub @const

@@ -21,7 +21,7 @@ main!
   !rand_seed.min # rand_seed
 
   # loop through payload
-  !payload_len for_i: dec
+  !payload.len for_i: dec
     # load byte
     :payload ld1 add lda
     # generate random number
@@ -38,15 +38,15 @@ main!
   payload:
     # !source
     !payload
-  payload_end:
+  payload.end:
 
   # memcpy random data to the payload buffer and halt
-  !payload_len x00 :payload :memcpy !call
+  !payload.len x00 :payload :memcpy !call
   !hlt
 
   !memcpy.def
 
-payload_len! :payload_end :payload sub @const
+payload.len! :payload.end :payload sub @const
 
 
 source!

@@ -10,9 +10,9 @@ main!
 
   !display_buffer loop:
     # if `slide + 2 * DISPLAY_BUFFER_LEN` overflows
-    !display_buffer_len ld0 add @const add @dyn
+    !display_buffer.len ld0 add @const add @dyn
     # then go to first slide. else go to next slide
-    !display_buffer_len sub @dyn !slides_start iff clc
+    !display_buffer.len sub @dyn !slides_start iff clc
     # swap current slide with next slide
     !memswp_display_buffer
     # wait for input
@@ -27,10 +27,10 @@ main!
 slides_start! x40
 
 # inlined version of `:memswp` with destination hard-coded to
-# `!display_buffer` and length hard-coded to `!display_buffer_len`.
+# `!display_buffer` and length hard-coded to `!display_buffer.len`.
 # assumes `clc`. does not consume its argument
 memswp_display_buffer!
-  !display_buffer_len for_byte: dec
+  !display_buffer.len for_byte: dec
     ld1 ld1 add lda
     !display_buffer ld2 add lda
     ld3 ld3 add sta

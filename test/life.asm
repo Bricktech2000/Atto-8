@@ -28,7 +28,7 @@ main!
       x00 # allocate neighbor count
 
       # count neighbors
-      !neighbors_len for_dxdy: dec
+      !neighbors.len for_dxdy: dec
         # neighbor_addr = *(neighbors + dxdy) + for_xy
         :neighbors ld1 add !i4i4.lda !u4u4.ld3 !i4i4.add
         # neighbor_value = load_bit(bit_addr(&DISPLAY_BUFFER, neighbor_addr))
@@ -57,7 +57,7 @@ main!
     @1F !i4i4
     @10 !i4i4
     @11 !i4i4
-  neighbors_end:
+  neighbors.end:
 
   !memcpy.def
 
@@ -72,8 +72,8 @@ main!
     # !copperhead
     # !figure_eight
 
-neighbors_len! :neighbors_end :neighbors sub @const
-back_buffer! !display_buffer !display_buffer_len sub @const
+neighbors.len! :neighbors.end :neighbors sub @const
+back_buffer! !display_buffer !display_buffer.len sub @const
 
 
 blinker! x0C !pad

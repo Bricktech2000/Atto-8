@@ -88,7 +88,7 @@ main!
       # as we go along. we figure out which tile occupies that nibble, then
       # figure out which row of the tile's sprite data we need for the nibble,
       # and finally display that row. this is done to save memory
-      !display_buffer_len for_byte: dec
+      !display_buffer.len for_byte: dec
         x00 # result
         x00 for_nibble:
           # tile = board[((byte & ~0x07) >> 1) | ((byte & 0x01) << 1) | nibble]

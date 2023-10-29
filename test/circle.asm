@@ -26,7 +26,7 @@ main!
   # pop previous controller state and fall through
   loop:
     # clear display then draw circle
-    !display_buffer_len x00 !display_buffer :memset !call
+    !display_buffer.len x00 !display_buffer :memset !call
     ld1 ld1 inc !draw_circle # offsets `r` from `0..8` to `1..9`
 
     x30 !delay

@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 #[path = "../misc/common/common.rs"]
 mod common;
 use common::*;
@@ -46,6 +48,33 @@ fn main() {
   }
 
   println!("Asm: Done");
+}
+
+#[derive(Clone, Eq, PartialEq)]
+enum Root {
+  Instruction(Instruction),
+  LabelDef(Label),
+  Node(Node),
+  Opcode(u8),
+  Const,
+  Dyn(Option<Instruction>),
+  Org(Option<Node>),
+}
+
+#[derive(Clone, Eq, PartialEq, Hash)]
+enum Node {
+  LabelRef(Label),
+  Value(u8),
+  Add(Box<Node>, Box<Node>),
+  Sub(Box<Node>, Box<Node>),
+  Rot(Box<Node>, Box<Node>),
+  Orr(Box<Node>, Box<Node>),
+  And(Box<Node>, Box<Node>),
+  Xor(Box<Node>, Box<Node>),
+  Xnd(Box<Node>, Box<Node>),
+  Shl(Box<Node>),
+  Shr(Box<Node>),
+  Not(Box<Node>),
 }
 
 fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -> String {
@@ -132,8 +161,6 @@ fn assemble(
   entry_point: &str,
 ) -> Vec<(Pos, Result<Instruction, u8>)> {
   // resolve macros recursively from `entry_point` and identify unused labels
-
-  use std::collections::{HashMap, HashSet};
 
   let mut macro_definitions: HashMap<Macro, Vec<(Pos, Token)>> = HashMap::new();
   let mut current_macro: Option<Macro> = None;
@@ -277,7 +304,7 @@ fn assemble(
       .then_some((pos.clone(), Error(format!("Unused label `{}`", label))))
   }));
 
-  // turn assembly tokens into roots, an intermediate representation. roots correspond to valid instructions
+  // turn assembly tokens into roots, an intermediate representation for optimization. roots correspond to valid instructions
 
   #[allow(dead_code)]
   fn assert_imm(imm: u8, errors: &mut Vec<(Pos, Error)>, pos: &Pos) -> u8 {
@@ -331,33 +358,6 @@ fn assemble(
         0b00000000
       }
     }
-  }
-
-  #[derive(Clone, Eq, PartialEq)]
-  enum Root {
-    Instruction(Instruction),
-    LabelDef(Label),
-    Node(Node),
-    Opcode(u8),
-    Const,
-    Dyn(Option<Instruction>),
-    Org(Option<Node>),
-  }
-
-  #[derive(Clone, Eq, PartialEq, Hash)]
-  enum Node {
-    LabelRef(Label),
-    Value(u8),
-    Add(Box<Node>, Box<Node>),
-    Sub(Box<Node>, Box<Node>),
-    Rot(Box<Node>, Box<Node>),
-    Orr(Box<Node>, Box<Node>),
-    And(Box<Node>, Box<Node>),
-    Xor(Box<Node>, Box<Node>),
-    Xnd(Box<Node>, Box<Node>),
-    Shl(Box<Node>),
-    Shr(Box<Node>),
-    Not(Box<Node>),
   }
 
   let roots: Vec<(Pos, Root)> = tokens
@@ -418,6 +418,228 @@ fn assemble(
     })
     .collect();
 
+  let roots = optimize(roots, errors);
+
+  // assemble roots into instructions by computing the value of every node and resolving labels
+
+  fn build_push_instruction(value: u8, pos: &Pos) -> Vec<(Pos, Instruction)> {
+    // the `Psh` instruction allows us to push arbitrary 7-bit immediates onto the stack.
+    // we then optionally use `Neg` and `Inc` to get the ability to push arbitrary 8-bit
+    // values. we also use `Phn` as a shorthand when possible.
+
+    match value {
+      0b11110000..=0b11111111 => vec![(pos.clone(), Instruction::Phn(value))],
+      0b10000000..=0b10000000 => vec![
+        (pos.clone(), Instruction::Psh(value.wrapping_sub(1))),
+        (pos.clone(), Instruction::Inc),
+      ],
+      0b00000000..=0b01111111 => vec![(pos.clone(), Instruction::Psh(value))],
+      0b10000000..=0b11111111 => vec![
+        (pos.clone(), Instruction::Psh(value.wrapping_neg())),
+        (pos.clone(), Instruction::Neg),
+      ],
+    }
+  }
+
+  // if every label a node depends on could be resolved, we can replace it with a value.
+  // if not, start by allocating one byte for pushing the node later. if pushing the node turns
+  // out to require more than one byte, iteratively `'bruteforce` allocation sizes until we
+  // find one that works. repeat for every node.
+
+  let mut instructions: Vec<(Pos, Result<Instruction, u8>)>;
+  let mut allocation_sizes: HashMap<Node, usize> = HashMap::new();
+
+  'bruteforce: loop {
+    let mut location_counter: usize = 0;
+    let mut label_definitions: HashMap<Label, u8> = HashMap::new();
+    let mut unevaluated_nodes: HashMap<u8, (Pos, Node)> = HashMap::new();
+
+    instructions = roots
+      .clone()
+      .into_iter()
+      .flat_map(|(pos, root)| match root {
+        Root::Instruction(instruction) | Root::Dyn(Some(instruction)) => {
+          let instructions_ = vec![(pos, Ok(instruction))];
+          location_counter += instructions_.len();
+          instructions_
+        }
+
+        Root::Node(node) => match resolve_node_value(&node, &label_definitions) {
+          Ok(value) => {
+            let instructions_ = build_push_instruction(value, &pos)
+              .into_iter()
+              .map(|(pos, instruction)| (pos, Ok(instruction)))
+              .collect::<Vec<_>>();
+            location_counter += instructions_.len();
+            instructions_
+          }
+          Err(_) => {
+            let instructions_ = vec![
+              (pos.clone(), Ok(Instruction::Nop));
+              allocation_sizes.get(&node).copied().unwrap_or(1)
+            ];
+            unevaluated_nodes.insert(location_counter as u8, (pos, node));
+            location_counter += instructions_.len();
+            instructions_
+          }
+        },
+
+        Root::Opcode(opcode) => {
+          let instructions_ = vec![(pos, Err(opcode))];
+          location_counter += instructions_.len();
+          instructions_
+        }
+
+        Root::LabelDef(Label::Local(_, None)) => panic!("Local label has no scope specified"),
+
+        Root::LabelDef(label) => {
+          if label_definitions.contains_key(&label) {
+            errors.push((
+              pos,
+              Error(format!("Duplicate label definition `{}`", label)),
+            ));
+          }
+          label_definitions.insert(label, location_counter as u8);
+          vec![]
+        }
+
+        Root::Org(Some(node)) => match resolve_node_value(&node, &label_definitions) {
+          Ok(value) => {
+            if value as usize >= location_counter {
+              let difference = value as usize - location_counter;
+              location_counter += difference;
+              vec![(pos, Err(0x00)); difference as usize]
+            } else {
+              errors.push((
+                pos,
+                Error(format!(
+                  "`{}` cannot move location counter backward from `{:02X}` to `{:02X}`",
+                  Token::AtOrg,
+                  location_counter,
+                  value
+                )),
+              ));
+              vec![]
+            }
+          }
+          Err(label) => {
+            errors.push((
+              pos,
+              Error(format!(
+                "`{}` argument contains currently unresolved label `{}`",
+                Token::AtOrg,
+                label
+              )),
+            ));
+            vec![]
+          }
+        },
+
+        Root::Org(None) => {
+          errors.push((
+            pos,
+            Error(format!(
+              "`{}` argument could not be reduced to a constant expression",
+              Token::AtOrg,
+            )),
+          ));
+          vec![]
+        }
+
+        Root::Const => {
+          errors.push((
+            pos,
+            Error(format!(
+              "`{}` argument could not be reduced to a constant expression",
+              Token::AtConst,
+            )),
+          ));
+          vec![]
+        }
+
+        Root::Dyn(None) => {
+          errors.push((
+            pos,
+            Error(format!(
+              "`{}` argument could not be reduced to an instruction",
+              Token::AtDyn,
+            )),
+          ));
+          vec![]
+        }
+      })
+      .collect();
+
+    // poke into `instructions` and evaluate the nodes that couldn't be evaluated before
+    'poke: {
+      for (location_counter, (pos, node)) in unevaluated_nodes.iter() {
+        let value = match resolve_node_value(&node, &label_definitions) {
+          Ok(value) => value,
+          Err(label) => {
+            errors.push((pos.clone(), Error(format!("Undefined label `{}`", label))));
+            0x00
+          }
+        };
+
+        // if the evaluated node doesn't fit in the allocated memory, note down the right amount of
+        // memory to allocate on the next iteration of `'bruteforce` and try again
+
+        let instructions_ = build_push_instruction(value, &pos);
+        if instructions_.len() > allocation_sizes.get(&node).copied().unwrap_or(1) {
+          allocation_sizes.insert(node.clone(), instructions_.len());
+          break 'poke;
+        }
+
+        for (index, (pos, instruction)) in instructions_.into_iter().enumerate() {
+          instructions[*location_counter as usize + index] = (pos, Ok(instruction));
+        }
+      }
+
+      // all unevaluated nodes have been evaluated, break out of the bruteforce loop
+      break 'bruteforce;
+    }
+
+    // abort brute force if errors were encountered
+    if errors.len() > 0 {
+      break 'bruteforce;
+    }
+  }
+
+  instructions
+}
+
+fn codegen(
+  instructions: Vec<(Pos, Result<Instruction, u8>)>,
+  errors: &mut Vec<(Pos, Error)>,
+) -> Vec<(Pos, u8)> {
+  // codegen instructions into opcodes
+
+  let opcodes: Vec<(Pos, u8)> = instructions
+    .into_iter()
+    .map(|(pos, instruction)| (pos, common::instruction_to_opcode(instruction)))
+    .collect();
+
+  let mut opcodes = opcodes;
+  let pos = Pos("[codegen]".to_string(), 0);
+
+  match common::MEM_SIZE.checked_sub(opcodes.len()) {
+    Some(padding) => opcodes.extend(vec![(pos, 0x00); padding]),
+    None => {
+      errors.push((
+        pos,
+        Error(format!(
+          "Program size `{:02X}` exceeds available memory of size `{:02X}`",
+          opcodes.len(),
+          common::MEM_SIZE
+        )),
+      ));
+    }
+  }
+
+  opcodes
+}
+
+fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Root)> {
   // build a tree of nodes representing everything we can compute at compile time
   // this removes redundant instructions and makes macros usable
 
@@ -553,13 +775,6 @@ fn assemble(
         Some(vec![Root::Dyn(Some(instruction.clone()))])
       }
 
-      [Root::Node(Node::Value(value)), Root::Dyn(None)] => Some(
-        make_push_instruction(value.clone(), &Pos("".to_string(), 0))
-          .iter()
-          .map(|(_, instruction)| Root::Dyn(Some(instruction.clone())))
-          .collect(),
-      ),
-
       [Root::Dyn(Some(instruction)), Root::Dyn(None)] => {
         Some(vec![Root::Dyn(Some(instruction.clone()))])
       }
@@ -598,49 +813,50 @@ fn assemble(
     roots =
       match_replace(&roots, |window| match window {
         [Root::Node(x00), Root::Instruction(Instruction::Add(_size))]
-          if eval(&x00, &HashMap::new()) == Ok(0x00) =>
+          if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
         {
           Some(vec![])
         }
 
         [Root::Node(x01), Root::Instruction(Instruction::Add(0x01))]
-          if eval(&x01, &HashMap::new()) == Ok(0x01) =>
+          if resolve_node_value(&x01, &HashMap::new()) == Ok(0x01) =>
         {
           Some(vec![Root::Instruction(Instruction::Inc)])
         }
 
         [Root::Node(x00), Root::Instruction(Instruction::Sub(_size))]
-          if eval(&x00, &HashMap::new()) == Ok(0x00) =>
+          if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
         {
           Some(vec![])
         }
 
         [Root::Node(x01), Root::Instruction(Instruction::Sub(0x01))]
-          if eval(&x01, &HashMap::new()) == Ok(0x01) =>
+          if resolve_node_value(&x01, &HashMap::new()) == Ok(0x01) =>
         {
           Some(vec![Root::Instruction(Instruction::Dec)])
         }
 
         [Root::Node(div_by_eight), Root::Instruction(Instruction::Rot(_size))]
-          if eval(&div_by_eight, &HashMap::new()).map(|value| value % 8) == Ok(0x00) =>
+          if resolve_node_value(&div_by_eight, &HashMap::new()).map(|value| value % 8)
+            == Ok(0x00) =>
         {
           Some(vec![])
         }
 
         [Root::Node(x00), Root::Instruction(Instruction::Orr(_size))]
-          if eval(&x00, &HashMap::new()) == Ok(0x00) =>
+          if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
         {
           Some(vec![])
         }
 
         [Root::Node(ff), Root::Instruction(Instruction::And(_size))]
-          if eval(&ff, &HashMap::new()) == Ok(0xFF) =>
+          if resolve_node_value(&ff, &HashMap::new()) == Ok(0xFF) =>
         {
           Some(vec![])
         }
 
         [Root::Node(x00), Root::Instruction(Instruction::Xor(_size))]
-          if eval(&x00, &HashMap::new()) == Ok(0x00) =>
+          if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
         {
           Some(vec![])
         }
@@ -815,21 +1031,21 @@ fn assemble(
       // `Sto`s
       [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(0x07))]
       | [Root::Node(x00), Root::Instruction(Instruction::Sto(0x08)), Root::Instruction(Instruction::Pop)]
-        if eval(&x00, &HashMap::new()) == Ok(0x00) =>
+        if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
       {
         // OpType::PopOp
         Some(vec![Root::Instruction(Instruction::Xnd(0x08))])
       }
       [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(0x03))]
       | [Root::Node(x00), Root::Instruction(Instruction::Sto(0x04)), Root::Instruction(Instruction::Pop)]
-        if eval(&x00, &HashMap::new()) == Ok(0x00) =>
+        if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
       {
         // OpType::PopOp
         Some(vec![Root::Instruction(Instruction::Xnd(0x04))])
       }
       [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(0x01))]
       | [Root::Node(x00), Root::Instruction(Instruction::Sto(0x02)), Root::Instruction(Instruction::Pop)]
-        if eval(&x00, &HashMap::new()) == Ok(0x00) =>
+        if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
       {
         // OpType::PopOp
         Some(vec![Root::Instruction(Instruction::Xnd(0x02))])
@@ -837,7 +1053,7 @@ fn assemble(
       [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(x00)]
       | [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(0x00))]
       | [Root::Node(x00), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
-        if eval(&x00, &HashMap::new()) == Ok(0x00) =>
+        if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
       {
         // OpType::PopOp
         Some(vec![Root::Instruction(Instruction::Xnd(0x01))])
@@ -845,7 +1061,7 @@ fn assemble(
       [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(x01)]
       | [Root::Instruction(Instruction::Pop), Root::Node(x01), Root::Instruction(Instruction::Sto(0x00))]
       | [Root::Node(x01), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
-        if eval(&x01, &HashMap::new()) == Ok(0x01) =>
+        if resolve_node_value(&x01, &HashMap::new()) == Ok(0x01) =>
       {
         // OpType::PopOp
         Some(vec![
@@ -856,7 +1072,7 @@ fn assemble(
       [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(x80)]
       | [Root::Instruction(Instruction::Pop), Root::Node(x80), Root::Instruction(Instruction::Sto(0x00))]
       | [Root::Node(x80), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
-        if eval(&x80, &HashMap::new()) == Ok(0x80) =>
+        if resolve_node_value(&x80, &HashMap::new()) == Ok(0x80) =>
       {
         // OpType::PopOp
         Some(vec![
@@ -867,7 +1083,7 @@ fn assemble(
       [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(xff)]
       | [Root::Instruction(Instruction::Pop), Root::Node(xff), Root::Instruction(Instruction::Sto(0x00))]
       | [Root::Node(xff), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
-        if eval(&xff, &HashMap::new()) == Ok(0xFF) =>
+        if resolve_node_value(&xff, &HashMap::new()) == Ok(0xFF) =>
       {
         // OpType::PopOp
         Some(vec![
@@ -896,174 +1112,178 @@ fn assemble(
     });
 
     // length 4
-    roots = match_replace(&roots, |window| match window {
-      // doubled `BinaryOp`s
-      [Root::Node(node1), Root::Instruction(Instruction::Add(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Add(same_size2))]
-        if same_size1 == same_size2 =>
-      {
-        Some(vec![
-          Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Add(*same_size1)),
-        ])
-      }
-      [Root::Node(node1), Root::Instruction(Instruction::Add(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Sub(same_size2))]
-        if same_size1 == same_size2 =>
-      {
-        Some(vec![
-          Root::Node(Node::Sub(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Add(*same_size1)),
-        ])
-      }
-      [Root::Node(node1), Root::Instruction(Instruction::Sub(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Sub(same_size2))]
-        if same_size1 == same_size2 =>
-      {
-        Some(vec![
-          Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Sub(*same_size1)),
-        ])
-      }
-      [Root::Node(node1), Root::Instruction(Instruction::Sub(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Add(same_size2))]
-        if same_size1 == same_size2 =>
-      {
-        Some(vec![
-          Root::Node(Node::Sub(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Sub(*same_size1)),
-        ])
-      }
-      [Root::Node(node1), Root::Instruction(Instruction::Rot(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Rot(same_size2))]
-        if same_size1 == same_size2 =>
-      {
-        Some(vec![
-          Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Rot(*same_size1)),
-        ])
-      }
-      [Root::Node(node1), Root::Instruction(Instruction::Orr(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Orr(same_size2))]
-        if same_size1 == same_size2 =>
-      {
-        Some(vec![
-          Root::Node(Node::Orr(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Orr(*same_size1)),
-        ])
-      }
-      [Root::Node(node1), Root::Instruction(Instruction::And(same_size1)), Root::Node(node2), Root::Instruction(Instruction::And(same_size2))]
-        if same_size1 == same_size2 =>
-      {
-        Some(vec![
-          Root::Node(Node::And(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::And(*same_size1)),
-        ])
-      }
-      [Root::Node(node1), Root::Instruction(Instruction::Xor(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Xor(same_size2))]
-        if same_size1 == same_size2 =>
-      {
-        Some(vec![
-          Root::Node(Node::Xor(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Xor(*same_size1)),
-        ])
-      }
-      [Root::Node(node1), Root::Instruction(Instruction::Xnd(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Xnd(same_size2))]
-        if same_size1 == same_size2 =>
-      {
-        Some(vec![
-          Root::Node(Node::Xnd(Box::new(node2.clone()), Box::new(node1.clone()))),
-          Root::Instruction(Instruction::Xnd(*same_size1)),
-        ])
-      }
-      [Root::Node(node1), Root::Instruction(Instruction::And(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Orr(same_size2))]
-        if same_size1 == same_size2
-          && eval(&node1, &HashMap::new())
-            .and_then(|value1| eval(&node2, &HashMap::new()).map(|value2| value1 ^ value2 == 0xFF))
-            .unwrap_or(false) =>
-      {
-        Some(vec![
-          Root::Node(node2.clone()),
-          Root::Instruction(Instruction::Orr(*same_size1)),
-        ])
-      }
-      [Root::Node(node1), Root::Instruction(Instruction::Orr(same_size1)), Root::Node(node2), Root::Instruction(Instruction::And(same_size2))]
-        if same_size1 == same_size2
-          && eval(&node1, &HashMap::new())
-            .and_then(|value1| eval(&node2, &HashMap::new()).map(|value2| value1 ^ value2 == 0xFF))
-            .unwrap_or(false) =>
-      {
-        Some(vec![
-          Root::Node(node2.clone()),
-          Root::Instruction(Instruction::And(*same_size1)),
-        ])
-      }
+    roots = match_replace(&roots, |window| {
+      match window {
+        // doubled `BinaryOp`s
+        [Root::Node(node1), Root::Instruction(Instruction::Add(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Add(same_size2))]
+          if same_size1 == same_size2 =>
+        {
+          Some(vec![
+            Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
+            Root::Instruction(Instruction::Add(*same_size1)),
+          ])
+        }
+        [Root::Node(node1), Root::Instruction(Instruction::Add(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Sub(same_size2))]
+          if same_size1 == same_size2 =>
+        {
+          Some(vec![
+            Root::Node(Node::Sub(Box::new(node2.clone()), Box::new(node1.clone()))),
+            Root::Instruction(Instruction::Add(*same_size1)),
+          ])
+        }
+        [Root::Node(node1), Root::Instruction(Instruction::Sub(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Sub(same_size2))]
+          if same_size1 == same_size2 =>
+        {
+          Some(vec![
+            Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
+            Root::Instruction(Instruction::Sub(*same_size1)),
+          ])
+        }
+        [Root::Node(node1), Root::Instruction(Instruction::Sub(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Add(same_size2))]
+          if same_size1 == same_size2 =>
+        {
+          Some(vec![
+            Root::Node(Node::Sub(Box::new(node2.clone()), Box::new(node1.clone()))),
+            Root::Instruction(Instruction::Sub(*same_size1)),
+          ])
+        }
+        [Root::Node(node1), Root::Instruction(Instruction::Rot(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Rot(same_size2))]
+          if same_size1 == same_size2 =>
+        {
+          Some(vec![
+            Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
+            Root::Instruction(Instruction::Rot(*same_size1)),
+          ])
+        }
+        [Root::Node(node1), Root::Instruction(Instruction::Orr(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Orr(same_size2))]
+          if same_size1 == same_size2 =>
+        {
+          Some(vec![
+            Root::Node(Node::Orr(Box::new(node2.clone()), Box::new(node1.clone()))),
+            Root::Instruction(Instruction::Orr(*same_size1)),
+          ])
+        }
+        [Root::Node(node1), Root::Instruction(Instruction::And(same_size1)), Root::Node(node2), Root::Instruction(Instruction::And(same_size2))]
+          if same_size1 == same_size2 =>
+        {
+          Some(vec![
+            Root::Node(Node::And(Box::new(node2.clone()), Box::new(node1.clone()))),
+            Root::Instruction(Instruction::And(*same_size1)),
+          ])
+        }
+        [Root::Node(node1), Root::Instruction(Instruction::Xor(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Xor(same_size2))]
+          if same_size1 == same_size2 =>
+        {
+          Some(vec![
+            Root::Node(Node::Xor(Box::new(node2.clone()), Box::new(node1.clone()))),
+            Root::Instruction(Instruction::Xor(*same_size1)),
+          ])
+        }
+        [Root::Node(node1), Root::Instruction(Instruction::Xnd(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Xnd(same_size2))]
+          if same_size1 == same_size2 =>
+        {
+          Some(vec![
+            Root::Node(Node::Xnd(Box::new(node2.clone()), Box::new(node1.clone()))),
+            Root::Instruction(Instruction::Xnd(*same_size1)),
+          ])
+        }
+        [Root::Node(node1), Root::Instruction(Instruction::And(same_size1)), Root::Node(node2), Root::Instruction(Instruction::Orr(same_size2))]
+          if same_size1 == same_size2
+            && (resolve_node_value(&node1, &HashMap::new()).ok())
+              .zip(resolve_node_value(&node2, &HashMap::new()).ok())
+              .map(|(value1, value2)| value1 ^ value2 == 0xFF)
+              .unwrap_or(false) =>
+        {
+          Some(vec![
+            Root::Node(node2.clone()),
+            Root::Instruction(Instruction::Orr(*same_size1)),
+          ])
+        }
+        [Root::Node(node1), Root::Instruction(Instruction::Orr(same_size1)), Root::Node(node2), Root::Instruction(Instruction::And(same_size2))]
+          if same_size1 == same_size2
+            && (resolve_node_value(&node1, &HashMap::new()).ok())
+              .zip(resolve_node_value(&node2, &HashMap::new()).ok())
+              .map(|(value1, value2)| value1 ^ value2 == 0xFF)
+              .unwrap_or(false) =>
+        {
+          Some(vec![
+            Root::Node(node2.clone()),
+            Root::Instruction(Instruction::And(*same_size1)),
+          ])
+        }
 
-      // `Node`s
-      [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Add(0x02))]
-        if op_type(push_op) == OpType::PushOp =>
-      {
-        Some(vec![
-          Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
-          push_op.clone(),
-        ])
-      }
-      [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Sub(0x02))]
-        if op_type(push_op) == OpType::PushOp =>
-      {
-        Some(vec![
-          Root::Node(Node::Sub(Box::new(node2.clone()), Box::new(node1.clone()))),
-          push_op.clone(),
-        ])
-      }
-      [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Rot(0x02))]
-        if op_type(push_op) == OpType::PushOp =>
-      {
-        Some(vec![
-          Root::Node(Node::Rot(Box::new(node2.clone()), Box::new(node1.clone()))),
-          push_op.clone(),
-        ])
-      }
-      [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Orr(0x02))]
-        if op_type(push_op) == OpType::PushOp =>
-      {
-        Some(vec![
-          Root::Node(Node::Orr(Box::new(node2.clone()), Box::new(node1.clone()))),
-          push_op.clone(),
-        ])
-      }
-      [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::And(0x02))]
-        if op_type(push_op) == OpType::PushOp =>
-      {
-        Some(vec![
-          Root::Node(Node::And(Box::new(node2.clone()), Box::new(node1.clone()))),
-          push_op.clone(),
-        ])
-      }
-      [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Xor(0x02))]
-        if op_type(push_op) == OpType::PushOp =>
-      {
-        Some(vec![
-          Root::Node(Node::Xor(Box::new(node2.clone()), Box::new(node1.clone()))),
-          push_op.clone(),
-        ])
-      }
-      [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Xnd(0x02))]
-        if op_type(push_op) == OpType::PushOp =>
-      {
-        Some(vec![
-          Root::Node(Node::Xnd(Box::new(node2.clone()), Box::new(node1.clone()))),
-          push_op.clone(),
-        ])
-      }
+        // `Node`s
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Add(0x02))]
+          if op_type(push_op) == OpType::PushOp =>
+        {
+          Some(vec![
+            Root::Node(Node::Add(Box::new(node2.clone()), Box::new(node1.clone()))),
+            push_op.clone(),
+          ])
+        }
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Sub(0x02))]
+          if op_type(push_op) == OpType::PushOp =>
+        {
+          Some(vec![
+            Root::Node(Node::Sub(Box::new(node2.clone()), Box::new(node1.clone()))),
+            push_op.clone(),
+          ])
+        }
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Rot(0x02))]
+          if op_type(push_op) == OpType::PushOp =>
+        {
+          Some(vec![
+            Root::Node(Node::Rot(Box::new(node2.clone()), Box::new(node1.clone()))),
+            push_op.clone(),
+          ])
+        }
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Orr(0x02))]
+          if op_type(push_op) == OpType::PushOp =>
+        {
+          Some(vec![
+            Root::Node(Node::Orr(Box::new(node2.clone()), Box::new(node1.clone()))),
+            push_op.clone(),
+          ])
+        }
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::And(0x02))]
+          if op_type(push_op) == OpType::PushOp =>
+        {
+          Some(vec![
+            Root::Node(Node::And(Box::new(node2.clone()), Box::new(node1.clone()))),
+            push_op.clone(),
+          ])
+        }
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Xor(0x02))]
+          if op_type(push_op) == OpType::PushOp =>
+        {
+          Some(vec![
+            Root::Node(Node::Xor(Box::new(node2.clone()), Box::new(node1.clone()))),
+            push_op.clone(),
+          ])
+        }
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Xnd(0x02))]
+          if op_type(push_op) == OpType::PushOp =>
+        {
+          Some(vec![
+            Root::Node(Node::Xnd(Box::new(node2.clone()), Box::new(node1.clone()))),
+            push_op.clone(),
+          ])
+        }
 
-      // `Ldo`s
-      [Root::Node(node1), push_op1, push_op2, Root::Instruction(Instruction::Ldo(0x02))]
-        if op_type(push_op1) == OpType::PushOp && op_type(push_op2) == OpType::PushOp =>
-      {
-        Some(vec![
-          Root::Node(node1.clone()),
-          push_op1.clone(),
-          push_op2.clone(),
-          Root::Node(node1.clone()),
-        ])
-      }
+        // `Ldo`s
+        [Root::Node(node1), push_op1, push_op2, Root::Instruction(Instruction::Ldo(0x02))]
+          if op_type(push_op1) == OpType::PushOp && op_type(push_op2) == OpType::PushOp =>
+        {
+          Some(vec![
+            Root::Node(node1.clone()),
+            push_op1.clone(),
+            push_op2.clone(),
+            Root::Node(node1.clone()),
+          ])
+        }
 
-      _ => None,
+        _ => None,
+      }
     });
 
     // length 5
@@ -1291,247 +1511,37 @@ fn assemble(
     });
   }
 
-  // assemble roots into instructions by computing the value of every node and resolving labels
-
-  fn eval(node: &Node, label_definitions: &HashMap<Label, u8>) -> Result<u8, Label> {
-    Ok(match node {
-      Node::LabelRef(label) => *label_definitions.get(label).ok_or(label.clone())?,
-      Node::Value(value) => *value,
-      Node::Add(node1, node2) => {
-        eval(node2, label_definitions)?.wrapping_add(eval(node1, label_definitions)?)
-      }
-      Node::Sub(node1, node2) => {
-        eval(node2, label_definitions)?.wrapping_sub(eval(node1, label_definitions)?)
-      }
-      Node::Rot(node1, node2) => {
-        let a = eval(node1, label_definitions)? as u16;
-        let b = eval(node2, label_definitions)? as u16;
-        let shifted = (b as u16) << a % 8;
-        (shifted & 0xFF) as u8 | (shifted >> 8) as u8
-      }
-      Node::Orr(node1, node2) => eval(node2, label_definitions)? | eval(node1, label_definitions)?,
-      Node::And(node1, node2) => eval(node2, label_definitions)? & eval(node1, label_definitions)?,
-      Node::Xor(node1, node2) => eval(node2, label_definitions)? ^ eval(node1, label_definitions)?,
-      Node::Xnd(_node1, _node2) => 0,
-      Node::Shl(node) => eval(node, label_definitions)?.wrapping_shl(1),
-      Node::Shr(node) => eval(node, label_definitions)?.wrapping_shl(1),
-      Node::Not(node) => !eval(node, label_definitions)?,
-    })
-  }
-
-  fn make_push_instruction(value: u8, pos: &Pos) -> Vec<(Pos, Instruction)> {
-    // the `Psh` instruction allows us to push arbitrary 7-bit immediates onto the stack.
-    // we then optionally use `Neg` and `Inc` to get the ability to push arbitrary 8-bit
-    // values. we also use `Phn` as a shorthand when possible.
-
-    match value {
-      0b11110000..=0b11111111 => vec![(pos.clone(), Instruction::Phn(value))],
-      0b10000000..=0b10000000 => vec![
-        (pos.clone(), Instruction::Psh(value.wrapping_sub(1))),
-        (pos.clone(), Instruction::Inc),
-      ],
-      0b00000000..=0b01111111 => vec![(pos.clone(), Instruction::Psh(value))],
-      0b10000000..=0b11111111 => vec![
-        (pos.clone(), Instruction::Psh(value.wrapping_neg())),
-        (pos.clone(), Instruction::Neg),
-      ],
-    }
-  }
-
-  // if every label a node depends on could be resolved, we can replace it with a value.
-  // if not, start by allocating one byte for pushing the node later. if pushing the node turns
-  // out to require more than one byte, iteratively `'bruteforce` allocation sizes until we
-  // find one that works. repeat for every node.
-
-  let mut instructions: Vec<(Pos, Result<Instruction, u8>)>;
-  let mut allocation_sizes: HashMap<Node, usize> = HashMap::new();
-
-  'bruteforce: loop {
-    let mut location_counter: usize = 0;
-    let mut label_definitions: HashMap<Label, u8> = HashMap::new();
-    let mut unevaluated_nodes: HashMap<u8, (Pos, Node)> = HashMap::new();
-
-    instructions = roots
-      .clone()
-      .into_iter()
-      .flat_map(|(pos, root)| match root {
-        Root::Instruction(instruction) | Root::Dyn(Some(instruction)) => {
-          let instructions_ = vec![(pos, Ok(instruction))];
-          location_counter += instructions_.len();
-          instructions_
-        }
-
-        Root::Node(node) => match eval(&node, &label_definitions) {
-          Ok(value) => {
-            let instructions_ = make_push_instruction(value, &pos)
-              .into_iter()
-              .map(|(pos, instruction)| (pos, Ok(instruction)))
-              .collect::<Vec<_>>();
-            location_counter += instructions_.len();
-            instructions_
-          }
-          Err(_) => {
-            let instructions_ = vec![
-              (pos.clone(), Ok(Instruction::Nop));
-              allocation_sizes.get(&node).copied().unwrap_or(1)
-            ];
-            unevaluated_nodes.insert(location_counter as u8, (pos, node));
-            location_counter += instructions_.len();
-            instructions_
-          }
-        },
-
-        Root::Opcode(opcode) => {
-          let instructions_ = vec![(pos, Err(opcode))];
-          location_counter += instructions_.len();
-          instructions_
-        }
-
-        Root::LabelDef(Label::Local(_, None)) => panic!("Local label has no scope specified"),
-
-        Root::LabelDef(label) => {
-          if label_definitions.contains_key(&label) {
-            errors.push((
-              pos,
-              Error(format!("Duplicate label definition `{}`", label)),
-            ));
-          }
-          label_definitions.insert(label, location_counter as u8);
-          vec![]
-        }
-
-        Root::Org(Some(node)) => match eval(&node, &label_definitions) {
-          Ok(value) => {
-            if value as usize >= location_counter {
-              let difference = value as usize - location_counter;
-              location_counter += difference;
-              vec![(pos, Err(0x00)); difference as usize]
-            } else {
-              errors.push((
-                pos,
-                Error(format!(
-                  "`{}` cannot move location counter backward from `{:02X}` to `{:02X}`",
-                  Token::AtOrg,
-                  location_counter,
-                  value
-                )),
-              ));
-              vec![]
-            }
-          }
-          Err(label) => {
-            errors.push((
-              pos,
-              Error(format!(
-                "`{}` argument contains currently unresolved label `{}`",
-                Token::AtOrg,
-                label
-              )),
-            ));
-            vec![]
-          }
-        },
-
-        Root::Org(None) => {
-          errors.push((
-            pos,
-            Error(format!(
-              "`{}` argument could not be reduced to a constant expression",
-              Token::AtOrg,
-            )),
-          ));
-          vec![]
-        }
-
-        Root::Const => {
-          errors.push((
-            pos,
-            Error(format!(
-              "`{}` argument could not be reduced to a constant expression",
-              Token::AtConst,
-            )),
-          ));
-          vec![]
-        }
-
-        Root::Dyn(None) => {
-          errors.push((
-            pos,
-            Error(format!(
-              "`{}` argument could not be reduced to an instruction",
-              Token::AtDyn,
-            )),
-          ));
-          vec![]
-        }
-      })
-      .collect();
-
-    // poke into `instructions` and evaluate the nodes that couldn't be evaluated before
-    'poke: {
-      for (location_counter, (pos, node)) in unevaluated_nodes.iter() {
-        let value = match eval(&node, &label_definitions) {
-          Ok(value) => value,
-          Err(label) => {
-            errors.push((pos.clone(), Error(format!("Undefined label `{}`", label))));
-            0x00
-          }
-        };
-
-        // if the evaluated node doesn't fit in the allocated memory, note down the right amount of
-        // memory to allocate on the next iteration of `'bruteforce` and try again
-
-        let instructions_ = make_push_instruction(value, &pos);
-        if instructions_.len() > allocation_sizes.get(&node).copied().unwrap_or(1) {
-          allocation_sizes.insert(node.clone(), instructions_.len());
-          break 'poke;
-        }
-
-        for (index, (pos, instruction)) in instructions_.into_iter().enumerate() {
-          instructions[*location_counter as usize + index] = (pos, Ok(instruction));
-        }
-      }
-
-      // all unevaluated nodes have been evaluated, break out of the bruteforce loop
-      break 'bruteforce;
-    }
-
-    // abort brute force if errors were encountered
-    if errors.len() > 0 {
-      break 'bruteforce;
-    }
-  }
-
-  instructions
+  roots
 }
 
-fn codegen(
-  instructions: Vec<(Pos, Result<Instruction, u8>)>,
-  errors: &mut Vec<(Pos, Error)>,
-) -> Vec<(Pos, u8)> {
-  // codegen instructions into opcodes
+fn resolve_node_value(node: &Node, label_definitions: &HashMap<Label, u8>) -> Result<u8, Label> {
+  // resolve `Node`s to `u8`s recursively while looking up `Label`s in `label_definitions`
 
-  let opcodes: Vec<(Pos, u8)> = instructions
-    .into_iter()
-    .map(|(pos, instruction)| (pos, common::instruction_to_opcode(instruction)))
-    .collect();
-
-  let mut opcodes = opcodes;
-  let pos = Pos("[codegen]".to_string(), 0);
-
-  match common::MEM_SIZE.checked_sub(opcodes.len()) {
-    Some(padding) => opcodes.extend(vec![(pos, 0x00); padding]),
-    None => {
-      errors.push((
-        pos,
-        Error(format!(
-          "Program size `{:02X}` exceeds available memory of size `{:02X}`",
-          opcodes.len(),
-          common::MEM_SIZE
-        )),
-      ));
+  Ok(match node {
+    Node::LabelRef(label) => *label_definitions.get(label).ok_or(label.clone())?,
+    Node::Value(value) => *value,
+    Node::Add(node1, node2) => resolve_node_value(node2, label_definitions)?
+      .wrapping_add(resolve_node_value(node1, label_definitions)?),
+    Node::Sub(node1, node2) => resolve_node_value(node2, label_definitions)?
+      .wrapping_sub(resolve_node_value(node1, label_definitions)?),
+    Node::Rot(node1, node2) => {
+      let a = resolve_node_value(node1, label_definitions)? as u16;
+      let b = resolve_node_value(node2, label_definitions)? as u16;
+      let shifted = (b as u16) << a % 8;
+      (shifted & 0xFF) as u8 | (shifted >> 8) as u8
     }
-  }
-
-  opcodes
+    Node::Orr(node1, node2) => {
+      resolve_node_value(node2, label_definitions)? | resolve_node_value(node1, label_definitions)?
+    }
+    Node::And(node1, node2) => {
+      resolve_node_value(node2, label_definitions)? & resolve_node_value(node1, label_definitions)?
+    }
+    Node::Xor(node1, node2) => {
+      resolve_node_value(node2, label_definitions)? ^ resolve_node_value(node1, label_definitions)?
+    }
+    Node::Xnd(_node1, _node2) => 0,
+    Node::Shl(node) => resolve_node_value(node, label_definitions)?.wrapping_shl(1),
+    Node::Shr(node) => resolve_node_value(node, label_definitions)?.wrapping_shl(1),
+    Node::Not(node) => !resolve_node_value(node, label_definitions)?,
+  })
 }
