@@ -19,4 +19,4 @@ void_p memchr(void_p ptr, int chr, size_t len);
 void memset(void_p ptr, int chr, size_t len);      // TODO should return void*
 void memcpy(void_p dst, c_void_p src, size_t len); // TODO should return void*
 int memcmp(c_void_p ptr1, c_void_p ptr2, size_t len);
-void memswp(void_p ptr1, void_p ptr2, size_t len); // TODO non-standard
+void memswp(void_p ptr1, void_p ptr2, size_t len); // TODO nonstandard

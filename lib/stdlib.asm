@@ -69,7 +69,7 @@ div_10.min! # quotient = div_10.min(n)
 
 
 sort.def!
-  sort: clc # sort(len, arr)
+  sort: clc # sort(len, *arr)
     # bubble sort, in-place
     x01 while. dec # swapped = false
       ld2 dec for_i. dec

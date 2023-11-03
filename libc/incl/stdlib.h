@@ -14,5 +14,4 @@ inline void exit(int status);
 inline void abort(void);
 
 inline int abs(int n);
-// TODO inline int rand(void);
-// TODO inline void srand(unsigned int seed);
+inline int rand(int seed); // TODO should take in `void`

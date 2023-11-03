@@ -208,11 +208,22 @@ pub fn binary_operation<T: Clone + 'static>(
 
 // C99 grammar
 
-pub fn parse(input: String) -> Result<Program, Error> {
-  parse::translation_unit().0(&input).map(|(programm, input)| match &input[..] {
+pub fn parse(input: String, errors: &mut Vec<(Pos, Error)>) -> Program {
+  let program = parse::translation_unit().0(&input).map(|(programm, input)| match &input[..] {
     "" => programm,
     _ => panic!("Input not fully parsed"),
-  })
+  });
+
+  match program {
+    Ok(program) => program,
+    Err(error) => {
+      errors.push((
+        Pos("[parse]".to_string(), 0),
+        Error(format!("Could not parse: {}", error)),
+      ));
+      Program(vec![])
+    }
+  }
 }
 
 pub fn translation_unit() -> Parser<Program> {
@@ -641,8 +652,13 @@ pub fn integer_constant() -> Parser<Expression> {
   Parser::error(Error(format!("")))
     .or_else(|_| {
       parse::whitespaces_string("0x")
-        .and_then(|_| parse::many1(parse::digit(16)))
-        .map(|digits| u8::from_str_radix(&digits.into_iter().collect::<String>(), 16))
+        .and_then(|_| parse::many1(parse::digit(0x10)))
+        .map(|digits| u8::from_str_radix(&digits.into_iter().collect::<String>(), 0x10))
+    })
+    .or_else(|_| {
+      parse::whitespaces_string("0b")
+        .and_then(|_| parse::many1(parse::digit(0b10)))
+        .map(|digits| u8::from_str_radix(&digits.into_iter().collect::<String>(), 0b10))
     })
     .or_else(|_| {
       parse::many(parse::whitespace())

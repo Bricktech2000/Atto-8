@@ -2,7 +2,12 @@ use crate::*;
 use parse::Parser;
 use std::collections::HashMap;
 
-pub fn preprocess(file: File, defines: &mut HashMap<String, TextLine>) -> Result<String, Error> {
+pub fn preprocess(
+  file: File,
+  defines: &mut HashMap<String, TextLine>,
+  errors: &mut Vec<(Pos, Error)>,
+  scope: Option<&str>,
+) -> String {
   // remove comments and resolve includes and defines
 
   let preprocessor = Parser::error(Error(format!("")))
@@ -12,7 +17,11 @@ pub fn preprocess(file: File, defines: &mut HashMap<String, TextLine>) -> Result
     .or_else(|_| parse::eof().map(|_| Directive::EOF));
 
   let source = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {
-    panic!("Unable to read file `{}`", file.0);
+    errors.push((
+      Pos(scope.unwrap_or("[bootstrap]").to_string(), 0),
+      Error(format!("Unable to read file `{}`", file)),
+    ));
+    format!("")
   });
 
   let mut preprocessed = "".to_string();
@@ -25,7 +34,7 @@ pub fn preprocess(file: File, defines: &mut HashMap<String, TextLine>) -> Result
   loop {
     (preprocessed, source) = match preprocessor.0(&source) {
       Ok((Directive::Include(text_line), input)) => (
-        preprocessed + &preprocess_include_directive(text_line, &file, defines)?,
+        preprocessed + &preprocess_include_directive(text_line, &file, defines, errors),
         input,
       ),
 
@@ -35,13 +44,13 @@ pub fn preprocess(file: File, defines: &mut HashMap<String, TextLine>) -> Result
       }
 
       Ok((Directive::TextLine(text_line), input)) => (
-        preprocessed + &preprocess_text_line_directive(text_line, defines)? + "\n",
+        preprocessed + &preprocess_text_line_directive(text_line, defines, errors) + "\n",
         input,
       ),
 
       Ok((Directive::EOF, input)) => {
         break match &input[..] {
-          "" => Ok(preprocessed),
+          "" => preprocessed,
           _ => panic!("Input not fully parsed"),
         };
       }
@@ -54,7 +63,8 @@ pub fn preprocess(file: File, defines: &mut HashMap<String, TextLine>) -> Result
 fn preprocess_text_line_directive(
   text_line: TextLine,
   defines: &mut HashMap<String, TextLine>,
-) -> Result<String, Error> {
+  errors: &mut Vec<(Pos, Error)>,
+) -> String {
   // resolve defines recursively in text line and return preprocessed text line
 
   let mut acc = "".to_string();
@@ -64,7 +74,7 @@ fn preprocess_text_line_directive(
       Ok(identifier) => match defines.remove(identifier) {
         Some(text_line) => {
           // prevents infinite recursion
-          let preprocessed = preprocess_text_line_directive(text_line.clone(), defines)?;
+          let preprocessed = preprocess_text_line_directive(text_line.clone(), defines, errors);
           defines.insert(identifier.clone(), text_line);
           preprocessed
         }
@@ -74,18 +84,20 @@ fn preprocess_text_line_directive(
     }
   }
 
-  Ok(acc)
+  acc
 }
 
 fn preprocess_include_directive(
   text_line: TextLine,
   file: &File,
   defines: &mut HashMap<String, TextLine>,
-) -> Result<String, Error> {
+  errors: &mut Vec<(Pos, Error)>,
+) -> String {
   // resolve defines in include directive and preprocess included file
 
   use std::path::Path;
-  let text_line = preprocess_text_line_directive(text_line, defines)?;
+  let text_line = preprocess_text_line_directive(text_line, defines, errors);
+
   match preprocess::include_directive_filename().0(&text_line) {
     Ok((filename, trailing)) => match &trailing[..] {
       "" => preprocess(
@@ -99,13 +111,28 @@ fn preprocess_include_directive(
             .to_string(),
         ),
         defines,
+        errors,
+        Some(&format!("{}", file)),
       ),
-      _ => Err(Error(format!(
-        "Trailing characters in include directive filename: `{}`",
-        text_line
-      ))),
+      _ => {
+        errors.push((
+          Pos(file.0.clone(), 0),
+          Error(format!(
+            "Trailing characters in include directive filename: `{}`",
+            text_line
+          )),
+        ));
+        format!("")
+      }
     },
-    Err(e) => Err(e),
+
+    Err(error) => {
+      errors.push((
+        Pos(file.0.clone(), 0),
+        Error(format!("Could not parse: {}", error)),
+      ));
+      format!("")
+    }
   }
 }
 
