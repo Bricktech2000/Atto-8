@@ -1,9 +1,13 @@
 #include <stdio.h>
 
-int main() {
-  puts("*PIPE*\r\n");
+inline char to_upper(char c) {
+  asm { clc !char.to_upper }
+}
 
-  asm { loop: }
-  putc(getc());
-  asm { :loop !jmp }
+int main() {
+  puts("*pipe*\r\n");
+
+  while (1) {
+    putc(to_upper(getc()));
+  }
 }

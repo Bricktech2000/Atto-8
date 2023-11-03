@@ -90,10 +90,10 @@ pub enum Global {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct FunctionDeclaration(Object, Vec<Object>);
+pub struct FunctionDeclaration(bool, Object, Vec<Object>);
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct FunctionDefinition(Object, Vec<Object>, Vec<Statement>);
+pub struct FunctionDefinition(bool, Object, Vec<Object>, Statement);
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Expression {
@@ -134,6 +134,8 @@ pub enum Expression {
 #[derive(Clone, PartialEq, Debug)]
 pub enum Statement {
   Expression(Expression),
+  Compound(Vec<Statement>),
+  While(Expression, Box<Statement>),
   Return(Option<Expression>),
   Asm(String),
 }

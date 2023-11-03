@@ -9,13 +9,14 @@ pub fn codegen(program: Program) -> Result<Vec<Token>, Error> {
 
 #[derive(Clone, PartialEq, Default, Debug)]
 struct State {
-  declarations: HashMap<String, Type>, // map from global declaration to its type
-  definitions: HashSet<String>,        // set of currently defined globals
-  parameters: HashMap<String, Type>,   // map from function paramater to its type
-  locals: HashMap<String, Type>,       // map from local variable to its type
-  global: Option<String>,              // current global name
-  stack: Vec<StackEntry>,              // current nesting stack
-  strings: HashMap<String, String>,    // map from string literal to its label
+  declarations: HashMap<String, (bool, Type)>, // map from global declaration to its type and whether it is inlined
+  definitions: HashSet<String>,                // set of currently defined globals
+  parameters: HashMap<String, Type>,           // map from function paramater to its type
+  locals: HashMap<String, Type>,               // map from local variable to its type
+  global: Option<String>,                      // current global name
+  stack: Vec<StackEntry>,                      // current nesting stack
+  uid: usize,                                  // unique identifier for temporary variables
+  strings: HashMap<String, String>,            // map from string literal to its label
   dependencies: HashMap<String, HashSet<String>>, // map from global to its dependencies
 }
 
@@ -137,12 +138,23 @@ fn program(program: Program, state: &mut State) -> Vec<Token> {
           "{}.deps",
           name.clone()
         )))])
-        .chain(dependencies.iter().flat_map(|dependency| {
-          vec![Token::MacroRef(Macro(format!(
-            "{}.def",
-            dependency.clone()
-          )))]
-        }))
+        .chain(
+          dependencies
+            .iter()
+            .filter(|dependency| {
+              !state
+                .declarations
+                .get(dependency.as_str())
+                .map(|(inline, _type)| *inline)
+                .unwrap_or(false)
+            })
+            .flat_map(|dependency| {
+              vec![Token::MacroRef(Macro(format!(
+                "{}.def",
+                dependency.clone()
+              )))]
+            }),
+        )
     })
     .collect();
 
@@ -163,7 +175,7 @@ fn function_declaration(
   state: &mut State,
 ) -> Vec<Token> {
   match function_declaration {
-    FunctionDeclaration(Object(return_type, name), parameters) => {
+    FunctionDeclaration(inline, Object(return_type, name), parameters) => {
       let parameter_types = parameters
         .iter()
         .map(|Object(type_, _name)| type_.clone())
@@ -172,21 +184,25 @@ fn function_declaration(
       state
         .declarations
         .entry(name.clone())
-        .and_modify(|existing_type| match existing_type {
-          Type::Function(existing_return_type, existing_parameter_types) => {
-            if **existing_return_type != return_type || *existing_parameter_types != parameter_types
-            {
-              panic!(
-                "Function `{}` already declared with different signature",
-                name.clone()
-              )
+        .and_modify(
+          |(existing_inline, existing_type)| match (existing_inline, existing_type) {
+            (existing_inline, Type::Function(existing_return_type, existing_parameter_types)) => {
+              if *existing_inline != inline
+                || **existing_return_type != return_type
+                || *existing_parameter_types != parameter_types
+              {
+                panic!(
+                  "Function `{}` already declared with different signature",
+                  name.clone()
+                )
+              }
             }
-          }
-          _ => (),
-        })
-        .or_insert(Type::Function(
-          Box::new(return_type.clone()),
-          parameter_types,
+            _ => (),
+          },
+        )
+        .or_insert((
+          inline,
+          Type::Function(Box::new(return_type.clone()), parameter_types),
         ));
 
       vec![]
@@ -196,11 +212,12 @@ fn function_declaration(
 
 fn function_definition(function_definition: FunctionDefinition, state: &mut State) -> Vec<Token> {
   match function_definition {
-    FunctionDefinition(Object(return_type, name), parameters, body) => {
+    FunctionDefinition(inline, Object(return_type, name), parameters, body) => {
       // TODO function parameters
 
       let tokens = codegen::function_declaration(
         FunctionDeclaration(
+          inline,
           Object(return_type.clone(), name.clone()),
           parameters.clone(),
         ),
@@ -232,15 +249,14 @@ fn function_definition(function_definition: FunctionDefinition, state: &mut Stat
 
       let tokens = std::iter::empty()
         .chain(tokens)
-        .chain(vec![
-          Token::MacroDef(Macro(format!("{}.def", name.clone()))),
-          Token::LabelDef(Label::Global(name.clone())),
-        ])
-        .chain(
-          body
-            .into_iter()
-            .flat_map(|statement| codegen::statement(statement, state)),
-        )
+        .chain(match inline {
+          true => vec![Token::MacroDef(Macro(format!("{}", name.clone())))],
+          false => vec![
+            Token::MacroDef(Macro(format!("{}.def", name.clone()))),
+            Token::LabelDef(Label::Global(name.clone())),
+          ],
+        })
+        .chain(codegen::statement(body, state))
         .collect();
 
       match state.global.take() {
@@ -261,6 +277,8 @@ fn function_definition(function_definition: FunctionDefinition, state: &mut Stat
 fn statement(statement: Statement, state: &mut State) -> Vec<Token> {
   match statement {
     Statement::Expression(expression) => codegen::expression_statement(expression, state),
+    Statement::Compound(statements) => codegen::compound_statement(statements, state),
+    Statement::While(condition, body) => codegen::while_statement(condition, *body, state),
     Statement::Return(expression) => codegen::return_statement(expression, state),
     Statement::Asm(assembly) => codegen::asm_statement(assembly, state),
   }
@@ -269,6 +287,77 @@ fn statement(statement: Statement, state: &mut State) -> Vec<Token> {
 fn expression_statement(expression: Expression, state: &mut State) -> Vec<Token> {
   let (_type, tokens) =
     codegen::expression(Expression::Cast(Type::Void, Box::new(expression)), state);
+
+  tokens
+}
+
+fn compound_statement(statements: Vec<Statement>, state: &mut State) -> Vec<Token> {
+  state.stack.push(StackEntry::BlockBoundary);
+
+  let tokens: Vec<Token> = statements
+    .into_iter()
+    .flat_map(|statement| codegen::statement(statement, state))
+    .collect();
+
+  match state.stack.pop() {
+    Some(StackEntry::BlockBoundary) => (),
+    _ => panic!("Expected block boundary"),
+  }
+
+  tokens
+}
+
+fn while_statement(condition: Expression, body: Statement, state: &mut State) -> Vec<Token> {
+  state.stack.push(StackEntry::LoopBoundary);
+
+  let jmp_macro = Macro("jmp".to_string());
+  let bcc_macro = Macro("bcc".to_string());
+  let zr_macro = Macro("zr".to_string());
+
+  let loop_label = Label::Global(format!("loop.{}", state.uid));
+  let while_label = Label::Global(format!("while.{}", state.uid));
+  let check_label = Label::Global(format!("check.{}", state.uid));
+  state.uid += 1;
+
+  let tokens = match condition {
+    Expression::IntegerConstant(0x00) => vec![],
+    Expression::IntegerConstant(_) => std::iter::empty()
+      .chain(vec![Token::LabelDef(loop_label.clone())])
+      .chain(codegen::statement(body, state))
+      .chain(vec![
+        Token::LabelRef(loop_label.clone()),
+        Token::MacroRef(jmp_macro.clone()),
+      ])
+      .collect(),
+    _ => std::iter::empty()
+      .chain(vec![
+        Token::LabelRef(check_label.clone()),
+        Token::MacroRef(jmp_macro.clone()),
+        Token::LabelDef(while_label.clone()),
+      ])
+      .chain(codegen::statement(body, state))
+      .chain(vec![Token::LabelDef(check_label.clone())])
+      .chain({
+        let (type_, tokens) = codegen::expression(condition, state);
+        match type_ {
+          type_ if type_.size() == 1 => std::iter::empty()
+            .chain(tokens)
+            .chain(vec![Token::MacroRef(zr_macro.clone())]),
+          _ => todo!(),
+        }
+      })
+      .chain(vec![
+        Token::LabelRef(while_label.clone()),
+        Token::MacroRef(bcc_macro.clone()),
+        Token::Clc,
+      ])
+      .collect(),
+  };
+
+  match state.stack.pop() {
+    Some(StackEntry::LoopBoundary) => (),
+    _ => panic!("Expected loop boundary"),
+  }
 
   tokens
 }
@@ -990,10 +1079,12 @@ fn function_call_expression(
   let call_macro = Macro("call".to_string());
 
   // TODO assumes all functions are globals
-  let object_type = state
+  let (inline, object_type) = state
     .declarations
     .get(&name)
     .unwrap_or_else(|| panic!("Declaration for object `{}` not found", name));
+
+  let inline = *inline;
 
   let (return_type, parameter_types) = match object_type {
     Type::Function(return_type, parameter_types) => (return_type.clone(), parameter_types.clone()),
@@ -1019,16 +1110,20 @@ fn function_call_expression(
         arguments
           .into_iter()
           .zip(parameter_types.into_iter())
+          .rev()
           .flat_map(|(argument, parameter_type)| {
             let (_type, tokens) =
               codegen::expression(Expression::Cast(parameter_type, Box::new(argument)), state);
             tokens
           }),
       )
-      .chain(vec![
-        Token::LabelRef(Label::Global(format!("{}", name.clone()))),
-        Token::MacroRef(call_macro),
-      ])
+      .chain(match inline {
+        true => vec![Token::MacroRef(Macro(format!("{}", name.clone())))],
+        false => vec![
+          Token::LabelRef(Label::Global(format!("{}", name.clone()))),
+          Token::MacroRef(call_macro),
+        ],
+      })
       .collect(),
   )
 }

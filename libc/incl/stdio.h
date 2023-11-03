@@ -1,15 +1,19 @@
-#define stdin asm { !stdin }   // TODO should be `const inline FILE *stdin;`
-#define stdout asm { !stdout } // TODO should be `const inline FILE *stdout;`
+// TODO pointer
+#define FILE_p int
+#define char_p int
+
+#define stdin 0  // TODO should be `inline const FILE_p stdin;`
+#define stdout 0 // TODO should be `inline const FILE_p stdout;`
 
 #define NULL 0
 #define EOF -1
 
-char fgetc(int stream); // TODO should be FILE*
+char fgetc(FILE_p stream);
 char getc();
-void fgets(int stream, int buf); // TODO should be FILE*, char*
-void gets(int buf);              // TODO should be char*
+void fgets(FILE_p stream, char_p buf); // TODO should take in size
+void gets(char_p buf);
 
-void fputc(int stream, char c); // TODO should be FILE*
+void fputc(FILE_p stream, char c);
 void putc(char c);
-void fputs(int stream, int buf); // TODO should be FILE*, char*
-void puts(int buf);              // TODO should be char*
+void fputs(FILE_p stream, char_p buf);
+void puts(char_p buf);

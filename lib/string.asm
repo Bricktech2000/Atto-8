@@ -50,10 +50,10 @@ strcmp.def!
   !rt1
 
 memchr.def!
-  memchr: clc # *ptr = memchr(*buf, char, len)
-    ld3 dec ad2 # buf += len - 1
+  memchr: clc # *ptr = memchr(*ptr, char, len)
+    ld3 dec ad2 # ptr += len - 1
     ld3 for_i. dec
-      # break if *buf == char
+      # break if *ptr == char
       ld2 ld1 sub lda
       ld4 !eq .break !bcs
     # loop if i > 0
@@ -63,13 +63,13 @@ memchr.def!
   # return* ptr
   st1 st1 !rt0
 memset.def!
-  memset: clc # memset(*ptr, val, len)
+  memset: clc # memset(*ptr, chr len)
     ld3 for_i. dec
-      # *ptr = val
+      # *ptr = chr
       ld3 ld1 ld4 add sta
     # loop if i > 0
     !z .for_i !bcc pop
-  # return*
+  # return* ptr
   !rt3
 memcpy.def!
   memcpy: clc # memcpy(*dst, *src, len)

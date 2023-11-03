@@ -167,7 +167,7 @@ fn identifier() -> Parser<String> {
   // TODO does not obey grammar
   parse::many1(
     Parser::error(Error(format!("")))
-      .or_else(|_| parse::digit_10())
+      .or_else(|_| parse::digit(10))
       .or_else(|_| parse::alphabetic())
       .or_else(|_| parse::satisfy(|c| c == '_')),
   )

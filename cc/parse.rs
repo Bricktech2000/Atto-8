@@ -124,6 +124,13 @@ pub fn string(string: &'static str) -> Parser<()> {
 
 // parser combinators
 
+pub fn maybe<T: Clone + 'static>(parser: Parser<T>) -> Parser<Option<T>> {
+  parser
+    .clone()
+    .map(|match_| Some(match_))
+    .or_else(|_| Parser::return_(None))
+}
+
 pub fn many1<T: Clone + 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
   parser
     .clone()
@@ -233,18 +240,22 @@ pub fn translation_unit() -> Parser<Program> {
 pub fn function_declaration() -> Parser<FunctionDeclaration> {
   // TODO does not obey grammar
   Parser::return_(())
-    .and_then(|_| parse::type_name())
-    .and_then(|type_name| {
-      parse::identifier().and_then(|identifier| {
-        Parser::return_(())
-          .and_then(|_| parse::whitespaces_char('('))
-          .and_then(|_| parse::parameter_list())
-          .and_then(|parameters| {
-            Parser::return_(())
-              .and_then(|_| parse::whitespaces_char(')'))
-              .and_then(|_| parse::whitespaces_char(';'))
-              .map(|_| FunctionDeclaration(Object(type_name, identifier), parameters))
-          })
+    .and_then(|_| parse::maybe(parse::whitespaces_string("inline")))
+    .and_then(|inline| {
+      parse::type_name().and_then(move |type_name| {
+        parse::identifier().and_then(move |identifier| {
+          Parser::return_(())
+            .and_then(|_| parse::whitespaces_char('('))
+            .and_then(|_| parse::parameter_list())
+            .and_then(move |parameters| {
+              Parser::return_(())
+                .and_then(|_| parse::whitespaces_char(')'))
+                .and_then(|_| parse::whitespaces_char(';'))
+                .map(move |_| {
+                  FunctionDeclaration(inline.is_some(), Object(type_name, identifier), parameters)
+                })
+            })
+        })
       })
     })
     .meta(format!("Function Declaration"))
@@ -253,20 +264,27 @@ pub fn function_declaration() -> Parser<FunctionDeclaration> {
 pub fn function_definition() -> Parser<FunctionDefinition> {
   // TODO does not obey grammar
   Parser::return_(())
-    .and_then(|_| parse::type_name())
-    .and_then(|type_name| {
-      parse::identifier().and_then(|identifier| {
-        Parser::return_(())
-          .and_then(|_| parse::whitespaces_char('('))
-          .and_then(|_| parse::parameter_list())
-          .and_then(|parameters| {
-            Parser::return_(())
-              .and_then(|_| parse::whitespaces_char(')'))
-              .and_then(|_| parse::compound_statement())
-              .map(|statements| {
-                FunctionDefinition(Object(type_name, identifier), parameters, statements)
-              })
-          })
+    .and_then(|_| parse::maybe(parse::whitespaces_string("inline")))
+    .and_then(|inline| {
+      parse::type_name().and_then(move |type_name| {
+        parse::identifier().and_then(move |identifier| {
+          Parser::return_(())
+            .and_then(|_| parse::whitespaces_char('('))
+            .and_then(|_| parse::parameter_list())
+            .and_then(move |parameters| {
+              Parser::return_(())
+                .and_then(|_| parse::whitespaces_char(')'))
+                .and_then(|_| parse::compound_statement())
+                .map(move |statements| {
+                  FunctionDefinition(
+                    inline.is_some(),
+                    Object(type_name, identifier),
+                    parameters,
+                    statements,
+                  )
+                })
+            })
+        })
       })
     })
     .meta(format!("Function Definition"))
@@ -309,12 +327,12 @@ pub fn type_name() -> Parser<Type> {
     .meta(format!("Type Name"))
 }
 
-pub fn compound_statement() -> Parser<Vec<Statement>> {
+pub fn compound_statement() -> Parser<Statement> {
   // TODO should be {<declaration>}* {<statement>}*
   Parser::return_(())
     .and_then(|_| parse::whitespaces_char('{'))
     .and_then(|_| parse::many_and_then(parse::statement(), parse::whitespaces_char('}')))
-    .map(|(statements, _)| statements)
+    .map(|(statements, _)| Statement::Compound(statements))
     .meta(format!("Compound Statement"))
 }
 
@@ -322,6 +340,8 @@ pub fn statement() -> Parser<Statement> {
   // TODO cases missing
   Parser::error(Error(format!("")))
     .or_else(|_| parse::jump_statement())
+    .or_else(|_| parse::iteration_statement())
+    .or_else(|_| parse::compound_statement())
     .or_else(|_| parse::expression_statement())
     .or_else(|_| parse::asm_statement()) // TODO does not obey grammar
 }
@@ -331,12 +351,42 @@ pub fn jump_statement() -> Parser<Statement> {
   Parser::return_(())
     .and_then(|_| parse::whitespaces_string("return"))
     .and_then(|_| {
-      parse::expression()
-        .and_then(|expression| parse::whitespaces_char(';').map(|_| Some(expression)))
-        .or_else(|_| parse::whitespaces_char(';').map(|_| None))
+      parse::maybe(parse::expression())
+        .and_then(|expression| parse::whitespaces_char(';').map(|_| expression))
     }) // TODO does not obey grammar
     .map(|expression| Statement::Return(expression))
     .meta(format!("Jump Statement"))
+}
+
+pub fn iteration_statement() -> Parser<Statement> {
+  // TODO cases missing
+  Parser::error(Error(format!("")))
+    .or_else(|_| parse::while_statement())
+    .or_else(|_| parse::do_while_statement())
+    .or_else(|_| parse::for_statement())
+}
+
+pub fn while_statement() -> Parser<Statement> {
+  Parser::return_(())
+    .and_then(|_| parse::whitespaces_string("while"))
+    .and_then(|_| parse::whitespaces_char('('))
+    .and_then(|_| parse::expression())
+    .and_then(|expression| {
+      parse::whitespaces_char(')')
+        .and_then(|_| parse::compound_statement())
+        .map(|statements| Statement::While(expression, Box::new(statements)))
+    })
+    .meta(format!("Iteration Statement"))
+}
+
+pub fn do_while_statement() -> Parser<Statement> {
+  // TODO do while statement
+  Parser::error(Error(format!("")))
+}
+
+pub fn for_statement() -> Parser<Statement> {
+  // TODO for statement
+  Parser::error(Error(format!("")))
 }
 
 pub fn expression_statement() -> Parser<Statement> {
@@ -578,7 +628,7 @@ pub fn identifier() -> Parser<String> {
     .and_then(|_| parse::alphabetic().or_else(|_| parse::char('_').map(|_| '_')))
     .and_then(|first| {
       parse::many(
-        parse::digit_10()
+        parse::digit(10)
           .or_else(|_| parse::alphabetic().or_else(|_| parse::char('_').map(|_| '_'))),
       )
       .map(move |rest| std::iter::once(first).chain(rest).collect())
@@ -588,17 +638,19 @@ pub fn identifier() -> Parser<String> {
 
 pub fn integer_constant() -> Parser<Expression> {
   // TODO does not obey grammar
-  parse::many(parse::whitespace())
-    .and_then(|_| parse::many1(parse::digit_10()))
-    .map(|digits| digits.into_iter().collect::<String>())
-    .and_then(|digits| {
-      Parser(Rc::new(move |input: &str| {
-        digits
-          .parse()
-          .map(|value| (Expression::IntegerConstant(value), input.to_string()))
-          .map_err(|_| panic!("Could not parse integer constant"))
-      }))
+  Parser::error(Error(format!("")))
+    .or_else(|_| {
+      parse::whitespaces_string("0x")
+        .and_then(|_| parse::many1(parse::digit(16)))
+        .map(|digits| u8::from_str_radix(&digits.into_iter().collect::<String>(), 16))
     })
+    .or_else(|_| {
+      parse::many(parse::whitespace())
+        .and_then(|_| parse::many1(parse::digit(10)))
+        .map(|digits| u8::from_str_radix(&digits.into_iter().collect::<String>(), 10))
+    })
+    .map(|digits| digits.unwrap_or_else(|_| panic!("Could not parse integer constant")))
+    .map(|value| Expression::IntegerConstant(value))
     .meta(format!("Integer Constant"))
 }
 
@@ -644,8 +696,8 @@ pub fn whitespace() -> Parser<()> {
     .or_else(|_| parse::char('\t'))
 }
 
-pub fn digit_10() -> Parser<char> {
-  parse::satisfy(|c| c.is_digit(10)).meta(format!("Digit"))
+pub fn digit(radix: u32) -> Parser<char> {
+  parse::satisfy(move |c| c.is_digit(radix)).meta(format!("Digit"))
 }
 
 pub fn alphabetic() -> Parser<char> {
