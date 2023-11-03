@@ -15,6 +15,7 @@ struct State {
   locals: HashMap<String, Type>,       // map from local variable to its type
   global: Option<String>,              // current global name
   stack: Vec<StackEntry>,              // current nesting stack
+  strings: HashMap<String, String>,    // map from string literal to its label
   dependencies: HashMap<String, HashSet<String>>, // map from global to its dependencies
 }
 
@@ -85,6 +86,25 @@ fn program(program: Program, state: &mut State) -> Vec<Token> {
   }
   .collect();
 
+  let strings_tokens: Vec<Token> = state
+    .strings
+    .iter()
+    .flat_map(|(string, label)| {
+      std::iter::empty()
+        .chain(vec![
+          Token::MacroDef(Macro(format!("{}.def", label.clone()))),
+          Token::LabelDef(Label::Global(label.clone())),
+        ])
+        .chain(
+          string
+            .chars()
+            .map(|c| Token::AtDD(c as u8))
+            .collect::<Vec<Token>>(),
+        )
+        .chain(vec![Token::AtDD(0x00)])
+    })
+    .collect();
+
   // brute-force transitive closure of dependencies
   // if A depends on B and B depends on C, then A depends on C
   let original_dependencies = state.dependencies.clone();
@@ -133,6 +153,7 @@ fn program(program: Program, state: &mut State) -> Vec<Token> {
 
   std::iter::empty()
     .chain(program_tokens)
+    .chain(strings_tokens)
     .chain(dependencies_tokens)
     .collect()
 }
@@ -288,6 +309,15 @@ fn return_statement(expression: Option<Expression>, state: &mut State) -> Vec<To
 }
 
 fn asm_statement(assembly: String, _state: &mut State) -> Vec<Token> {
+  // TODO partially copied from `asm.rs`
+  // TODO does not support file includes
+  let assembly = assembly
+    .lines()
+    .map(|line| line.strip_suffix("#").unwrap_or(line))
+    .map(|line| line.split("# ").next().unwrap_or(line))
+    .map(|line| line.to_string() + "\n")
+    .collect::<String>();
+
   let mnemonics: Vec<Mnemonic> = assembly
     .split_whitespace()
     .map(|mnemonic| Mnemonic(mnemonic.to_string()))
@@ -377,6 +407,7 @@ fn expression(expression: Expression, state: &mut State) -> (Type, Vec<Token>) {
     Expression::Cast(type_, expression) => codegen::cast_expression(type_, *expression, state),
     Expression::IntegerConstant(value) => codegen::integer_constant_expression(value, state),
     Expression::CharacterConstant(value) => codegen::character_constant_expression(value, state),
+    Expression::StringLiteral(value) => codegen::string_literal_expression(value, state),
     Expression::Identifier(_) => todo!(),
     Expression::FunctionCall(name, arguments) => {
       codegen::function_call_expression(name, arguments, state)
@@ -908,6 +939,46 @@ fn character_constant_expression(value: char, _state: &mut State) -> (Type, Vec<
   (
     Type::Char, // TODO character constants are `int`s in C
     vec![Token::XXX(value as u8)],
+  )
+}
+
+fn string_literal_expression(value: String, state: &mut State) -> (Type, Vec<Token>) {
+  use std::collections::hash_map::DefaultHasher;
+  use std::hash::Hasher;
+
+  let mut hasher = DefaultHasher::new();
+  hasher.write(value.as_bytes());
+  let value_hash = hasher.finish();
+
+  let label = format!(
+    "str_{}.{:X}",
+    value
+      .chars()
+      .filter_map(|c| match c {
+        'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '-' => Some(c),
+        ' ' => Some('_'),
+        _ => None,
+      })
+      .collect::<String>(),
+    value_hash
+  );
+
+  let label = state.strings.entry(value.clone()).or_insert(label.clone());
+
+  state
+    .dependencies
+    .entry(
+      state
+        .global
+        .clone()
+        .unwrap_or_else(|| panic!("Expected global")),
+    )
+    .or_insert(HashSet::new())
+    .insert(label.clone());
+
+  (
+    Type::Int, // TODO should be `char *`
+    vec![Token::LabelRef(Label::Global(label.clone()))],
   )
 }
 

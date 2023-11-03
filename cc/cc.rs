@@ -126,6 +126,7 @@ pub enum Expression {
   Cast(Type, Box<Expression>),
   IntegerConstant(u8),
   CharacterConstant(char),
+  StringLiteral(String),
   Identifier(String),
   FunctionCall(String, Vec<Expression>),
 }

@@ -6,6 +6,7 @@ asm {
   // import macros referenced by C compiler, such as
   // `!call`, `!ret`, `!hlt`, `!mul`, `!div`, `!mod`
   #include "../lib/core.asm"
+  #include "../lib/types.asm"
 }
 
 asm {

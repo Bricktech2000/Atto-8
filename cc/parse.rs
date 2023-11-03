@@ -24,7 +24,7 @@ pub fn bluebird<
 }
 
 #[derive(Clone)]
-pub struct Parser<T: Clone + 'static>(pub Rc<dyn Fn(String) -> ParseResult<T>>);
+pub struct Parser<T: Clone + 'static>(pub Rc<dyn Fn(&str) -> ParseResult<T>>);
 pub type ParseResult<T> = Result<(T, String), Error>;
 
 impl<T: Clone + 'static> Parser<T> {
@@ -32,33 +32,31 @@ impl<T: Clone + 'static> Parser<T> {
     self,
     f: F,
   ) -> Parser<U> {
-    Parser(Rc::new(move |input: String| {
-      self.0(input).and_then(|(match_, input)| f.clone()(match_).0(input))
+    Parser(Rc::new(move |input: &str| {
+      self.0(input).and_then(|(match_, input)| f.clone()(match_).0(&input))
     }))
   }
 
-  pub fn or_else<F: FnOnce(Error) -> Parser<T> + Clone + 'static>(self, f: F) -> Parser<T> {
-    Parser(Rc::new(move |input: String| {
-      self.0(input.clone()).or_else(|error1| {
-        f.clone()(error1.clone()).0(input).or_else(|error2| {
-          match (error1.0.as_str(), error2.0.as_str()) {
-            ("", _) | (_, "") => Err(Error(format!("{}{}", error1, error2))),
-            _ => Err(Error(format!("{}; {}", error1, error2))),
-          }
+  pub fn or_else<F: FnOnce(&Error) -> Parser<T> + Clone + 'static>(self, f: F) -> Parser<T> {
+    Parser(Rc::new(move |input: &str| {
+      self.0(input).or_else(|error1| {
+        f.clone()(&error1).0(input).or_else(|error2| match (error1.0.as_str(), error2.0.as_str()) {
+          ("", _) | (_, "") => Err(Error(format!("{}{}", error1, error2))),
+          _ => Err(Error(format!("{}; {}", error1, error2))),
         })
       })
     }))
   }
 
   pub fn map<U: Clone + 'static, F: FnOnce(T) -> U + Clone + 'static>(self, f: F) -> Parser<U> {
-    Parser(Rc::new(move |input: String| {
+    Parser(Rc::new(move |input: &str| {
       self.0(input).map(|(match_, input)| (f.clone()(match_), input))
     }))
   }
 
-  pub fn map_err<F: FnOnce(Error) -> Error + Clone + 'static>(self, f: F) -> Parser<T> {
-    Parser(Rc::new(move |input: String| {
-      self.0(input).map_err(|error| f.clone()(error))
+  pub fn map_err<F: FnOnce(&Error) -> Error + Clone + 'static>(self, f: F) -> Parser<T> {
+    Parser(Rc::new(move |input: &str| {
+      self.0(input).map_err(|error| f.clone()(&error))
     }))
   }
 
@@ -67,26 +65,28 @@ impl<T: Clone + 'static> Parser<T> {
   }
 
   pub fn return_(value: T) -> Parser<T> {
-    Parser(Rc::new(move |input: String| Ok((value.clone(), input))))
+    Parser(Rc::new(move |input: &str| {
+      Ok((value.clone(), input.to_string()))
+    }))
   }
 
   pub fn error(error: Error) -> Parser<T> {
-    Parser(Rc::new(move |_input: String| Err(error.clone())))
+    Parser(Rc::new(move |_input: &str| Err(error.clone())))
   }
 }
 
 // elementary parsers
 
 pub fn any() -> Parser<char> {
-  Parser(Rc::new(|input: String| match &input[..] {
+  Parser(Rc::new(|input: &str| match &input[..] {
     "" => Err(Error(format!("got EOF"))), // to be concatenated
     _ => Ok((input.chars().next().unwrap(), input[1..].to_string())),
   }))
 }
 
 pub fn eof() -> Parser<()> {
-  Parser(Rc::new(|input: String| match &input[..] {
-    "" => Ok(((), input)),
+  Parser(Rc::new(|input: &str| match &input[..] {
+    "" => Ok(((), input.to_string())),
     // TODO uses debug formatting
     _ => Err(Error(format!(
       "EOF: got {:?}",
@@ -97,8 +97,8 @@ pub fn eof() -> Parser<()> {
 
 pub fn satisfy<F: Fn(char) -> bool + Clone + 'static>(predicate: F) -> Parser<char> {
   parse::any().and_then(|char| {
-    Parser(Rc::new(move |input: String| match predicate(char) {
-      true => Ok((char, input)),
+    Parser(Rc::new(move |input: &str| match predicate(char) {
+      true => Ok((char, input.to_string())),
       // TODO uses debug formatting
       false => Err(Error(format!("got {:?}", char))), // to be concatenated
     }))
@@ -131,7 +131,18 @@ pub fn many1<T: Clone + 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
 }
 
 pub fn many<T: Clone + 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
-  parse::many1(parser).or_else(|_| Parser::return_(vec![]))
+  // causes occasional stack overflow
+  // parse::many1(parser).or_else(|_| Parser::return_(vec![]))
+
+  Parser(Rc::new(move |input: &str| {
+    let mut input = input.to_string();
+    let mut matches = vec![];
+    while let Ok((match_, input_)) = parser.0(&input) {
+      matches.push(match_);
+      input = input_;
+    }
+    Ok((matches, input))
+  }))
 }
 
 #[allow(dead_code)]
@@ -191,7 +202,7 @@ pub fn binary_operation<T: Clone + 'static>(
 // C99 grammar
 
 pub fn parse(input: String) -> Result<Program, Error> {
-  parse::translation_unit().0(input).map(|(programm, input)| match &input[..] {
+  parse::translation_unit().0(&input).map(|(programm, input)| match &input[..] {
     "" => programm,
     _ => panic!("Input not fully parsed"),
   })
@@ -321,10 +332,10 @@ pub fn jump_statement() -> Parser<Statement> {
     .and_then(|_| parse::whitespaces_string("return"))
     .and_then(|_| {
       parse::expression()
-        .and_then(|expression| Parser::return_(Some(expression)))
-        .or_else(|_| Parser::return_(None))
+        .and_then(|expression| parse::whitespaces_char(';').map(|_| Some(expression)))
+        .or_else(|_| parse::whitespaces_char(';').map(|_| None))
     }) // TODO does not obey grammar
-    .and_then(|expression| parse::whitespaces_char(';').map(|_| Statement::Return(expression)))
+    .map(|expression| Statement::Return(expression))
     .meta(format!("Jump Statement"))
 }
 
@@ -342,21 +353,7 @@ pub fn asm_statement() -> Parser<Statement> {
     .and_then(|_| parse::whitespaces_char('{'))
     .and_then(|_| parse::many(parse::satisfy(|c| c != '}')))
     .map(|chars| chars.iter().collect::<String>())
-    .and_then(|assembly| {
-      parse::whitespaces_char('}').map(move |_| {
-        Statement::Asm(
-          // TODO partially copied from `asm.rs`
-          // TODO does not support file includes
-          assembly
-            .clone()
-            .lines()
-            .map(|line| line.strip_suffix("#").unwrap_or(line))
-            .map(|line| line.split("# ").next().unwrap_or(line))
-            .map(|line| line.to_string() + "\n")
-            .collect::<String>(),
-        )
-      })
-    })
+    .and_then(|assembly| parse::whitespaces_char('}').map(move |_| Statement::Asm(assembly)))
     .meta(format!("Asm Statement"))
 }
 
@@ -570,8 +567,10 @@ pub fn unary_expression() -> Parser<Expression> {
           })
       })
     })
+    // TODO does not obey grammar
     .or_else(|_| parse::integer_constant())
     .or_else(|_| parse::character_constant())
+    .or_else(|_| parse::string_literal())
 }
 
 pub fn identifier() -> Parser<String> {
@@ -593,10 +592,10 @@ pub fn integer_constant() -> Parser<Expression> {
     .and_then(|_| parse::many1(parse::digit_10()))
     .map(|digits| digits.into_iter().collect::<String>())
     .and_then(|digits| {
-      Parser(Rc::new(move |input: String| {
+      Parser(Rc::new(move |input: &str| {
         digits
           .parse()
-          .map(|value| (Expression::IntegerConstant(value), input))
+          .map(|value| (Expression::IntegerConstant(value), input.to_string()))
           .map_err(|_| panic!("Could not parse integer constant"))
       }))
     })
@@ -607,23 +606,34 @@ pub fn character_constant() -> Parser<Expression> {
   // TODO currently only parsing <simple-escape-sequence>s
   parse::many(parse::whitespace())
     .and_then(|_| parse::char('\''))
-    .and_then(|_| {
-      Parser::error(Error(format!("")))
-        .or_else(|_| parse::satisfy(|c| !"\'\\\n".contains(c)))
-        .or_else(|_| parse::string("\\\'").map(|_| '\''))
-        .or_else(|_| parse::string("\\\"").map(|_| '\"'))
-        .or_else(|_| parse::string("\\?").map(|_| '?'))
-        .or_else(|_| parse::string("\\\\").map(|_| '\\'))
-        .or_else(|_| parse::string("\\a").map(|_| '\x07'))
-        .or_else(|_| parse::string("\\b").map(|_| '\x08'))
-        .or_else(|_| parse::string("\\f").map(|_| '\x0C'))
-        .or_else(|_| parse::string("\\n").map(|_| '\n'))
-        .or_else(|_| parse::string("\\r").map(|_| '\r'))
-        .or_else(|_| parse::string("\\t").map(|_| '\t'))
-        .or_else(|_| parse::string("\\0").map(|_| '\0')) // TODO should be <octal-escape-sequence>
-    })
+    .and_then(|_| parse::satisfy(|c| !"\'\\\n".contains(c)).or_else(|_| parse::escape_sequence()))
     .and_then(|char| parse::char('\'').map(move |_| Expression::CharacterConstant(char)))
     .meta(format!("Character Constant"))
+}
+
+pub fn string_literal() -> Parser<Expression> {
+  parse::many(parse::whitespace())
+    .and_then(|_| parse::char('"'))
+    .and_then(|_| {
+      parse::many(parse::satisfy(|c| !"\"\\\n".contains(c)).or_else(|_| parse::escape_sequence()))
+        .map(|chars| chars.into_iter().collect::<String>())
+    })
+    .and_then(|string| parse::char('"').map(move |_| Expression::StringLiteral(string)))
+}
+
+pub fn escape_sequence() -> Parser<char> {
+  Parser::error(Error(format!("")))
+    .or_else(|_| parse::string("\\\'").map(|_| '\''))
+    .or_else(|_| parse::string("\\\"").map(|_| '\"'))
+    .or_else(|_| parse::string("\\?").map(|_| '?'))
+    .or_else(|_| parse::string("\\\\").map(|_| '\\'))
+    .or_else(|_| parse::string("\\a").map(|_| '\x07'))
+    .or_else(|_| parse::string("\\b").map(|_| '\x08'))
+    .or_else(|_| parse::string("\\f").map(|_| '\x0C'))
+    .or_else(|_| parse::string("\\n").map(|_| '\n'))
+    .or_else(|_| parse::string("\\r").map(|_| '\r'))
+    .or_else(|_| parse::string("\\t").map(|_| '\t'))
+    .or_else(|_| parse::string("\\0").map(|_| '\0')) // TODO should be <octal-escape-sequence>
 }
 
 pub fn whitespace() -> Parser<()> {

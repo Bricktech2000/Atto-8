@@ -32,10 +32,7 @@ int main() {
 
   // return 6 * 10 + 4;
 
-  putc('o');
-  putc('k');
-  putc('\r');
-  putc('\n');
+  puts("***ok\r\n" + 3);
 
   ADDITION == 3;
   return foo() + (char)1;

@@ -23,7 +23,7 @@ pub fn preprocess(file: File, defines: &mut HashMap<String, TextLine>) -> Result
     .collect::<String>();
 
   loop {
-    (preprocessed, source) = match preprocessor.0(source.clone()) {
+    (preprocessed, source) = match preprocessor.0(&source) {
       Ok((Directive::Include(text_line), input)) => (
         preprocessed + &preprocess_include_directive(text_line, &file, defines)?,
         input,
@@ -86,7 +86,7 @@ fn preprocess_include_directive(
 
   use std::path::Path;
   let text_line = preprocess_text_line_directive(text_line, defines)?;
-  match preprocess::include_directive_filename().0(text_line.clone()) {
+  match preprocess::include_directive_filename().0(&text_line) {
     Ok((filename, trailing)) => match &trailing[..] {
       "" => preprocess(
         File(
