@@ -39,26 +39,6 @@ popcnt! # count = popcnt(n, init)
   orr
 
 
-mul! clc # product = mul(a, b)
-  x00 inc @const loop.
-    ld1 add
-    .loop x01 su4 @dyn
-    .break iff !jmp
-  break. st1 sub
-
-div! clc # quotient = div(a, b)
-  x00 dec @const loop.
-    x01 add
-    .loop ld2 su4 @dyn
-    .break iff !jmp
-  break. st1 pop
-
-mod! clc # remainder = mod(a, b)
-  loop.
-    ld0 su2 @dyn
-  .loop !bcc clc add
-
-
 mul_10! # product = mul_10(n)
   # n += n << 2
   ld0 x02 rot add # 5 n
@@ -116,19 +96,19 @@ sort.def!
 # -  `HEAP_START` -- start of heap memory
 # - `*HEAP_START` -- length of heap memory but with the most significant bit set
 #
-# struct header {
+# struct header ??<
 #   u7 size; // excludes header
 #   bool is_free; // most significant bit
-# }
+# ??>
 #
-# struct block {
+# struct block ??<
 #   header header;
 #   u8 data[header.size];
-# }
+# ??>
 #
-# struct heap {
+# struct heap ??<
 #   block blocks[];
-# }
+# ??>
 
 heap_unlimited! xFF # header for free block of size 0x7F
 is_free_mask! x80 @const

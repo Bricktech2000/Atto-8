@@ -45,3 +45,22 @@ hlt! !here !jmp
 pad! .lbl add lbl. @org
 stall! @const !stall.dyn # argument at most 0x1F
 stall.dyn! shl shl shl rot @dyn # argument at most 0x1F
+
+mul! clc # product = mul(a, b)
+  x00 inc @const loop.
+    ld1 add
+    .loop x01 su4 @dyn
+    .break iff !jmp
+  break. st1 sub
+
+div! clc # quotient = div(a, b)
+  x00 dec @const loop.
+    x01 add
+    .loop ld2 su4 @dyn
+    .break iff !jmp
+  break. st1 pop
+
+mod! clc # remainder = mod(a, b)
+  loop.
+    ld0 su2 @dyn
+  .loop !bcc clc add

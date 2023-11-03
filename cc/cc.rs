@@ -9,19 +9,24 @@ mod preprocess;
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
-  if args.len() != 3 {
-    println!("CC: Usage: cc <C source file> <assembly output file>");
+  if args.len() < 3 {
+    println!("CC: Usage: cc <C source files> <assembly output file>");
     std::process::exit(1);
   }
 
-  let c_source_file = File(args[1].clone());
-  let assembly_output_file = &args[2];
+  let c_source_files = args[1..args.len() - 1].to_vec();
+  let assembly_output_file = &args[args.len() - 1];
 
-  let preprocessed: String = preprocess::preprocess(c_source_file, &mut HashMap::new())
-    .unwrap_or_else(|e| {
-      println!("CC: Preprocessing Error: {}", e);
-      std::process::exit(1);
-    });
+  let preprocessed: String = c_source_files
+    .iter()
+    .map(|c_source_file| {
+      preprocess::preprocess(File(c_source_file.clone()), &mut HashMap::new()).unwrap_or_else(|e| {
+        println!("CC: Preprocessing Error: {}", e);
+        std::process::exit(1);
+      })
+    })
+    .collect::<Vec<String>>()
+    .join("\n");
 
   // println!("CC: Preprocessed: {:#?}", preprocessed);
 
@@ -70,7 +75,7 @@ pub enum Type {
   Array(Box<Type>),
   Structure(Vec<Object>),
   Union(Vec<Object>),
-  Function(Box<Type>, Vec<Object>),
+  Function(Box<Type>, Vec<Type>),
   Pointer(Box<Type>),
 }
 

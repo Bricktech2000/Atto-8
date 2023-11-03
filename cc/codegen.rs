@@ -1,21 +1,30 @@
 use crate::*;
+use std::collections::{HashMap, HashSet};
 
 pub fn codegen(program: Program) -> Result<Vec<Token>, Error> {
-  let tokens: Vec<Token> = codegen::program(program, &vec![]);
+  let tokens: Vec<Token> = codegen::program(program, &mut State::default());
 
   Ok(tokens)
+}
+
+#[derive(Clone, PartialEq, Default, Debug)]
+struct State {
+  declarations: HashMap<String, Type>, // map from global declaration to its type
+  definitions: HashSet<String>,        // set of currently defined globals
+  parameters: HashMap<String, Type>,   // map from function paramater to its type
+  locals: HashMap<String, Type>,       // map from local variable to its type
+  global: Option<String>,              // current global name
+  stack: Vec<StackEntry>,              // current nesting stack
+  dependencies: HashMap<String, HashSet<String>>, // map from global to its dependencies
 }
 
 #[allow(dead_code)]
 #[derive(Clone, PartialEq, Debug)]
 enum StackEntry {
   ProgramBoundary,
-  GlobalDeclaration(Object),
-  GlobalDefinition(Object),
   FunctionBoundary(Type),
-  LoopBoundary(Type),
-  BlockBoundary(Type),
-  Local(Object),
+  LoopBoundary,
+  BlockBoundary,
   Temporary(Type),
 }
 
@@ -24,12 +33,9 @@ impl StackEntry {
   pub fn size(&self) -> usize {
     match self {
       StackEntry::ProgramBoundary => 0,
-      StackEntry::GlobalDeclaration(_) => 0,
-      StackEntry::GlobalDefinition(_) => 0,
       StackEntry::FunctionBoundary(type_) => type_.size(),
-      StackEntry::LoopBoundary(type_) => type_.size(),
-      StackEntry::BlockBoundary(type_) => type_.size(),
-      StackEntry::Local(Object(type_, _name)) => type_.size(),
+      StackEntry::LoopBoundary => 0,
+      StackEntry::BlockBoundary => 0,
       StackEntry::Temporary(type_) => type_.size(),
     }
   }
@@ -61,123 +67,210 @@ impl Type {
   }
 }
 
-macro_rules! with {
-  ($stack:expr, $entry:expr) => {
-    &$stack.iter().chain(vec![$entry].iter()).cloned().collect()
-  };
-}
+fn program(program: Program, state: &mut State) -> Vec<Token> {
+  state.stack.push(StackEntry::ProgramBoundary);
 
-fn program(program: Program, stack: &Vec<StackEntry>) -> Vec<Token> {
-  let stack = stack.clone();
-
-  match program {
-    Program(globals) => globals
-      .into_iter()
-      .scan(stack, |stack, global| match global {
-        Global::FunctionDeclaration(function_declaration) => {
-          let FunctionDeclaration(Object(type_, name), parameters) = function_declaration.clone();
-          stack.push(StackEntry::GlobalDeclaration(Object(
-            Type::Function(Box::new(type_.clone()), parameters),
-            name.clone(),
-          )));
-          Some((stack.clone(), vec![]))
-        }
-        Global::FunctionDefinition(function_definition) => {
-          let FunctionDefinition(Object(type_, name), parameters, _body) =
-            function_definition.clone();
-          stack.push(StackEntry::GlobalDeclaration(Object(
-            Type::Function(Box::new(type_.clone()), parameters),
-            name.clone(),
-          )));
-          let old_stack = stack.clone();
-          stack.push(StackEntry::GlobalDefinition(Object(
-            Type::Function(Box::new(type_.clone()), vec![]),
-            name.clone(),
-          )));
-          Some((
-            stack.clone(),
-            codegen::function_definition(
-              function_definition,
-              with![old_stack, StackEntry::ProgramBoundary],
-            ),
-          ))
-        }
-        Global::AsmStatement(assembly) => {
-          Some((stack.clone(), codegen::asm_statement(assembly, stack)))
-        }
-      })
-      .flat_map(|(_stack, tokens)| tokens)
-      .collect(),
-  }
-}
-
-fn function_definition(
-  function_definition: FunctionDefinition,
-  stack: &Vec<StackEntry>,
-) -> Vec<Token> {
-  match function_definition {
-    FunctionDefinition(Object(type_, name), parameters, body) => match parameters[..] {
-      [] => {
-        stack
-          .iter()
-          .find(|entry| match entry {
-            StackEntry::GlobalDefinition(Object(Type::Function(_, _), name_)) => *name_ == name,
-            _ => false,
-          })
-          .is_some()
-          .then(|| panic!("Function `{}` already defined", name.clone()));
-
-        std::iter::empty()
-          .chain(vec![
-            Token::MacroDef(Macro(format!("{}.ref", name.clone()))),
-            Token::LabelRef(Label::Global(format!("{}", name.clone()))),
-            Token::MacroDef(Macro(format!("{}.def", name.clone()))),
-            Token::LabelDef(Label::Global(name.clone())),
-          ])
-          .chain(body.into_iter().flat_map(|statement| {
-            codegen::statement(
-              statement,
-              with![stack, StackEntry::FunctionBoundary(type_.clone())],
-            )
-          }))
-          .collect()
+  let program_tokens: Vec<Token> = match program {
+    Program(globals) => globals.into_iter().flat_map(|global| match global {
+      Global::FunctionDeclaration(function_declaration) => {
+        codegen::function_declaration(function_declaration.clone(), state)
       }
-      _ => panic!("Function parameters not yet supported"),
-    },
+
+      Global::FunctionDefinition(function_definition) => {
+        codegen::function_definition(function_definition.clone(), state)
+      }
+
+      Global::AsmStatement(assembly) => codegen::asm_statement(assembly, state),
+    }),
+  }
+  .collect();
+
+  // brute-force transitive closure of dependencies
+  // if A depends on B and B depends on C, then A depends on C
+  let original_dependencies = state.dependencies.clone();
+  for name in original_dependencies.keys() {
+    let mut stack: Vec<String> = vec![name.clone()];
+    let mut visited: HashSet<String> = HashSet::new();
+
+    // depth-first iteration because recursion would be inconvenient
+    while let Some(node) = stack.pop() {
+      for dependency in original_dependencies.get(&node).unwrap_or(&HashSet::new()) {
+        if !visited.contains(dependency) {
+          stack.push(dependency.clone());
+          visited.insert(dependency.clone());
+          state
+            .dependencies
+            .get_mut(name)
+            .unwrap_or_else(|| unreachable!())
+            .insert(dependency.clone());
+        }
+      }
+    }
+  }
+
+  let dependencies_tokens: Vec<Token> = state
+    .dependencies
+    .iter()
+    .flat_map(|(name, dependencies)| {
+      std::iter::empty()
+        .chain(vec![Token::MacroDef(Macro(format!(
+          "{}.deps",
+          name.clone()
+        )))])
+        .chain(dependencies.iter().flat_map(|dependency| {
+          vec![Token::MacroRef(Macro(format!(
+            "{}.def",
+            dependency.clone()
+          )))]
+        }))
+    })
+    .collect();
+
+  match state.stack.pop() {
+    Some(StackEntry::ProgramBoundary) => (),
+    _ => panic!("Expected program boundary"),
+  }
+
+  std::iter::empty()
+    .chain(program_tokens)
+    .chain(dependencies_tokens)
+    .collect()
+}
+
+fn function_declaration(
+  function_declaration: FunctionDeclaration,
+  state: &mut State,
+) -> Vec<Token> {
+  match function_declaration {
+    FunctionDeclaration(Object(return_type, name), parameters) => {
+      let parameter_types = parameters
+        .iter()
+        .map(|Object(type_, _name)| type_.clone())
+        .collect::<Vec<Type>>();
+
+      state
+        .declarations
+        .entry(name.clone())
+        .and_modify(|existing_type| match existing_type {
+          Type::Function(existing_return_type, existing_parameter_types) => {
+            if **existing_return_type != return_type || *existing_parameter_types != parameter_types
+            {
+              panic!(
+                "Function `{}` already declared with different signature",
+                name.clone()
+              )
+            }
+          }
+          _ => (),
+        })
+        .or_insert(Type::Function(
+          Box::new(return_type.clone()),
+          parameter_types,
+        ));
+
+      vec![]
+    }
   }
 }
 
-fn statement(statement: Statement, stack: &Vec<StackEntry>) -> Vec<Token> {
+fn function_definition(function_definition: FunctionDefinition, state: &mut State) -> Vec<Token> {
+  match function_definition {
+    FunctionDefinition(Object(return_type, name), parameters, body) => {
+      // TODO function parameters
+
+      let tokens = codegen::function_declaration(
+        FunctionDeclaration(
+          Object(return_type.clone(), name.clone()),
+          parameters.clone(),
+        ),
+        state,
+      );
+
+      state
+        .definitions
+        .get(&name)
+        .is_some()
+        .then(|| panic!("Function `{}` already defined", name.clone()));
+
+      state.definitions.insert(name.clone());
+
+      state
+        .dependencies
+        .entry(name.clone())
+        .or_insert(HashSet::new())
+        .insert(name.clone());
+
+      state
+        .stack
+        .push(StackEntry::FunctionBoundary(return_type.clone()));
+
+      match state.global.replace(name.clone()) {
+        None => (),
+        _ => panic!("Expected no global"),
+      }
+
+      let tokens = std::iter::empty()
+        .chain(tokens)
+        .chain(vec![
+          Token::MacroDef(Macro(format!("{}.def", name.clone()))),
+          Token::LabelDef(Label::Global(name.clone())),
+        ])
+        .chain(
+          body
+            .into_iter()
+            .flat_map(|statement| codegen::statement(statement, state)),
+        )
+        .collect();
+
+      match state.global.take() {
+        Some(name_) if name_ == name => (),
+        _ => panic!("Expected global"),
+      }
+
+      match state.stack.pop() {
+        Some(StackEntry::FunctionBoundary(type_)) if type_ == return_type => (),
+        _ => panic!("Expected function boundary"),
+      }
+
+      tokens
+    }
+  }
+}
+
+fn statement(statement: Statement, state: &mut State) -> Vec<Token> {
   match statement {
-    Statement::Expression(expression) => codegen::expression_statement(expression, stack),
-    Statement::Return(expression) => codegen::return_statement(expression, stack),
-    Statement::Asm(assembly) => codegen::asm_statement(assembly, stack),
+    Statement::Expression(expression) => codegen::expression_statement(expression, state),
+    Statement::Return(expression) => codegen::return_statement(expression, state),
+    Statement::Asm(assembly) => codegen::asm_statement(assembly, state),
   }
 }
 
-fn expression_statement(expression: Expression, stack: &Vec<StackEntry>) -> Vec<Token> {
+fn expression_statement(expression: Expression, state: &mut State) -> Vec<Token> {
   let (_type, tokens) =
-    codegen::expression(Expression::Cast(Type::Void, Box::new(expression)), stack);
+    codegen::expression(Expression::Cast(Type::Void, Box::new(expression)), state);
 
   tokens
 }
 
-fn return_statement(expression: Option<Expression>, stack: &Vec<StackEntry>) -> Vec<Token> {
+fn return_statement(expression: Option<Expression>, state: &mut State) -> Vec<Token> {
   let ret_macro = Macro("ret".to_string());
 
-  let type_ = stack
+  // TODO pop off items from stack until we reach a function boundary
+  let return_type = state
+    .stack
     .iter()
     .rev()
-    .find_map(|entry| match entry {
-      StackEntry::FunctionBoundary(type_) => Some(type_),
+    .find_map(|stack_entry| match stack_entry {
+      StackEntry::FunctionBoundary(return_type) => Some(return_type),
       _ => None,
     })
     .unwrap_or_else(|| panic!("`return` outside of function"));
 
   let (type_, tokens) = match expression {
-    Some(expression) => {
-      codegen::expression(Expression::Cast(type_.clone(), Box::new(expression)), stack)
-    }
+    Some(expression) => codegen::expression(
+      Expression::Cast(return_type.clone(), Box::new(expression)),
+      state,
+    ),
     None => (Type::Void, vec![]),
   };
 
@@ -185,16 +278,16 @@ fn return_statement(expression: Option<Expression>, stack: &Vec<StackEntry>) -> 
     type_ if type_.size() == 0 => std::iter::empty()
       .chain(tokens)
       .chain(vec![Token::MacroRef(ret_macro)])
-      .collect(), // TODO check function boundary
+      .collect(),
     type_ if type_.size() == 1 => std::iter::empty()
       .chain(tokens)
       .chain(vec![Token::Swp, Token::MacroRef(ret_macro)])
-      .collect(), // TODO check function boundary
+      .collect(),
     _ => todo!(),
   }
 }
 
-fn asm_statement(assembly: String, _stack: &Vec<StackEntry>) -> Vec<Token> {
+fn asm_statement(assembly: String, _state: &mut State) -> Vec<Token> {
   let mnemonics: Vec<Mnemonic> = assembly
     .split_whitespace()
     .map(|mnemonic| Mnemonic(mnemonic.to_string()))
@@ -211,88 +304,88 @@ fn asm_statement(assembly: String, _stack: &Vec<StackEntry>) -> Vec<Token> {
   tokens
 }
 
-fn expression(expression: Expression, stack: &Vec<StackEntry>) -> (Type, Vec<Token>) {
+fn expression(expression: Expression, state: &mut State) -> (Type, Vec<Token>) {
   match expression.clone() {
-    Expression::Negation(expression) => codegen::negation_expression(*expression, stack),
+    Expression::Negation(expression) => codegen::negation_expression(*expression, state),
     Expression::LogicalNegation(expression) => {
-      codegen::logical_negation_expression(*expression, stack)
+      codegen::logical_negation_expression(*expression, state)
     }
     Expression::BitwiseComplement(expression) => {
-      codegen::bitwise_complement_expression(*expression, stack)
+      codegen::bitwise_complement_expression(*expression, state)
     }
 
     Expression::Addition(expression1, expression2) => {
-      codegen::addition_expression(*expression1, *expression2, stack)
+      codegen::addition_expression(*expression1, *expression2, state)
     }
     Expression::Subtraction(expression1, expression2) => {
-      codegen::subtraction_expression(*expression1, *expression2, stack)
+      codegen::subtraction_expression(*expression1, *expression2, state)
     }
     Expression::Multiplication(expression1, expression2) => {
-      codegen::multiplication_expression(*expression1, *expression2, stack)
+      codegen::multiplication_expression(*expression1, *expression2, state)
     }
     Expression::Division(expression1, expression2) => {
-      codegen::division_expression(*expression1, *expression2, stack)
+      codegen::division_expression(*expression1, *expression2, state)
     }
     Expression::Modulo(expression1, expression2) => {
-      codegen::modulo_expression(*expression1, *expression2, stack)
+      codegen::modulo_expression(*expression1, *expression2, state)
     }
     Expression::LogicalAnd(expression1, expression2) => {
-      codegen::logical_and_expression(*expression1, *expression2, stack)
+      codegen::logical_and_expression(*expression1, *expression2, state)
     }
     Expression::LogicalOr(expression1, expression2) => {
-      codegen::logical_or_expression(*expression1, *expression2, stack)
+      codegen::logical_or_expression(*expression1, *expression2, state)
     }
     Expression::BitwiseAnd(expression1, expression2) => {
-      codegen::bitwise_and_expression(*expression1, *expression2, stack)
+      codegen::bitwise_and_expression(*expression1, *expression2, state)
     }
     Expression::BitwiseInclusiveOr(expression1, expression2) => {
-      codegen::bitwise_inclusive_or_expression(*expression1, *expression2, stack)
+      codegen::bitwise_inclusive_or_expression(*expression1, *expression2, state)
     }
     Expression::BitwiseExclusiveOr(expression1, expression2) => {
-      codegen::bitwise_exclusive_or_expression(*expression1, *expression2, stack)
+      codegen::bitwise_exclusive_or_expression(*expression1, *expression2, state)
     }
     Expression::LeftShift(expression1, expression2) => {
-      codegen::left_shift_expression(*expression1, *expression2, stack)
+      codegen::left_shift_expression(*expression1, *expression2, state)
     }
     Expression::RightShift(expression1, expression2) => {
-      codegen::right_shift_expression(*expression1, *expression2, stack)
+      codegen::right_shift_expression(*expression1, *expression2, state)
     }
 
     Expression::EqualTo(expression1, expression2) => {
-      codegen::equal_to_expression(*expression1, *expression2, stack)
+      codegen::equal_to_expression(*expression1, *expression2, state)
     }
     Expression::NotEqualTo(expression1, expression2) => {
-      codegen::not_equal_to_expression(*expression1, *expression2, stack)
+      codegen::not_equal_to_expression(*expression1, *expression2, state)
     }
     Expression::LessThan(expression1, expression2) => {
-      codegen::less_than_expression(*expression1, *expression2, stack)
+      codegen::less_than_expression(*expression1, *expression2, state)
     }
     Expression::LessThanOrEqualTo(expression1, expression2) => {
-      codegen::less_than_or_equal_to_expression(*expression1, *expression2, stack)
+      codegen::less_than_or_equal_to_expression(*expression1, *expression2, state)
     }
     Expression::GreaterThan(expression1, expression2) => {
-      codegen::greater_than_expression(*expression1, *expression2, stack)
+      codegen::greater_than_expression(*expression1, *expression2, state)
     }
     Expression::GreaterThanOrEqualTo(expression1, expression2) => {
-      codegen::greater_than_or_equal_to_expression(*expression1, *expression2, stack)
+      codegen::greater_than_or_equal_to_expression(*expression1, *expression2, state)
     }
 
     Expression::Conditional(expression1, expression2, expression3) => {
-      codegen::conditional_expression(*expression1, *expression2, *expression3, stack)
+      codegen::conditional_expression(*expression1, *expression2, *expression3, state)
     }
 
-    Expression::Cast(type_, expression) => codegen::cast_expression(type_, *expression, stack),
-    Expression::IntegerConstant(value) => codegen::integer_constant_expression(value, stack),
-    Expression::CharacterConstant(value) => codegen::character_constant_expression(value, stack),
+    Expression::Cast(type_, expression) => codegen::cast_expression(type_, *expression, state),
+    Expression::IntegerConstant(value) => codegen::integer_constant_expression(value, state),
+    Expression::CharacterConstant(value) => codegen::character_constant_expression(value, state),
     Expression::Identifier(_) => todo!(),
     Expression::FunctionCall(name, arguments) => {
-      codegen::function_call_expression(name, arguments, stack)
+      codegen::function_call_expression(name, arguments, state)
     }
   }
 }
 
-fn negation_expression(expression: Expression, stack: &Vec<StackEntry>) -> (Type, Vec<Token>) {
-  let (type_, tokens) = codegen::expression(expression, stack);
+fn negation_expression(expression: Expression, state: &mut State) -> (Type, Vec<Token>) {
+  let (type_, tokens) = codegen::expression(expression, state);
 
   (
     type_.clone(),
@@ -306,11 +399,8 @@ fn negation_expression(expression: Expression, stack: &Vec<StackEntry>) -> (Type
   )
 }
 
-fn logical_negation_expression(
-  expression: Expression,
-  stack: &Vec<StackEntry>,
-) -> (Type, Vec<Token>) {
-  let (type_, tokens) = codegen::expression(expression, stack);
+fn logical_negation_expression(expression: Expression, state: &mut State) -> (Type, Vec<Token>) {
+  let (type_, tokens) = codegen::expression(expression, state);
 
   (
     type_.clone(),
@@ -342,11 +432,8 @@ fn logical_negation_expression(
   )
 }
 
-fn bitwise_complement_expression(
-  expression: Expression,
-  stack: &Vec<StackEntry>,
-) -> (Type, Vec<Token>) {
-  let (type_, tokens) = codegen::expression(expression, stack);
+fn bitwise_complement_expression(expression: Expression, state: &mut State) -> (Type, Vec<Token>) {
+  let (type_, tokens) = codegen::expression(expression, state);
 
   (
     type_.clone(),
@@ -363,10 +450,10 @@ fn bitwise_complement_expression(
 fn addition_expression(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let (type_, tokens1, tokens2) =
-    codegen::usual_arithmetic_conversion(expression1, expression2, stack);
+    codegen::usual_arithmetic_conversion(expression1, expression2, state);
 
   (
     type_.clone(),
@@ -384,10 +471,10 @@ fn addition_expression(
 fn subtraction_expression(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let (type_, tokens1, tokens2) =
-    codegen::usual_arithmetic_conversion(expression1, expression2, stack);
+    codegen::usual_arithmetic_conversion(expression1, expression2, state);
 
   (
     type_.clone(),
@@ -405,12 +492,12 @@ fn subtraction_expression(
 fn multiplication_expression(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let (type_, tokens1, tokens2) =
-    codegen::usual_arithmetic_conversion(expression1, expression2, stack);
+    codegen::usual_arithmetic_conversion(expression1, expression2, state);
 
-  let mul_macro = Macro("mul".to_string()); // TODO implement operation
+  let mul_macro = Macro("mul".to_string());
 
   (
     type_.clone(),
@@ -428,12 +515,12 @@ fn multiplication_expression(
 fn division_expression(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let (type_, tokens1, tokens2) =
-    codegen::usual_arithmetic_conversion(expression1, expression2, stack);
+    codegen::usual_arithmetic_conversion(expression1, expression2, state);
 
-  let div_macro = Macro("div".to_string()); // TODO implement operation
+  let div_macro = Macro("div".to_string());
 
   (
     type_.clone(),
@@ -451,12 +538,12 @@ fn division_expression(
 fn modulo_expression(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let (type_, tokens1, tokens2) =
-    codegen::usual_arithmetic_conversion(expression1, expression2, stack);
+    codegen::usual_arithmetic_conversion(expression1, expression2, state);
 
-  let mod_macro = Macro("mod".to_string()); // TODO implement operation
+  let mod_macro = Macro("mod".to_string());
 
   (
     type_.clone(),
@@ -474,7 +561,7 @@ fn modulo_expression(
 fn logical_and_expression(
   _expression1: Expression,
   _expression2: Expression,
-  _stack: &Vec<StackEntry>,
+  _state: &mut State,
 ) -> (Type, Vec<Token>) {
   todo!()
 }
@@ -482,7 +569,7 @@ fn logical_and_expression(
 fn logical_or_expression(
   _expression1: Expression,
   _expression2: Expression,
-  _stack: &Vec<StackEntry>,
+  _state: &mut State,
 ) -> (Type, Vec<Token>) {
   todo!()
 }
@@ -490,10 +577,10 @@ fn logical_or_expression(
 fn bitwise_and_expression(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let (type_, tokens1, tokens2) =
-    codegen::usual_arithmetic_conversion(expression1, expression2, stack);
+    codegen::usual_arithmetic_conversion(expression1, expression2, state);
 
   (
     type_.clone(),
@@ -511,10 +598,10 @@ fn bitwise_and_expression(
 fn bitwise_inclusive_or_expression(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let (type_, tokens1, tokens2) =
-    codegen::usual_arithmetic_conversion(expression1, expression2, stack);
+    codegen::usual_arithmetic_conversion(expression1, expression2, state);
 
   (
     type_.clone(),
@@ -532,10 +619,10 @@ fn bitwise_inclusive_or_expression(
 fn bitwise_exclusive_or_expression(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let (type_, tokens1, tokens2) =
-    codegen::usual_arithmetic_conversion(expression1, expression2, stack);
+    codegen::usual_arithmetic_conversion(expression1, expression2, state);
 
   (
     type_.clone(),
@@ -553,7 +640,7 @@ fn bitwise_exclusive_or_expression(
 fn left_shift_expression(
   _expression1: Expression,
   _expression2: Expression,
-  _stack: &Vec<StackEntry>,
+  _state: &mut State,
 ) -> (Type, Vec<Token>) {
   todo!()
 }
@@ -561,7 +648,7 @@ fn left_shift_expression(
 fn right_shift_expression(
   _expression1: Expression,
   _expression2: Expression,
-  _stack: &Vec<StackEntry>,
+  _state: &mut State,
 ) -> (Type, Vec<Token>) {
   todo!()
 }
@@ -569,10 +656,10 @@ fn right_shift_expression(
 fn equal_to_expression(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let (type_, tokens1, tokens2) =
-    codegen::usual_arithmetic_conversion(expression1, expression2, stack);
+    codegen::usual_arithmetic_conversion(expression1, expression2, state);
 
   (
     Type::Bool,
@@ -602,10 +689,10 @@ fn equal_to_expression(
 fn not_equal_to_expression(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let (type_, tokens1, tokens2) =
-    codegen::usual_arithmetic_conversion(expression1, expression2, stack);
+    codegen::usual_arithmetic_conversion(expression1, expression2, state);
 
   (
     Type::Bool,
@@ -636,10 +723,10 @@ fn not_equal_to_expression(
 fn less_than_expression(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let (type_, tokens1, tokens2) =
-    codegen::usual_arithmetic_conversion(expression1, expression2, stack);
+    codegen::usual_arithmetic_conversion(expression1, expression2, state);
 
   (
     Type::Bool,
@@ -664,10 +751,10 @@ fn less_than_expression(
 fn less_than_or_equal_to_expression(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let (type_, tokens1, tokens2) =
-    codegen::usual_arithmetic_conversion(expression1, expression2, stack);
+    codegen::usual_arithmetic_conversion(expression1, expression2, state);
 
   (
     Type::Bool,
@@ -693,10 +780,10 @@ fn less_than_or_equal_to_expression(
 fn greater_than_expression(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let (type_, tokens1, tokens2) =
-    codegen::usual_arithmetic_conversion(expression1, expression2, stack);
+    codegen::usual_arithmetic_conversion(expression1, expression2, state);
 
   (
     Type::Bool,
@@ -721,10 +808,10 @@ fn greater_than_expression(
 fn greater_than_or_equal_to_expression(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let (type_, tokens1, tokens2) =
-    codegen::usual_arithmetic_conversion(expression1, expression2, stack);
+    codegen::usual_arithmetic_conversion(expression1, expression2, state);
 
   (
     Type::Bool,
@@ -751,11 +838,11 @@ fn conditional_expression(
   expression1: Expression,
   expression2: Expression,
   expression3: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
-  let (type1, tokens1) = codegen::expression(expression1, stack);
+  let (type1, tokens1) = codegen::expression(expression1, state);
   let (type2, tokens2, tokens3) =
-    codegen::usual_arithmetic_conversion(expression2, expression3, stack);
+    codegen::usual_arithmetic_conversion(expression2, expression3, state);
 
   (
     type2.clone(),
@@ -771,12 +858,8 @@ fn conditional_expression(
   )
 }
 
-fn cast_expression(
-  type_: Type,
-  expression: Expression,
-  stack: &Vec<StackEntry>,
-) -> (Type, Vec<Token>) {
-  let (type1, tokens1) = codegen::expression(expression, stack);
+fn cast_expression(type_: Type, expression: Expression, state: &mut State) -> (Type, Vec<Token>) {
+  let (type1, tokens1) = codegen::expression(expression, state);
 
   (
     type_.clone(),
@@ -814,14 +897,14 @@ fn cast_expression(
   )
 }
 
-fn integer_constant_expression(value: u8, _stack: &Vec<StackEntry>) -> (Type, Vec<Token>) {
+fn integer_constant_expression(value: u8, _state: &mut State) -> (Type, Vec<Token>) {
   (
     Type::Int, // TODO assumes all integer literals are ints
     vec![Token::XXX(value)],
   )
 }
 
-fn character_constant_expression(value: char, _stack: &Vec<StackEntry>) -> (Type, Vec<Token>) {
+fn character_constant_expression(value: char, _state: &mut State) -> (Type, Vec<Token>) {
   (
     Type::Char, // TODO character constants are `int`s in C
     vec![Token::XXX(value as u8)],
@@ -831,33 +914,48 @@ fn character_constant_expression(value: char, _stack: &Vec<StackEntry>) -> (Type
 fn function_call_expression(
   name: String,
   arguments: Vec<Expression>,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>) {
   let call_macro = Macro("call".to_string());
 
-  let type_ = stack
-    .iter()
-    .find_map(|entry| match entry {
-      // TODO arguments are not type-checked against parameters
-      StackEntry::GlobalDeclaration(Object(Type::Function(type_, _parameters), name_))
-        if *name_ == name =>
-      {
-        Some(*type_.clone())
-      }
-      _ => None,
-    })
-    .unwrap_or_else(|| panic!("Declaration for function `{}` not found", name));
+  // TODO assumes all functions are globals
+  let object_type = state
+    .declarations
+    .get(&name)
+    .unwrap_or_else(|| panic!("Declaration for object `{}` not found", name));
+
+  let (return_type, parameter_types) = match object_type {
+    Type::Function(return_type, parameter_types) => (return_type.clone(), parameter_types.clone()),
+    _ => panic!("`{}` is not a function", name),
+  };
+
+  // TODO assumes all functions are globals
+  state
+    .dependencies
+    .entry(
+      state
+        .global
+        .clone()
+        .unwrap_or_else(|| panic!("Expected global")),
+    )
+    .or_insert(HashSet::new())
+    .insert(name.clone());
 
   (
-    type_.clone(),
+    *return_type,
     std::iter::empty()
       .chain(
         arguments
           .into_iter()
-          .flat_map(|argument| codegen::expression(argument, stack).1),
+          .zip(parameter_types.into_iter())
+          .flat_map(|(argument, parameter_type)| {
+            let (_type, tokens) =
+              codegen::expression(Expression::Cast(parameter_type, Box::new(argument)), state);
+            tokens
+          }),
       )
       .chain(vec![
-        Token::MacroRef(Macro(format!("{}.ref", name.clone()))),
+        Token::LabelRef(Label::Global(format!("{}", name.clone()))),
         Token::MacroRef(call_macro),
       ])
       .collect(),
@@ -867,10 +965,10 @@ fn function_call_expression(
 fn usual_arithmetic_conversion(
   expression1: Expression,
   expression2: Expression,
-  stack: &Vec<StackEntry>,
+  state: &mut State,
 ) -> (Type, Vec<Token>, Vec<Token>) {
-  let (type1, tokens1) = codegen::expression(expression1, stack);
-  let (type2, tokens2) = codegen::expression(expression2, stack);
+  let (type1, tokens1) = codegen::expression(expression1, state);
+  let (type2, tokens2) = codegen::expression(expression2, state);
   match (type1.clone(), type2.clone()) {
     (type1, type2) if type1 == type2 => (type1, tokens1, tokens2),
 

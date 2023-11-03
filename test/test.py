@@ -41,9 +41,10 @@ target = 'target'
 input = sys.argv[1:][::-1]
 shutil.rmtree(rel_path(target), ignore_errors=True)
 shutil.copytree(rel_path('./'), rel_path(target), dirs_exist_ok=True)
-shutil.copytree(rel_path('../lib/'), rel_path('target/lib/'), dirs_exist_ok=True)
-shutil.copytree(rel_path('../misc/'), rel_path('target/misc/'), dirs_exist_ok=True)
-shutil.copytree(rel_path('../cc/libc/'), rel_path('target/'), dirs_exist_ok=True)
+shutil.copytree(rel_path('../lib/'), rel_path(target, 'lib/'), dirs_exist_ok=True)
+shutil.copytree(rel_path('../libc/'), rel_path(target, 'libc/'), dirs_exist_ok=True)
+shutil.copytree(rel_path('../misc/'), rel_path(target, 'misc/'), dirs_exist_ok=True)
+shutil.copytree(rel_path('../libc/incl/'), rel_path(target), dirs_exist_ok=True)
 
 
 filenames = []
@@ -54,10 +55,10 @@ while input:
     operation = input.pop()
     match operation:
       case 'cc':
-        c_source_file = filenames.pop()
-        assembly_output_file = c_source_file + '.asm'
+        (c_source_files, filenames) = (filenames, [])  # consume all
+        assembly_output_file = c_source_files[0] + '.asm'
         filenames.append(assembly_output_file)
-        operations.append((operation, functools.partial(run_cargo, operation, c_source_file, assembly_output_file)))
+        operations.append((operation, functools.partial(run_cargo, operation, *c_source_files, assembly_output_file)))
       case 'enc':
         hex_source_file = filenames.pop()
         memory_image_file = hex_source_file + '.mem'
