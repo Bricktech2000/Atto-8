@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Atto-8 microprocessor is a minimalist stack-based processor implementing the Atto-8 microarchitecture as defined in [/spec/microarchitecture.md](../spec/microarchitecture.md). It is designed to keep logic IC count to a minimum while still being a complete implementation of the Atto-8 microarchitecture, only consisting of one full adder, one NAND gate and a few latches. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex processors.
+The Atto-8 microprocessor is a minimalist stack-based processor implementing the Atto-8 microarchitecture as specified in [/spec/microarchitecture.md](../spec/microarchitecture.md). It is designed to keep logic IC count to a minimum while still being a complete implementation of the Atto-8 microarchitecture, only consisting of one full adder, one NAND gate and a few latches. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex processors.
 
 ![Atto-8 Microprocessor Diagram](../misc/assets/microprocessor.png)
 
@@ -76,7 +76,7 @@ These design decisions greatly simplify the hardware complexity of the Atto-8 mi
 
 ## Instruction Set
 
-The instruction set of the Atto-8 microprocessor adheres to the Atto-8 microarchitecture as defined in [/spec/microarchitecture.md](../spec/microarchitecture.md). Instruction clock cycle counts are detailed below.
+The instruction set of the Atto-8 microprocessor adheres to the Atto-8 microarchitecture specification as defined in [/spec/microarchitecture.md](../spec/microarchitecture.md). Instruction clock cycle counts are detailed below.
 
 | Instruction | Clocks                          |
 | ----------- | ------------------------------- |

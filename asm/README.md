@@ -4,7 +4,7 @@ _Optimizing assembler for Atto-8 microarchitecture_
 
 ## Overview
 
-The assembler loads an assembly file from `argv[1]` and outputs a memory image file to `argv[2]` which is exactly `0x100` bytes in size. Code generation adheres to microarchitecture specification as defined in [/spec/microarchitecture.md](../spec/microarchitecture.md).
+The assembler loads an assembly file from `argv[1]` and outputs a memory image file to `argv[2]` which is exactly `0x100` bytes in size. Code generation adheres to Atto-8 microarchitecture specification as defined in [/spec/microarchitecture.md](../spec/microarchitecture.md).
 
 Assembly consists of the following process:
 

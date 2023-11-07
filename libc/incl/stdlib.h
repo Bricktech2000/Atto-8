@@ -1,7 +1,7 @@
 // TODO pointer
 #define void_p int
 
-#define size_t int // TODO should be `typeedef`
+#define size_t int // TODO should be `typedef`
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
 
