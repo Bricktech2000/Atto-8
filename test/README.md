@@ -42,4 +42,7 @@ python3 test.py checkerboard.hex enc dasm asm mic circ
 
 # assemble source code, decode to hex, encode from hex, disassemble binary, assemble disassembly, build microcode, simulate resulting binary with microcode
 python3 test.py life.asm asm dec enc dasm asm mic sim
+
+# build brainfuck microcode, simulate brainfuck source
+python3 test.py fib.b bf sim
 ```
