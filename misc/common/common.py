@@ -12,3 +12,7 @@ def open_safe(operation):
       print(f'{operation}: Error: Unable to {mode} file `{filename}`')
       sys.exit(1)
   return fn
+
+
+def pad_or_slice(L, n):
+  return L + [None] * (n - len(L)) if len(L) < n else L[:n]

@@ -1,0 +1,2 @@
+++++[->++++++++<]>[.+]
+prints all ASCII characters

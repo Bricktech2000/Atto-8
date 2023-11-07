@@ -4,15 +4,8 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 
-# - `+[>,.<]` pipes stdin to stdout
-# - `+++++++.` sends a bell to stdout
-# - `++++[->++++++++<]>[.+]` prints all ASCII characters
-# - `>+[,[[>,]<[.<]>[-]]+]` reverses a string
-# - `+[,[---------[-[++++++++++.[-]]],]+]` strips newlines and tabs
-# - `++++++++++[>++++++++++>+<<-]>[>.<-]` clears the screen
-# - `+++++[>+++++++++<-]+[,[[>--.++>+<<-]>+.->[<.>-]<<,]+]` converts text to brainfuck code that prints it
-# - `>+[,[>>>++++++++[<[<++>-]<+[>+<-]<-[-[-<]>]>[-<]<,>>>-]<.[-]<<]+]` converts a binary string to ascii text
-# - `----[---->+<]>++.--[----->+<]>+..-----.[->+++++<]>++.+++++++++++.` prints _Atto-8_ to stdout
+# most programs from `bf/test/` can be pasted into this interpreter and compiler directly.
+# note that `,` is not blocking; if no input is available, it will return `'\0'` instead.
 
 main!
   !interpreter
@@ -64,7 +57,7 @@ compiler!
     !char.carriage_return !putc
     !char.line_feed !putc
 
-    # execute compiled brainfuck program
+    # execute compiled brainfuck program.
     # `head` and `!stdout` are already on the stack
     x00 :code_buffer !jmp
 
@@ -88,7 +81,8 @@ compiler!
   <: ld1 sta dec ld0 lda !char.null
   +: inc !char.null
   -: dec !char.null
-  # `!stdin` and `!stdout` are `'\0'` which is also `!char.null`
+  # `!stdin` and `!stdout` are `'\0'` which is also `!char.null`. to avoid a null bytes
+  # within the string, we load `'\0'` from the stack using `ldO` instead
   .: ld0 ld3 !fputc !char.null
   ,: ld2 !fgetc st0 !char.null
   [: !z !pad_sentinel ![_sentinel iff !jmp !char.null
@@ -149,7 +143,7 @@ interpreter!
         # increment or decrement head depending on sign of nesting level
         shl ld1 dec ld2 inc iff st1 shr
         # loop if nesting level is non-zero
-      !z :for_c !bcc # 0x00 is left on the stack
+      !z :for_c !bcc # bleed `0x00`
       # we're at a right bracket if and only if we're coming from a left bracket.
       # if we're at a right bracket, increment head to skip over the right bracket
       ld1 inc lda !char.right_square_bracket !eq add @dyn

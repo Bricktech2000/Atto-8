@@ -32,3 +32,7 @@ path = "mic/mic.rs"
 [[bin]]
 name = "sim"
 path = "sim/sim.rs"
+
+[[bin]]
+name = "bf-mic"
+path = "bf/bf-mic.rs"

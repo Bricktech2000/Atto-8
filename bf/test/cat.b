@@ -1,0 +1,2 @@
++[>,.<]
+pipes stdin to stdout

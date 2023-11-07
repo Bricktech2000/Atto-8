@@ -45,6 +45,7 @@ shutil.copytree(rel_path('../lib/'), rel_path(target, 'lib/'), dirs_exist_ok=Tru
 shutil.copytree(rel_path('../libc/'), rel_path(target, 'libc/'), dirs_exist_ok=True)
 shutil.copytree(rel_path('../misc/'), rel_path(target, 'misc/'), dirs_exist_ok=True)
 shutil.copytree(rel_path('../libc/incl/'), rel_path(target), dirs_exist_ok=True)
+shutil.copytree(rel_path('../bf/test/'), rel_path(target), dirs_exist_ok=True)
 
 
 filenames = []
@@ -58,7 +59,8 @@ while input:
         (c_source_files, filenames) = (filenames, [])  # consume all
         assembly_output_file = c_source_files[0] + '.asm'
         filenames.append(assembly_output_file)
-        operations.append((operation, functools.partial(run_cargo, operation, *c_source_files, assembly_output_file)))
+        operations.append((operation, functools.partial(
+            run_cargo, f'{operation}', *c_source_files, assembly_output_file)))
       case 'enc':
         hex_source_file = filenames.pop()
         memory_image_file = hex_source_file + '.mem'
@@ -75,29 +77,40 @@ while input:
         assembly_source_file = filenames.pop()
         memory_image_file = assembly_source_file + '.mem'
         filenames.append(memory_image_file)
-        operations.append((operation, functools.partial(run_cargo, operation, assembly_source_file, memory_image_file)))
+        operations.append((operation, functools.partial(
+            run_cargo, f'{operation}', assembly_source_file, memory_image_file)))
       case 'dasm':
         memory_image_file = filenames.pop()
         disassembly_output_file = memory_image_file + '.asm'
         filenames.append(disassembly_output_file)
         operations.append((operation, functools.partial(
-            run_cargo, operation, memory_image_file, disassembly_output_file)))
+            run_cargo, f'{operation}', memory_image_file, disassembly_output_file)))
       case 'emu':
         memory_image_file = filenames.pop()
-        operations.append((operation, functools.partial(run_cargo, operation, memory_image_file)))
+        operations.append((operation, functools.partial(run_cargo, f'{operation}', memory_image_file)))
       case 'mic':
         microcode_image_file = rel_path(target, 'microcode.mic')
         filenames.append(microcode_image_file)
-        operations.append((operation, functools.partial(run_cargo, operation, microcode_image_file)))
+        operations.append((operation, functools.partial(run_cargo, f'{operation}', microcode_image_file)))
       case 'sim':
         microcode_image_file = filenames.pop()
         memory_image_file = filenames.pop()
-        operations.append((operation, functools.partial(run_cargo, operation, memory_image_file, microcode_image_file)))
+        operations.append((operation, functools.partial(
+            run_cargo, f'{operation}', memory_image_file, microcode_image_file)))
       case 'circ':
         microcode_image_file = filenames.pop()
         memory_image_file = filenames.pop()
         operations.append((operation, functools.partial(run_python, rel_path(
             f'../{operation}/{operation}.py'), memory_image_file, microcode_image_file)))
+      case 'bf':
+        brainfuck_source_file = filenames.pop()
+        memory_image_file = brainfuck_source_file + '.mem'
+        filenames.append(memory_image_file)
+        operations.append((operation, functools.partial(run_python, rel_path(
+            f'../{operation}/{operation}-pad.py'), brainfuck_source_file, memory_image_file)))
+        microcode_image_file = rel_path(target, 'brainfuck.mic')
+        filenames.append(microcode_image_file)
+        operations.append((operation, functools.partial(run_cargo, f'{operation}-mic', microcode_image_file)))
       case 'pop':
         filenames.pop()
       case 'dup':

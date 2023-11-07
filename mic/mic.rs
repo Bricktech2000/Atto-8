@@ -116,12 +116,14 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
   let set_xlylzl = ControlWord! {data_xl, data_yl, data_zl};
   let ip_mem = ControlWord! {ip_data, data_mem};
   let clr_sc = ControlWord! {clr_sc};
+  let nand_xlylcf = ControlWord! {nand_data, data_xl, data_yl, data_cf};
+  let nand_xlylzl = ControlWord! {nand_data, data_xl, data_yl, data_zl};
 
   let noop = seq![ControlWord! {}];
   let fetch = seq![ip_alxl, cinsum_ip, mem_ilzl];
   let clr_yl = seq![set_ylzl, nand_yl];
-  let set_cf = seq![set_ylzl, set_ylzl, nand_ylcf];
-  let clr_cf = seq![set_ylzl, nand_ylzl, nand_zlcf];
+  let set_cf = seq![set_xlylzl, set_xlylzl, nand_xlylcf];
+  let clr_cf = seq![set_xlylzl, nand_xlylzl, nand_zlcf];
 
   let microcode: [[[Result<ControlWord, TickTrap>; 0x20]; 0x02]; 0x80] = [[[(); 0x20]; 0x02]; 0x80]
     .iter()

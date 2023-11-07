@@ -17,6 +17,7 @@ Available operations are as follows:
 - `mic` &mdash; See [/mic/](../mic/)
 - `sim` &mdash; See [/sim/](../sim/)
 - `circ` &mdash; See [/circ/](../circ/)
+- `bf` &mdash; See [/bf/](../bf/)
 - `pop` &mdash; Pop argument from the stack
 - `dup` &mdash; Duplicate argument on the stack
 - `pipe` &mdash; Pipe file contents to stdout
