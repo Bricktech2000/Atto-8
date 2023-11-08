@@ -195,7 +195,16 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
           );
         }
         print!("\r\n");
+        stdout = stdout
+          .into_iter()
+          .filter(|c| *c <= 0x7F) // outside ASCII
+          .filter(|c| *c != 0x00) // NUL
+          .collect::<VecDeque<_>>();
         print!("{}", stdout.iter().map(|c| *c as char).collect::<String>());
+        stdout = stdout
+          .into_iter()
+          .filter(|c| *c != 0x07) // BEL
+          .collect::<VecDeque<_>>();
         use std::io::Write;
         std::io::stdout().flush().unwrap();
       }
