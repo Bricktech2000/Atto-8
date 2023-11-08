@@ -20,7 +20,7 @@ The Atto-8 is a small ecosystem of hardware and software living in symbiosis. Th
 - [/mic/](mic/) &mdash; Microcode builder for Atto-8 microprocessor
 - [/sim/](sim/) &mdash; Cycle-accurate component-level simulator for Atto-8 microcomputer
 - [/circ/](circ/) &mdash; Gate-level circuit design for Atto-8 microcomputer
-- [/bf/](bf/) &mdash; Brainfuck architecture front-end for Atto-8 microprocessor
+- [/bf/](bf/) &mdash; Brainfuck architecture frontend for Atto-8 microprocessor
 - [/test/](test/) &mdash; Test programs and test framework for Atto-8 microcomputer
 - [/misc/](misc/) &mdash; Miscellaneous files
 

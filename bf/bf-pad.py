@@ -1,3 +1,4 @@
+import re
 import sys
 
 sys.dont_write_bytecode = True
@@ -17,7 +18,9 @@ memory_image_file = sys.argv[2]
 with open_safe(brainfuck_source_file, 'rb') as brainfuck_source_file:
   brainfuck_source = brainfuck_source_file.read()
 
-preprocessed = b'>>' + bytes(byte for byte in brainfuck_source if byte in b'><+-.,[]#')
+preprocessed = re.sub(rb'[^><+-.,[\]#]', b'', brainfuck_source)  # strip out no-ops
+preprocessed = re.sub(rb'^\[.*?\]', b'', preprocessed)  # strip out leading comments
+preprocessed = b'>>' + preprocessed  # prepend `>>`, required by frontend
 memory_image = bytes(byte or 0x00 for byte in common.pad_or_slice(list(preprocessed), common.MEM_SIZE))
 
 with open_safe(memory_image_file, 'wb') as memory_image_file:

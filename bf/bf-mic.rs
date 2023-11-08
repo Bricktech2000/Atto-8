@@ -129,6 +129,15 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
             .map(|(step, rest)| (step as usize, rest))
             .map(|(step, rest)| {
               let () = rest;
+              // when encountering instructions `[` and `]`, the microcode must walk to the matching
+              // instruction. address `0x01` stores the current nesting level to support nested loops.
+              // when walking right the nesting level is positive and when walking left it is negative.
+              // address `0xFF` stores the walking direction. when walking right the walking direction
+              // is `0x01` and when walking left it is `0xFF`. this information can be derived from the
+              // nesting level, but doing so would be inconvenient. `CF` stores whether or not we are
+              // in a walking state. this information can be derived from the nesting level, but doing
+              // so would be inconvenient.
+
               // the most significant bit of an opcode must be set before it is loaded into `IL`. `nfetch`
               // fetches `*IP`, inverts all its bits with a boolean `not`, and stores the result in `IL`.
               // since brainfuck is 7-bit ASCII, this ensures the most significant bit of `IL` is always
