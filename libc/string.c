@@ -1,5 +1,1 @@
-// clang-format off
-
-asm {
-  #include "../lib/string.asm"
-}
+asm { @ lib/string.asm }

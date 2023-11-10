@@ -90,7 +90,7 @@ pub fn eof() -> Parser<()> {
     // TODO uses debug formatting
     _ => Err(Error(format!(
       "EOF: got {:?}",
-      input[0..16].to_string() + "..."
+      input[0..std::cmp::min(16, input.len())].to_string() + "..."
     ))), // to be concatenated
   }))
 }
@@ -115,7 +115,8 @@ pub fn char(char: char) -> Parser<()> {
 pub fn string(string: &'static str) -> Parser<()> {
   string
     .chars()
-    .map(parse::char)
+    // similar to `parse::char` but without its `meta`, for clearer diagnostics
+    .map(|char| parse::satisfy(move |c| c == char).map(|_| ()))
     .reduce(|acc, parser| acc.and_then(|_| parser))
     .unwrap()
     // TODO uses debug formatting
@@ -413,7 +414,7 @@ pub fn asm_statement() -> Parser<Statement> {
     .and_then(|_| parse::whitespaces_string("asm"))
     .and_then(|_| parse::whitespaces_char('{'))
     .and_then(|_| parse::many(parse::satisfy(|c| c != '}')))
-    .map(|chars| chars.iter().collect::<String>())
+    .map(|chars| chars.iter().collect::<String>().trim().to_string())
     .and_then(|assembly| parse::whitespaces_char('}').map(move |_| Statement::Asm(assembly)))
     .meta(format!("Asm Statement"))
 }

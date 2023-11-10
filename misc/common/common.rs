@@ -253,21 +253,21 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
       }
     };
   }
-}
 
-use std::sync::mpsc;
-use std::sync::mpsc::Receiver;
-fn spawn_input_channel() -> Receiver<console::Key> {
-  let stdout = console::Term::stdout();
+  use std::sync::mpsc;
+  use std::sync::mpsc::Receiver;
+  fn spawn_input_channel() -> Receiver<console::Key> {
+    let stdout = console::Term::stdout();
 
-  let (tx, rx) = mpsc::channel::<console::Key>();
-  std::thread::spawn(move || loop {
-    if let Ok(key) = stdout.read_key() {
-      tx.send(key).unwrap();
-    }
-  });
+    let (tx, rx) = mpsc::channel::<console::Key>();
+    std::thread::spawn(move || loop {
+      if let Ok(key) = stdout.read_key() {
+        tx.send(key).unwrap();
+      }
+    });
 
-  rx
+    rx
+  }
 }
 
 pub fn render_memory(memory: &[u8; MEM_SIZE], ip: u8, sp: u8, cf: bool) -> String {
@@ -368,6 +368,74 @@ pub fn render_controller(controller: &u8) -> String {
   );
 
   fmt
+}
+
+const MICROCODE_FAULT_SENTINEL: u16 = -1i16 as u16;
+const ILLEGAL_OPCODE_SENTINEL: u16 = -2i16 as u16;
+const DEBUG_REQUEST_SENTINEL: u16 = -3i16 as u16;
+const BUS_FAULT_SENTINEL: u16 = -4i16 as u16;
+
+impl From<u16> for ControlWord {
+  fn from(control_word: u16) -> Self {
+    let mut slice = [0x00; 16];
+    for i in 0..slice.len() {
+      slice[i] = (control_word >> i) as u8 & 1;
+    }
+    slice.reverse();
+    let control_word = slice;
+
+    // // causes a dynamic memory allocation
+    // let control_word = (0..16)
+    //   .rev()
+    //   .map(|i| (control_word >> i) as u8 & 1)
+    //   .collect::<Vec<_>>()
+    //   .try_into()
+    //   .unwrap();
+
+    unsafe {
+      std::mem::transmute::<[u8; std::mem::size_of::<ControlWord>()], ControlWord>(control_word)
+    }
+  }
+}
+
+impl Into<u16> for ControlWord {
+  fn into(self) -> u16 {
+    let control_word =
+      unsafe { std::mem::transmute::<ControlWord, [u8; std::mem::size_of::<ControlWord>()]>(self) };
+
+    control_word
+      .iter()
+      .fold(0, |acc, &byte| (acc << 1) | byte as u16)
+  }
+}
+
+pub fn u16_into_result(u16: u16) -> Result<ControlWord, TickTrap> {
+  match u16 {
+    MICROCODE_FAULT_SENTINEL => Err(TickTrap::MicrocodeFault),
+    ILLEGAL_OPCODE_SENTINEL => Err(TickTrap::IllegalOpcode),
+    DEBUG_REQUEST_SENTINEL => Err(TickTrap::DebugRequest),
+    BUS_FAULT_SENTINEL => Err(TickTrap::BusFault),
+    control_word => Ok(control_word.into()),
+  }
+}
+
+pub fn result_into_u16(result: Result<ControlWord, TickTrap>) -> u16 {
+  match result {
+    Err(TickTrap::MicrocodeFault) => MICROCODE_FAULT_SENTINEL,
+    Err(TickTrap::IllegalOpcode) => ILLEGAL_OPCODE_SENTINEL,
+    Err(TickTrap::DebugRequest) => DEBUG_REQUEST_SENTINEL,
+    Err(TickTrap::BusFault) => BUS_FAULT_SENTINEL,
+    Ok(control_word) => control_word.into(),
+  }
+}
+
+impl std::fmt::Display for Signal {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Signal::Active => write!(f, "HI"),
+      Signal::Inactive => write!(f, "LO"),
+    }
+  }
 }
 
 #[derive(Clone, Eq, PartialEq)]
@@ -821,15 +889,6 @@ pub fn instruction_to_token(instruction: Result<Instruction, u8>) -> Token {
   }
 }
 
-impl std::fmt::Display for Signal {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Signal::Active => write!(f, "HI"),
-      Signal::Inactive => write!(f, "LO"),
-    }
-  }
-}
-
 impl std::fmt::Display for File {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     use path_clean::PathClean;
@@ -875,64 +934,5 @@ impl std::fmt::Display for Mnemonic {
 impl std::fmt::Display for Token {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     write!(f, "{}", token_to_mnemonic(self.clone()))
-  }
-}
-
-const MICROCODE_FAULT_SENTINEL: u16 = -1i16 as u16;
-const ILLEGAL_OPCODE_SENTINEL: u16 = -2i16 as u16;
-const DEBUG_REQUEST_SENTINEL: u16 = -3i16 as u16;
-const BUS_FAULT_SENTINEL: u16 = -4i16 as u16;
-
-impl From<u16> for ControlWord {
-  fn from(control_word: u16) -> Self {
-    let mut slice = [0x00; 16];
-    for i in 0..slice.len() {
-      slice[i] = (control_word >> i) as u8 & 1;
-    }
-    slice.reverse();
-    let control_word = slice;
-
-    // // causes a dynamic memory allocation
-    // let control_word = (0..16)
-    //   .rev()
-    //   .map(|i| (control_word >> i) as u8 & 1)
-    //   .collect::<Vec<_>>()
-    //   .try_into()
-    //   .unwrap();
-
-    unsafe {
-      std::mem::transmute::<[u8; std::mem::size_of::<ControlWord>()], ControlWord>(control_word)
-    }
-  }
-}
-
-impl Into<u16> for ControlWord {
-  fn into(self) -> u16 {
-    let control_word =
-      unsafe { std::mem::transmute::<ControlWord, [u8; std::mem::size_of::<ControlWord>()]>(self) };
-
-    control_word
-      .iter()
-      .fold(0, |acc, &byte| (acc << 1) | byte as u16)
-  }
-}
-
-pub fn u16_into_result(u16: u16) -> Result<ControlWord, TickTrap> {
-  match u16 {
-    MICROCODE_FAULT_SENTINEL => Err(TickTrap::MicrocodeFault),
-    ILLEGAL_OPCODE_SENTINEL => Err(TickTrap::IllegalOpcode),
-    DEBUG_REQUEST_SENTINEL => Err(TickTrap::DebugRequest),
-    BUS_FAULT_SENTINEL => Err(TickTrap::BusFault),
-    control_word => Ok(control_word.into()),
-  }
-}
-
-pub fn result_into_u16(result: Result<ControlWord, TickTrap>) -> u16 {
-  match result {
-    Err(TickTrap::MicrocodeFault) => MICROCODE_FAULT_SENTINEL,
-    Err(TickTrap::IllegalOpcode) => ILLEGAL_OPCODE_SENTINEL,
-    Err(TickTrap::DebugRequest) => DEBUG_REQUEST_SENTINEL,
-    Err(TickTrap::BusFault) => BUS_FAULT_SENTINEL,
-    Ok(control_word) => control_word.into(),
   }
 }

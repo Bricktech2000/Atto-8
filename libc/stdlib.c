@@ -1,10 +1,4 @@
-// clang-format off
-
-asm {
-  #include "../lib/stdlib.asm"
-}
-
-// clang-format on
+asm { @ lib/stdlib.asm }
 
 inline void exit(int status) {
   asm { !hlt }
