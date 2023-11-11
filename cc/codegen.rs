@@ -79,7 +79,7 @@ fn program(
 ) -> Vec<Result<Token, String>> {
   state.stack.push(StackEntry::ProgramBoundary);
 
-  let executable_tokens: Vec<Result<Token, String>> = std::iter::empty()
+  let globals_tokens: Vec<Result<Token, String>> = std::iter::empty()
     .chain(vec![Err("# section .text".to_string())])
     .chain(match program {
       Program(globals) => globals.into_iter().flat_map(|global| match global {
@@ -117,12 +117,19 @@ fn program(
     .chain(vec![Err("".to_string())])
     .collect();
 
-  // brute-force transitive closure of dependencies
-  // if A depends on B and B depends on C, then A depends on C
+  // brute-force reflexive transitive closure of dependencies.
+  // if A depends on B and B depends on C then ensure A depends on C,
+  // for all A, B, C. ensure A depends on A, for all A.
   let original_dependencies = state.dependencies.clone();
   for name in original_dependencies.keys() {
     let mut stack: Vec<String> = vec![name.clone()];
     let mut visited: HashSet<String> = HashSet::new();
+
+    let deps = state
+      .dependencies
+      .get_mut(name)
+      .unwrap_or_else(|| unreachable!());
+    deps.insert(name.clone()); // reflexive closure
 
     // depth-first iteration because recursion would be inconvenient
     while let Some(node) = stack.pop() {
@@ -130,11 +137,7 @@ fn program(
         if !visited.contains(dependency) {
           stack.push(dependency.clone());
           visited.insert(dependency.clone());
-          state
-            .dependencies
-            .get_mut(name)
-            .unwrap_or_else(|| unreachable!())
-            .insert(dependency.clone());
+          deps.insert(dependency.clone()); // transitive closure
         }
       }
     }
@@ -176,7 +179,7 @@ fn program(
   }
 
   std::iter::empty()
-    .chain(executable_tokens)
+    .chain(globals_tokens)
     .chain(strings_tokens)
     .chain(dependencies_tokens)
     .collect()
@@ -257,8 +260,7 @@ fn function_definition(
       state
         .dependencies
         .entry(name.clone())
-        .or_insert(HashSet::new())
-        .insert(name.clone());
+        .or_insert(HashSet::new());
 
       state
         .stack

@@ -1541,7 +1541,7 @@ fn resolve_node_value(node: &Node, label_definitions: &HashMap<Label, u8>) -> Re
     }
     Node::Xnd(_node1, _node2) => 0,
     Node::Shl(node) => resolve_node_value(node, label_definitions)?.wrapping_shl(1),
-    Node::Shr(node) => resolve_node_value(node, label_definitions)?.wrapping_shl(1),
+    Node::Shr(node) => resolve_node_value(node, label_definitions)?.wrapping_shr(1),
     Node::Not(node) => !resolve_node_value(node, label_definitions)?,
   })
 }
