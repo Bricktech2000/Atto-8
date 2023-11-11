@@ -1,4 +1,4 @@
->+[,[[>,]<[.<]>[-]]+]
+>+[,[>,]<[.<]>+]
 reverses a string
 
 Daniel B Cristofani (cristofdathevanetdotcom)

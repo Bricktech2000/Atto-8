@@ -55,6 +55,7 @@ python3 test.py mandelbrot.asm asm emu
 python3 test.py hello\ world.asm asm emu
 python3 test.py fibonacci.asm asm emu
 python3 test.py collatz.asm asm emu
+python3 test.py reverse.asm asm emu
 python3 test.py hanoi.asm asm emu
 
 # test programs
