@@ -64,3 +64,10 @@ mod! clc # remainder = mod(a, b)
   loop.
     ld0 su2 @dyn
   .loop !bcc clc add
+
+divmod! clc # (quotient, remainder) = divmod(a, b)
+  x00 dec @const loop.
+    x01 add
+    .loop ld2 su4 @dyn
+    .break iff !jmp
+  break. swp clc ad2

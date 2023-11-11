@@ -1,6 +1,7 @@
 rand_seed! x00
 rand_seed.min! x0F
 
+back_buffer! !display_buffer !display_buffer.len sub @const
 
 deep_void!
   @00 @00 @00 @00 @00 @00 @00 @00
@@ -36,7 +37,7 @@ atto_-8!
 hllo_wrld!
   @00 @00 @00 @00 @00 @00 @00 @00 #
   @A8 @8E @E8 @8A @AE @EE @00 @00 # HLLO
-  @AE @8C @EC @8A @EA @EC @00 @00 # WRLD
+  @AC @8C @EE @8A @EA @EC @00 @00 # WRLD
   @00 @00 @00 @00 @00 @00 @00 @00 #
 
 avatar!

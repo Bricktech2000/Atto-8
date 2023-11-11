@@ -63,7 +63,7 @@ main!
 
   # print `buffer` followed by a space and fall through
   buffer_print:
-    ld2 !u8.to_chars !putc !putc
+    ld2 !u8.to_hex !putc !putc
     !char.space
 
   # print the character at the top of the stack and fall through

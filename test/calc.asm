@@ -30,38 +30,10 @@ main!
     ld1 !putc !status_success st1
 
     :stack for_item:
-      !char.null # sentinel
-      # value = stack[item]
-      ld1 !u8.lda
-      # while (value != 0)
-      while_value: !z :break !bcs
-        # (div_10, mod_10) = (value / 10, value % 10)
-        !divmod_10
-        # char = '0' + mod_10
-        !char.digit_zero ad2 # bleeds `char`
-      :while_value !jmp break: !u8.pop
-      # separate items with spaces
-      !char.space
-      # print chars in reverse order
-      for_char: !putc !char.check_null :for_char !bcc # bleed `0x00`
-    # loop while less than `top`
-    add @dyn ld3 ld1 !gt :for_item !bcc pop
-
-    # :stack for_item:
-    #   # separate items with spaces
-    #   !char.space !putc
-    #   x00 # sentinel
-    #   x01 x0A x64 # place values
-    #   # loop through place values
-    #   ld4 lda for_place_value:
-    #     # subtract place value iteratively and count iterations
-    #     xFF for_iteration: inc ld2 su2 :for_iteration !bcc
-    #     # print `digit,` where `digit = iteration_count + '0'`
-    #     !char.digit_zero dec @const !char.add !putc
-    #   # loop until place value is the sentinel
-    #   add x00 xo2 @dyn :for_place_value !bcc pop # bleed sentinel
-    # # loop while less than `top`
-    # add @dyn ld3 ld1 !gt :for_item !bcc magic_label: pop
+      # print `stack[item]` as decimal
+      ld0 !u8.lda !u8.to_dec !char.space !stack_puts
+    # loop while no greater than `top`
+    ld0 ld4 !eq inc :for_item !bcc pop
 
   loop:
     # pop previous character
@@ -131,11 +103,3 @@ main!
 status_overflow! !char.exclamation_mark
 status_syntax! !char.question_mark
 status_success! !char.space
-
-divmod_10! # (div_10, mod_10) = divmod_10(n)
-  x00 dec @const loop.
-    x01 add
-    x0A su2 @dyn
-  .loop !bcc
-  # omit @dyn for optimization
-  x0A dec @const ad2

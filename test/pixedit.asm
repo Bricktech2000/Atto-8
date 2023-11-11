@@ -35,8 +35,8 @@ main!
   load:
     !display_buffer for_load: clc
       # assume input always well formed
-      !getc !char.to_u4 x04 rot
-      !getc !char.to_u4 orr !u8
+      !getc !hex.to_u4 x04 rot
+      !getc !hex.to_u4 orr !u8
       # write byte to display buffer
       ld1 !u8.sta
     inc !z :break !bcs
@@ -52,7 +52,7 @@ main!
       # !char.space !char.line_feed iff !putc
       # !char.null !char.carriage_return iff !putc
       !char.commercial_at !putc
-      ld0 !u8.lda !u8.to_chars !putc !putc
+      ld0 !u8.lda !u8.to_hex !putc !putc
       !char.space !putc
     inc !z :for_store !bcc pop
     !char.carriage_return !putc !char.line_feed !putc

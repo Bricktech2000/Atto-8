@@ -3,6 +3,7 @@
 @ lib/string.asm
 @ lib/stdlib.asm
 @ lib/display.asm
+@ misc/common/common.asm
 
 # to count neighbors, display buffer is read from and back buffer is written to.
 # back buffer is copied to display buffer at the end of each iteration.
@@ -22,10 +23,11 @@ main!
 
   loop:
     # copy back buffer to display buffer
-    !display_buffer !back_buffer sub @const !back_buffer !display_buffer :memcpy !call
-    # loop through every cell
+    !display_buffer.len !back_buffer !display_buffer :memcpy !call
+
+    # loop through cells
     x00 !u4u4 for_xy: dec
-      x00 # allocate neighbor count
+      x00 # neighbor count
 
       # count neighbors
       !neighbors.len for_dxdy: dec
@@ -43,7 +45,7 @@ main!
       !u4u4.ld2 !back_buffer !bit_addr !store_bit
       ignore:
 
-      pop # pop neighbor count
+      pop # neighbor count
     !z :for_xy !bcc !u4u4.pop
   :loop !jmp
 
@@ -73,7 +75,6 @@ main!
     # !figure_eight
 
 neighbors.len! :neighbors.end :neighbors sub @const
-back_buffer! !display_buffer !display_buffer.len sub @const
 
 
 blinker! x0C !pad

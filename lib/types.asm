@@ -1725,23 +1725,36 @@ c4f4m4f4.norm! !i4f4.ld1 !i4f4.ld0 !i4f4.mul !i4f4.st1 !i4f4.ld0 !i4f4.mul !i4f4
 c8f8m8f8.norm! !i8f8.ld1 !i8f8.ld0 !i8f8.mul !i8f8.st1 !i8f8.ld0 !i8f8.mul !i4f4.add # i8f8 norm = c8f8m8f8.norm(c8f8m8f8 c)
 
 # converts `0x0..=0xF` to `'0'..='9', 'A'..='F'`. undefined for other values
-u4.to_char!
+u4.to_hex!
   !char.digit_count sub @dyn
     !char.latin_capital_letter_a @const
     !char.digit_count !char.digit_zero add dec @const
   iff add
 # converts `'0'..='9', 'A'..='F'` to `0x0..=0xF`. undefined for other values
-char.to_u4!
+hex.to_u4!
   !char.latin_capital_letter_a sub @dyn
     !char.digit_count @const
     !char.latin_capital_letter_a !char.digit_zero sub dec @const
   iff add
 # converts `0x00..=0xFF` to `'00'..='FF'`
-u8.to_chars!
-  ld0 !u4u4.snd clc !u4.to_char
-  swp !u4u4.fst !u4.to_char
+u8.to_hex!
+  ld0 !u4u4.snd clc !u4.to_hex
+  swp !u4u4.fst !u4.to_hex
 # converts `'00'..='FF'` to `0x00..=0xFF`
-chars.to_u8!
+hex.to_u8!
+  @err # to be implemented
+# converts `0x00..=0xFF` to an null-terminated sequence of digits `'0'..='9'`
+u8.to_dec!
+  !char.null swp
+  # while (value != 0)
+  while_value. !z .break !bcs
+    # (div_10, mod_10) = (value / 10, value % 10)
+    !divmod_10
+    # char = '0' + mod_10
+    !char.digit_zero ad2 # bleeds `char`
+  .while_value !jmp break. !u8.pop
+# converts an unspecified number of digits `'0'..='9'` to `0x00..=0xFF`
+hec.to_u8!
   @err # to be implemented
 
 char.check_null! !z

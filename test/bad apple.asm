@@ -19,9 +19,9 @@ main!
       # assume input character never null
       # assume input always well formed
       !getc !char.check_null :done !bcs
-      !char.to_u4 x04 rot
+      !hex.to_u4 x04 rot
       !getc !char.check_null :done !bcs
-      !char.to_u4 orr !u8
+      !hex.to_u4 orr !u8
       # write byte to display buffer
       ld1 !u8.sta
     inc !z :for_byte !bcc pop

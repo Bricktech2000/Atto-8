@@ -46,7 +46,15 @@ mul_10! # product = mul_10(n)
   shl # 10 n
   # return* n
 
-div_10! clc # quotient = div_10(n)
+divmod_10! # (div_10, mod_10) = divmod_10(n)
+  x00 dec @const loop.
+    x01 add
+    x0A su2 @dyn
+  .loop !bcc
+  # omit @dyn for optimization within `u8.to_dec`
+  x0A dec @const ad2
+
+div_10_constant_time! clc # quotient = div_10_constant_time(n)
   # n >>= 1
   shr clc # 1/2 n = 0.5 n
   # n += n >> 2; n += 1 // round up
@@ -59,13 +67,12 @@ div_10! clc # quotient = div_10(n)
   xF8 and x05 rot # 411/4096 n =~ 0.1003 n
   # return* n
 
-div_10.min! # quotient = div_10.min(n)
+div_10_through_mul! # quotient = div_10_through_mul(n)
   # n *= 205
   xCD !u8 !u8.mul # 205 n
   # n >>= 11
   pop xF8 and x05 rot # 205/2048 n =~ 0.1001 n
   # return* n
-
 
 
 sort.def!
