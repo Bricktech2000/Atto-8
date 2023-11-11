@@ -29,7 +29,7 @@ The Atto-8 is a small ecosystem of hardware and software living in symbiosis. Th
 This project is a work in progress. Try it out by running any of the following commands from the [/test/](test/) directory:
 
 ```bash
-# completed programs
+# demo programs
 python3 test.py draw.asm asm emu
 python3 test.py random.asm asm emu
 python3 test.py counter.asm asm emu
@@ -54,9 +54,11 @@ python3 test.py stopwatch.asm asm emu
 python3 test.py mandelbrot.asm asm emu
 python3 test.py hello\ world.asm asm emu
 python3 test.py fibonacci.asm asm emu
+python3 test.py fizzbuzz.asm asm emu
 python3 test.py collatz.asm asm emu
 python3 test.py reverse.asm asm emu
 python3 test.py hanoi.asm asm emu
+python3 test.py rot13.asm asm emu
 
 # test programs
 python3 test.py stdin.asm asm emu
