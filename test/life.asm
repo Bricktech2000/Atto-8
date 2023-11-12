@@ -31,12 +31,8 @@ main!
 
       # count neighbors
       !neighbors.len for_dxdy: dec
-        # neighbor_addr = *(neighbors + dxdy) + for_xy
         :neighbors ld1 add !i4i4.lda !u4u4.ld3 !i4i4.add
-        # neighbor_value = load_bit(bit_addr(&DISPLAY_BUFFER, neighbor_addr))
-        !display_buffer !bit_addr !load_bit clc
-        # neighbor_count += neighbor_value
-        ad2
+        !display_buffer !bit_addr !load_bit clc ad2
       !z :for_dxdy !bcc pop
 
       # apply rules outlined above
