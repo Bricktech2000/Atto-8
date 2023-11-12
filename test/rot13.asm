@@ -4,16 +4,21 @@
 
 main!
   nop @dyn loop:
-    !getc x00 # default offset: `0x00`
-      # do not touch the sacred code below. arranging it this way allows
-      # the assembler to generate highly space-efficient code. most of it
-      # disappears during the optimization phase.
-      !char.latin_capital_letter_a su2 clc !offset su2 !offset     iff clc !char.latin_capital_letter_a ad2 !offset ad2
-      !char.latin_capital_letter_n su2 clc !offset su2 !offset neg iff clc !char.latin_capital_letter_n ad2 !offset ad2
-      !char.latin_small_letter_a   su2 clc !offset su2 !offset     iff clc !char.latin_small_letter_a   ad2 !offset ad2
-      !char.latin_small_letter_n   su2 clc !offset su2 !offset neg iff clc !char.latin_small_letter_n   ad2 !offset ad2
+    # read user input
+    !getc ld0
+      # make lowercase. if outside of alphabet, will become
+      # corrupted but will stay outside of alphabet
+      !char.space orr
+      # map `'a'..='z'` to `0..=25`
+      !char.latin_small_letter_a sub
+      x00 # default offset: `0x00`
+        # if character in `'a'..='m'` then offset is `13`
+        !offset su2 !offset iff
+        # if character in `'n'..='z'` then offset is `-13`
+        !offset su2 !offset neg dec @const iff
+      st0
     # add offset to character and print it
-    clc add clc !putc
+    add @dyn !putc
   :loop !jmp
 
-offset! !char.capital_letter_count shr @const # half the alphabet
+offset! !char.small_letter_count shr @const # half the alphabet
