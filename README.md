@@ -70,7 +70,7 @@ python3 test.py addition.hex enc emu
 python3 test.py checkerboard.hex enc emu
 python3 test.py pipe.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py hello\ world.c libc/stdio.c libc/crt0.c cc asm emu
-python3 test.py test.c libc/string.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm mic sim
+python3 test.py test.c libc/string.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py errors.asm asm emu
 ```
 
