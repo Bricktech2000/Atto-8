@@ -53,6 +53,7 @@ python3 test.py pixedit.asm asm emu
 python3 test.py stopwatch.asm asm emu
 python3 test.py mandelbrot.asm asm emu
 python3 test.py hello\ world.asm asm emu
+python3 test.py color\ maze.asm asm emu
 python3 test.py fibonacci.asm asm emu
 python3 test.py fizzbuzz.asm asm emu
 python3 test.py rule\ 110.asm asm emu
