@@ -38,23 +38,35 @@ main!
     :for_x !bcc !u8.pop
 
     # copy back buffer to display buffer and print newline
-    !buffer_len !back_buffer !display_buffer :memcpy !call clc
+    !display_buffer.len !back_buffer !display_buffer :memcpy !call clc
     !char.carriage_return !putc !char.line_feed !putc
   :loop !jmp
 
   !memcpy.def
 
-  !display_buffer @org
-    # !buffer_len shr !pad @80 # for rule 30
-    # !buffer_len shr !pad @80 # for rule 90
-    !buffer_len dec !pad @01 # for rule 110
-    # x00 !pad @80 # for rule 124
+  !display_buffer @org !configuration
 
-rule!
-  # x1E # rule 30
-  # x5A # rule 90
-  x6E # rule 110
-  # x7C # rule 124
+random! @65 @A5 @D3 @3D @46 @DA @7D @06 @D2 @8C @CB @D0 @52 @3A @4B @A6 @42 @0C @3E @FA @CF @A3 @9A @20 @66 @BA @B4 @9A @5F @3A @40 @BE
+center! !buffer_len shr !pad @80
+right! !buffer_len dec !pad @01
+left! @80
+
+# rule! x1A configuration! !random # rule 26
+# rule! x1E configuration! !center # rule 30
+# rule! x39 configuration! !center # rule 57
+# rule! x49 configuration! !random # rule 73
+# rule! x5A configuration! !center # rule 90
+# rule! x69 configuration! !center # rule 105
+# rule! x69 configuration! !random # rule 105
+# rule! x6D configuration! !random # rule 109
+rule! x6E configuration! !right # rule 110
+# rule! x78 configuration! !random # rule 120
+# rule! x7C configuration! !left # rule 124
+# rule! x81 configuration! !random # rule 129
+# rule! x92 configuration! !random # rule 146
+# rule! x96 configuration! !random # rule 150
+# rule! xA6 configuration! !random # rule 166
+# rule! xE1 configuration! !random # rule 225
 
 buffer_len! !display_buffer.len shr shr @const # short
 # buffer_len! !display_buffer.len shr @const # medium

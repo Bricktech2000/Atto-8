@@ -55,7 +55,6 @@ compiler!
       ld0 lda :default
         ![_sentinel xo2 :[_sentinel iff ![_sentinel xo2
         !]_sentinel xo2 :]_sentinel iff !]_sentinel xo2
-        !char.null xo2
       st0 !jmp default:
     inc :for_b !bcc pop
 
