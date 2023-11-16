@@ -6,7 +6,7 @@ strcat.def!
     inc .for_c !bcc dec st1
     # copy src to dst
     !strcpy.def
-    # use :strcpy label
+    # prevent unused label warning
     :strcpy pop
 strchr.def!
   strchr: # *ptr = strchr(*str, char)
@@ -100,6 +100,17 @@ memswp.def!
       ld4 ld2 add lda
       ld4 ld3 add sta
       ld4 ld2 add sta
+    # loop if i > 0
+    !z .for_i !bcc pop
+  # return*
+  !rt3
+memxor.def!
+  memxor: clc # memxor(*dst, *src, len)
+    ld3 for_i. dec
+      # *dst ^= *src
+      ld3 ld1 add lda
+      ld3 ld2 add
+      ld0 lda xo2 sta
     # loop if i > 0
     !z .for_i !bcc pop
   # return*

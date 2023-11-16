@@ -1,5 +1,6 @@
 @ lib/core.asm
 @ lib/types.asm
+@ lib/string.asm
 @ lib/stdlib.asm
 @ lib/stdio.asm
 @ lib/display.asm
@@ -43,10 +44,7 @@ main!
     !z swp if4 xor x00 if2 clc
 
     # XOR the back buffer into the front buffer
-    !display_buffer for_byte:
-      ld0 !display_buffer.len sub lda
-      ld1 lda xor ld1 sta
-    inc !z :for_byte !bcc pop
+    !display_buffer.len !back_buffer !display_buffer :memxor !call
 
     # set the pixel at the new `player_pos` in both buffers
     !u4u4.ld2 !display_buffer !bit_addr
@@ -56,6 +54,8 @@ main!
     # delay of `x01` seems to look best on 60Hz displays
     x01 !delay
   :loop !jmp
+
+  !memxor.def
 
   # we use `dec` because levels begin with `player_pos` which
   # we want to appear as the first item on the stack
