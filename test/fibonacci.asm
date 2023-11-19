@@ -6,8 +6,8 @@
 # input any of `0123456789:;<=>?@ABC...` to start.
 # anything after `<` overflows `u8`s
 
-main!
-  nop @dyn loop:
+main! !nop
+  loop:
     !block_getc !char.digit_zero !char.sub :fib !call !u8.pop
     !char.carriage_return !putc !char.line_feed !putc
   :loop !jmp

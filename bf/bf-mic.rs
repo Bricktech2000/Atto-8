@@ -253,9 +253,10 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                       ], // if we're done walking, set walking direction to right, set nesting level to 0x01, and check `*SP == 0x00`
                     },
                     match carry {
-                      true => seq![ip_alxl, set_yl, sum_xl, walk, clr_yl], // if we're walking, perform a walk step
-                      false => seq![clr_yl],
-                    }
+                      true => seq![ip_alxl, set_yl, sum_xl, walk], // if we're walking, perform a walk step
+                      false => seq![noop, noop, noop, noop, noop, noop],
+                    },
+                    clr_yl
                   ]
                 }
 
@@ -285,15 +286,15 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                         sp_al, mem_ylzl, nand_ylzl, nand_ylcf // *SP == 0x00 -> CF
                       ], // if we're done walking, set walking direction to left, set nesting level to 0xFF, and check `*SP != 0x00`
                     },
+                    match carry {
+                      false => seq![ip_alxl, set_yl, sum_xl, walk], // if we're walking, perform a walk step
+                      true => seq![noop, noop, noop, noop, noop, noop],
+                    },
                     // invert carry again so it represents `walking` instead of `!walking`
                     match carry {
                       true => seq![clr_cf],  // if nesting level is 0x00, we're done walking
                       false => seq![set_cf], // else, we're walking
-                    }, // !CF -> CF
-                    match carry {
-                      true => seq![ip_alxl, set_yl, sum_xl, walk, clr_yl], // if we're walking, perform a walk step
-                      false => seq![clr_yl],
-                    }
+                    } // !CF -> CF
                   ]
                 }
 
@@ -324,20 +325,25 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                 ],
               };
 
-              let seq = seq![seq, clr_sc];
-              let rest = seq.get(0x20..seq.len() - 1).unwrap_or(&[]);
-              if step == 0x00 && rest.len() > 0 {
-                errors.push(Error(format!(
-                  "Microcode for opcode `{:02X}` with carry `{:01X}` overflows by {} steps",
-                  opcode,
-                  carry as u8,
-                  rest.len()
-                )));
+              let pre = seq![seq, clr_sc];
+              let post = seq![clr_sc];
+              match 0x20usize.overflowing_sub(pre.len() + post.len()) {
+                (padding, false) => seq![pre, vec![Err(TickTrap::MicrocodeFault); padding], post],
+                (wrapped, true) => {
+                  if step == 0x00 {
+                    errors.push(Error(format!(
+                      "Microcode for opcode `{:02X}` with carry `{:01X}` overflows by {} steps",
+                      opcode,
+                      carry as u8,
+                      wrapped.wrapping_neg()
+                    )));
+                  }
+                  vec![Err(TickTrap::MicrocodeFault); 0x20]
+                }
               }
-              seq
-                .get(step)
-                .copied()
-                .unwrap_or(Err(TickTrap::MicrocodeFault))
+              .get(step)
+              .copied()
+              .unwrap()
             })
             .collect::<Vec<_>>()
             .try_into()

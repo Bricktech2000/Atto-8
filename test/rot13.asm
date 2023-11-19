@@ -2,8 +2,8 @@
 @ lib/types.asm
 @ lib/stdio.asm
 
-main!
-  nop @dyn loop:
+main! !nop
+  loop:
     # read user input
     !getc ld0
       # make lowercase. if outside of alphabet, will become

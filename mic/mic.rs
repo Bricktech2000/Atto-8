@@ -506,20 +506,25 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                   }
                 };
 
-              let seq = seq![seq, clr_sc];
-              let rest = seq.get(0x20..seq.len() - 1).unwrap_or(&[]);
-              if step == 0x00 && rest.len() > 0 {
-                errors.push(Error(format!(
-                  "Microcode for opcode `{:02X}` with carry `{:01X}` overflows by {} steps",
-                  opcode,
-                  carry as u8,
-                  rest.len()
-                )));
+              let pre = seq![seq, clr_sc];
+              let post = seq![clr_sc];
+              match 0x20usize.overflowing_sub(pre.len() + post.len()) {
+                (padding, false) => seq![pre, vec![Err(TickTrap::MicrocodeFault); padding], post],
+                (wrapped, true) => {
+                  if step == 0x00 {
+                    errors.push(Error(format!(
+                      "Microcode for opcode `{:02X}` with carry `{:01X}` overflows by {} steps",
+                      opcode,
+                      carry as u8,
+                      wrapped.wrapping_neg()
+                    )));
+                  }
+                  vec![Err(TickTrap::MicrocodeFault); 0x20]
+                }
               }
-              seq
-                .get(step)
-                .copied()
-                .unwrap_or(Err(TickTrap::MicrocodeFault))
+              .get(step)
+              .copied()
+              .unwrap()
             })
             .collect::<Vec<_>>()
             .try_into()

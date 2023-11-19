@@ -41,6 +41,7 @@ rt4! st3 pop pop pop !ret
 
 dbg! @BB # unofficial `0xBB` treated as debug request
 here! lbl. .lbl
+nop! nop @dyn
 hlt! !here !jmp
 pad! .lbl add lbl. @org
 stall! @const !stall.dyn # argument at most 0x1F

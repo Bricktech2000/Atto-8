@@ -6,8 +6,8 @@
 # input any of `0123456789:;<=>?@ABC...` to start.
 # use `0` to display all numbers
 
-main!
-  nop @dyn loop:
+main! !nop
+  loop:
     !block_getc !char.digit_zero !char.sub :fizzbuzz !call
     !char.carriage_return !putc !char.line_feed !putc
   :loop !jmp

@@ -6,8 +6,8 @@
 # input any of `0123456789:;<=>?@ABC...` to start.
 # anything after `Q` causes a stack overflow
 
-main!
-  nop @dyn loop:
+main! !nop
+  loop:
     !char.latin_capital_letter_a !char.latin_capital_letter_b !char.latin_capital_letter_c
     !block_getc !char.digit_zero !char.sub :hanoi !call
     !char.line_feed !putc

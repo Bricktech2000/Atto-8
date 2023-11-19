@@ -6,8 +6,8 @@
 # input any of `0123456789:;<=>?@ABC...` to start.
 # note that inputs `0?GNSW` overflow `u8`s
 
-main!
-  nop @dyn loop:
+main! !nop
+  loop:
     !block_getc !char.digit_zero !char.sub :collatz !call
     !char.left_parenthesis !putc !u8.to_dec !stack_puts !char.right_parenthesis !putc
     !char.carriage_return !putc !char.line_feed !putc
