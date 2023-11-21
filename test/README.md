@@ -44,5 +44,5 @@ python3 test.py checkerboard.hex enc dasm asm mic circ
 python3 test.py life.asm asm dec enc dasm asm mic sim
 
 # build brainfuck microcode, simulate brainfuck source
-python3 test.py fib.b bf sim
+python3 test.py fib.bf bf sim
 ```
