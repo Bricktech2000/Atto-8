@@ -5,6 +5,8 @@ use std::collections::VecDeque;
 pub const MEM_SIZE: usize = 0x100;
 pub const MIC_SIZE: usize = 0x80 * 0x02 * 0x20;
 pub const DISPLAY_BUFFER: usize = 0xE0;
+pub const DISPLAY_BUFFER_LEN: usize = 0x20;
+pub const STDIO_BUFFER: usize = 0x00;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ControlWord {
@@ -50,14 +52,14 @@ pub trait Tickable {
     &mut self,
     stdin: &mut VecDeque<u8>,
     stdout: &mut VecDeque<u8>,
-    display: &mut [u8; 0x20],
+    display: &mut [u8; DISPLAY_BUFFER_LEN],
     controller: &mut u8,
   );
   fn tick(
     &mut self,
     stdin: &mut VecDeque<u8>,
     stdout: &mut VecDeque<u8>,
-    display: &mut [u8; 0x20],
+    display: &mut [u8; DISPLAY_BUFFER_LEN],
     controller: &mut u8,
   ) -> Result<u128, TickTrap>;
 }
@@ -74,7 +76,7 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
 
   let mut stdin = VecDeque::new();
   let mut stdout = VecDeque::new();
-  let mut display = [0x00; 0x20];
+  let mut display = [0x00; DISPLAY_BUFFER_LEN];
 
   // this call will switch the termital to raw mode
   let input_channel = spawn_input_channel();
@@ -301,7 +303,7 @@ pub fn render_memory(memory: &[u8; MEM_SIZE], ip: u8, sp: u8, cf: bool) -> Strin
   fmt
 }
 
-pub fn render_display(display: &[u8; 0x20]) -> String {
+pub fn render_display(display: &[u8; DISPLAY_BUFFER_LEN]) -> String {
   let mut fmt = "".to_string();
 
   // https://en.wikipedia.org/wiki/Block_Elements
@@ -331,7 +333,6 @@ pub fn render_display(display: &[u8; 0x20]) -> String {
     fmt += &col_right;
     fmt += "\r\n";
   }
-
   fmt += &line_bottom;
   fmt += "\r\n";
 

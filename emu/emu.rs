@@ -55,44 +55,46 @@ impl Tickable for Microcomputer {
     &mut self,
     stdin: &mut VecDeque<u8>,
     _stdout: &mut VecDeque<u8>,
-    display: &mut [u8; 0x20],
+    display: &mut [u8; common::DISPLAY_BUFFER_LEN],
     _controller: &mut u8,
   ) {
     stdin.push_back(self.mem[0x00]);
-    display.copy_from_slice(&self.mem[common::DISPLAY_BUFFER as usize..]);
+    display.copy_from_slice(
+      &self.mem[common::DISPLAY_BUFFER..common::DISPLAY_BUFFER + common::DISPLAY_BUFFER_LEN],
+    );
   }
 
   fn tick(
     &mut self,
     stdin: &mut VecDeque<u8>,
     stdout: &mut VecDeque<u8>,
-    display: &mut [u8; 0x20],
+    display: &mut [u8; common::DISPLAY_BUFFER_LEN],
     controller: &mut u8,
   ) -> Result<u128, TickTrap> {
     let mp = &mut self.mp;
 
     macro_rules! mem_read {
       ($address:expr) => {{
-        let address = $address;
+        let address = $address as usize;
         if address == 0x00 {
           stdin.pop_front().unwrap_or(*controller)
         } else {
-          self.mem[address as usize]
+          self.mem[address]
         }
       }};
     }
 
     macro_rules! mem_write {
       ($address:expr, $value:expr) => {{
-        let address = $address;
+        let address = $address as usize;
         let value = $value;
         if address == 0x00 {
           stdout.push_back(value);
         }
-        if address as usize & common::DISPLAY_BUFFER == common::DISPLAY_BUFFER {
-          display[address as usize & !common::DISPLAY_BUFFER] = value
+        if address & common::DISPLAY_BUFFER == common::DISPLAY_BUFFER {
+          display[address & !common::DISPLAY_BUFFER] = value
         }
-        self.mem[address as usize] = value;
+        self.mem[address] = value;
       }};
     }
 

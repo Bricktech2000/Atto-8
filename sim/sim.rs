@@ -136,7 +136,7 @@ impl Tickable for Microcomputer {
     &mut self,
     stdin: &mut VecDeque<u8>,
     stdout: &mut VecDeque<u8>,
-    display: &mut [u8; 0x20],
+    display: &mut [u8; common::DISPLAY_BUFFER_LEN],
     controller: &mut u8,
   ) {
     self.rst = Reset::Asserted;
@@ -152,7 +152,7 @@ impl Tickable for Microcomputer {
     &mut self,
     stdin: &mut VecDeque<u8>,
     stdout: &mut VecDeque<u8>,
-    display: &mut [u8; 0x20],
+    display: &mut [u8; common::DISPLAY_BUFFER_LEN],
     controller: &mut u8,
   ) -> Result<u128, TickTrap> {
     let mp = &mut self.mp;
@@ -297,7 +297,9 @@ impl Tickable for Microcomputer {
     if let Reset::Asserted = self.rst {
       mp.al = 0x00;
       stdin.push_back(self.mem[0x00]);
-      display.copy_from_slice(&self.mem[common::DISPLAY_BUFFER as usize..]);
+      display.copy_from_slice(
+        &self.mem[common::DISPLAY_BUFFER..common::DISPLAY_BUFFER + common::DISPLAY_BUFFER_LEN],
+      );
     }
 
     // X latch and Y latch and Z latch
