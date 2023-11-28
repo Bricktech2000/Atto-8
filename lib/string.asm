@@ -73,14 +73,10 @@ memset.def!
   !rt3
 memcpy.def!
   memcpy: clc # memcpy(*dst, *src, len)
-    ld3 for_i. dec
-      # *dst = *src
-      ld3 ld1 add lda
-      ld3 ld2 add sta
-    # loop if i > 0
-    !z .for_i !bcc pop
-  # return*
-  !rt3
+    # for simplicity, ignore `restrict` qualifier
+    !memmove.def
+    # prevent unused label warning
+    :memmove pop
 memcmp.def!
   memcmp: clc # cpm = memcmp(*ptr1, *ptr2, len)
     ld3 for_i. dec
@@ -111,6 +107,16 @@ memxor.def!
       ld3 ld1 add lda
       ld3 ld2 add
       ld0 lda xo2 sta
+    # loop if i > 0
+    !z .for_i !bcc pop
+  # return*
+  !rt3
+memmove.def!
+  memmove: # memmove(*dst, *src, len)
+    ld3 for_i. dec
+      # *dst = *src
+      ld3 ld1 add lda
+      ld3 ld2 add sta
     # loop if i > 0
     !z .for_i !bcc pop
   # return*
