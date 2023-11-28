@@ -80,16 +80,14 @@ sort.def!
     # bubble sort, in-place
     x01 while. dec # swapped = false
       ld2 dec for_i. dec
-        ld4 ld1 add # push pointer
+        ld4 add # push pointer
           # if not in order, swap
-          ld0 !u8u8.lda swp sub pop
-          .continue !bcc
-            ld0 !u8u8.lda
-            ld2 !u8u8.sta
-            # swapped = true
-            x01 st2
-          continue.
-        pop # pop pointer
+          ld0 inc lda ld1 lda # load both values
+          ld1 ld1 !gt # compare values
+          ld0 ld2 if2 if2 # optionally swap values
+          ld2 sta ld1 inc sta # store both values
+          x00 ad2 @dyn # set `swapped` if swapped
+        ld4 sub # pop pointer
       !z .for_i !bcc # bleed `0x00`
     # break if not swapped
     !e .while !bcc pop
