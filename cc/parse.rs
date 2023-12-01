@@ -286,13 +286,13 @@ pub fn function_definition() -> Parser<FunctionDefinition> {
             .and_then(move |parameters| {
               Parser::return_(())
                 .and_then(|_| parse::whitespaces_char(')'))
-                .and_then(|_| parse::compound_statement())
-                .map(move |statements| {
+                .and_then(|_| parse::statement())
+                .map(move |statement| {
                   FunctionDefinition(
                     inline.is_some(),
                     Object(type_name, identifier),
                     parameters,
-                    statements,
+                    statement,
                   )
                 })
             })

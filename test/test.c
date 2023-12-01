@@ -14,7 +14,7 @@
 #define DISPLAY_BUFFER 0xE0
 #define DISPLAY_BUFFER_LEN 0x20
 
-inline void bar(void) { memset(DISPLAY_BUFFER, 0xFF, DISPLAY_BUFFER_LEN); }
+inline void bar(void) memset(DISPLAY_BUFFER, 0xFF, DISPLAY_BUFFER_LEN);
 inline void baz(void) { memset(DISPLAY_BUFFER, 0x00, DISPLAY_BUFFER_LEN); }
 
 inline void delay(int iterations);
