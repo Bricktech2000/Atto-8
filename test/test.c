@@ -1,12 +1,24 @@
+#pragma once
+
 #define STDIO "stdio.h"
 
 #include STDIO
 #include <stdlib.h>
 #include <string.h>
 
+#undef STDIO
+#undef STDIO
+#undef UNDEFINED
+
 // #define EMPTY
 // #include EMPTY<file.h>
 // EMPTY #include <file.h>
+
+// #error test error in file __FILE__ on line __LINE__
+
+// #invalid directive
+
+#// null directive
 
 #define ADDITION 1 + TWO
 #define TWO 2
