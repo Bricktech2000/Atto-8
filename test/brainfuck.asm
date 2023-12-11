@@ -4,13 +4,13 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 
-# most programs from `bf/test/` can be pasted into this interpreter and compiler directly.
+# most programs from `/bf/test/` can be pasted into this interpreter and compiler directly.
 # note the following:
 # - `,` is non-blocking; if no input is currently available, `'\0'` is returned
-# - `CRLF` is used for newlines. sending `LF` will not return the carriage
+# - `CRLF` is used for printing newlines. sending `LF` will not return the carriage
 # - cells are 8-bit unsigned integers, wrapping on overflow and underflow
-# - writing beyond the start of the tape will cause undefined behavior
-# - unbalancedd brackets in the source code will cause undefined behavior
+# - writing beyond the start of the tape will result in undefined behavior
+# - unbalancedd brackets in the source code will result in undefined behavior
 
 main!
   !interpreter

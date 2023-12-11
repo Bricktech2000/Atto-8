@@ -28,7 +28,7 @@ slides_start! x40
 
 # inlined version of `:memswp` with destination hard-coded to
 # `!display_buffer` and length hard-coded to `!display_buffer.len`.
-# assumes `clc`. does not consume its argument
+# does not consume its argument. assumes `clc`
 memswp_display_buffer!
   !display_buffer.len for_byte: dec
     ld1 ld1 add lda

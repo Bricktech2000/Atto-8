@@ -16,7 +16,7 @@ struct State {
   definitions: HashSet<String>,                // set of currently defined globals
   parameters: HashMap<String, Type>,           // map from function paramater to its type
   locals: HashMap<String, Type>,               // map from local variable to its type
-  global: Option<String>,                      // current global name
+  global: Option<String>,                      // current global name for dependency tracking
   stack: Vec<StackEntry>,                      // current nesting stack
   uid: usize,                                  // unique identifier for temporary variables
   strings: HashMap<String, String>,            // map from string literal to its label

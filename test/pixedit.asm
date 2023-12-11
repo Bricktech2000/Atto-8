@@ -13,7 +13,7 @@
 # - type or paste a bitmap into `stdin` to load it
 # - type `'\n'` to output the current bitmap to `stdout`
 #
-# most designs from `misc/common/common.asm` can be loaded into PixEdit by directly
+# most designs from `/misc/common/common.asm` can be loaded into PixEdit by directly
 # pasting them in. below is a sample design spelling out "PIXEDIT" in the Atto-8 font:
 #
 # ```

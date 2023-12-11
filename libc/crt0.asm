@@ -7,6 +7,6 @@ main!
   # link in dependencies and call C entry point
   :main !call !hlt !main.deps
 
-  # initialize `malloc` and `free`
-  heap_start: xFF :heap_start pop @const
+  # initialize heap for `malloc` and `free`
+  heap_start: !heap_unlimited :heap_start pop @const
 heap_start! :heap_start @const
