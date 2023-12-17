@@ -291,10 +291,7 @@ fn function_definition(
 
       match state.stack.pop() {
         Some(StackEntry::FunctionBoundary(inline_, type_))
-          if inline_ == inline && type_ == return_type =>
-        {
-          ()
-        }
+          if inline_ == inline && type_ == return_type => {}
         _ => panic!("Expected function boundary"),
       }
 
@@ -457,10 +454,7 @@ fn return_statement(
   match inline {
     true => match type_ {
       type_ if type_.size() == 0 => std::iter::empty().chain(tokens).collect(),
-      type_ if type_.size() == 1 => std::iter::empty()
-        .chain(tokens)
-        .chain(vec![Ok(Token::Pop)])
-        .collect(),
+      type_ if type_.size() == 1 => std::iter::empty().chain(tokens).collect(),
       _ => {
         // TODO implement
         errors.push((

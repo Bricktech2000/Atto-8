@@ -25,7 +25,7 @@ The Atto-8 microarchitecture is a minimalist stack-based architecture with 8-bit
 | `SP`      | Stack Pointer       | 8 bits |
 | `CF`      | Carry Flag          | 1 bit  |
 
-`IP` is a pointer to the instruction being executed in memory. Writing to `IP` through `sti` will cause a jump to the specified address. `IP` is incremented after the execution of each instruction.
+`IP` is a pointer to the next instruction to be executed. Writing to `IP` through `sti` will cause a jump to the specified address. `IP` is incremented before the execution of every instruction.
 
 `SP` is a pointer to the item at top of the stack, which grows downward. Writing to `SP` through `sts` while the stack is empty will move the location of the stack in memory. Instructions increment or decrement `SP` as needed.
 

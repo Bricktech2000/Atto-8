@@ -68,7 +68,8 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
   let mut current_clocks = 0;
   let mut initial_time = std::time::Instant::now();
   let mut next_call_clocks = 0;
-  let mut next_print_time = std::time::Instant::now();
+  let mut next_stdin_clocks = 0;
+  let mut next_stdout_clocks = 0;
   let mut controller_timestamps = [None; 8];
   let mut status_line = "".to_string();
   let mut debug_mode = false;
@@ -78,10 +79,10 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
   let mut stdout = VecDeque::new();
   let mut display = [0x00; DISPLAY_BUFFER_LEN];
 
+  mc.reset(&mut stdin, &mut stdout, &mut display, &mut 0x00);
+
   // this call will switch the termital to raw mode
   let input_channel = spawn_input_channel();
-
-  mc.reset(&mut stdin, &mut stdout, &mut display, &mut 0x00);
 
   loop {
     let mut controller = controller_timestamps
@@ -91,7 +92,7 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
         acc | ((timestamp.is_some() as u8) << index)
       });
 
-    // call `std::Instant::now()` and `input_channel.try_recv()` at most 1000 times per second
+    // call `std::Instant::now()` at most 1000 times per second
     if next_call_clocks <= current_clocks || debug_mode {
       next_call_clocks += if debug_mode { 0 } else { clock_speed / 1000 };
 
@@ -122,6 +123,11 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
           format!("Execution on time")
         };
       }
+    }
+
+    // read input at most 60 times per second
+    if next_stdin_clocks <= current_clocks || debug_mode {
+      next_stdin_clocks += if debug_mode { 0 } else { clock_speed / 60 };
 
       'until_empty: loop {
         use std::sync::mpsc::TryRecvError;
@@ -174,70 +180,72 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
           Err(TryRecvError::Disconnected) => panic!("Channel disconnected"),
         }
       }
+    }
 
-      // print at most 60 times per second
-      if next_print_time <= std::time::Instant::now() || debug_mode {
-        next_print_time += std::time::Duration::from_millis(if debug_mode { 0 } else { 1000 / 60 });
+    // write output at most 60 times per second
+    if next_stdout_clocks <= current_clocks || debug_mode {
+      next_stdout_clocks += if debug_mode { 0 } else { clock_speed / 60 };
 
-        let term = console::Term::stdout();
-        term.clear_screen().unwrap();
-        term.move_cursor_to(0, 0).unwrap();
+      let term = console::Term::stdout();
+      term.clear_screen().unwrap();
+      term.move_cursor_to(0, 0).unwrap();
 
-        print!("{}\r\n", status_line);
-        if show_state || debug_mode {
-          print!("Clocks: {}\r\n", current_clocks);
-          print!("\r\n");
-          print!("{}", mc);
-        } else {
-          print!("\r\n");
-          print!(
-            "{}\r\n{}",
-            render_display(&display),
-            render_controller(&controller)
-          );
-        }
+      print!("{}\r\n", status_line);
+      if show_state || debug_mode {
+        print!("Clocks: {}\r\n", current_clocks);
         print!("\r\n");
-        stdout = stdout
-          .into_iter()
-          .filter(|c| *c <= 0x7F) // outside ASCII
-          .filter(|c| *c != 0x00) // NUL
-          .collect::<VecDeque<_>>();
-        print!("{}", stdout.iter().map(|c| *c as char).collect::<String>());
-        stdout = stdout
-          .into_iter()
-          .filter(|c| *c != 0x07) // BEL
-          .collect::<VecDeque<_>>();
-        use std::io::Write;
-        std::io::stdout().flush().unwrap();
+        print!("{}", mc);
+      } else {
+        print!("\r\n");
+        print!(
+          "{}\r\n{}",
+          render_display(&display),
+          render_controller(&controller)
+        );
       }
+      print!("\r\n");
+      stdout = stdout
+        .into_iter()
+        .filter(|c| *c <= 0x7F) // outside ASCII
+        .filter(|c| *c != 0x00) // NUL
+        .collect::<VecDeque<_>>();
+      print!("{}", stdout.iter().map(|c| *c as char).collect::<String>());
+      stdout = stdout
+        .into_iter()
+        .filter(|c| *c != 0x07) // BEL
+        .collect::<VecDeque<_>>();
+      use std::io::Write;
+      std::io::stdout().flush().unwrap();
+    }
 
-      if debug_mode {
-        'until_valid: loop {
-          match input_channel.try_recv() {
-            Ok(console::Key::Del) => {
-              stdout = VecDeque::new();
-              break 'until_valid;
-            }
-
-            Ok(console::Key::Tab) => {
-              status_line = "Single stepped".to_string();
-              break 'until_valid;
-            }
-
-            Ok(console::Key::Escape) => {
-              debug_mode = !debug_mode;
-              break 'until_valid;
-            }
-
-            _ => continue 'until_valid,
+    if debug_mode {
+      'until_valid: loop {
+        match input_channel.try_recv() {
+          Ok(console::Key::Del) => {
+            stdout = VecDeque::new();
+            break 'until_valid;
           }
-        }
 
-        // conceptually hacky but does the job
-        initial_time = std::time::Instant::now();
-        current_clocks = 0;
-        next_call_clocks = 0;
+          Ok(console::Key::Tab) => {
+            status_line = "Single stepped".to_string();
+            break 'until_valid;
+          }
+
+          Ok(console::Key::Escape) => {
+            debug_mode = !debug_mode;
+            break 'until_valid;
+          }
+
+          _ => continue 'until_valid,
+        }
       }
+
+      // conceptually hacky but does the job
+      initial_time = std::time::Instant::now();
+      current_clocks = 0;
+      next_call_clocks = 0;
+      next_stdin_clocks = 0;
+      next_stdout_clocks = 0;
     }
 
     match mc.tick(&mut stdin, &mut stdout, &mut display, &mut controller) {
@@ -283,10 +291,9 @@ pub fn render_memory(memory: &[u8; MEM_SIZE], ip: u8, sp: u8, cf: bool) -> Strin
         "{:02X}{}",
         memory[address as usize],
         if address == sp.wrapping_sub(1) {
-          if cf {
-            "/"
-          } else {
-            "|"
+          match cf {
+            true => "/",
+            false => "|",
           }
         } else if address == ip.wrapping_sub(1) {
           "["
