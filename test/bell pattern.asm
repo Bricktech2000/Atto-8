@@ -23,6 +23,7 @@ main!
     # !standard_pattern
     # !tuning_pattern
   pattern.end:
+
 pattern.len! :pattern.end :pattern sub @const
 
 # note durations, in reverse order

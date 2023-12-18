@@ -25,19 +25,23 @@ main!
     !u8u8.ld0 !u4f4.add !u4f4.st1
 
     # load (x_pos >> 4, y_pos >> 4) onto the stack
-    !u4f4.ld3 !u4f4.in !u4f4.ld2 !u4f4.in x04 rot orr clc !u4u4
-      # if (y_pos ^ y_pos << 1) & 0xE0 == 0 { y_vel = -y_vel }
+    !u4f4.ld3 !u4f4.in !u4f4.ld2 !u4f4.in x04 rot orr !u4u4
+      # if (y_pos ^ y_pos << 1) & 0xE0 == 0 { y_vel = ~y_vel }
       # this checks if y_pos & 0xF0 is either 0x00 of 0xF0
       !u4f4.ld2 !u4f4.ld0 shl xor xE0 !cl
-      !u4f4.ld1 !u4f4.ld0 !u4f4.neg !u4f4.iff !u4f4.st1 clc
+      !u4f4.ld1 !u4f4.neg dec if2
       # if (x_pos ^ x_pos << 1) & 0xE0 != 0 { goto ignore_check }
-      # this only checks paddle bounces if the ball is on either side of the screen
+      # this only checks for paddle bounces if the ball is on either side of the screen
       !u4f4.ld4 !u4f4.ld0 shl xor xE0 !cl
       :ignore_check !bcc
+        # y_vel ^= (paddle_a ^ paddle_b) & 0x03
+        # this randomly modifies y_vel while preserving its sign, with paddle positions
+        # acting as a seed
+        !u8.ld6 !u8.ld6 xor x03 and xo2
         # x_vel = -x_vel
         !u4f4.ld3 !u4f4.neg !u4f4.st3
         # if the byte in memory where the ball sits is not 0, game over
-        !display_buffer !u4u4.ld1 xF8 and x03 !rneg @const rot add lda
+        !display_buffer !u4u4.ld1 x07 not and x05 rot add lda
         !zr :game_over !bcs
       ignore_check:
 

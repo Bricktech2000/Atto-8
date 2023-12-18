@@ -1754,7 +1754,7 @@ u8.to_dec!
     !char.digit_zero ad2 # bleeds `char`
   .while_value !jmp break. !u8.pop
 # converts an unspecified number of digits `'0'..='9'` to `0x00..=0xFF`
-hec.to_u8!
+dec.to_u8!
   @err # to be implemented
 
 char.check_null! !z
