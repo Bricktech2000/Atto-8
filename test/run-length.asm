@@ -2,18 +2,19 @@
 @ lib/types.asm
 @ lib/stdlib.asm
 @ lib/stdio.asm
+@ lib/display.asm
 
 # the image to be displayed is 24 characters wide by 12 characters tall. that's 288 bytes. the Atto-8
 # only has 256 bytes of RAM, and so compression is necessary. this demo uses run-length encoding
 
 main!
-  :rle_profile_picture !rle_puts
+  pop pop !display_buffer sts
 
-  !hlt
+  :rle_profile_picture !rle_puts !hlt
 
   rle_profile_picture:
     !06 @20 @2C @2B @2A !02 @25 !02 @40 !02 @25 @2A @2B @2C @0D @0A
-    !03 @20 @3A @2A !0E @40 @2A @3A @0D @0A
+    !04 @20 @2A !0E @40 @2A @0D @0A
     !02 @20 @2A !06 @40 @23 @2A !02 @2B @2A @23 !06 @40 @2A @0D @0A
     @20 @23 !05 @40 @25 !03 @2B !02 @3A !03 @2B @25 !05 @40 @23 @0D @0A
     @2B !06 @40 @2A !03 @2B !02 @2A !03 @2B @23 !06 @40 @2B @0D @0A
@@ -22,8 +23,8 @@ main!
     @2B !04 @40 @23 @2A @2B @3D @2B !04 @40 @2B @3D @2B @2A @23 !04 @40 @2B @0D @0A
     @20 @23 !02 @40 @23 !05 @3A @25 !02 @40 @25 !05 @3A @23 !02 @40 @23 @0D @0A
     !02 @20 @2A @40 @23 !05 @3A @2B !02 @40 @2B !05 @3A @23 @40 @2A @0D @0A
-    !03 @20 @3A @2A @3A !05 @3A !02 @2A @3A !05 @3A @2A @3A @0D @0A
-    !05 @20 !02 @27 @22 !02 @2D !04 @3A !02 @2D @22 !02 @27 @0D @0A
+    !04 @20 @2A @3A !05 @3A !02 @2A @3A !05 @3A @2A @0D @0A
+    !05 @20 !03 @27 !08 @3A !03 @27 @0D @0A
     @00
 
 rle_puts!
