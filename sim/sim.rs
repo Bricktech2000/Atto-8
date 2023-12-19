@@ -35,7 +35,7 @@ fn main() {
       std::process::exit(1);
     })
     .chunks(2)
-    .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
+    .map(|chunk| u16::from_le_bytes(chunk.try_into().unwrap()))
     .collect::<Vec<u16>>()
     .try_into()
     .unwrap_or_else(|_| {

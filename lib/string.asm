@@ -26,9 +26,9 @@ strlen.def!
       ld0 lda !char.is_null
     inc .for_c !bcc
     # compute len
-    ld2 sub
+    sw2 su2
   # return* len
-  st1 !rt0
+  !rt0
 strcpy.def!
   strcpy: # strcpy(*dst, *src)
     ld2 ld2 for_c.

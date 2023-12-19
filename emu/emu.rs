@@ -148,6 +148,14 @@ impl Tickable for Microcomputer {
         Ok(13 + size as u128)
       }
 
+      Instruction::Swp(size) => {
+        let addr = mp.sp.wrapping_add(size);
+        let first = pop!();
+        push!(mem_read!(addr));
+        mem_write!(addr, first);
+        Ok(13 + size as u128)
+      }
+
       Instruction::Rot(size) => {
         let addr = mp.sp.wrapping_add(size);
         let first = pop!();
@@ -278,8 +286,6 @@ impl Tickable for Microcomputer {
         Ok(5)
       }
 
-      Instruction::Nop => Ok(3),
-
       Instruction::Clc => {
         mp.cf = false;
         Ok(6)
@@ -295,13 +301,7 @@ impl Tickable for Microcomputer {
         Ok(6)
       }
 
-      Instruction::Swp => {
-        let first = pop!();
-        let second = pop!();
-        push!(first);
-        push!(second);
-        Ok(15)
-      }
+      Instruction::Nop => Ok(3),
 
       Instruction::Pop => {
         let _ = pop!();

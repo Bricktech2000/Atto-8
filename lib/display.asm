@@ -21,19 +21,19 @@ store_bit! # store_bit(rot, addr, bit)
   # return*
 set_bit! # set_bit(rot, addr)
   # mask = 0x01 << rot
-  x01 swp rot swp
+  swp x01 sw2 ro2
   # *addr |= mask
   ld0 lda or2 sta
   # return*
 clear_bit! # clear_bit(rot, addr)
   # mask = ~0x01 << rot
-  x01 not swp rot swp
+  swp x01 not sw2 ro2
   # *addr &= mask
   ld0 lda an2 sta
   # return*
 flip_bit! # flip_bit(rot, addr)
   # mask = 0x01 << rot
-  x01 swp rot swp
+  swp x01 sw2 ro2
   # *addr ^= mask
   ld0 lda xo2 sta
   # return*
@@ -58,19 +58,19 @@ store_nibble! # store_nibble(rot, addr, nibble)
   # return*
 set_nibble! # set_nibble(rot, addr)
   # mask = 0x0F << rot
-  x0F swp rot swp
+  swp x0F sw2 ro2
   # *addr |= mask
   ld0 lda or2 sta
   # return*
 clear_nibble! # clear_nibble(rot, addr)
   # mask = ~0x0F << rot
-  x0F not swp rot swp
+  swp x0F not sw2 ro2
   # *addr &= mask
   ld0 lda an2 sta
   # return*
 flip_nibble! # flip_nibble(rot, addr)
   # mask = 0x0F << rot
-  x0F swp rot swp
+  swp x0F sw2 ro2
   # *addr ^= mask
   ld0 lda xo2 sta
   # return*

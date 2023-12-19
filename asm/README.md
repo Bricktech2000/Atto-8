@@ -49,6 +49,8 @@ Assembler optimizations assume the carry flag is always clear, and may leave the
 | `suS`    | Emit instruction `sub S`                          |
 | `iff`    | Emit instruction `iff 0x01`                       |
 | `ifS`    | Emit instruction `iff S`                          |
+| `swp`    | Emit instruction `swp 0x01`                       |
+| `swS`    | Emit instruction `swp S`                          |
 | `rot`    | Emit instruction `rot 0x01`                       |
 | `roS`    | Emit instruction `rot S`                          |
 | `orr`    | Emit instruction `orr 0x01`                       |
@@ -76,7 +78,6 @@ Assembler optimizations assume the carry flag is always clear, and may leave the
 | `clc`    | Emit instruction `clc`                            |
 | `sec`    | Emit instruction `sec`                            |
 | `flc`    | Emit instruction `flc`                            |
-| `swp`    | Emit instruction `swp`                            |
 | `pop`    | Emit instruction `pop`                            |
 
 ## Conventions

@@ -9,8 +9,8 @@ setlocal iskeyword+=34,35,36,37,38,39,40,41,42,43,44,45,47,59,60,61,62,63,91,92,
 setlocal commentstring=#\ %s
 setlocal comments=:#\ 
 
-syntax match atto8Instruction "\<\(add\|sub\|iff\|rot\|orr\|and\|xor\|xnd\|inc\|dec\|neg\|shl\|shr\|not\|buf\|lda\|sta\|ldi\|sti\|lds\|sts\|nop\|sec\|clc\|flc\|swp\|pop\)\>"
-syntax match atto8Instruction "\<\(ad\|su\|if\|ro\|or\|an\|xo\|xn\)[1248]\{1\}\>"
+syntax match atto8Instruction "\<\(add\|sub\|iff\|swp\|rot\|orr\|and\|xor\|xnd\|inc\|dec\|neg\|shl\|shr\|not\|buf\|lda\|sta\|ldi\|sti\|lds\|sts\|sec\|clc\|flc\|nop\|pop\)\>"
+syntax match atto8Instruction "\<\(ad\|su\|if\|sw\|ro\|or\|an\|xo\|xn\)[1248]\{1\}\>"
 syntax match atto8Instruction "\<\(ld\|st\)[0-9A-F]\{1\}\>"
 syntax match atto8XXX "\<x[0-9A-F]\{2\}\>"
 syntax match atto8Directive "@\<\(const\|dyn\|org\|err\|[0-9A-F]\{2\}\)\>"

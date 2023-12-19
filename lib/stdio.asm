@@ -12,7 +12,7 @@ fgets! # fgets(stream, *str)
     ld1 sta
   inc .for_c !bcc pop pop
 gets! !stdin !fgets # gets(*str)
-fgets.def! fgets: swp ld2 swp !fgets !rt1 # fgets(stream, *str)
+fgets.def! fgets: sw2 swp !fgets !rt0 # fgets(stream, *str)
 gets.def! gets: swp !gets !ret # gets(*str)
 
 gets.min! # gets.min(*str)
@@ -35,7 +35,7 @@ fputs! # fputs(stream, *str)
     ld2 !fputc
   inc .for_c !bcc pop pop
 puts! !stdout !fputs # puts(*str)
-fputs.def! fputs: swp ld2 swp !fputs !rt1 # fputs(stream, *str)
+fputs.def! fputs: sw2 swp !fputs !rt0 # fputs(stream, *str)
 puts.def! puts: swp !puts !ret # puts(*str)
 
 puts.min! # puts.min(*str)

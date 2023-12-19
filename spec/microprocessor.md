@@ -84,6 +84,7 @@ The instruction set of the Atto-8 microprocessor adheres to the Atto-8 microarch
 | `add SIZE`  | `14 + SIZE`                     |
 | `sub SIZE`  | `14 + SIZE`                     |
 | `iff SIZE`  | `13 + SIZE`                     |
+| `swp SIZE`  | `13 + SIZE`                     |
 | `rot SIZE`  | `18 + SIZE + *SP * (18 + SIZE)` |
 | `orr SIZE`  | `14 + SIZE`                     |
 | `and SIZE`  | `11 + SIZE`                     |
@@ -104,11 +105,10 @@ The instruction set of the Atto-8 microprocessor adheres to the Atto-8 microarch
 | `sti`       | `6`                             |
 | `lds`       | `10`                            |
 | `sts`       | `5`                             |
-| `nop`       | `3`                             |
 | `clc`       | `6`                             |
 | `sec`       | `6`                             |
 | `flc`       | `6`                             |
-| `swp`       | `15`                            |
+| `nop`       | `3`                             |
 | `pop`       | `5`                             |
 | `phn NIMM`  | `10`                            |
 

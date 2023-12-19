@@ -27,7 +27,7 @@ main!
   got_line_feed:
     # print carriage return then print and reset status
     !char.carriage_return !putc
-    ld1 !putc !status_success st1
+    !status_success sw2 !putc
 
     :stack for_item:
       # print `stack[item]` as decimal
@@ -89,6 +89,7 @@ main!
 
   got_other:
     # no match; report syntax error
+    pop x02 ad4 pop
     !status_syntax st1
   :loop !jmp
 

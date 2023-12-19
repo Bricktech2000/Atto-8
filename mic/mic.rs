@@ -103,7 +103,6 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
   let nand_al = ControlWord! {nand_data, data_al};
   let cinsum_spxl = ControlWord! {set_cin, sum_data, data_sp, data_al, data_xl};
   let cinsum_alxl = ControlWord! {set_cin, sum_data, data_al, data_xl};
-  let cinsum_al = ControlWord! {set_cin, sum_data, data_al};
   let nand_zlcf = ControlWord! {nand_data, data_zl, data_cf};
   let cinsum_xlcf = ControlWord! {set_cin, sum_data, data_xl, data_cf};
   let sum_xlcf = ControlWord! {sum_data, data_xl, data_cf};
@@ -146,6 +145,7 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                   Instruction::Psh(_imm) => {
                     unreachable!()
                   }
+
                   Instruction::Add(size) => {
                     seq![
                       fetch, //
@@ -205,6 +205,22 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                       },
                       cinsum_mem, // XL -> *AL
                       clr_yl
+                    ]
+                  }
+
+                  Instruction::Swp(size) => {
+                    seq![
+                      fetch, //
+                      sp_alxl,
+                      mem_zl,                           // *SP -> ZL
+                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
+                      mem_xl,                           // *AL -> XL
+                      set_yl,
+                      nand_zl,
+                      nand_mem, // ZL -> *AL
+                      sp_al,
+                      cinsum_mem, // XL -> *SP
+                      clr_yl      //
                     ]
                   }
 
@@ -461,10 +477,6 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Nop => {
-                    seq![fetch]
-                  }
-
                   Instruction::Clc => {
                     seq![fetch, clr_cf]
                   }
@@ -478,15 +490,8 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                     false => seq![fetch, set_cf],
                   },
 
-                  Instruction::Swp => {
-                    seq![
-                      fetch, //
-                      sp_al, mem_zl, // *SP -> ZL
-                      sp_xl, cinsum_al, mem_xl, // *(SP + 1) -> *XL
-                      set_yl, nand_zl, nand_mem, // ZL -> *(SP + 1)
-                      sp_al, cinsum_mem, // XL -> *SP
-                      clr_yl      //
-                    ]
+                  Instruction::Nop => {
+                    seq![fetch]
                   }
 
                   Instruction::Pop => {
