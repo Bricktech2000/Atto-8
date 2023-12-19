@@ -13,8 +13,8 @@ main!
 
   x07 !u8 # paddle_a
   x07 !u8 # paddle_b
-  x70 !u4f4 # x_pos
-  x08 !i4f4 # x_vel
+  xF0 !u4f4 # x_pos
+  xF8 !i4f4 # x_vel
   x70 !u4f4 # y_pos
   x03 !i4f4 # y_vel
 
@@ -50,7 +50,7 @@ main!
         # paddle_pos = paddle ? paddle_a : paddle_b
         !z !u8.ld7 !u8.ld7 iff
           # get user input and conditionally swap nibbles depending on `paddle`
-          !getc x04 x00 iff rot
+          !getc x00 x04 iff rot
           # compute `paddle_vel` based on user input
           x00 # default: `0x00`
             !primary_up xo2 xFF iff !primary_up xo2
@@ -80,7 +80,7 @@ main!
       !u8u8.ld0 !set_bit
       x08 magic_label: !delay
     # erase pixel at bit_addr and consume bit_addr
-    !clear_bit
+    !clear_bit clc
   :loop !jmp
 
   game_over:
