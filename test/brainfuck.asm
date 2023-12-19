@@ -51,12 +51,13 @@ compiler!
     !char.pop !getc !char.check_null :loop !bcc !char.pop
 
     # compute and substitute sentinel values
-    :code_buffer for_b:
-      ld0 lda :default
+    :code_buffer for_b: inc
+      ld0 lda :for_b
         ![_sentinel xo2 :[_sentinel iff ![_sentinel xo2
         !]_sentinel xo2 :]_sentinel iff !]_sentinel xo2
-      st0 !jmp default:
-    inc :for_b !bcc pop
+        !char.null xo2 :break iff !char.null xo2
+      st0 !jmp
+    break: pop
 
     !char.carriage_return !putc
     !char.line_feed !putc
@@ -70,14 +71,14 @@ compiler!
       ld0 x03 add ld1 dec sta
       # save current address onto the stack for `:]_sentinel` later
       ld0
-    :default !jmp
+    :for_b !jmp
 
     ]_sentinel:
       # compute offset to previous current address and save into memory contaning `!]_sentinel`
       ld1 dec dec ld1 sta
       # pop previous current address from stack and store into it an offset to current address
       swp ld1 inc inc swp sta
-    :default !jmp
+    :for_b !jmp
 
   # expects `*head` on top of the stack, followed by `head`, followed by `!stdout`
   # top of stack is written to `*head` only when `'<'` or `'>'` are encountered
@@ -90,8 +91,7 @@ compiler!
   .: ld0 ld3 !fputc !char.null
   ,: ld2 !fgetc st0 !char.null
   [: !z !pad_sentinel ![_sentinel iff !jmp !char.null
-  ]: !]_sentinel !jmp !char.null
-  _: !char.null
+  ]: !]_sentinel !jmp _: !char.null
 
 [_sentinel! @FF
 ]_sentinel! @FE
