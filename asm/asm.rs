@@ -53,6 +53,7 @@ fn main() {
 #[derive(Clone, Eq, PartialEq)]
 enum Root {
   Instruction(Instruction),
+  Conditional(Node, Node),
   LabelDef(Label),
   Node(Node),
   Opcode(u8),
@@ -450,124 +451,154 @@ fn assemble(
   let mut instructions: Vec<(Pos, Result<Instruction, u8>)>;
   let mut allocation_sizes: HashMap<Node, usize> = HashMap::new();
 
+  macro_rules! allocation_size {
+    ($node:expr) => {
+      allocation_sizes.get($node).copied().unwrap_or(1)
+    };
+  }
+
   'bruteforce: loop {
     let mut location_counter: usize = 0;
     let mut label_definitions: HashMap<Label, u8> = HashMap::new();
     let mut unevaluated_nodes: HashMap<u8, (Pos, Node)> = HashMap::new();
 
     instructions = roots
-      .clone()
-      .into_iter()
-      .flat_map(|(pos, root)| match root {
-        Root::Instruction(instruction) | Root::Dyn(Some(instruction)) => {
-          let instructions_ = vec![(pos, Ok(instruction))];
-          location_counter += instructions_.len();
-          instructions_
-        }
+      .iter()
+      .flat_map(|(pos, root)| {
+        let instructions = match root {
+          Root::Instruction(instruction) | Root::Dyn(Some(instruction)) => {
+            vec![(pos.clone(), Ok(instruction.clone()))]
+          }
 
-        Root::Node(node) => match resolve_node_value(&node, &label_definitions) {
-          Ok(value) => {
-            let instructions_ = build_push_instruction(value, &pos)
+          Root::Conditional(node1, node2) => {
+            let mut node1 = node1.clone();
+            let mut node2 = node2.clone();
+            let mut instructions = vec![];
+            if allocation_size!(&node1) > 1 && allocation_size!(&node2) > 1 {
+              // if both arguments of a conditional can only be pushed indirectly, negate both nodes
+              // so they can both be pushed directly, then negate result of the conditional itself.
+              // this saves one byte over emitting as-is
+              node1 = Node::Sub(Box::new(node1), Box::new(Node::Value(0x00)));
+              node2 = Node::Sub(Box::new(node2), Box::new(Node::Value(0x00)));
+              instructions.extend(vec![
+                (pos.clone(), Ok(Instruction::Nop));
+                allocation_size!(&node1) + allocation_size!(&node2)
+              ]);
+              instructions.extend(vec![
+                (pos.clone(), Ok(Instruction::Iff(0x01))),
+                (pos.clone(), Ok(Instruction::Neg)),
+              ]);
+            } else {
+              // else, if at least one argument can be pushed directly, emit as-is.
+              // there is no byte to be saved here
+              instructions.extend(vec![
+                (pos.clone(), Ok(Instruction::Nop));
+                allocation_size!(&node1) + allocation_size!(&node2)
+              ]);
+              instructions.extend(vec![(pos.clone(), Ok(Instruction::Iff(0x01)))]);
+            }
+            unevaluated_nodes.insert(location_counter as u8, (pos.clone(), node1.clone()));
+            unevaluated_nodes.insert(
+              (location_counter + allocation_size!(&node1)) as u8,
+              (pos.clone(), node2.clone()),
+            );
+            instructions
+          }
+
+          Root::Node(node) => match resolve_node_value(&node, &label_definitions) {
+            Ok(value) => build_push_instruction(value, &pos)
               .into_iter()
               .map(|(pos, instruction)| (pos, Ok(instruction)))
-              .collect::<Vec<_>>();
-            location_counter += instructions_.len();
-            instructions_
+              .collect::<Vec<_>>(),
+            Err(_) => {
+              unevaluated_nodes.insert(location_counter as u8, (pos.clone(), node.clone()));
+              vec![(pos.clone(), Ok(Instruction::Nop)); allocation_size!(&node)]
+            }
+          },
+
+          Root::Opcode(opcode) => {
+            vec![(pos.clone(), Err(opcode.clone()))]
           }
-          Err(_) => {
-            let instructions_ = vec![
-              (pos.clone(), Ok(Instruction::Nop));
-              allocation_sizes.get(&node).copied().unwrap_or(1)
-            ];
-            unevaluated_nodes.insert(location_counter as u8, (pos, node));
-            location_counter += instructions_.len();
-            instructions_
-          }
-        },
 
-        Root::Opcode(opcode) => {
-          let instructions_ = vec![(pos, Err(opcode))];
-          location_counter += instructions_.len();
-          instructions_
-        }
+          Root::LabelDef(Label::Local(_, None)) => panic!("Local label has no scope specified"),
 
-        Root::LabelDef(Label::Local(_, None)) => panic!("Local label has no scope specified"),
-
-        Root::LabelDef(label) => {
-          if label_definitions.contains_key(&label) {
-            errors.push((
-              pos,
-              Error(format!("Duplicate label definition `{}`", label)),
-            ));
-          }
-          label_definitions.insert(label, location_counter as u8);
-          vec![]
-        }
-
-        Root::Org(Some(node)) => match resolve_node_value(&node, &label_definitions) {
-          Ok(value) => {
-            if value as usize >= location_counter {
-              let difference = value as usize - location_counter;
-              location_counter += difference;
-              vec![(pos, Err(0x00)); difference as usize]
-            } else {
+          Root::LabelDef(label) => {
+            if label_definitions.contains_key(&label) {
               errors.push((
-                pos,
+                pos.clone(),
+                Error(format!("Duplicate label definition `{}`", label)),
+              ));
+            }
+            label_definitions.insert(label.clone(), location_counter as u8);
+            vec![]
+          }
+
+          Root::Org(Some(node)) => match resolve_node_value(&node, &label_definitions) {
+            Ok(value) => match (value as usize).checked_sub(location_counter) {
+              Some(padding) => {
+                vec![(pos.clone(), Err(0x00)); padding]
+              }
+              None => {
+                errors.push((
+                  pos.clone(),
+                  Error(format!(
+                    "`{}` cannot move location counter backward from `{:02X}` to `{:02X}`",
+                    Token::AtOrg,
+                    location_counter,
+                    value
+                  )),
+                ));
+                vec![]
+              }
+            },
+            Err(label) => {
+              errors.push((
+                pos.clone(),
                 Error(format!(
-                  "`{}` cannot move location counter backward from `{:02X}` to `{:02X}`",
+                  "`{}` argument contains currently unresolved label `{}`",
                   Token::AtOrg,
-                  location_counter,
-                  value
+                  label
                 )),
               ));
               vec![]
             }
-          }
-          Err(label) => {
+          },
+
+          Root::Org(None) => {
             errors.push((
-              pos,
+              pos.clone(),
               Error(format!(
-                "`{}` argument contains currently unresolved label `{}`",
+                "`{}` argument could not be reduced to a constant expression",
                 Token::AtOrg,
-                label
               )),
             ));
             vec![]
           }
-        },
 
-        Root::Org(None) => {
-          errors.push((
-            pos,
-            Error(format!(
-              "`{}` argument could not be reduced to a constant expression",
-              Token::AtOrg,
-            )),
-          ));
-          vec![]
-        }
+          Root::Const => {
+            errors.push((
+              pos.clone(),
+              Error(format!(
+                "`{}` argument could not be reduced to a constant expression",
+                Token::AtConst,
+              )),
+            ));
+            vec![]
+          }
 
-        Root::Const => {
-          errors.push((
-            pos,
-            Error(format!(
-              "`{}` argument could not be reduced to a constant expression",
-              Token::AtConst,
-            )),
-          ));
-          vec![]
-        }
-
-        Root::Dyn(None) => {
-          errors.push((
-            pos,
-            Error(format!(
-              "`{}` argument could not be reduced to an instruction",
-              Token::AtDyn,
-            )),
-          ));
-          vec![]
-        }
+          Root::Dyn(None) => {
+            errors.push((
+              pos.clone(),
+              Error(format!(
+                "`{}` argument could not be reduced to an instruction",
+                Token::AtDyn,
+              )),
+            ));
+            vec![]
+          }
+        };
+        location_counter += instructions.len();
+        instructions
       })
       .collect();
 
@@ -585,13 +616,13 @@ fn assemble(
         // if the evaluated node doesn't fit in the allocated memory, note down the right amount of
         // memory to allocate on the next iteration of `'bruteforce` and try again
 
-        let instructions_ = build_push_instruction(value, &pos);
-        if instructions_.len() > allocation_sizes.get(&node).copied().unwrap_or(1) {
-          allocation_sizes.insert(node.clone(), instructions_.len());
+        let push_instructions = build_push_instruction(value, &pos);
+        if push_instructions.len() > allocation_size!(&node) {
+          allocation_sizes.insert(node.clone(), push_instructions.len());
           break 'poke;
         }
 
-        for (index, (pos, instruction)) in instructions_.into_iter().enumerate() {
+        for (index, (pos, instruction)) in push_instructions.into_iter().enumerate() {
           instructions[*location_counter as usize + index] = (pos, Ok(instruction));
         }
       }
@@ -751,6 +782,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
         Instruction::Pop => OpType::PopOp,
         Instruction::Phn(_nimm) => OpType::PushOp,
       },
+      Root::Conditional(_, _) => OpType::PushOp,
       Root::LabelDef(_) => OpType::Impure,
       Root::Node(_) => OpType::PushOp,
       Root::Opcode(_) => OpType::Impure,
@@ -940,6 +972,11 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
 
     // length 3
     roots = match_replace(&roots, |window| match window {
+      // `Conditional`s
+      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Iff(0x01))] => {
+        Some(vec![Root::Conditional(node1.clone(), node2.clone())])
+      }
+
       // `Node`s
       [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Add(0x01))] => {
         Some(vec![Root::Node(Node::Add(
@@ -1210,6 +1247,16 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
           Some(vec![Root::Node(node2.clone()), and.clone()])
         }
 
+        // `Conditional`s
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Iff(0x02))]
+          if op_type(push_op) == OpType::PushOp =>
+        {
+          Some(vec![
+            Root::Conditional(node1.clone(), node2.clone()),
+            push_op.clone(),
+          ])
+        }
+
         // `Node`s
         [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Add(0x02))]
           if op_type(push_op) == OpType::PushOp =>
@@ -1342,6 +1389,20 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
 
     // length 6
     roots = match_replace(&roots, |window| match window {
+      // `Conditional`s
+      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Iff(0x04))]
+        if op_type(push_op1) == OpType::PushOp
+          && op_type(push_op2) == OpType::PushOp
+          && op_type(push_op3) == OpType::PushOp =>
+      {
+        Some(vec![
+          Root::Conditional(node1.clone(), node2.clone()),
+          push_op1.clone(),
+          push_op2.clone(),
+          push_op3.clone(),
+        ])
+      }
+
       // `Node`s
       [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Add(0x04))]
         if op_type(push_op1) == OpType::PushOp
