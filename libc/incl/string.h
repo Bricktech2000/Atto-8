@@ -11,9 +11,10 @@
 
 void strcat(char_p dst, c_char_p src); // TODO should return char*
 char_p strchr(c_char_p str, int chr);
-size_t strlen(c_char_p s);
+size_t strlen(c_char_p str);
 void strcpy(char_p dst, c_char_p src); // TODO should return char*
 int strcmp(c_char_p str1, c_char_p str2);
+char_p strend(c_char_p str); // TODO nonstandard
 
 void_p memchr(void_p ptr, int chr, size_t len);
 void memset(void_p ptr, int chr, size_t len);      // TODO should return void*

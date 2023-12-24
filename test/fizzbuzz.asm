@@ -16,7 +16,7 @@ main! !nop
   # assembler generate a push instruction for the address of `label`.
   # the opcode for pushing a byte `b` is `b` if `b < 0x80`, and so
   # we must ensure all labels below are less than `0x80`
-  str_num: @00 @00 @00 @00 # enough for null-terminated `"255"`
+  str_num: @00 @00 @00 @00 # enough for `"255\0"`
   str_fizz: @46 @69 @7A @7A @00
   str_fizzbuzz: @46 @69 @7A @7A # fall through to `str_buzz`
   str_buzz: @42 @75 @7A @7A @00

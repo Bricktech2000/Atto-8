@@ -1,9 +1,7 @@
 strcat.def!
   strcat: # strcat(*dst, *str)
-    # src += strlen(src)
-    ld1 for_c.
-      ld0 lda !char.is_null
-    inc .for_c !bcc dec st1
+    # seek to end of dst
+    ld1 !strend st1
     # copy src to dst
     !strcpy.def
     # prevent unused label warning
@@ -39,7 +37,7 @@ strcpy.def!
   # return*
   !rt2
 strcmp.def!
-  strcmp: clc # cpm = strcmp(*str1, *str2)
+  strcmp: clc # cmp = strcmp(*str1, *str2)
     ld2 ld2 for_c.
       # break if *str1 != *str2
       ld1 lda ld1 lda sub !z st4 .break !bcc
@@ -48,6 +46,17 @@ strcmp.def!
     inc swp inc swp @dyn .for_c !bcc break. pop pop
   # return* *str1 - *str2
   !rt1
+strend.def!
+  strend: # *ptr = strend(*str)
+    # str += strlen(str)
+    ld1 !strend st1
+  # return* ptr
+  !rt0
+strend! # *ptr = strend(*str)
+  # str += strlen(str)
+  for_c.
+    ld0 lda !char.is_null
+  inc .for_c !bcc dec
 
 memchr.def!
   memchr: clc # *ptr = memchr(*ptr, char, len)
@@ -78,7 +87,7 @@ memcpy.def!
     # prevent unused label warning
     :memmove pop
 memcmp.def!
-  memcmp: clc # cpm = memcmp(*ptr1, *ptr2, len)
+  memcmp: clc # cmp = memcmp(*ptr1, *ptr2, len)
     ld3 for_i. dec
       # break if *ptr1 != *ptr2
       ld3 ld1 add lda

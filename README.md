@@ -55,6 +55,7 @@ python3 test.py mandelbrot.asm asm emu
 python3 test.py hello\ world.asm asm emu
 python3 test.py bell\ pattern.asm asm emu
 python3 test.py color\ maze.asm asm emu
+python3 test.py char\ code.asm asm emu
 python3 test.py grayscale.asm asm emu
 python3 test.py fibonacci.asm asm emu
 python3 test.py fizzbuzz.asm asm emu
@@ -66,10 +67,10 @@ python3 test.py rot13.asm asm emu
 python3 test.py simon.asm asm emu
 
 # test programs
-python3 test.py stdin.asm asm emu
 python3 test.py sorting.asm asm emu
 python3 test.py strings.asm asm emu
 python3 test.py allocation.asm asm emu
+python3 test.py mock\ shell.asm asm emu
 python3 test.py multiplication.asm asm emu
 python3 test.py addition.hex enc emu
 python3 test.py checkerboard.hex enc emu

@@ -54,3 +54,68 @@ stack_puts! # stack_puts(str[])
 # inputs and pushes in reverse order a null-terminated string onto the stack
 stack_gets! # str[] = stack_gets()
   !char.null for_c. !getc !char.check_null .for_c !bcc !char.pop
+
+
+# reads into `dst` and echoes to `stdout` characters from `stdin` until `'\n'` is
+# encountered. supports `'\b'`. supports placeholder text through `end` parameter:
+# - `:buf :buf :getline !call` (where `dst == end`) does not use placeholder text
+# - `:buf !puts :buf :buf !strend :getline !call` uses `:buf` as placeholder text
+getline.def!
+    got_other.
+      # increment by `2` because `.got_backspace` will decrement by `1`
+      # *end = char; end += 2
+      ld2 x02 ad4
+      !char.ld1 swp !char.sta # bleed `char`
+    got_backspace.
+      # `char` is either `'\b'` or `other` from above
+      # putc(dst == end ? 0 : char)
+      # end -= dst == end ? o : 1
+      ld3 ld3 !e iff !putc xFF ad2 @dyn
+      # putc(' ')
+      !char.space !putc !char.backspace # bleed `'\b'`
+    got_null.
+      # `char` is either `'\0'` or `'\b'` from above
+      # putc(char)
+      !putc
+  getline: # getline(*dst, *end)
+      !getc
+    .got_other
+      !char.line_feed xo2 .got_line_feed iff !char.line_feed xo2
+      !char.backspace xo2 .got_backspace iff !char.backspace xo2
+      !char.null xo2 .got_null iff !char.null xo2
+    !jmp
+    got_line_feed.
+      # pop `char`, which is a `'\n'`
+      !char.pop
+      # *end = '\0'
+      st1 !char.null swp sta
+  # return*
+  !ret
+
+# identical to `getline`, but does not echo to `stdout`
+getpass.def!
+    got_other.
+      # increment by `2` because `.got_backspace` will decrement by `1`
+      # *end = char; end += 2
+      ld2 !char.sta
+      x02 ad2 !char.null # bleed `'\0'`
+    got_backspace.
+      # end -= dst == end ? 0 : 1
+      ld3 ld3 !e xFF ad4 @dyn pop # bleed `char`
+    got_null.
+      # pop `char`
+      !char.pop
+  getpass: # getpass(*dst, *end)
+      !getc
+    .got_other
+      !char.line_feed xo2 .got_line_feed iff !char.line_feed xo2
+      !char.backspace xo2 .got_backspace iff !char.backspace xo2
+      !char.null xo2 .got_null iff !char.null xo2
+    !jmp
+    got_line_feed.
+      # pop `char`, which is a `'\n'`
+      !char.pop
+      # *end = '\0'
+      st1 !char.null swp sta
+  # return*
+  !ret

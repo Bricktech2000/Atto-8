@@ -5,12 +5,12 @@
 
 main!
   x63 :str_abcdef :strchr !call :strlen !call # 0x04
-  # xCC :str_abcdef :strchr !call # 0x00
+  xCC :str_abcdef :strchr !call # 0x00
   # :str_abc :strlen !call # 0x03
   # :str_abcdef :strlen !call # 0x06
   :str_abc :str_buf :strcpy !call :str_buf :strlen !call # 0x03
   # :str_ac :str_abcdef :strcat !call :str_abcdef :strlen !call # 0x08
-  # :str_ac :str_ab :strcmp !call # 0x01
+  :str_ac :str_ab :strcmp !call # 0x01
   :str_ab :str_abc :strcmp !call # 0x9D
   :str_abc :str_abc :strcmp !call # 0x00
   x06 x63 :str_abcdef :memchr !call :strlen !call # 0x04
