@@ -88,7 +88,7 @@ pub enum Type {
   Array(Box<Type>),
   Structure(Vec<Object>),
   Union(Vec<Object>),
-  Function(Box<Type>, Vec<Type>),
+  Function(Box<Type>, Vec<Type>, bool),
   Pointer(Box<Type>),
 }
 
@@ -103,10 +103,10 @@ pub enum Global {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct FunctionDeclaration(bool, Object, Vec<Object>);
+pub struct FunctionDeclaration(bool, Object, Vec<Object>, bool);
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct FunctionDefinition(bool, Object, Vec<Object>, Statement);
+pub struct FunctionDefinition(bool, Object, Vec<Object>, bool, Statement);
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Expression {

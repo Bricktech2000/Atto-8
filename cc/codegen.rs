@@ -38,7 +38,7 @@ impl StackEntry {
   pub fn size(&self) -> usize {
     match self {
       StackEntry::ProgramBoundary => 0,
-      StackEntry::FunctionBoundary(_inline, type_) => type_.size(),
+      StackEntry::FunctionBoundary(_is_inline, type_) => type_.size(),
       StackEntry::LoopBoundary => 0,
       StackEntry::BlockBoundary => 0,
       StackEntry::Temporary(type_) => type_.size(),
@@ -66,7 +66,7 @@ impl Type {
         .map(|Object(type_, _name)| type_.size())
         .max()
         .unwrap_or(0),
-      Type::Function(_, _) => 1,
+      Type::Function(_, _, _) => 1,
       Type::Pointer(_) => 1,
     }
   }
@@ -158,7 +158,7 @@ fn program(
               !state
                 .declarations
                 .get(dependency.as_str())
-                .map(|(inline, _type)| *inline)
+                .map(|(is_inline, _type)| *is_inline)
                 .unwrap_or(false)
             })
             .flat_map(|dependency| {
@@ -191,21 +191,28 @@ fn function_declaration(
   errors: &mut Vec<(Pos, Error)>,
 ) -> Vec<Result<Token, String>> {
   match function_declaration {
-    FunctionDeclaration(inline, Object(return_type, name), parameters) => {
-      let parameter_types = parameters
-        .iter()
-        .map(|Object(type_, _name)| type_.clone())
-        .collect::<Vec<Type>>();
+    FunctionDeclaration(is_inline, Object(return_type, name), parameters, is_variadic) => {
+      let parameter_types = match parameters[..] {
+        [Object(Type::Void, _)] => vec![], // for `T func(void)`-style declarations
+        _ => parameters
+          .iter()
+          .map(|Object(type_, _name)| type_.clone())
+          .collect::<Vec<Type>>(),
+      };
 
       state
         .declarations
         .entry(name.clone())
-        .and_modify(
-          |(existing_inline, existing_type)| match (existing_inline, existing_type) {
-            (existing_inline, Type::Function(existing_return_type, existing_parameter_types)) => {
-              if *existing_inline != inline
+        .and_modify(|(existing_is_inline, existing_type)| {
+          match (existing_is_inline, existing_type) {
+            (
+              existing_is_inline,
+              Type::Function(existing_return_type, existing_parameter_types, existing_is_variadic),
+            ) => {
+              if *existing_is_inline != is_inline
                 || **existing_return_type != return_type
                 || *existing_parameter_types != parameter_types
+                || *existing_is_variadic != is_variadic
               {
                 errors.push((
                   Pos("pos".to_string(), 0),
@@ -217,11 +224,11 @@ fn function_declaration(
               }
             }
             _ => (),
-          },
-        )
+          }
+        })
         .or_insert((
-          inline,
-          Type::Function(Box::new(return_type.clone()), parameter_types),
+          is_inline,
+          Type::Function(Box::new(return_type.clone()), parameter_types, is_variadic),
         ));
 
       vec![]
@@ -235,14 +242,15 @@ fn function_definition(
   errors: &mut Vec<(Pos, Error)>,
 ) -> Vec<Result<Token, String>> {
   match function_definition {
-    FunctionDefinition(inline, Object(return_type, name), parameters, body) => {
+    FunctionDefinition(is_inline, Object(return_type, name), parameters, is_variadic, body) => {
       // TODO function parameters
 
       let tokens = codegen::function_declaration(
         FunctionDeclaration(
-          inline,
+          is_inline,
           Object(return_type.clone(), name.clone()),
           parameters.clone(),
+          is_variadic,
         ),
         state,
         errors,
@@ -264,7 +272,7 @@ fn function_definition(
 
       state
         .stack
-        .push(StackEntry::FunctionBoundary(inline, return_type.clone()));
+        .push(StackEntry::FunctionBoundary(is_inline, return_type.clone()));
 
       match state.global.replace(name.clone()) {
         None => (),
@@ -273,7 +281,7 @@ fn function_definition(
 
       let tokens = std::iter::empty()
         .chain(tokens)
-        .chain(match inline {
+        .chain(match is_inline {
           true => vec![Ok(Token::MacroDef(Macro(format!("{}", name.clone()))))],
           false => vec![
             Ok(Token::MacroDef(Macro(format!("{}.def", name.clone())))),
@@ -290,8 +298,8 @@ fn function_definition(
       }
 
       match state.stack.pop() {
-        Some(StackEntry::FunctionBoundary(inline_, type_))
-          if inline_ == inline && type_ == return_type => {}
+        Some(StackEntry::FunctionBoundary(is_inline_, type_))
+          if is_inline_ == is_inline && type_ == return_type => {}
         _ => panic!("Expected function boundary"),
       }
 
@@ -424,12 +432,12 @@ fn return_statement(
   let ret_macro = Macro("ret".to_string());
 
   // TODO pop off items from stack until we reach a function boundary
-  let (inline, return_type) = state
+  let (is_inline, return_type) = state
     .stack
     .iter()
     .rev()
     .find_map(|stack_entry| match stack_entry {
-      StackEntry::FunctionBoundary(inline, return_type) => Some((inline, return_type)),
+      StackEntry::FunctionBoundary(is_inline, return_type) => Some((is_inline, return_type)),
       _ => None,
     })
     .unwrap_or_else(|| {
@@ -440,7 +448,7 @@ fn return_statement(
       (&false, &Type::Void)
     });
 
-  let inline = *inline;
+  let is_inline = *is_inline;
 
   let (type_, tokens) = match expression {
     Some(expression) => codegen::expression(
@@ -451,7 +459,7 @@ fn return_statement(
     None => (Type::Void, vec![]),
   };
 
-  match inline {
+  match is_inline {
     true => match type_ {
       type_ if type_.size() == 0 => std::iter::empty().chain(tokens).collect(),
       type_ if type_.size() == 1 => std::iter::empty().chain(tokens).collect(),
@@ -1372,8 +1380,10 @@ fn string_literal_expression(
     value
       .chars()
       .filter_map(|c| match c {
-        'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '-' => Some(c),
+        // see `misc/atto-8.vim`
         ' ' => Some('_'),
+        '!' | '.' | ':' | '@' => None,
+        '\x20'..='\x7e' => Some(c),
         _ => None,
       })
       .collect::<String>(),
@@ -1408,7 +1418,7 @@ fn function_call_expression(
   let call_macro = Macro("call".to_string());
 
   // TODO assumes all functions are globals
-  let (inline, object_type) = state.declarations.get(&name).unwrap_or_else(|| {
+  let (is_inline, object_type) = state.declarations.get(&name).unwrap_or_else(|| {
     errors.push((
       Pos("pos".to_string(), 0),
       Error(format!("Unresolved identifier `{}`", name)),
@@ -1416,18 +1426,44 @@ fn function_call_expression(
     &(false, Type::Void)
   });
 
-  let inline = *inline;
+  let is_inline = *is_inline;
 
-  let (return_type, parameter_types) = match object_type {
-    Type::Function(return_type, parameter_types) => (return_type.clone(), parameter_types.clone()),
+  let (return_type, parameter_types, is_variadic) = match object_type {
+    Type::Function(return_type, parameter_types, is_variadic) => {
+      (return_type.clone(), parameter_types.clone(), *is_variadic)
+    }
     _ => {
       errors.push((
         Pos("pos".to_string(), 0),
         Error(format!("`{}` is not a function", name)),
       ));
-      (Box::new(Type::Void), vec![])
+      (Box::new(Type::Void), vec![], true)
     }
   };
+
+  if is_variadic && arguments.len() < parameter_types.len() {
+    errors.push((
+      Pos("pos".to_string(), 0),
+      Error(format!(
+        "Expected at least {} arguments to variadic function `{}`, got {}",
+        parameter_types.len(),
+        name,
+        arguments.len()
+      )),
+    ));
+  }
+
+  if !is_variadic && arguments.len() != parameter_types.len() {
+    errors.push((
+      Pos("pos".to_string(), 0),
+      Error(format!(
+        "Expected {} arguments to function `{}`, got {}",
+        parameter_types.len(),
+        name,
+        arguments.len()
+      )),
+    ));
+  }
 
   // TODO assumes all functions are globals
   state
@@ -1444,21 +1480,31 @@ fn function_call_expression(
   (
     *return_type,
     std::iter::empty()
-      .chain(
-        arguments
-          .into_iter()
-          .zip(parameter_types.into_iter())
+      .chain(match is_variadic {
+        true => arguments
+          .iter()
+          .skip(parameter_types.len())
           .rev()
-          .flat_map(|(argument, parameter_type)| {
-            let (_type, tokens) = codegen::expression(
-              Expression::Cast(parameter_type, Box::new(argument)),
-              state,
-              errors,
-            );
+          .flat_map(|argument| {
+            let (_type, tokens) = codegen::expression(argument.clone(), state, errors);
             tokens
-          }),
-      )
-      .chain(match inline {
+          })
+          .collect(),
+        false => vec![],
+      })
+      .collect::<Vec<_>>()
+      .into_iter()
+      .chain(arguments.iter().zip(parameter_types.iter()).rev().flat_map(
+        |(argument, parameter_type)| {
+          let (_type, tokens) = codegen::expression(
+            Expression::Cast(parameter_type.clone(), Box::new(argument.clone())),
+            state,
+            errors,
+          );
+          tokens
+        },
+      ))
+      .chain(match is_inline {
         true => vec![Ok(Token::MacroRef(Macro(format!("{}", name.clone()))))],
         false => vec![
           Ok(Token::LabelRef(Label::Global(format!("{}", name.clone())))),

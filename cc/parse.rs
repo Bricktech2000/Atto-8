@@ -253,19 +253,29 @@ pub fn function_declaration() -> Parser<FunctionDeclaration> {
   // TODO does not obey grammar
   Parser::return_(())
     .and_then(|_| parse::maybe(parse::whitespaces_string("inline")))
-    .and_then(|inline| {
+    .and_then(|is_inline| {
       parse::type_name().and_then(move |type_name| {
         parse::identifier().and_then(move |identifier| {
           Parser::return_(())
             .and_then(|_| parse::whitespaces_char('('))
             .and_then(|_| parse::parameter_list())
             .and_then(move |parameters| {
-              Parser::return_(())
-                .and_then(|_| parse::whitespaces_char(')'))
-                .and_then(|_| parse::whitespaces_char(';'))
-                .map(move |_| {
-                  FunctionDeclaration(inline.is_some(), Object(type_name, identifier), parameters)
-                })
+              parse::maybe(
+                parse::whitespaces_char(',').and_then(|_| parse::whitespaces_string("...")),
+              )
+              .and_then(move |is_variadic| {
+                Parser::return_(())
+                  .and_then(|_| parse::whitespaces_char(')'))
+                  .and_then(|_| parse::whitespaces_char(';'))
+                  .map(move |_| {
+                    FunctionDeclaration(
+                      is_inline.is_some(),
+                      Object(type_name, identifier),
+                      parameters,
+                      is_variadic.is_some(),
+                    )
+                  })
+              })
             })
         })
       })
@@ -277,24 +287,30 @@ pub fn function_definition() -> Parser<FunctionDefinition> {
   // TODO does not obey grammar
   Parser::return_(())
     .and_then(|_| parse::maybe(parse::whitespaces_string("inline")))
-    .and_then(|inline| {
+    .and_then(|is_inline| {
       parse::type_name().and_then(move |type_name| {
         parse::identifier().and_then(move |identifier| {
           Parser::return_(())
             .and_then(|_| parse::whitespaces_char('('))
             .and_then(|_| parse::parameter_list())
             .and_then(move |parameters| {
-              Parser::return_(())
-                .and_then(|_| parse::whitespaces_char(')'))
-                .and_then(|_| parse::statement())
-                .map(move |statement| {
-                  FunctionDefinition(
-                    inline.is_some(),
-                    Object(type_name, identifier),
-                    parameters,
-                    statement,
-                  )
-                })
+              parse::maybe(
+                parse::whitespaces_char(',').and_then(|_| parse::whitespaces_string("...")),
+              )
+              .and_then(move |is_variadic| {
+                Parser::return_(())
+                  .and_then(|_| parse::whitespaces_char(')'))
+                  .and_then(|_| parse::statement())
+                  .map(move |statement| {
+                    FunctionDefinition(
+                      is_inline.is_some(),
+                      Object(type_name, identifier),
+                      parameters,
+                      is_variadic.is_some(),
+                      statement,
+                    )
+                  })
+              })
             })
         })
       })
@@ -316,26 +332,36 @@ pub fn parameter_list() -> Parser<Vec<Object>> {
 
 pub fn type_name() -> Parser<Type> {
   // TODO does not obey grammar
-  Parser::error(Error(format!("")))
-    .or_else(|_| {
-      parse::whitespaces_string("long long int")
-        .or_else(|_| parse::whitespaces_string("long long"))
-        .map(|_| Type::LongLong)
+  Parser::return_(())
+    .and_then(|_| parse::maybe(parse::whitespaces_string("const")))
+    .and_then(|_const| {
+      Parser::error(Error(format!("")))
+        .or_else(|_| {
+          parse::whitespaces_string("long long int")
+            .or_else(|_| parse::whitespaces_string("long long"))
+            .map(|_| Type::LongLong)
+        })
+        .or_else(|_| {
+          parse::whitespaces_string("long int")
+            .or_else(|_| parse::whitespaces_string("long"))
+            .map(|_| Type::Long)
+        })
+        .or_else(|_| parse::whitespaces_string("int").map(|_| Type::Int))
+        .or_else(|_| {
+          parse::whitespaces_string("short int")
+            .or_else(|_| parse::whitespaces_string("short"))
+            .map(|_| Type::Short)
+        })
+        .or_else(|_| parse::whitespaces_string("char").map(|_| Type::Char))
+        .or_else(|_| parse::whitespaces_string("bool").map(|_| Type::Bool))
+        .or_else(|_| parse::whitespaces_string("void").map(|_| Type::Void))
     })
-    .or_else(|_| {
-      parse::whitespaces_string("long int")
-        .or_else(|_| parse::whitespaces_string("long"))
-        .map(|_| Type::Long)
+    // TODO implement proper pointer types
+    .and_then(|type_| {
+      parse::whitespaces_string("*")
+        .map(|_| Type::Int)
+        .or_else(|_| Parser::return_(type_))
     })
-    .or_else(|_| parse::whitespaces_string("int").map(|_| Type::Int))
-    .or_else(|_| {
-      parse::whitespaces_string("short int")
-        .or_else(|_| parse::whitespaces_string("short"))
-        .map(|_| Type::Short)
-    })
-    .or_else(|_| parse::whitespaces_string("char").map(|_| Type::Char))
-    .or_else(|_| parse::whitespaces_string("bool").map(|_| Type::Bool))
-    .or_else(|_| parse::whitespaces_string("void").map(|_| Type::Void))
     .meta(format!("Type Name"))
 }
 

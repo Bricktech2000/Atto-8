@@ -30,7 +30,7 @@ inline void bar(void) memset(DISPLAY_BUFFER, 0xFF, DISPLAY_BUFFER_LEN);
 inline void baz(void) { memset(DISPLAY_BUFFER, 0x00, DISPLAY_BUFFER_LEN); }
 
 inline void delay(int iterations);
-void sort(size_t len, void_p arr);
+void sort(size_t len, void *arr);
 int foo(void);
 
 int main(void) {
