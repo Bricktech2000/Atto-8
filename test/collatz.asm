@@ -8,7 +8,7 @@
 
 main! !nop
   loop:
-    !block_getc !char.digit_zero !char.sub :collatz !call
+    !char.null !block_getc !char.digit_zero !char.sub :collatz !call
     !char.left_parenthesis !putc !u8.to_dec !stack_puts !char.right_parenthesis !putc
     !char.carriage_return !putc !char.line_feed !putc
   :loop !jmp
@@ -19,7 +19,7 @@ main! !nop
       ld2 shl # 2 * n
       ld3 shr @dyn neg # -n / 2
       ld1 iff ad4 @dyn # `n += CF ? 2*n+CF : -n/2`
-      ld3 !u8.to_dec !stack_puts !char.space !putc
+      !char.null ld4 !u8.to_dec !stack_puts !char.space !putc
       x04 !eq # if `3 * n + 1 == 4` then `n == 1`
     inc :for_s !bcc
   # return* steps

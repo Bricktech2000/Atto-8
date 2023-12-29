@@ -16,7 +16,7 @@ fib: clc # u8 f = fib(u8 n)
   x00 x01 # initial values
   for_n:
     ld1 add swp # assume no overflow
-    ld1 !u8.to_dec !stack_puts !char.space !putc clc
+    !char.null !char.space ld3 !u8.to_dec !stack_puts clc
   x01 su4 :for_n !bcc
   # return*
   st2 pop !rt0

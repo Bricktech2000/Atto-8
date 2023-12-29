@@ -4,7 +4,7 @@ inline char to_upper(char c) {
   asm { clc !char.to_upper }
 }
 
-int main(void) {
+void main(void) {
   puts("*pipe*\r\n");
 
   while (1) {

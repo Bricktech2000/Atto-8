@@ -7,6 +7,7 @@ abs! ld0 x01 rot x01 and neg swp ld1 add xor @const
 abs.dyn! ld0 neg ld1 !ng iff
 min.dyn! ld1 ld1 !le iff
 max.dyn! ld1 ld1 !gt iff
+asr.dyn! ld0 !ng shr @dyn
 
 z! buf @dyn               # check zero
 e! xor @dyn               # check equal

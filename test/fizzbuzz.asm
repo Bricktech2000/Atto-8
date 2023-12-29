@@ -33,7 +33,7 @@ main! !nop
   fizzbuzz: # fizzbuzz(u8 n)
     x00 for_i:
       # convert `n` to decimal string onto the stack
-      !u8.ld0 !u8.to_dec
+      !char.null !u8.ld1 !u8.to_dec
       # move string from the stack to `str_num`
       :str_num for_c:
         swp !z ld1 !u8.sta inc

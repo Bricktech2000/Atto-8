@@ -30,8 +30,8 @@ main!
     !status_success sw2 !putc
 
     :stack for_item:
-      # print `stack[item]` as decimal
-      ld0 !u8.lda !u8.to_dec !char.space !stack_puts
+      # print `stack[item]` as decimal, ignoring `0x00` values
+      ld0 !u8.lda !z :zero !bcs !char.null swp !u8.to_dec zero: !char.space !stack_puts
     # loop while no greater than `top`
     ld0 ld4 !eq inc :for_item !bcc pop
 

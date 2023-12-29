@@ -52,7 +52,7 @@ python3 test.py calc.asm asm emu
 python3 test.py pixedit.asm asm emu
 python3 test.py stopwatch.asm asm emu
 python3 test.py mandelbrot.asm asm emu
-python3 test.py hello\ world.asm asm emu
+python3 test.py mock\ shell.asm asm emu
 python3 test.py bell\ pattern.asm asm emu
 python3 test.py color\ maze.asm asm emu
 python3 test.py char\ code.asm asm emu
@@ -67,16 +67,18 @@ python3 test.py rot13.asm asm emu
 python3 test.py simon.asm asm emu
 
 # test programs
+python3 test.py printf.asm asm emu
 python3 test.py sorting.asm asm emu
 python3 test.py strings.asm asm emu
 python3 test.py allocation.asm asm emu
-python3 test.py mock\ shell.asm asm emu
+python3 test.py hello\ world.asm asm emu
 python3 test.py multiplication.asm asm emu
 python3 test.py addition.hex enc emu
 python3 test.py checkerboard.hex enc emu
 python3 test.py pipe.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py hello\ world.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py test.c libc/string.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
+python3 test.py printf.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py errors.asm asm emu
 ```
 

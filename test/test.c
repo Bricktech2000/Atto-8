@@ -33,7 +33,7 @@ inline void delay(int iterations);
 void sort(size_t len, void *arr);
 int foo(void);
 
-int main(void) {
+void main(void) {
   // return 0;
   // return 1 + 2;
   // return ~2 + (3 + 4) * 5;
@@ -50,6 +50,7 @@ int main(void) {
   putc(foo() + (char)1);
   puts("***ok\r\n" + 0b0011);
 
+  asm { xE0 sts } // `!display_buffer`
   while (1) {
     bar();
     delay(0x1F);

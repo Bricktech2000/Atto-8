@@ -7,7 +7,7 @@ main!
   loop:
     !block_getc
     !u8.to_hex !putc !putc !char.space !putc
-    # !u8.to_dec !stack_puts !char.space !putc
+    # !char.null swp !u8.to_dec !stack_puts !char.space !putc
     # !char.to_lower !putc
     # !char.to_upper !putc
     !block_null

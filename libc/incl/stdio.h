@@ -24,3 +24,5 @@ inline void putc(char c);
 void fputs(FILE *stream, const char *buf);
 // TODO should be `int puts(const char* buf);`
 void puts(const char *buf);
+
+void printf(char *format, ...); // TODO should return `int`

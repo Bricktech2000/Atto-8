@@ -1743,16 +1743,15 @@ u8.to_hex!
 # converts `'00'..='FF'` to `0x00..=0xFF`
 hex.to_u8!
   @err # to be implemented
-# converts `0x00..=0xFF` to an null-terminated sequence of digits `'0'..='9'`
+# converts `0x00..=0xFF` to a sequence of digits `'0'..='9'`. converts `0x00` to `'0'`
 u8.to_dec!
-  !char.null swp
-  # while (value != 0)
-  while_value. !z .break !bcs
+  while_value.
     # (div_10, mod_10) = (value / 10, value % 10)
     !divmod_10
     # char = '0' + mod_10
     !char.digit_zero ad2 # bleeds `char`
-  .while_value !jmp break. !u8.pop
+  # loop while `div_10 != 0`
+  !z .while_value !bcc !u8.pop
 # converts an unspecified number of digits `'0'..='9'` to `0x00..=0xFF`
 dec.to_u8!
   @err # to be implemented

@@ -56,6 +56,70 @@ stack_gets! # str[] = stack_gets()
   !char.null for_c. !getc !char.check_null .for_c !bcc !char.pop
 
 
+# a `printf` immitation that supports a few conversion specifiers. in `format`,
+# - `%d` prints a signed integer as decimal with precision `1`
+# - `%u` prints an unsigned integer as decimal with precision `1`
+# - `%x` prints an unsigned integer as uppercase hex with precision `2` (nonstandard)
+# - `%c` prints a character
+# - `%s` prints a null-terminated string from its address
+# - `%p` prints a pointer-to-void as `"0x"` followed by upperacase hex with precision `2`
+# - `%%` prints a literal `'%'` character
+# note that:
+# - integers are assumed to be 8 bits wide (nonstandard)
+# - the common conversion specifiers `i`, `o`, `X`, `n` are unsupported (nonstandard)
+# - in `format`, a `%` followed by an unknown conversion specifier will print a `'%'`
+# - if the last character of `format` is `'%'`, the behavior is undefined
+# - passing insufficient arguments for the format results in undefined behavior
+# - passing excess arguments for the format results in undefined behavior (nonstandard)
+printf.def!
+    got_latin_small_letter_p:
+      # print `"0x"` then fall through to specifier `x`
+      !char.digit_zero str_: !putc !char.latin_small_letter_x !putc
+    got_latin_small_letter_x:
+      # print first character then fall through to specifier `c` with second character
+      !u8.to_hex !putc
+    got_latin_small_letter_c:
+    got_other:
+      # print char on stack and fall through to specifier `s` with empty string
+      !putc :str_
+    got_latin_small_letter_s:
+      # print as string and fall through to `:printf`
+      !puts.min
+  printf: # printf(*format, ...)
+    # load `char` from `format`
+    ld1 lda
+    :got_other
+      !char.percent_sign xo2 :got_percent_sign iff !char.percent_sign xo2
+      !char.null xo2 :got_null iff !char.null xo2
+    x01 ad4 # increment `format` here because carry is cleared
+    !jmp # keep `char` on stack for `:got_other`
+    got_percent_sign:
+      pop # pops `char` from stack
+      swp sw2 # loads one argument from `va_list`
+      ld2 lda # loads `specifier` from `format`
+      x01 ad4 # increments `format`
+    :got_unknown_specifier
+      !char.latin_small_letter_p xo2 :got_latin_small_letter_p iff !char.latin_small_letter_p xo2
+      !char.latin_small_letter_x xo2 :got_latin_small_letter_x iff !char.latin_small_letter_x xo2
+      !char.latin_small_letter_d xo2 :got_latin_small_letter_d iff !char.latin_small_letter_d xo2
+      !char.latin_small_letter_u xo2 :got_latin_small_letter_u iff !char.latin_small_letter_u xo2
+      !char.latin_small_letter_c xo2 :got_latin_small_letter_c iff !char.latin_small_letter_c xo2
+      !char.latin_small_letter_s xo2 :got_latin_small_letter_s iff # !char.latin_small_letter_s xo2
+    st0 !jmp # pops `specifier` off stack
+    got_latin_small_letter_d:
+      # compute absolute value, print `-` if was negative and fall through to specifier `u`
+      !abs.dyn !char.null !char.hyphen_minus iff !putc clc
+    got_latin_small_letter_u:
+      # print as decimal and jump back to `:printf`
+      !char.null swp !u8.to_dec !stack_puts :printf !jmp
+    got_unknown_specifier: # includes specifier `%`
+      # store back argument from `va_list` and jump to specifier `c` with `'%'`
+      sw2 swp !char.percent_sign :got_latin_small_letter_c !jmp
+    got_null: # null terminator
+  # pop `char` from stack then return*
+  pop !rt1
+
+
 # reads into `dst` and echoes to `stdout` characters from `stdin` until `'\n'` is
 # encountered. supports `'\b'`. supports placeholder text through `end` parameter:
 # - `:buf :buf :getline !call` (where `dst == end`) does not use placeholder text

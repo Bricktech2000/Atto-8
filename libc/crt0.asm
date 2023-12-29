@@ -2,8 +2,6 @@
 
 # assembler entry point
 main!
-  # initialize stack, `argc = argv = envp = NULL`
-  pop pop xE0 sts # `!display_buffer`
   # link in dependencies and call C entry point
   :main !call !hlt !main.deps
 
