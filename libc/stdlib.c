@@ -1,4 +1,5 @@
 asm { @ lib/stdlib.asm }
 
-inline void exit(int status) asm { !hlt }
-inline void abort(void) asm { !hlt }
+inline void hlt(void);
+inline void exit(int status) { hlt(); }
+inline void abort(void) { hlt(); }

@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 #[path = "../misc/common/common.rs"]
 mod common;
@@ -460,7 +460,7 @@ fn assemble(
   'bruteforce: loop {
     let mut location_counter: usize = 0;
     let mut label_definitions: HashMap<Label, u8> = HashMap::new();
-    let mut unevaluated_nodes: HashMap<u8, (Pos, Node)> = HashMap::new();
+    let mut unevaluated_nodes: BTreeMap<u8, (Pos, Node)> = BTreeMap::new();
 
     instructions = roots
       .iter()
@@ -890,8 +890,8 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
         Some(vec![])
       }
 
-      [Root::Node(ff), Root::Instruction(Instruction::And(_size))]
-        if resolve_node_value(&ff, &HashMap::new()) == Ok(0xFF) =>
+      [Root::Node(xff), Root::Instruction(Instruction::And(_size))]
+        if resolve_node_value(&xff, &HashMap::new()) == Ok(0xFF) =>
       {
         Some(vec![])
       }
@@ -933,12 +933,6 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
 
       [Root::Instruction(Instruction::Not), Root::Instruction(Instruction::Not)] => {
         Some(vec![Root::Instruction(Instruction::Buf)])
-      }
-
-      [node @ Root::Node(_), Root::Instruction(Instruction::Buf)] => Some(vec![node.clone()]),
-
-      [buf @ Root::Instruction(Instruction::Buf), Root::Instruction(Instruction::Buf)] => {
-        Some(vec![buf.clone()])
       }
 
       [node @ Root::Node(_), Root::Instruction(Instruction::Ldo(0x00))] => {

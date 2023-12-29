@@ -1,5 +1,5 @@
 use crate::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 pub fn codegen(program: Program, errors: &mut Vec<(Pos, Error)>) -> Vec<Result<Token, String>> {
   let tokens: Vec<Result<Token, String>> = std::iter::empty()
@@ -19,8 +19,8 @@ struct State {
   global: Option<String>,                      // current global name for dependency tracking
   stack: Vec<StackEntry>,                      // current nesting stack
   uid: usize,                                  // unique identifier for temporary variables
-  strings: HashMap<String, String>,            // map from string literal to its label
-  dependencies: HashMap<String, HashSet<String>>, // map from global to its dependencies
+  strings: BTreeMap<String, String>,           // map from string literal to its label
+  dependencies: BTreeMap<String, BTreeSet<String>>, // map from global to its dependencies
 }
 
 #[allow(dead_code)]
@@ -133,7 +133,7 @@ fn program(
 
     // depth-first iteration because recursion would be inconvenient
     while let Some(node) = stack.pop() {
-      for dependency in original_dependencies.get(&node).unwrap_or(&HashSet::new()) {
+      for dependency in original_dependencies.get(&node).unwrap_or(&BTreeSet::new()) {
         if !visited.contains(dependency) {
           stack.push(dependency.clone());
           visited.insert(dependency.clone());
@@ -268,7 +268,7 @@ fn function_definition(
       state
         .dependencies
         .entry(name.clone())
-        .or_insert(HashSet::new());
+        .or_insert(BTreeSet::new());
 
       state
         .stack
@@ -1368,27 +1368,21 @@ fn string_literal_expression(
   state: &mut State,
   _errors: &mut Vec<(Pos, Error)>,
 ) -> (Type, Vec<Result<Token, String>>) {
-  use std::collections::hash_map::DefaultHasher;
-  use std::hash::Hasher;
-
-  let mut hasher = DefaultHasher::new();
-  hasher.write(value.as_bytes());
-  let value_hash = hasher.finish();
-
   let label = format!(
-    "str_{}.{:X}",
+    "str_{}.{}",
     value
       .chars()
       .filter_map(|c| match c {
-        // see `misc/atto-8.vim`
+        // see `/misc/atto-8.vim`
         ' ' => Some('_'),
         '!' | '.' | ':' | '@' => None,
         '\x20'..='\x7e' => Some(c),
         _ => None,
       })
       .collect::<String>(),
-    value_hash
+    state.uid
   );
+  state.uid += 1;
 
   let label = state.strings.entry(value.clone()).or_insert(label.clone());
 
@@ -1400,7 +1394,7 @@ fn string_literal_expression(
         .clone()
         .unwrap_or_else(|| panic!("Expected global")),
     )
-    .or_insert(HashSet::new())
+    .or_insert(BTreeSet::new())
     .insert(label.clone());
 
   (
@@ -1474,7 +1468,7 @@ fn function_call_expression(
         .clone()
         .unwrap_or_else(|| panic!("Expected global")),
     )
-    .or_insert(HashSet::new())
+    .or_insert(BTreeSet::new())
     .insert(name.clone());
 
   (
