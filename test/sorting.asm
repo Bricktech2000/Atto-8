@@ -4,12 +4,12 @@
 @ lib/stdio.asm
 
 main!
-  :str_Atto-8 ld0 !str_Atto-8.len dec :sort !call
-  :str_Atto-8 !puts # -8Aott
+  :str_atto-8 !str_atto-8.len dec :sort !call
+  :str_atto-8 !puts # -8Aott
   !hlt
 
   !sort.def
 
-  str_Atto-8: @41 @74 @74 @6F @2D @38 @00 str_Atto-8.end:
+  str_atto-8: @41 @74 @74 @6F @2D @38 @00 str_atto-8.end: # "Atto-8"
 
-str_Atto-8.len! :str_Atto-8.end :str_Atto-8 sub @const
+str_atto-8.len! :str_atto-8.end :str_atto-8 sub @const

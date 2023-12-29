@@ -18,10 +18,10 @@ main!
 
   #   "     __|__\n"
   # "\r'---x-(_)-x---' "
-  str_tail: @20 @20 @20 @20 @20 @5F @5F @7C @5F @5F @0A @00
-  str_left: @0D @27 @2D @2D @2D @00
-  str_body: @2D @28 @5F @29 @2D @00
-  str_right: @2D @2D @2D @27 @20 @00
+  str_tail: @20 @20 @20 @20 @20 @5F @5F @7C @5F @5F @0A @00 # "     __|__\n"
+  str_left: @0D @27 @2D @2D @2D @00 # "\r'---"
+  str_body: @2D @28 @5F @29 @2D @00 # "-(_)-"
+  str_right: @2D @2D @2D @27 @20 @00 # "---' "
 
   propeller: !char.latin_small_letter_x !char.plus_sign
 

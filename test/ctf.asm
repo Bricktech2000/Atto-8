@@ -56,10 +56,8 @@ source!
 
   !puts.min.def
 
-  # "FLAG{MIliTAry-Gr4dE_3ncrypT1oN}\0"
-  str_api_key: @46 @4C @41 @47 @7B @4D @49 @6C @69 @54 @41 @72 @79 @2D @47 @72 @34 @64 @45 @5F @33 @6E @63 @72 @79 @70 @54 @31 @6F @4E @7D @00
-  # "Nothing to see here!\r\nIt appears this program is working as intended.\r\n\0"
-  str_message: @4E @6F @74 @68 @69 @6E @67 @20 @74 @6F @20 @73 @65 @65 @20 @68 @65 @72 @65 @21 @0D @0A @49 @74 @20 @61 @70 @70 @65 @61 @72 @73 @20 @74 @68 @69 @73 @20 @70 @72 @6F @67 @72 @61 @6D @20 @69 @73 @20 @77 @6F @72 @6B @69 @6E @67 @20 @61 @73 @20 @69 @6E @74 @65 @6E @64 @65 @64 @2E @0D @0A @00
+  str_api_key: @46 @4C @41 @47 @7B @4D @49 @6C @69 @54 @41 @72 @79 @2D @47 @72 @34 @64 @45 @5F @33 @6E @63 @72 @79 @70 @54 @31 @6F @4E @7D @00 # "FLAG{MIliTAry-Gr4dE_3ncrypT1oN}"
+  str_message: @4E @6F @74 @68 @69 @6E @67 @20 @74 @6F @20 @73 @65 @65 @20 @68 @65 @72 @65 @21 @0D @0A @49 @74 @20 @61 @70 @70 @65 @61 @72 @73 @20 @74 @68 @69 @73 @20 @70 @72 @6F @67 @72 @61 @6D @20 @69 @73 @20 @77 @6F @72 @6B @69 @6E @67 @20 @61 @73 @20 @69 @6E @74 @65 @6E @64 @65 @64 @2E @0D @0A @00 # "Nothing to see here!\r\nIt appears this program is working as intended.\r\n"
   exit:
 
 payload!

@@ -73,15 +73,15 @@ stack_gets! # str[] = stack_gets()
 # - passing excess arguments for the format results in undefined behavior (nonstandard)
 printf.def!
     got_latin_small_letter_p:
-      # print `"0x"` then fall through to specifier `x`
-      !char.digit_zero str_: !putc !char.latin_small_letter_x !putc
+      # print `"0x"` then fall through to conversion specifier `x`
+      !char.digit_zero str_empty: !putc !char.latin_small_letter_x !putc
     got_latin_small_letter_x:
-      # print first character then fall through to specifier `c` with second character
+      # print first character then fall through to conversion specifier `c` with second character
       !u8.to_hex !putc
     got_latin_small_letter_c:
     got_other:
-      # print char on stack and fall through to specifier `s` with empty string
-      !putc :str_
+      # print char on stack and fall through to conversion specifier `s` with empty string
+      !putc :str_empty
     got_latin_small_letter_s:
       # print as string and fall through to `:printf`
       !puts.min
@@ -96,24 +96,24 @@ printf.def!
     got_percent_sign:
       pop # pops `char` from stack
       swp sw2 # loads one argument from `va_list`
-      ld2 lda # loads `specifier` from `format`
+      ld2 lda # loads `conversion_specifier` from `format`
       x01 ad4 # increments `format`
-    :got_unknown_specifier
+    :got_unknown_conversion_specifier
       !char.latin_small_letter_p xo2 :got_latin_small_letter_p iff !char.latin_small_letter_p xo2
       !char.latin_small_letter_x xo2 :got_latin_small_letter_x iff !char.latin_small_letter_x xo2
       !char.latin_small_letter_d xo2 :got_latin_small_letter_d iff !char.latin_small_letter_d xo2
       !char.latin_small_letter_u xo2 :got_latin_small_letter_u iff !char.latin_small_letter_u xo2
       !char.latin_small_letter_c xo2 :got_latin_small_letter_c iff !char.latin_small_letter_c xo2
       !char.latin_small_letter_s xo2 :got_latin_small_letter_s iff # !char.latin_small_letter_s xo2
-    st0 !jmp # pops `specifier` off stack
+    st0 !jmp # pops `conversion_specifier` off stack
     got_latin_small_letter_d:
-      # compute absolute value, print `-` if was negative and fall through to specifier `u`
+      # compute absolute value, print `-` if was negative and fall through to conversion specifier `u`
       !abs.dyn !char.null !char.hyphen_minus iff !putc clc
     got_latin_small_letter_u:
       # print as decimal and jump back to `:printf`
       !char.null swp !u8.to_dec !stack_puts :printf !jmp
-    got_unknown_specifier: # includes specifier `%`
-      # store back argument from `va_list` and jump to specifier `c` with `'%'`
+    got_unknown_conversion_specifier: # includes conversion specifier `%`
+      # store back argument from `va_list` and jump to conversion specifier `c` with `'%'`
       sw2 swp !char.percent_sign :got_latin_small_letter_c !jmp
     got_null: # null terminator
   # pop `char` from stack then return*

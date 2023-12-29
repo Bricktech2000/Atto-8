@@ -112,7 +112,8 @@ fn program(
             .collect::<Vec<Result<Token, String>>>(),
         )
         .chain(vec![Ok(Token::AtDD(0x00))])
-        .chain(vec![Err("".to_string())])
+        // TODO uses debug formatting
+        .chain(vec![Err(format!("# {:?}", string))])
     }))
     .chain(vec![Err("".to_string())])
     .collect();
@@ -1368,23 +1369,11 @@ fn string_literal_expression(
   state: &mut State,
   _errors: &mut Vec<(Pos, Error)>,
 ) -> (Type, Vec<Result<Token, String>>) {
-  let label = format!(
-    "str_{}.{}",
-    value
-      .chars()
-      .filter_map(|c| match c {
-        // see `/misc/atto-8.vim`
-        ' ' => Some('_'),
-        '!' | '.' | ':' | '@' => None,
-        '\x20'..='\x7e' => Some(c),
-        _ => None,
-      })
-      .collect::<String>(),
-    state.uid
-  );
+  let name = state
+    .strings
+    .entry(value.clone())
+    .or_insert(format!("str.{}", state.uid));
   state.uid += 1;
-
-  let label = state.strings.entry(value.clone()).or_insert(label.clone());
 
   state
     .dependencies
@@ -1395,11 +1384,11 @@ fn string_literal_expression(
         .unwrap_or_else(|| panic!("Expected global")),
     )
     .or_insert(BTreeSet::new())
-    .insert(label.clone());
+    .insert(name.clone());
 
   (
     Type::Int, // TODO should be `char *`
-    vec![Ok(Token::LabelRef(Label::Global(label.clone())))],
+    vec![Ok(Token::LabelRef(Label::Global(name.clone())))],
   )
 }
 
