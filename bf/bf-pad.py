@@ -20,7 +20,7 @@ with open_safe(brainfuck_source_file, 'rb') as brainfuck_source_file:
 
 preprocessed = re.sub(rb'[^><+-.,[\]#]', b'', brainfuck_source)  # strip out no-ops
 preprocessed = re.sub(rb'^\[.*?\]', b'', preprocessed)  # strip out leading comments
-preprocessed = b'>>' + preprocessed  # prepend `>>`, required by frontend
+preprocessed = b'\0' + preprocessed  # prepend padding, as execution begins at `0x01`
 memory_image = bytes(byte or 0x00 for byte in common.pad_or_slice(list(preprocessed), common.MEM_SIZE))
 
 with open_safe(memory_image_file, 'wb') as memory_image_file:

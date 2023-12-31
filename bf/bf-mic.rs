@@ -105,6 +105,9 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
   let nand_xlyl = ControlWord! {nand_data, data_xl, data_yl};
   let sum_memyl = ControlWord! {sum_data, data_mem, data_yl};
   let cinsum_memyl = ControlWord! {set_cin, sum_data, data_mem, data_yl};
+  let ip_xl = ControlWord! {ip_data, data_xl};
+  let sum_sp = ControlWord! {sum_data, data_sp};
+  let set_il = ControlWord! {data_il};
 
   let noop = seq![ControlWord! {}];
   let clr_yl = seq![set_ylzl, nand_yl];
@@ -245,7 +248,7 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                       false => seq![set_cf], // else, we're walking
                     }, // !CF -> CF
                     match carry {
-                      true => seq![noop, noop, noop, noop, noop, noop, noop, noop], // if we're walking, no-op
+                      true => seq![noop; 8], // if we're walking, no-op
                       false => seq![
                         set_al, cinsum_mem, // 0x01 -> *0xFF
                         cinsum_al, cinsum_mem, // 0x01 -> *0x01
@@ -254,7 +257,7 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                     },
                     match carry {
                       true => seq![ip_alxl, set_yl, sum_xl, walk], // if we're walking, perform a walk step
-                      false => seq![noop, noop, noop, noop, noop, noop],
+                      false => seq![noop; 6],
                     },
                     clr_yl
                   ]
@@ -279,7 +282,7 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                     // note that carry was not inverted here. for the next few lines,
                     // the carry bit represents `!walking` instead of `walking`
                     match carry {
-                      false => seq![noop, noop, noop, noop, noop, noop, noop, noop, noop], // if we're walking, no-op
+                      false => seq![noop; 9], // if we're walking, no-op
                       true => seq![
                         set_alylzl, set_mem, // 0xFF -> *0xFF
                         nand_xlyl, cinsum_al, nand_mem, // 0xFF -> *0x01
@@ -288,13 +291,23 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                     },
                     match carry {
                       false => seq![ip_alxl, set_yl, sum_xl, walk], // if we're walking, perform a walk step
-                      true => seq![noop, noop, noop, noop, noop, noop],
+                      true => seq![noop; 6],
                     },
                     // invert carry again so it represents `walking` instead of `!walking`
                     match carry {
                       true => seq![clr_cf],  // if nesting level is 0x00, we're done walking
                       false => seq![set_cf], // else, we're walking
                     } // !CF -> CF
+                  ]
+                }
+
+                b'\0' => {
+                  seq![
+                    nfetch,
+                    clr_yl,
+                    sum_ip, // IP--
+                    // catch `IL` jump from initialization routine below
+                    seq![clr_sc; 0x10]
                   ]
                 }
 
@@ -309,9 +322,20 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                   ]
                 }
 
-                b'\0' => {
+                // upon initialization, `IL` is reset to `0x00`, which gets mapped to `0xF0` since its most
+                // significant bit is not set. therefore, upon initialization, `!opcode` will be `0x0F`.
+                b'\x0F' => {
                   seq![
-                    nfetch, clr_yl, sum_ip // IP--
+                    set_ylzl, //
+                    // set initial `SP = 0xFE`, as per the specification
+                    sp_xl, sum_xl, sum_sp, // SP--; SP--
+                    // set initial `IP = 0x01`, as per the specification
+                    nand_yl, ip_xl, cinsum_ip, // IP++
+                    // set `IL = 0xFF` to jump to instruction `b'\0'`, which will catch our jump, reset `SC`
+                    // through `clr_sc`, and consequently fetch the first instruction through `nfetch`. as a
+                    // consequence of `clr_sc` being asynchronous, we will miss the first microinstruction of
+                    // `nfetch`. therefore, we include below that first microinstruction, `ip_alxl`
+                    ip_alxl, set_il
                   ]
                 }
 

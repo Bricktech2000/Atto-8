@@ -16,7 +16,7 @@ The Atto-8 microprocessor, specified in [/spec/microprocessor.md](../spec/microp
 | `IP`      | Instruction Pointer | 8 bits |
 | `HP`      | Head Pointer        | 8 bits |
 
-`IP` is a pointer to the current instruction and can be indirectly written to through instructions `[` and `]`. `IP` is incremented after the execution of every instruction.
+`IP` is a pointer to the next instruction to be executed and can be indirectly written to through instructions `[` and `]`. `IP` is incremented before the execution of every instruction.
 
 `HP` is a read-write head that can be moved through instructions `>` and `<` and used through instructions `+`, `-`, `.` and `,`.
 
@@ -44,16 +44,17 @@ The frontend is initialized with the following state:
 
 | Commponent | Value  |
 | ---------- | ------ |
-| `IP`       | `0x00` |
-| `HP`       | `0x00` |
+| `IP`       | `0x01` |
+| `HP`       | `0xFE` |
 
-This implies that execution begins at address `0x00`.
+This implies that:
+
+- Execution begins at address `0x01`.
+- The start of the tape is located at address `0xFE`.
 
 ## Implementation Constraints
 
-Writing beyond the start of the tape will corrupt the frontend's state, resulting in undefined behavior. Writing too far into the tape will corrupt program memory, resulting in undefined behavior.
-
-Every program must begin with instructions `>>`; failure to do so will result in undefined behavior. Brackets `[` and `]` must be balanced; failure to do so will result in undefined behavior.
+Writing beyond the start of the tape will corrupt the frontend's state, resulting in undefined behavior. Writing too far into the tape will corrupt program memory, resulting in undefined behavior. Brackets `[` and `]` must be balanced; failure to meet this condition will result in undefined behavior.
 
 Address `0x00` is assumed to be a memory-mapped standard input/output device. That is, `.` outputs by writing a byte to address `0x00` and `,` inputs by reading a byte from address `0x00`.
 

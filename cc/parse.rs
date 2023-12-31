@@ -180,7 +180,6 @@ pub fn many_and_then<T: Clone + 'static, U: Clone + 'static>(
   })
 }
 
-#[allow(dead_code)]
 pub fn sepby1<T: Clone + 'static>(parser: Parser<T>, separator: Parser<()>) -> Parser<Vec<T>> {
   parser.clone().and_then(|first| {
     parse::many(separator.and_then(|_| parser))

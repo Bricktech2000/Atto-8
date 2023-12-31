@@ -1,4 +1,4 @@
-+>>>>>>>>>>-[,+[-.----------[[-]>]<->]<]
++[,[---------[-[++++++++++.[-]]],]+]
 strips newlines and tabs
 
 Daniel B Cristofani (cristofdathevanetdotcom)
