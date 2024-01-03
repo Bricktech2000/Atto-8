@@ -168,14 +168,14 @@ fn assemble(
 
   for (pos, token) in tokens.into_iter() {
     match token {
-      Token::MacroDef(macro_) => {
-        current_macro = Some(macro_.clone());
+      Token::MacroDef(r#macro) => {
+        current_macro = Some(r#macro.clone());
         macro_definitions
-          .entry(macro_.clone())
+          .entry(r#macro.clone())
           .and_modify(|_| {
             errors.push((
               pos.clone(),
-              Error(format!("Duplicate macro definition `{}`", macro_)),
+              Error(format!("Duplicate macro definition `{}`", r#macro)),
             ));
           })
           .or_insert(vec![]);
@@ -183,7 +183,7 @@ fn assemble(
 
       _ => match current_macro
         .as_ref()
-        .and_then(|macro_| macro_definitions.get_mut(&macro_))
+        .and_then(|r#macro| macro_definitions.get_mut(&r#macro))
       {
         Some(macro_tokens) => macro_tokens.push((
           Pos(
@@ -218,27 +218,27 @@ fn assemble(
     tokens
       .into_iter()
       .flat_map(|(pos, token)| match token {
-        Token::MacroRef(macro_) => {
-          if parent_macros.contains(&macro_) {
+        Token::MacroRef(r#macro) => {
+          if parent_macros.contains(&r#macro) {
             errors.push((
               pos.clone(),
               Error(format!(
                 "Macro self-reference {} -> `{}`",
                 parent_macros
                   .iter()
-                  .map(|macro_| format!("`{}`", macro_))
+                  .map(|r#macro| format!("`{}`", r#macro))
                   .collect::<Vec<String>>()
                   .join(" -> "),
-                macro_
+                r#macro
               )),
             ));
             return vec![];
           }
 
-          let tokens = match macro_definitions.get(&macro_) {
+          let tokens = match macro_definitions.get(&r#macro) {
             Some(tokens) => tokens.clone(),
             None => {
-              errors.push((pos.clone(), Error(format!("Undefined macro `{}`", macro_))));
+              errors.push((pos.clone(), Error(format!("Undefined macro `{}`", r#macro))));
               vec![]
             }
           };
@@ -259,7 +259,7 @@ fn assemble(
             .collect();
 
           *scope_uid += 1;
-          parent_macros.push(macro_.clone());
+          parent_macros.push(r#macro.clone());
           let tokens = expand_macros(
             &tokens,
             scope_uid,
@@ -809,7 +809,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
         Some(vec![Root::Dyn(Some(instruction.clone()))])
       }
 
-      [dyn_ @ Root::Dyn(Some(_)), Root::Dyn(None)] => Some(vec![dyn_.clone()]),
+      [r#dyn @ Root::Dyn(Some(_)), Root::Dyn(None)] => Some(vec![r#dyn.clone()]),
 
       [opcode @ Root::Opcode(_), Root::Dyn(None)] => Some(vec![opcode.clone()]),
 
@@ -831,8 +831,8 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
         Some(vec![label.clone(), node.clone(), org.clone()])
       }
 
-      [node @ Root::Node(_), label @ Root::LabelDef(_), const_ @ Root::Const] => {
-        Some(vec![node.clone(), const_.clone(), label.clone()])
+      [node @ Root::Node(_), label @ Root::LabelDef(_), r#const @ Root::Const] => {
+        Some(vec![node.clone(), r#const.clone(), label.clone()])
       }
 
       _ => None,
@@ -933,6 +933,12 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
 
       [Root::Instruction(Instruction::Not), Root::Instruction(Instruction::Not)] => {
         Some(vec![Root::Instruction(Instruction::Buf)])
+      }
+
+      [Root::Instruction(Instruction::Ldo(same_ofst1)), Root::Instruction(Instruction::Sto(same_ofst2))]
+        if same_ofst1 == same_ofst2 =>
+      {
+        Some(vec![])
       }
 
       [node @ Root::Node(_), Root::Instruction(Instruction::Ldo(0x00))] => {

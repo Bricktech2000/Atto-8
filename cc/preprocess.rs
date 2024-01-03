@@ -221,7 +221,7 @@ type TextLine = Vec<Result<String, char>>;
 
 fn include_directive() -> Parser<Directive> {
   // TODO does not obey grammar
-  Parser::return_(())
+  Parser::r#return(())
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_string("include"))
     .and_then(|_| preprocess::text_line())
@@ -233,7 +233,7 @@ fn include_directive() -> Parser<Directive> {
 
 fn define_directive() -> Parser<Directive> {
   // TODO does not obey grammar
-  Parser::return_(())
+  Parser::r#return(())
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_string("define"))
     .and_then(|_| parse::identifier())
@@ -244,14 +244,14 @@ fn define_directive() -> Parser<Directive> {
           preprocess::whitespaces_char('\n')
             .map(move |_| Directive::Define(identifier, replacement_list))
         })
-        .or_else(|_| Parser::return_(Directive::Define(identifier2, vec![])))
+        .or_else(|_| Parser::r#return(Directive::Define(identifier2, vec![])))
     })
     .meta(format!("Define Directive"))
 }
 
 fn undef_directive() -> Parser<Directive> {
   // TODO does not obey grammar
-  Parser::return_(())
+  Parser::r#return(())
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_string("undef"))
     .and_then(|_| parse::identifier())
@@ -263,7 +263,7 @@ fn undef_directive() -> Parser<Directive> {
 
 fn pragma_directive() -> Parser<Directive> {
   // TODO does not obey grammar
-  Parser::return_(())
+  Parser::r#return(())
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_string("pragma"))
     .and_then(|_| preprocess::text_line())
@@ -275,7 +275,7 @@ fn pragma_directive() -> Parser<Directive> {
 
 fn error_directive() -> Parser<Directive> {
   // TODO does not obey grammar
-  Parser::return_(())
+  Parser::r#return(())
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_string("error"))
     .and_then(|_| preprocess::text_line())
@@ -285,7 +285,7 @@ fn error_directive() -> Parser<Directive> {
 
 fn null_directive() -> Parser<Directive> {
   // TODO does not obey grammar
-  Parser::return_(())
+  Parser::r#return(())
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_char('\n').map(|_| Directive::Null))
     .meta(format!("Null Directive"))

@@ -724,8 +724,8 @@ pub fn token_to_mnemonic(token: Token) -> Mnemonic {
     }
     Token::LabelRef(Label::Local(identifier, None)) => Mnemonic(format!(".{}", identifier)),
     Token::LabelRef(Label::Global(identifier)) => Mnemonic(format!(":{}", identifier)),
-    Token::MacroDef(Macro(macro_)) => Mnemonic(format!("{}!", macro_)),
-    Token::MacroRef(Macro(macro_)) => Mnemonic(format!("!{}", macro_)),
+    Token::MacroDef(Macro(r#macro)) => Mnemonic(format!("{}!", r#macro)),
+    Token::MacroRef(Macro(r#macro)) => Mnemonic(format!("!{}", r#macro)),
     Token::AtConst => Mnemonic(format!("@const")),
     Token::AtDyn => Mnemonic(format!("@dyn")),
     Token::AtOrg => Mnemonic(format!("@org")),

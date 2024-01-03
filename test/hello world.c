@@ -1,7 +1,3 @@
 #include <stdio.h>
 
-void main(void) {
-  puts("Hello, world!");
-
-  return;
-}
+void main(void) { puts("Hello, world!"); }

@@ -33,7 +33,7 @@ impl<T: Clone + 'static> Parser<T> {
     f: F,
   ) -> Parser<U> {
     Parser(Rc::new(move |input: &str| {
-      self.0(input).and_then(|(match_, input)| f.clone()(match_).0(&input))
+      self.0(input).and_then(|(r#match, input)| f.clone()(r#match).0(&input))
     }))
   }
 
@@ -50,7 +50,7 @@ impl<T: Clone + 'static> Parser<T> {
 
   pub fn map<U: Clone + 'static, F: FnOnce(T) -> U + Clone + 'static>(self, f: F) -> Parser<U> {
     Parser(Rc::new(move |input: &str| {
-      self.0(input).map(|(match_, input)| (f.clone()(match_), input))
+      self.0(input).map(|(r#match, input)| (f.clone()(r#match), input))
     }))
   }
 
@@ -64,7 +64,7 @@ impl<T: Clone + 'static> Parser<T> {
     self.map_err(move |error| Error(format!("{}: {}", meta, error)))
   }
 
-  pub fn return_(value: T) -> Parser<T> {
+  pub fn r#return(value: T) -> Parser<T> {
     Parser(Rc::new(move |input: &str| {
       Ok((value.clone(), input.to_string()))
     }))
@@ -128,8 +128,8 @@ pub fn string(string: &'static str) -> Parser<()> {
 pub fn maybe<T: Clone + 'static>(parser: Parser<T>) -> Parser<Option<T>> {
   parser
     .clone()
-    .map(|match_| Some(match_))
-    .or_else(|_| Parser::return_(None))
+    .map(|r#match| Some(r#match))
+    .or_else(|_| Parser::r#return(None))
 }
 
 pub fn many1<T: Clone + 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
@@ -140,14 +140,14 @@ pub fn many1<T: Clone + 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
 
 pub fn many<T: Clone + 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
   // causes occasional stack overflow
-  // parse::many1(parser).or_else(|_| Parser::return_(vec![]))
+  // parse::many1(parser).or_else(|_| Parser::r#return(vec![]))
 
   Parser(Rc::new(move |input: &str| {
     let mut input = input.to_string();
     let mut matches = vec![];
-    while let Ok((match_, input_)) = parser.0(&input) {
-      matches.push(match_);
-      input = input_;
+    while let Ok((r#match, new_input)) = parser.0(&input) {
+      matches.push(r#match);
+      input = new_input;
     }
     Ok((matches, input))
   }))
@@ -156,27 +156,27 @@ pub fn many<T: Clone + 'static>(parser: Parser<T>) -> Parser<Vec<T>> {
 #[allow(dead_code)]
 pub fn many1_and_then<T: Clone + 'static, U: Clone + 'static>(
   parser: Parser<T>,
-  final_: Parser<U>,
+  r#final: Parser<U>,
 ) -> Parser<(Vec<T>, U)> {
   parse::many1(parser.clone()).and_then(move |matches| {
     parser
-      // include `parser`'s error message if `final_` fails
+      // include `parser`'s error message if `final` fails
       .map(|_| unreachable!())
-      .or_else(move |_| final_.clone())
-      .map(move |final_| (matches, final_))
+      .or_else(move |_| r#final.clone())
+      .map(move |r#final| (matches, r#final))
   })
 }
 
 pub fn many_and_then<T: Clone + 'static, U: Clone + 'static>(
   parser: Parser<T>,
-  final_: Parser<U>,
+  r#final: Parser<U>,
 ) -> Parser<(Vec<T>, U)> {
   parse::many(parser.clone()).and_then(move |matches| {
     parser
-      // include `parser`'s error message if `final_` fails
+      // include `parser`'s error message if `final` fails
       .map(|_| unreachable!())
-      .or_else(move |_| final_.clone())
-      .map(move |final_| (matches, final_))
+      .or_else(move |_| r#final.clone())
+      .map(move |r#final| (matches, r#final))
   })
 }
 
@@ -188,7 +188,7 @@ pub fn sepby1<T: Clone + 'static>(parser: Parser<T>, separator: Parser<()>) -> P
 }
 
 pub fn sepby<T: Clone + 'static>(parser: Parser<T>, separator: Parser<()>) -> Parser<Vec<T>> {
-  parse::sepby1(parser, separator).or_else(|_| Parser::return_(vec![]))
+  parse::sepby1(parser, separator).or_else(|_| Parser::r#return(vec![]))
 }
 
 pub fn binary_operation<T: Clone + 'static>(
@@ -238,9 +238,9 @@ pub fn translation_unit() -> Parser<Program> {
           .map(|function_definition| Global::FunctionDefinition(function_definition))
       })
       .or_else(|_| {
-        parse::asm_statement().map(|statement| match statement {
-          Statement::Asm(asm_statement) => Global::AsmStatement(asm_statement),
-          _ => panic!("`asm_statement` did not return `Statement::Asm`"),
+        parse::assembly_statement().map(|statement| match statement {
+          Statement::Assembly(global_assembly) => Global::GlobalAssembly(global_assembly),
+          _ => panic!("`global_assembly` did not return `Statement::Assembly`"),
         })
       }),
     parse::whitespaces_eof(),
@@ -250,12 +250,12 @@ pub fn translation_unit() -> Parser<Program> {
 
 pub fn function_declaration() -> Parser<FunctionDeclaration> {
   // TODO does not obey grammar
-  Parser::return_(())
+  Parser::r#return(())
     .and_then(|_| parse::maybe(parse::whitespaces_string("inline")))
     .and_then(|is_inline| {
       parse::type_name().and_then(move |type_name| {
         parse::identifier().and_then(move |identifier| {
-          Parser::return_(())
+          Parser::r#return(())
             .and_then(|_| parse::whitespaces_char('('))
             .and_then(|_| parse::parameter_list())
             .and_then(move |parameters| {
@@ -263,7 +263,7 @@ pub fn function_declaration() -> Parser<FunctionDeclaration> {
                 parse::whitespaces_char(',').and_then(|_| parse::whitespaces_string("...")),
               )
               .and_then(move |is_variadic| {
-                Parser::return_(())
+                Parser::r#return(())
                   .and_then(|_| parse::whitespaces_char(')'))
                   .and_then(|_| parse::whitespaces_char(';'))
                   .map(move |_| {
@@ -284,12 +284,12 @@ pub fn function_declaration() -> Parser<FunctionDeclaration> {
 
 pub fn function_definition() -> Parser<FunctionDefinition> {
   // TODO does not obey grammar
-  Parser::return_(())
+  Parser::r#return(())
     .and_then(|_| parse::maybe(parse::whitespaces_string("inline")))
     .and_then(|is_inline| {
       parse::type_name().and_then(move |type_name| {
         parse::identifier().and_then(move |identifier| {
-          Parser::return_(())
+          Parser::r#return(())
             .and_then(|_| parse::whitespaces_char('('))
             .and_then(|_| parse::parameter_list())
             .and_then(move |parameters| {
@@ -297,7 +297,7 @@ pub fn function_definition() -> Parser<FunctionDefinition> {
                 parse::whitespaces_char(',').and_then(|_| parse::whitespaces_string("...")),
               )
               .and_then(move |is_variadic| {
-                Parser::return_(())
+                Parser::r#return(())
                   .and_then(|_| parse::whitespaces_char(')'))
                   .and_then(|_| parse::statement())
                   .map(move |statement| {
@@ -322,7 +322,7 @@ pub fn parameter_list() -> Parser<Vec<Object>> {
   parse::sepby(
     parse::type_name().and_then(|type_name| {
       parse::identifier()
-        .or_else(|_| Parser::return_("".to_string()))
+        .or_else(|_| Parser::r#return("".to_string()))
         .map(|identifier| Object(type_name, identifier))
     }),
     parse::whitespaces_char(','),
@@ -331,7 +331,7 @@ pub fn parameter_list() -> Parser<Vec<Object>> {
 
 pub fn type_name() -> Parser<Type> {
   // TODO does not obey grammar
-  Parser::return_(())
+  Parser::r#return(())
     .and_then(|_| parse::maybe(parse::whitespaces_string("const")))
     .and_then(|_const| {
       Parser::error(Error(format!("")))
@@ -341,32 +341,53 @@ pub fn type_name() -> Parser<Type> {
             .map(|_| Type::LongLong)
         })
         .or_else(|_| {
+          parse::whitespaces_string("unsigned long long int")
+            .or_else(|_| parse::whitespaces_string("unsigned long long"))
+            .map(|_| Type::UnsignedLongLong)
+        })
+        .or_else(|_| {
           parse::whitespaces_string("long int")
             .or_else(|_| parse::whitespaces_string("long"))
             .map(|_| Type::Long)
         })
+        .or_else(|_| {
+          parse::whitespaces_string("unsigned long int")
+            .or_else(|_| parse::whitespaces_string("unsigned long"))
+            .map(|_| Type::UnsignedLong)
+        })
         .or_else(|_| parse::whitespaces_string("int").map(|_| Type::Int))
+        .or_else(|_| {
+          parse::whitespaces_string("unsigned int")
+            .or_else(|_| parse::whitespaces_string("unsigned"))
+            .map(|_| Type::UnsignedInt)
+        })
         .or_else(|_| {
           parse::whitespaces_string("short int")
             .or_else(|_| parse::whitespaces_string("short"))
             .map(|_| Type::Short)
+        })
+        .or_else(|_| {
+          parse::whitespaces_string("unsigned short int")
+            .or_else(|_| parse::whitespaces_string("unsigned short"))
+            .map(|_| Type::UnsignedShort)
         })
         .or_else(|_| parse::whitespaces_string("char").map(|_| Type::Char))
         .or_else(|_| parse::whitespaces_string("bool").map(|_| Type::Bool))
         .or_else(|_| parse::whitespaces_string("void").map(|_| Type::Void))
     })
     // TODO implement proper pointer types
-    .and_then(|type_| {
+    .and_then(|r#type| {
+      let type1 = r#type.clone();
       parse::whitespaces_string("*")
-        .map(|_| Type::Int)
-        .or_else(|_| Parser::return_(type_))
+        .map(|_| Type::Pointer(Box::new(r#type)))
+        .or_else(|_| Parser::r#return(type1))
     })
     .meta(format!("Type Name"))
 }
 
 pub fn compound_statement() -> Parser<Statement> {
   // TODO should be {<declaration>}* {<statement>}*
-  Parser::return_(())
+  Parser::r#return(())
     .and_then(|_| parse::whitespaces_char('{'))
     .and_then(|_| parse::many_and_then(parse::statement(), parse::whitespaces_char('}')))
     .map(|(statements, _)| Statement::Compound(statements))
@@ -380,12 +401,12 @@ pub fn statement() -> Parser<Statement> {
     .or_else(|_| parse::iteration_statement())
     .or_else(|_| parse::compound_statement())
     .or_else(|_| parse::expression_statement())
-    .or_else(|_| parse::asm_statement()) // TODO does not obey grammar
+    .or_else(|_| parse::assembly_statement()) // TODO does not obey grammar
 }
 
 pub fn jump_statement() -> Parser<Statement> {
   // TODO cases missing
-  Parser::return_(())
+  Parser::r#return(())
     .and_then(|_| parse::whitespaces_string("return"))
     .and_then(|_| {
       parse::maybe(parse::expression())
@@ -404,7 +425,7 @@ pub fn iteration_statement() -> Parser<Statement> {
 }
 
 pub fn while_statement() -> Parser<Statement> {
-  Parser::return_(())
+  Parser::r#return(())
     .and_then(|_| parse::whitespaces_string("while"))
     .and_then(|_| parse::whitespaces_char('('))
     .and_then(|_| parse::expression())
@@ -428,20 +449,20 @@ pub fn for_statement() -> Parser<Statement> {
 
 pub fn expression_statement() -> Parser<Statement> {
   // TODO cases missing
-  Parser::return_(())
+  Parser::r#return(())
     .and_then(|_| parse::expression())
     .and_then(|expression| parse::whitespaces_char(';').map(|_| Statement::Expression(expression)))
     .meta(format!("Expression Statement"))
 }
 
-pub fn asm_statement() -> Parser<Statement> {
-  Parser::return_(())
+pub fn assembly_statement() -> Parser<Statement> {
+  Parser::r#return(())
     .and_then(|_| parse::whitespaces_string("asm"))
     .and_then(|_| parse::whitespaces_char('{'))
     .and_then(|_| parse::many(parse::satisfy(|c| c != '}')))
     .map(|chars| chars.iter().collect::<String>().trim().to_string())
-    .and_then(|assembly| parse::whitespaces_char('}').map(move |_| Statement::Asm(assembly)))
-    .meta(format!("Asm Statement"))
+    .and_then(|assembly| parse::whitespaces_char('}').map(move |_| Statement::Assembly(assembly)))
+    .meta(format!("Assembly Statement"))
 }
 
 pub fn expression() -> Parser<Expression> {
@@ -455,7 +476,7 @@ pub fn constant_expression() -> Parser<Expression> {
 pub fn conditional_expression() -> Parser<Expression> {
   parse::logical_or_expression().and_then(|expression1| {
     let expression = expression1.clone();
-    Parser::return_(())
+    Parser::r#return(())
       .and_then(|_| parse::whitespaces_char('?'))
       .and_then(|_| parse::expression())
       .and_then(|expression2| {
@@ -469,7 +490,7 @@ pub fn conditional_expression() -> Parser<Expression> {
             )
           })
       })
-      .or_else(|_| Parser::return_(expression))
+      .or_else(|_| Parser::r#return(expression))
   })
 }
 
@@ -477,7 +498,7 @@ pub fn logical_or_expression() -> Parser<Expression> {
   parse::binary_operation(
     parse::logical_and_expression(),
     parse::whitespaces_string("||")
-      .and_then(|_| Parser::return_(psi(Box::new, Expression::LogicalOr))),
+      .and_then(|_| Parser::r#return(psi(Box::new, Expression::LogicalOr))),
   )
 }
 
@@ -485,7 +506,7 @@ pub fn logical_and_expression() -> Parser<Expression> {
   parse::binary_operation(
     parse::bitwise_inclusive_or_expression(),
     parse::whitespaces_string("&&")
-      .and_then(|_| Parser::return_(psi(Box::new, Expression::LogicalAnd))),
+      .and_then(|_| Parser::r#return(psi(Box::new, Expression::LogicalAnd))),
   )
 }
 
@@ -493,7 +514,7 @@ pub fn bitwise_inclusive_or_expression() -> Parser<Expression> {
   parse::binary_operation(
     parse::bitwise_exclusive_or_expression(),
     parse::whitespaces_char('|')
-      .and_then(|_| Parser::return_(psi(Box::new, Expression::BitwiseInclusiveOr))),
+      .and_then(|_| Parser::r#return(psi(Box::new, Expression::BitwiseInclusiveOr))),
   )
 }
 
@@ -501,7 +522,7 @@ pub fn bitwise_exclusive_or_expression() -> Parser<Expression> {
   parse::binary_operation(
     parse::bitwise_and_expression(),
     parse::whitespaces_char('^')
-      .and_then(|_| Parser::return_(psi(Box::new, Expression::BitwiseExclusiveOr))),
+      .and_then(|_| Parser::r#return(psi(Box::new, Expression::BitwiseExclusiveOr))),
   )
 }
 
@@ -509,7 +530,7 @@ pub fn bitwise_and_expression() -> Parser<Expression> {
   parse::binary_operation(
     parse::equality_expression(),
     parse::whitespaces_char('&')
-      .and_then(|_| Parser::return_(psi(Box::new, Expression::BitwiseAnd))),
+      .and_then(|_| Parser::r#return(psi(Box::new, Expression::BitwiseAnd))),
   )
 }
 
@@ -519,11 +540,11 @@ pub fn equality_expression() -> Parser<Expression> {
     Parser::error(Error(format!("")))
       .or_else(|_| {
         parse::whitespaces_string("==")
-          .and_then(|_| Parser::return_(psi(Box::new, Expression::EqualTo)))
+          .and_then(|_| Parser::r#return(psi(Box::new, Expression::EqualTo)))
       })
       .or_else(|_| {
         parse::whitespaces_string("!=")
-          .and_then(|_| Parser::return_(psi(Box::new, Expression::NotEqualTo)))
+          .and_then(|_| Parser::r#return(psi(Box::new, Expression::NotEqualTo)))
       }),
   )
 }
@@ -534,19 +555,19 @@ pub fn relational_expression() -> Parser<Expression> {
     Parser::error(Error(format!("")))
       .or_else(|_| {
         parse::whitespaces_string(">=")
-          .and_then(|_| Parser::return_(psi(Box::new, Expression::GreaterThanOrEqualTo)))
+          .and_then(|_| Parser::r#return(psi(Box::new, Expression::GreaterThanOrEqualTo)))
       })
       .or_else(|_| {
         parse::whitespaces_char('>')
-          .and_then(|_| Parser::return_(psi(Box::new, Expression::GreaterThan)))
+          .and_then(|_| Parser::r#return(psi(Box::new, Expression::GreaterThan)))
       })
       .or_else(|_| {
         parse::whitespaces_string("<=")
-          .and_then(|_| Parser::return_(psi(Box::new, Expression::LessThanOrEqualTo)))
+          .and_then(|_| Parser::r#return(psi(Box::new, Expression::LessThanOrEqualTo)))
       })
       .or_else(|_| {
         parse::whitespaces_char('<')
-          .and_then(|_| Parser::return_(psi(Box::new, Expression::LessThan)))
+          .and_then(|_| Parser::r#return(psi(Box::new, Expression::LessThan)))
       }),
   )
 }
@@ -557,11 +578,11 @@ pub fn shift_expression() -> Parser<Expression> {
     Parser::error(Error(format!("")))
       .or_else(|_| {
         parse::whitespaces_string("<<")
-          .and_then(|_| Parser::return_(psi(Box::new, Expression::LeftShift)))
+          .and_then(|_| Parser::r#return(psi(Box::new, Expression::LeftShift)))
       })
       .or_else(|_| {
         parse::whitespaces_string(">>")
-          .and_then(|_| Parser::return_(psi(Box::new, Expression::RightShift)))
+          .and_then(|_| Parser::r#return(psi(Box::new, Expression::RightShift)))
       }),
   )
 }
@@ -572,11 +593,11 @@ pub fn additive_expression() -> Parser<Expression> {
     Parser::error(Error(format!("")))
       .or_else(|_| {
         parse::whitespaces_char('+')
-          .and_then(|_| Parser::return_(psi(Box::new, Expression::Addition)))
+          .and_then(|_| Parser::r#return(psi(Box::new, Expression::Addition)))
       })
       .or_else(|_| {
         parse::whitespaces_char('-')
-          .and_then(|_| Parser::return_(psi(Box::new, Expression::Subtraction)))
+          .and_then(|_| Parser::r#return(psi(Box::new, Expression::Subtraction)))
       }),
   )
 }
@@ -587,21 +608,20 @@ pub fn multiplicative_expression() -> Parser<Expression> {
     Parser::error(Error(format!("")))
       .or_else(|_| {
         parse::whitespaces_char('*')
-          .and_then(|_| Parser::return_(psi(Box::new, Expression::Multiplication)))
+          .and_then(|_| Parser::r#return(psi(Box::new, Expression::Multiplication)))
       })
       .or_else(|_| {
         parse::whitespaces_char('/')
-          .and_then(|_| Parser::return_(psi(Box::new, Expression::Division)))
+          .and_then(|_| Parser::r#return(psi(Box::new, Expression::Division)))
       })
       .or_else(|_| {
         parse::whitespaces_char('%')
-          .and_then(|_| Parser::return_(psi(Box::new, Expression::Modulo)))
+          .and_then(|_| Parser::r#return(psi(Box::new, Expression::Modulo)))
       }),
   )
 }
 
 pub fn cast_expression() -> Parser<Expression> {
-  // (type) identifier
   parse::whitespaces_char('(')
     .and_then(|_| parse::type_name())
     .and_then(|type_name| {
@@ -615,49 +635,57 @@ pub fn cast_expression() -> Parser<Expression> {
 pub fn unary_expression() -> Parser<Expression> {
   Parser::error(Error(format!("")))
     .or_else(|_| {
-      Parser::return_(())
+      Parser::r#return(())
         .and_then(|_| parse::whitespaces_char('-'))
         .and_then(|_| parse::unary_expression())
         .map(|x| bluebird(Box::new, Expression::Negation)(x))
     })
     .or_else(|_| {
-      Parser::return_(())
+      Parser::r#return(())
         .and_then(|_| parse::whitespaces_char('+'))
         .and_then(|_| parse::unary_expression())
     })
     .or_else(|_| {
-      Parser::return_(())
+      Parser::r#return(())
         .and_then(|_| parse::whitespaces_char('~'))
         .and_then(|_| parse::unary_expression())
         .map(|x| bluebird(Box::new, Expression::BitwiseComplement)(x))
     })
     .or_else(|_| {
-      Parser::return_(())
+      Parser::r#return(())
         .and_then(|_| parse::whitespaces_char('!'))
         .and_then(|_| parse::unary_expression())
         .map(|x| bluebird(Box::new, Expression::LogicalNegation)(x))
     })
     .or_else(|_| {
-      Parser::return_(())
+      Parser::r#return(())
         .and_then(|_| parse::whitespaces_char('('))
         .and_then(|_| parse::expression()) // TODO does not obey grammar
         .and_then(|expression| parse::whitespaces_char(')').map(|_| expression))
     })
-    .or_else(|_| {
-      // TODO does not obey grammar
-      parse::identifier().and_then(|identifier| {
-        Parser::return_(())
-          .and_then(|_| parse::whitespaces_char('('))
-          .and_then(|_| parse::sepby(parse::expression(), parse::whitespaces_char(',')))
-          .and_then(|arguments| {
-            parse::whitespaces_char(')').map(|_| Expression::FunctionCall(identifier, arguments))
-          })
-      })
-    })
     // TODO does not obey grammar
     .or_else(|_| parse::integer_constant())
+    // TODO does not obey grammar
     .or_else(|_| parse::character_constant())
+    // TODO does not obey grammar
     .or_else(|_| parse::string_literal())
+    // TODO does not obey grammar
+    .or_else(|_| parse::identifier().map(|identifier| Expression::Identifier(identifier)))
+    // TODO does not obey grammar
+    .and_then(|expression| {
+      let expression1 = expression.clone();
+      Parser::error(Error(format!("")))
+        .or_else(|_| {
+          Parser::r#return(())
+            .and_then(|_| parse::whitespaces_char('('))
+            .and_then(|_| parse::sepby(parse::expression(), parse::whitespaces_char(',')))
+            .and_then(|arguments| {
+              parse::whitespaces_char(')')
+                .map(|_| Expression::FunctionCall(Box::new(expression1), arguments))
+            })
+        })
+        .or_else(|_| Parser::r#return(expression))
+    })
 }
 
 pub fn identifier() -> Parser<String> {

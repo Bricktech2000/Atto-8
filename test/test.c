@@ -23,7 +23,7 @@
 #define ADDITION 1 + TWO
 #define TWO 2
 
-#define DISPLAY_BUFFER 0xE0
+#define DISPLAY_BUFFER (void *)0xE0
 #define DISPLAY_BUFFER_LEN 0x20
 
 inline void bar(void) memset(DISPLAY_BUFFER, 0xFF, DISPLAY_BUFFER_LEN);
@@ -31,7 +31,7 @@ inline void baz(void) { memset(DISPLAY_BUFFER, 0x00, DISPLAY_BUFFER_LEN); }
 
 inline void delay(int iterations);
 void sort(size_t len, void *arr);
-int foo(void);
+int foo(int n, char *test);
 
 void main(void) {
   // return 0;
@@ -47,8 +47,8 @@ void main(void) {
   // puts("Atto-8");
 
   free(malloc(10));
-  putc(foo() + (char)1);
-  puts("***ok\r\n" + 0b0011);
+  putc(foo(42, "test") + (char)1);
+  puts("***ok\r\n" + (unsigned)0b0011);
 
   asm { xE0 sts } // `!display_buffer`
   while (1) {
@@ -59,7 +59,7 @@ void main(void) {
   }
 }
 
-int foo(void) {
-  return 42;
-  foo();
+int foo(int n, char *test) {
+  return n;
+  foo(n + 1, test);
 }
