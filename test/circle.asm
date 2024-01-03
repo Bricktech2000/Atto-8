@@ -29,14 +29,14 @@ main!
     !display_buffer.len x00 !display_buffer :memset !call
     ld1 ld1 inc !draw_circle # offsets `r` from `0..8` to `1..9`
 
-    x30 !delay
+    x18 !delay
 
     # wait for controller input
     !block_getc
 
-    x00 !secondary_to_delta ad2
+    x00 ld1 !secondary_to_delta clc ad2
     x07 an2 # clamps `r` to `0..8`
-    x00 !primary_to_delta st0 ad2
+    x00 ld1 !primary_to_delta clc st0 ad2
   :loop !jmp
 
   !memset.def

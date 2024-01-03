@@ -67,7 +67,7 @@ main!
       # the x06 (0b00000110) below requires 4 cacti
       # x0E (0x00001110) could be used for 8 cacti
       ld6 !rand.min st6 ld6
-      x06 and clc :cacti add
+      x06 and clc :cacti !ofst
       # copy cactus data to cactus_top and cactus_bot
       !u16.lda !u16.st2
     ignore_cactus:

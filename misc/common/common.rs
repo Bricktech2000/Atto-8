@@ -96,7 +96,7 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
     if next_call_clocks <= current_clocks || debug_mode {
       next_call_clocks += if debug_mode { 0 } else { clock_speed / 1000 };
 
-      let timestamp_threshold = std::time::Duration::from_millis(200);
+      let timestamp_threshold = std::time::Duration::from_millis(100);
       controller_timestamps = controller_timestamps
         .iter()
         .map(|timestamp: &Option<std::time::Instant>| {

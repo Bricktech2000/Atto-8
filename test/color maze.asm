@@ -30,9 +30,9 @@ main!
 
   loop:
     # default: `player_vel`
-    !getc !u8.ld2 !primary_to_delta
+    !u8.ld1 !getc !primary_to_delta
     # ignore user input if velocity isn't `0x00`
-    x00 xo4 @dyn st0 if2
+    ld2 !zr if2
 
     # if `parity` is `0x00` then update `player_pos` with `player_vel`
     !z !u4u4.ld1 x00 dec !u4u4.iff !u8.ld3 add @dyn

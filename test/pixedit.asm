@@ -62,7 +62,7 @@ main!
     !char.pop !getc
 
     # xy_pos += xy_vel
-    x00 !primary_to_delta clc ad2
+    x00 ld1 !primary_to_delta clc ad2
 
     :default
       !char.space xo2 :ignore iff !char.space xo2
@@ -71,9 +71,9 @@ main!
     !jmp default:
       # first flip pixel at xy_pos
       !u4u4.ld0+1 !display_buffer !bit_addr !flip_bit
-      x05 !delay
+      x04 !delay
     ignore:
       # second flip pixel at xy_pos
       !u4u4.ld0+1 !display_buffer !bit_addr !flip_bit
-      x20 !delay
+      x14 !delay
   :loop !jmp

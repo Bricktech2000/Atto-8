@@ -80,7 +80,7 @@ main!
       # of this operation is `0x10` if and only if `&board & 0x0F` is
       # coprime with `0x10`. this is guaranteed at assembly time. see below
       ld3 generate:
-        x0F and clc :board add
+        x0F and clc :board !ofst
       ld0 lda !zr :generate !bcc sta
 
       # instead of looping through the board and displaying tiles, we loop
@@ -97,7 +97,7 @@ main!
           # nibble is the second nibble of the byte. this gives a pointer to the tile we're looking for
           :board ld3 x06 not @const and clc shr x00 shl @dyn xFF xo4 shl @dyn orr clc add lda
           # 2048_char = 2048_chars[tile]
-          :2048_chars add lda
+          :2048_chars !ofst lda
           # nibble = (2048_char << (byte & 0x06)) & 0x60
           # we use `0x60` as a mask to center the character horizontally.
           # this is also why `shl @const` is used in `2048_chars` below

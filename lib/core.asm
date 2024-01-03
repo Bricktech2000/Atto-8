@@ -47,6 +47,7 @@ hlt! !here !jmp
 pad! .lbl add lbl. @org
 stall! @const !stall.dyn # argument at most 0x1F
 stall.dyn! shl shl shl rot @dyn # argument at most 0x1F
+ofst! neg @const sub # add large constant by subtraction
 
 mul! clc # product = mul(a, b)
   x00 inc @const loop.

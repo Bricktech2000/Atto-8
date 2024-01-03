@@ -3,7 +3,6 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 @ lib/display.asm
-@ lib/controller.asm
 
 main!
   # we're putting the bottom of the stack two bytes away from the display buffer
@@ -49,13 +48,13 @@ main!
       x00 for_paddle:
         # paddle_pos = paddle ? paddle_a : paddle_b
         !z !u8.ld7 !u8.ld7 iff
-          # get user input and conditionally swap nibbles depending on `paddle`
-          !getc x00 x04 iff rot
-          # compute `paddle_vel` based on user input
           x00 # default: `0x00`
-            !primary_up xo2 xFF iff !primary_up xo2
-            !primary_down xo2 x01 iff # !primary_down xo2
-          clc !u8.st0
+            # get user input and conditionally swap nibbles depending on `paddle`
+            !getc x00 x04 iff rot
+            # compute `paddle_vel` based on user input
+            shr xFF if2 # primary_up
+            shr @dyn # primary_down
+          pop
         # if ((paddle_pos + paddle_vel) & 0x0F != 0x00) paddle_pos += paddle_vel
         # this prevents the paddles from going out of bounds
         !u8.ld1 !u8.add x0F and swp iff

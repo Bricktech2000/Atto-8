@@ -21,7 +21,7 @@ main!
     # ld2 !rand.min st2 ld2 x01 swp rot x0F and
 
     # default: `xy_vel`
-    swp !primary_to_delta st0
+    !primary_to_delta
     # xy_pos += xy_vel
     clc ld0 ad2
 

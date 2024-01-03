@@ -27,10 +27,10 @@ main!
     st1
 
   loop: not
-    x12 !delay
+    x14 !delay
 
     # default: `head_vel`
-    !getc !u8.ld3 !primary_to_delta st0
+    !u8.ld2 !getc !primary_to_delta
     # on even frame parity, ignore user input
     !u8.ld3 ld2 !zr !u8.iff !u8.st2
     # head_pos += head_vel

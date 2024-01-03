@@ -60,13 +60,12 @@ main!
   @EA right_xor: @00 @1E @00 @20 @00 @21 @00 @20 @00 @21 @00 @0A
 
   toggle_button: # toggle_button(state)
-    swp :up_xor # default to up
-      # !primary_up xo2 :up_xor iff !primary_up xo2 # no need to test for up
-      !primary_down xo2 :down_xor iff !primary_down xo2
-      !primary_left xo2 :left_xor iff !primary_left xo2
-      !primary_right xo2 :right_xor iff # !primary_right xo2 # no need to restore state
+    swp :right_xor swp # default to right
+      shr :up_xor if2
+      shr :down_xor if2
+      shr :left_xor if2
     # src = dir_xor
-    st0
+    pop
     # dst = *(dir_xor - 1)
     ld0 dec lda
     # load return address
