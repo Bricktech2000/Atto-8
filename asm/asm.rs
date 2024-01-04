@@ -56,8 +56,8 @@ enum Root {
   Conditional(Node, Node),
   LabelDef(Label),
   Node(Node),
-  Opcode(u8),
   Const,
+  Data(Option<Node>),
   Dyn(Option<Instruction>),
   Org(Option<Node>),
 }
@@ -91,7 +91,7 @@ fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -
   });
 
   let assembly: String = assembly
-    .lines()
+    .split("\n")
     .map(|line| line.strip_suffix("#").unwrap_or(line))
     .map(|line| line.split("# ").next().unwrap_or(line))
     .map(|line| match line.find("@ ") {
@@ -272,7 +272,7 @@ fn assemble(
           tokens
         }
 
-        Token::AtErr => {
+        Token::AtError => {
           errors.push((
             pos.clone(),
             Error(format!("`{}` directive encountered", token)),
@@ -369,10 +369,11 @@ fn assemble(
         Token::LabelRef(label) => Root::Node(Node::LabelRef(label)),
         Token::MacroDef(_) => panic!("Macro definition found in intermediate representation"),
         Token::MacroRef(_) => panic!("Macro reference found in intermediate representation"),
+        Token::AtError => panic!("Error directive found in intermediate representation"),
         Token::AtConst => Root::Const,
+        Token::AtData => Root::Data(None),
         Token::AtDyn => Root::Dyn(None),
         Token::AtOrg => Root::Org(None),
-        Token::AtErr => panic!("Error directive found in intermediate representation"),
         Token::XXX(value) => Root::Node(Node::Value(value)),
         Token::Add => Root::Instruction(Instruction::Add(assert_size(0x01, errors, &pos))),
         Token::AdS(size) => Root::Instruction(Instruction::Add(assert_size(size, errors, &pos))),
@@ -413,7 +414,7 @@ fn assemble(
         Token::Nop => Root::Instruction(Instruction::Nop),
         Token::Pop => Root::Instruction(Instruction::Pop),
         Token::AtDD(0xBB) => Root::Instruction(Instruction::Dbg),
-        Token::AtDD(value) => Root::Opcode(value),
+        Token::AtDD(value) => Root::Data(Some(Node::Value(value))),
       };
 
       (pos, token)
@@ -505,6 +506,19 @@ fn assemble(
             instructions
           }
 
+          Root::LabelDef(Label::Local(_, None)) => panic!("Local label has no scope specified"),
+
+          Root::LabelDef(label) => {
+            if label_definitions.contains_key(&label) {
+              errors.push((
+                pos.clone(),
+                Error(format!("Duplicate label definition `{}`", label)),
+              ));
+            }
+            label_definitions.insert(label.clone(), location_counter as u8);
+            vec![]
+          }
+
           Root::Node(node) => match resolve_node_value(&node, &label_definitions) {
             Ok(value) => build_push_instruction(value, &pos)
               .into_iter()
@@ -516,20 +530,51 @@ fn assemble(
             }
           },
 
-          Root::Opcode(opcode) => {
-            vec![(pos.clone(), Err(opcode.clone()))]
+          Root::Const => {
+            errors.push((
+              pos.clone(),
+              Error(format!(
+                "`{}` argument could not be reduced to a constant expression",
+                Token::AtConst,
+              )),
+            ));
+            vec![]
           }
 
-          Root::LabelDef(Label::Local(_, None)) => panic!("Local label has no scope specified"),
-
-          Root::LabelDef(label) => {
-            if label_definitions.contains_key(&label) {
+          Root::Data(Some(node)) => match resolve_node_value(&node, &label_definitions) {
+            Ok(value) => vec![(pos.clone(), Err(value))],
+            Err(label) => {
               errors.push((
                 pos.clone(),
-                Error(format!("Duplicate label definition `{}`", label)),
+                Error(format!(
+                  "`{}` argument contains currently unresolved label `{}`",
+                  Token::AtData,
+                  label
+                )),
               ));
+              vec![]
             }
-            label_definitions.insert(label.clone(), location_counter as u8);
+          },
+
+          Root::Data(None) => {
+            errors.push((
+              pos.clone(),
+              Error(format!(
+                "`{}` argument could not be reduced to a constant expression",
+                Token::AtData,
+              )),
+            ));
+            vec![]
+          }
+
+          Root::Dyn(None) => {
+            errors.push((
+              pos.clone(),
+              Error(format!(
+                "`{}` argument could not be reduced to an instruction",
+                Token::AtDyn,
+              )),
+            ));
             vec![]
           }
 
@@ -570,28 +615,6 @@ fn assemble(
               Error(format!(
                 "`{}` argument could not be reduced to a constant expression",
                 Token::AtOrg,
-              )),
-            ));
-            vec![]
-          }
-
-          Root::Const => {
-            errors.push((
-              pos.clone(),
-              Error(format!(
-                "`{}` argument could not be reduced to a constant expression",
-                Token::AtConst,
-              )),
-            ));
-            vec![]
-          }
-
-          Root::Dyn(None) => {
-            errors.push((
-              pos.clone(),
-              Error(format!(
-                "`{}` argument could not be reduced to an instruction",
-                Token::AtDyn,
               )),
             ));
             vec![]
@@ -785,8 +808,8 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
       Root::Conditional(_, _) => OpType::PushOp,
       Root::LabelDef(_) => OpType::Impure,
       Root::Node(_) => OpType::PushOp,
-      Root::Opcode(_) => OpType::Impure,
       Root::Const => OpType::Impure,
+      Root::Data(_) => OpType::Impure,
       Root::Dyn(_) => OpType::Impure,
       Root::Org(_) => OpType::Impure,
     }
@@ -809,9 +832,9 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
         Some(vec![Root::Dyn(Some(instruction.clone()))])
       }
 
-      [r#dyn @ Root::Dyn(Some(_)), Root::Dyn(None)] => Some(vec![r#dyn.clone()]),
+      [node @ Root::Data(Some(_)), Root::Dyn(None)] => Some(vec![node.clone()]),
 
-      [opcode @ Root::Opcode(_), Root::Dyn(None)] => Some(vec![opcode.clone()]),
+      [r#dyn @ Root::Dyn(Some(_)), Root::Dyn(None)] => Some(vec![r#dyn.clone()]),
 
       [Root::Node(Node::Value(value)), Root::Dyn(None)] => {
         match common::opcode_to_instruction(*value) {
@@ -821,18 +844,24 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
         }
       }
 
+      [Root::Node(node), Root::Data(None)] => Some(vec![Root::Data(Some(node.clone()))]),
+
       [Root::Node(node), Root::Org(None)] => Some(vec![Root::Org(Some(node.clone()))]),
 
       _ => None,
     });
     roots = match_replace(&roots, |window| match window {
       // for `!pad` macro
-      [node @ Root::Node(_), label @ Root::LabelDef(_), org @ Root::Org(None)] => {
-        Some(vec![label.clone(), node.clone(), org.clone()])
-      }
-
       [node @ Root::Node(_), label @ Root::LabelDef(_), r#const @ Root::Const] => {
         Some(vec![node.clone(), r#const.clone(), label.clone()])
+      }
+
+      [node @ Root::Node(_), label @ Root::LabelDef(_), data @ Root::Data(None)] => {
+        Some(vec![node.clone(), data.clone(), label.clone()])
+      }
+
+      [node @ Root::Node(_), label @ Root::LabelDef(_), org @ Root::Org(None)] => {
+        Some(vec![label.clone(), node.clone(), org.clone()])
       }
 
       _ => None,

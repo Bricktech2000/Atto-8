@@ -24,5 +24,5 @@ main!
   # use display buffer as heap for demo
   !display_buffer @org
 
-  heap_start: !heap_unlimited
+  heap_start: !heap_unlimited @data
 heap_start! :heap_start @const

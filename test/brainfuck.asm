@@ -44,7 +44,7 @@ compiler!
       # both more performant and smaller in size than `strcat`
       ld2 for_c:
         # loop if *dst != '\xFF'
-        ld1 lda !char.check_null
+        ld1 lda !z
         ld1 sta
       inc swp inc swp @dyn :for_c !bcc dec st2 pop
     # loop while `stdin` is not empty
@@ -55,7 +55,7 @@ compiler!
       ld0 lda :for_b
         ![_sentinel xo2 :[_sentinel iff ![_sentinel xo2
         !]_sentinel xo2 :]_sentinel iff !]_sentinel xo2
-        !char.null xo2 :break iff !char.null xo2
+        !null_sentinel xo2 :break iff !null_sentinel xo2
       st0 !jmp
     break: pop
 
@@ -82,20 +82,21 @@ compiler!
 
   # expects `*head` on top of the stack, followed by `head`, followed by `!stdout`
   # top of stack is written to `*head` only when `'<'` or `'>'` are encountered
-  >: ld1 sta inc ld0 lda !char.null
-  <: ld1 sta dec ld0 lda !char.null
-  +: inc !char.null
-  -: dec !char.null
-  # `!stdin` and `!stdout` are `'\0'` which is also `!char.null`. to avoid a null bytes
-  # within the string, we load `'\0'` from the stack using `ldO` instead
-  .: ld0 ld3 !fputc !char.null
-  ,: ld2 !fgetc st0 !char.null
-  [: !z !pad_sentinel ![_sentinel iff !jmp !char.null
-  ]: !]_sentinel !jmp _: !char.null
+  >: ld1 sta inc ld0 lda !null_sentinel
+  <: ld1 sta dec ld0 lda !null_sentinel
+  +: inc !null_sentinel
+  -: dec !null_sentinel
+  # `!stdin` and `!stdout` are `'\0'` which is also `!null_sentinel`. to avoid null bytes
+  # within the string, we load `'\0'` from the stack using `ldo` instead
+  .: ld0 ld3 !fputc !null_sentinel
+  ,: ld2 !fgetc st0 !null_sentinel
+  [: !z !pad_sentinel ![_sentinel iff !jmp !null_sentinel
+  ]: !]_sentinel !jmp _: !null_sentinel
 
 [_sentinel! @FF
 ]_sentinel! @FE
 pad_sentinel! @FD
+null_sentinel! @00
 
 
 interpreter!

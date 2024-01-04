@@ -1742,7 +1742,7 @@ u8.to_hex!
   swp !u4u4.fst !u4.to_hex
 # converts `'00'..='FF'` to `0x00..=0xFF`
 hex.to_u8!
-  @err # to be implemented
+  @error # to be implemented
 # converts `0x00..=0xFF` to a sequence of digits `'0'..='9'`. converts `0x00` to `'0'`
 u8.to_dec!
   while_value.
@@ -1754,7 +1754,7 @@ u8.to_dec!
   !z .while_value !bcc !u8.pop
 # converts an unspecified number of digits `'0'..='9'` to `0x00..=0xFF`
 dec.to_u8!
-  @err # to be implemented
+  @error # to be implemented
 
 char.check_null! !z
 char.is_null! !zr

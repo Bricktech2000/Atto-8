@@ -22,7 +22,7 @@
 # - `pos` as a `u4u4` means "tetromino position"
 
 main!
-  pop pop :tetrominoes x03 sub @const sts # (pos, index, frame)
+  pop pop :tetrominoes dec dec dec @const sts # (pos, index, frame)
 
   spawn_tetromino:
     # if we're here we probably failed to move a tetromino down; move it back up
@@ -131,7 +131,7 @@ main!
   # `initial_index = 0x08` because `tetrominoes[0x08]` is `0x00`, an invisible tetromino,
   # which we want because falling through to `spawn_tetromino` at startup will display
   # it. `initial_frame = 0x00` is arbitrary
-  !spawn_pos x40 add @const x08 @00
+  !spawn_pos x40 add @data @08 @00
 
   # every byte is one tetromino at one rotation. bits within a byte, from the most to
   # the least significant, represents one `@` in the diagram below, to be read left to

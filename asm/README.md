@@ -37,11 +37,12 @@ Assembler optimizations assume the carry flag is always clear, and may leave the
 | `.label` | Push address of local label `label`               |
 | `macro!` | Define start of macro `macro`                     |
 | `!macro` | Token-wise replace with contents of macro `macro` |
+| `@error` | Emit error and terminate compilation              |
 | `@const` | Assert that preceding expression is constant      |
+| `@data`  | Insert preceding expression into binary           |
 | `@dyn`   | Inhibit optimization of preceding instruction     |
 | `@org`   | Set location counter to preceding expression      |
-| `@err`   | Emit error and terminate compilation              |
-| `@DD`    | Insert `DD` into binary at current address        |
+| `@DD`    | Insert `DD` into binary; shorhand for `xDD @data` |
 | `xXX`    | Push hexadecimal `XX` through `psh` and `phn`     |
 | `add`    | Emit instruction `add 0x01`                       |
 | `adS`    | Emit instruction `add S`                          |

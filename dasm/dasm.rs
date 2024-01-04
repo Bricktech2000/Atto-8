@@ -51,7 +51,7 @@ fn main() {
         Token::AtDyn,
         Token::XXX(index as u8),
         Token::AtOrg,
-        Token::AtDD(opcode)
+        Token::AtDD(opcode),
       )
     })
     .map(|line| line.to_string() + "\n")

@@ -125,23 +125,23 @@ main!
   # to the pixels of the font from left to right, top to bottom. the padding for the font is at the
   # top of the character so that the first bit is always clear so that it fits in an `IMM`
   2048_chars:
-    x00 shl @const #
-    x0F shl @const # 0
-    x15 shl @const # 1
-    x1E shl @const # 2
-    x37 shl @const # 3
-    x2D shl @const # 4
-    x36 shl @const # 5
-    x1B shl @const # 6
-    x35 shl @const # 7
-    x3F shl @const # 8
-    x3D shl @const # 9
-    x27 shl @const # A
-    x2F shl @const # B
-    x19 shl @const # C
-    x1F shl @const # D
-    x39 shl @const # E
-    x1A shl @const # F
+    x00 shl @data #
+    x0F shl @data # 0
+    x15 shl @data # 1
+    x1E shl @data # 2
+    x37 shl @data # 3
+    x2D shl @data # 4
+    x36 shl @data # 5
+    x1B shl @data # 6
+    x35 shl @data # 7
+    x3F shl @data # 8
+    x3D shl @data # 9
+    x27 shl @data # A
+    x2F shl @data # B
+    x19 shl @data # C
+    x1F shl @data # D
+    x39 shl @data # E
+    x1A shl @data # F
 
   # `&board & 0x0F` must be coprime with `0x10` for random number generation.
   # `x` is coprime with `0x10` if and only if `x` is odd. therefore we ensure

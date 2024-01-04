@@ -6,5 +6,5 @@ main!
   :main !call !hlt !main.deps
 
   # initialize heap for `malloc` and `free`
-  heap_start: xFF :heap_start pop @const # `!heap_unlimited`
+  heap_start: @FF :heap_start pop # `!heap_unlimited @data`
 heap_start! :heap_start @const

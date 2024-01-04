@@ -12,23 +12,18 @@ main! !nop
     !char.carriage_return !putc !char.line_feed !putc
   :loop !jmp
 
-  # we use the syntax `:label` in `ptrs` below, which makes the
-  # assembler generate a push instruction for the address of `label`.
-  # the opcode for pushing a byte `b` is `b` if `b < 0x80`, and so
-  # we must ensure all labels below are less than `0x80`
   str_num: @00 @00 @00 @00 # enough for null-terminated `"255"`
   str_fizz: @46 @69 @7A @7A @00 # "Fizz"
   str_fizzbuzz: @46 @69 @7A @7A # "FizzBuzz"
   str_buzz: @42 @75 @7A @7A @00 # "Buzz"
-  !here x80 not and @org # assert location counter less than `0x80`
 
   ptrs:
     # note how bit `0b01` being set indicates divisibility by `3`
     # and bit `0b10` being set indicates divisibility by `5`
-    :str_num # ptrs[0b00]
-    :str_fizz # ptrs[0b01]
-    :str_buzz # ptrs[0b10]
-    :str_fizzbuzz # ptrs[0b11]
+    :str_num @data # ptrs[0b00]
+    :str_fizz @data # ptrs[0b01]
+    :str_buzz @data # ptrs[0b10]
+    :str_fizzbuzz @data # ptrs[0b11]
 
   fizzbuzz: # fizzbuzz(u8 n)
     x00 for_i:

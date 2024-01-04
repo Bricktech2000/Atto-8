@@ -22,10 +22,11 @@ main!
   lda @const
   lda @org
   x00 @org
+  lda @data
   :future @org future:
   dyn: :dyn @dyn
   !self
-  @err
+  @error
 
   !row !row !row !row !row !row !row !row !row !row !row !row !row !row !row !row
 row! @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00
