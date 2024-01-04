@@ -20,8 +20,12 @@
 
 #// null directive
 
-#define ADDITION 1 + TWO
+#define ADDITION                                                               \
+  1 + TWO //                                     line continuation
 #define TWO 2
+
+/* /* multi // line
+   comment */
 
 #define DISPLAY_BUFFER (void *)0xE0
 #define DISPLAY_BUFFER_LEN 0x20

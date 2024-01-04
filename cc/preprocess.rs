@@ -44,9 +44,13 @@ pub fn preprocess(
 
   let mut preprocessed = "".to_string();
   let mut source = source
-    .lines()
-    .map(|line| line.split("//").next().unwrap_or(line))
-    .map(|line| line.to_string() + "\n")
+    .replace("\\\n", "") // line continuation
+    .split("\n")
+    .map(|line| line.split("//").next().unwrap_or(line)) // line comments
+    .map(|line| line.to_owned() + "\n")
+    .collect::<String>()
+    .split("*/")
+    .map(|item| item.split("/*").next().unwrap_or(item)) // block comments
     .collect::<String>();
 
   let preprocessed = loop {
