@@ -18,7 +18,7 @@ main! !nop
     x00 for_s:
       ld2 shl # 2 * n
       ld3 shr @dyn neg # -n / 2
-      ld1 iff ad4 @dyn # `n += CF ? 2*n+CF : -n/2`
+      ld1 iff ad4 @dyn clc # `n += CF ? 2*n+CF : -n/2`
       !char.null ld4 !u8.to_dec !stack_puts !char.space !putc
       x04 !eq # if `3 * n + 1 == 4` then `n == 1`
     inc :for_s !bcc

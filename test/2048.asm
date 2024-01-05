@@ -49,7 +49,8 @@ main!
         ld1 lda # board[curr]
 
         !z :zero !bcs
-        !eq :continue :equal iff !jmp
+        !eq :equal !bcs
+        :continue !jmp
 
         zero: # `board[prev]` and `board[curr]` on the stack
           # board[curr] = board[prev] - 1
@@ -118,8 +119,8 @@ main!
     # the controller being in any state other than `0x01 | 0x02 | 0x04 | 0x08`
     # unfortunately breaks the game logic. not much we can do about that.
     # below is similar to `!block_getc` but updates `rand_seed` while waiting
-    block: !char.add !getc !char.check_null :block
-  :while swp iff !jmp
+    block: !char.add !getc !char.check_null :block !bcs
+  :while !jmp
 
   # characters below are 2x4 pixels in size. the bits of their encoding from MSB to LSB correspond
   # to the pixels of the font from left to right, top to bottom. the padding for the font is at the

@@ -23,7 +23,7 @@ main!
 
     !is_in_set @dyn x00 shl @dyn
     ld1 !display_buffer !bit_addr !store_bit
-  !z !here :for_xy swp iff !jmp
+  !z !here !bcs :for_xy !jmp
 
 
   !u8.mul.def

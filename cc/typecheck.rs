@@ -1392,7 +1392,7 @@ fn function_call_expression(
     r#type => r#type,
   };
 
-  let (inline_designator, return_type, parameter_types, is_variadic) = match designator_type {
+  let (inline_name, return_type, parameter_types, is_variadic) = match designator_type {
     Type::Function(return_type, parameter_types, is_variadic) => {
       (None, return_type, parameter_types, is_variadic)
     }
@@ -1463,16 +1463,10 @@ fn function_call_expression(
 
   (
     *return_type.clone(),
-    match (inline_designator, return_type.range()) {
-      (Some(designator), Range::U0 | Range::I0) => {
-        TypedExpression::N0MacroCall(designator, arguments)
-      }
-      (Some(designator), Range::U1 | Range::I1) => {
-        TypedExpression::N1MacroCall(designator, arguments)
-      }
-      (Some(designator), Range::U8 | Range::I8) => {
-        TypedExpression::N8MacroCall(designator, arguments)
-      }
+    match (inline_name, return_type.range()) {
+      (Some(name), Range::U0 | Range::I0) => TypedExpression::N0MacroCall(name, arguments),
+      (Some(name), Range::U1 | Range::I1) => TypedExpression::N1MacroCall(name, arguments),
+      (Some(name), Range::U8 | Range::I8) => TypedExpression::N8MacroCall(name, arguments),
       (None, Range::U0 | Range::I0) => {
         TypedExpression::N0FunctionCall(Box::new(designator), arguments)
       }

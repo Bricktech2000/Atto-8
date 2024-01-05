@@ -39,6 +39,10 @@ fn global(global: TypedGlobal) -> Vec<Result<Token, String>> {
     TypedGlobal::Macro(label, statement) => std::iter::empty()
       .chain(vec![Ok(Token::MacroDef(Macro(label)))])
       .chain(codegen::statement(statement))
+      .chain(vec![Ok(Token::LabelDef(Label::Local(
+        format!("macro.end"),
+        None,
+      )))])
       .chain(vec![Err(format!(""))])
       .collect(),
 
@@ -72,23 +76,40 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
     }
 
     TypedStatement::MacroReturnN0(parameters_size, locals_size, expression) => {
-      // TODO for an early return, we need to jump to the end of the macro
+      let jmp_macro = Macro("jmp".to_string());
+      let end_label = Label::Local(format!("macro.end"), None);
+
       match (parameters_size, locals_size, expression) {
         (parameters_size, locals_size, Some(expression)) => std::iter::empty()
           .chain(codegen::n0_expression(expression))
           .chain(vec![Ok(Token::Pop); parameters_size + locals_size])
+          .chain(vec![
+            Ok(Token::LabelRef(end_label)),
+            Ok(Token::MacroRef(jmp_macro)),
+          ])
           .collect(),
         (parameters_size, locals_size, None) => std::iter::empty()
           .chain(vec![Ok(Token::Pop); parameters_size + locals_size])
+          .chain(vec![
+            Ok(Token::LabelRef(end_label)),
+            Ok(Token::MacroRef(jmp_macro)),
+          ])
           .collect(),
       }
     }
 
     TypedStatement::MacroReturnN1(parameters_size, locals_size, expression)
     | TypedStatement::MacroReturnN8(parameters_size, locals_size, expression) => {
+      let jmp_macro = Macro("jmp".to_string());
+      let end_label = Label::Local(format!("macro.end"), None);
+
       match (parameters_size, locals_size, expression) {
         (0, 0, Some(expression)) => std::iter::empty()
           .chain(codegen::expression(expression))
+          .chain(vec![
+            Ok(Token::LabelRef(end_label)),
+            Ok(Token::MacroRef(jmp_macro)),
+          ])
           .collect(),
         (parameters_size, locals_size, Some(expression)) => std::iter::empty()
           .chain(codegen::expression(expression))
@@ -96,12 +117,24 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
             (parameters_size + locals_size - 1) as u8,
           ))])
           .chain(vec![Ok(Token::Pop); parameters_size + locals_size - 1])
+          .chain(vec![
+            Ok(Token::LabelRef(end_label)),
+            Ok(Token::MacroRef(jmp_macro)),
+          ])
           .collect(),
         (0, 0, None) => std::iter::empty()
           .chain(vec![Ok(Token::XXX(0x00))])
+          .chain(vec![
+            Ok(Token::LabelRef(end_label)),
+            Ok(Token::MacroRef(jmp_macro)),
+          ])
           .collect(),
         (parameters_size, locals_size, None) => std::iter::empty()
           .chain(vec![Ok(Token::Pop); parameters_size + locals_size - 1])
+          .chain(vec![
+            Ok(Token::LabelRef(end_label)),
+            Ok(Token::MacroRef(jmp_macro)),
+          ])
           .collect(),
       }
     }
@@ -381,50 +414,121 @@ fn n8_expression(expression: TypedExpression) -> Vec<Result<Token, String>> {
       .chain(vec![Ok(Token::Not)])
       .collect(),
 
-    TypedExpression::N8Addition(expression1, expression2) => {
-      std::iter::empty()
-        .chain(codegen::n8_expression(*expression1))
-        .chain(codegen::n8_expression(*expression2))
-        .chain(vec![Ok(Token::Clc), Ok(Token::Add)]) // TODO optimize
-        .collect()
-    }
+    TypedExpression::N8Addition(expression1, expression2) => match (*expression1, *expression2) {
+      (expression, TypedExpression::N8Constant(0x01))
+      | (TypedExpression::N8Constant(0x01), expression) => std::iter::empty()
+        .chain(codegen::n8_expression(expression))
+        .chain(vec![Ok(Token::Inc)])
+        .collect(),
+      (expression, TypedExpression::N8Constant(0x00))
+      | (TypedExpression::N8Constant(0x00), expression) => std::iter::empty()
+        .chain(codegen::n8_expression(expression))
+        .collect(),
+      (expression, TypedExpression::N8Constant(0xff))
+      | (TypedExpression::N8Constant(0xff), expression) => std::iter::empty()
+        .chain(codegen::n8_expression(expression))
+        .chain(vec![Ok(Token::Dec)])
+        .collect(),
+      (expression1, expression2) => std::iter::empty()
+        .chain(codegen::n8_expression(expression1))
+        .chain(codegen::n8_expression(expression2))
+        .chain(vec![Ok(Token::Clc), Ok(Token::Add)])
+        .collect(),
+    },
 
     TypedExpression::N8Subtraction(expression1, expression2) => {
-      std::iter::empty()
-        .chain(codegen::n8_expression(*expression1))
-        .chain(codegen::n8_expression(*expression2))
-        .chain(vec![Ok(Token::Clc), Ok(Token::Sub)]) // TODO optimize
-        .collect()
+      match (*expression1, *expression2) {
+        (expression, TypedExpression::N8Constant(0x01))
+        | (TypedExpression::N8Constant(0x01), expression) => std::iter::empty()
+          .chain(codegen::n8_expression(expression))
+          .chain(vec![Ok(Token::Dec)])
+          .collect(),
+        (expression, TypedExpression::N8Constant(0x00))
+        | (TypedExpression::N8Constant(0x00), expression) => std::iter::empty()
+          .chain(codegen::n8_expression(expression))
+          .collect(),
+        (expression, TypedExpression::N8Constant(0xff))
+        | (TypedExpression::N8Constant(0xff), expression) => std::iter::empty()
+          .chain(codegen::n8_expression(expression))
+          .chain(vec![Ok(Token::Inc)])
+          .collect(),
+        (expression1, expression2) => std::iter::empty()
+          .chain(codegen::n8_expression(expression1))
+          .chain(codegen::n8_expression(expression2))
+          .chain(vec![Ok(Token::Clc), Ok(Token::Sub)])
+          .collect(),
+      }
     }
 
     TypedExpression::U8Multiplication(expression1, expression2) => {
       let mul_macro = Macro("mul".to_string());
 
-      std::iter::empty()
-        .chain(codegen::n8_expression(*expression1))
-        .chain(codegen::n8_expression(*expression2))
-        .chain(vec![Ok(Token::MacroRef(mul_macro))])
-        .collect()
+      match (*expression1, *expression2) {
+        (expression, TypedExpression::N8Constant(0x02))
+        | (TypedExpression::N8Constant(0x02), expression) => std::iter::empty()
+          .chain(codegen::n8_expression(expression))
+          .chain(vec![Ok(Token::Clc), Ok(Token::Shl)])
+          .collect(),
+        (expression, TypedExpression::N8Constant(0x01))
+        | (TypedExpression::N8Constant(0x01), expression) => std::iter::empty()
+          .chain(codegen::n8_expression(expression))
+          .collect(),
+        (_expression, TypedExpression::N8Constant(0x00))
+        | (TypedExpression::N8Constant(0x00), _expression) => std::iter::empty()
+          .chain(vec![Ok(Token::XXX(0x00))])
+          .collect(),
+        (expression1, expression2) => std::iter::empty()
+          .chain(codegen::n8_expression(expression1))
+          .chain(codegen::n8_expression(expression2))
+          .chain(vec![Ok(Token::MacroRef(mul_macro))])
+          .collect(),
+      }
     }
 
     TypedExpression::U8Division(expression1, expression2) => {
       let div_macro = Macro("div".to_string());
 
-      std::iter::empty()
-        .chain(codegen::n8_expression(*expression1))
-        .chain(codegen::n8_expression(*expression2))
-        .chain(vec![Ok(Token::MacroRef(div_macro))])
-        .collect()
+      match (*expression1, *expression2) {
+        (expression1, TypedExpression::N8Constant(0x02)) => std::iter::empty()
+          .chain(codegen::n8_expression(expression1))
+          .chain(vec![Ok(Token::Clc), Ok(Token::Shr)])
+          .collect(),
+        (expression1, TypedExpression::N8Constant(0x01)) => std::iter::empty()
+          .chain(codegen::n8_expression(expression1))
+          .collect(),
+        (_expression1, TypedExpression::N8Constant(0x00)) => std::iter::empty().collect(), // behavior is undefined
+        (TypedExpression::N8Constant(0x00), _expression) => std::iter::empty()
+          .chain(vec![Ok(Token::XXX(0x00))])
+          .collect(),
+        (expression1, expression2) => std::iter::empty()
+          .chain(codegen::n8_expression(expression1))
+          .chain(codegen::n8_expression(expression2))
+          .chain(vec![Ok(Token::MacroRef(div_macro))])
+          .collect(),
+      }
     }
 
     TypedExpression::U8Modulo(expression1, expression2) => {
       let mod_macro = Macro("mod".to_string());
 
-      std::iter::empty()
-        .chain(codegen::n8_expression(*expression1))
-        .chain(codegen::n8_expression(*expression2))
-        .chain(vec![Ok(Token::MacroRef(mod_macro))])
-        .collect()
+      match (*expression1, *expression2) {
+        (expression1, TypedExpression::N8Constant(0x02)) => std::iter::empty()
+          .chain(codegen::n8_expression(expression1))
+          .chain(vec![Ok(Token::XXX(0x01)), Ok(Token::And)])
+          .collect(),
+        (_expression1, TypedExpression::N8Constant(0x01)) => std::iter::empty()
+          .chain(codegen::n8_expression(TypedExpression::N8Constant(0x00)))
+          .collect(),
+        (_expression1, TypedExpression::N8Constant(0x00)) => std::iter::empty().collect(), // behavior is undefined
+        (TypedExpression::N8Constant(0x00), _expression) => std::iter::empty()
+          .chain(vec![Ok(Token::XXX(0x00))])
+          .collect(),
+        (expression1, expression2) => std::iter::empty()
+          .chain(codegen::n8_expression(expression1))
+          .chain(codegen::n8_expression(expression2))
+          .chain(vec![Ok(Token::MacroRef(mod_macro))])
+          .collect(),
+      }
     }
 
     TypedExpression::N8Constant(constant) => vec![Ok(Token::XXX(constant))],

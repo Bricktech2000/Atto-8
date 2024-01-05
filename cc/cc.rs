@@ -81,6 +81,8 @@ fn main() {
   println!("CC: Done");
 }
 
+// abstract syntax tree
+
 #[derive(Clone, PartialEq, Debug)]
 pub struct Object(Type, String);
 
@@ -168,6 +170,8 @@ pub enum Statement {
   Return(Option<Expression>),
   Assembly(String),
 }
+
+// typed intermediate representation
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct TypedProgram(Vec<TypedGlobal>);

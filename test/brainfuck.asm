@@ -154,6 +154,6 @@ interpreter!
       ld1 inc lda !char.right_square_bracket !eq add @dyn
     # loop if current source char is not null
     got_neither:
-  inc !here :loop swp iff !jmp
+  inc !here !bcs :loop !jmp
 
   x06 !pad source_buffer:

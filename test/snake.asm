@@ -72,8 +72,8 @@ main!
     # not enough memory to check if food spawned on snake body.
     # therefore, if food_pos == tail_pos, generate new food somewhere else.
     # otherwise, the algorithm above confuses food for the snake body.
-    ld1 x11 orr !u4u4.ld5 !eq
-  :loop :food iff !jmp
+    ld1 x11 orr !u4u4.ld5 !eq :food !bcs
+  :loop !jmp
 
   directions:
     @F0 !i4i4

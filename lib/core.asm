@@ -27,12 +27,9 @@ cl! and @dyn pop          # cleared in
 ncl! and @dyn pop flc     # non-cleared in
 
 jmp! sti
-bcc! @const !bcc.dyn
-bcc.dyn! .skip iff !jmp skip.
-bcs! @const !bcs.dyn
-bcs.dyn! .skip swp iff !jmp skip.
-call! @const !call.dyn
-call.dyn! .ret swp !jmp ret.
+bcc! @const .skip iff !jmp skip.
+bcs! @const .skip swp iff !jmp skip.
+call! @const .ret swp !jmp ret.
 ret! !jmp
 rt0! !ret
 rt1! st0 !ret
@@ -45,8 +42,7 @@ here! lbl. .lbl
 nop! nop @dyn
 hlt! !here !jmp
 pad! .lbl add lbl. @org
-stall! @const !stall.dyn # argument at most 0x1F
-stall.dyn! shl shl shl rot @dyn # argument at most 0x1F
+stall! @const shl shl shl rot @dyn # argument at most 0x1F
 ofst! neg @const sub # add large constant by subtraction
 
 mul! clc # product = mul(a, b)

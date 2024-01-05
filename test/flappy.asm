@@ -21,7 +21,7 @@ main!
     !getc !char.check_null !i4f4.ld1 !flap_vel !i4f4.ld3 !i4f4.iff ld8 !zr !i4f4.iff !i4f4.st1 st5
     # compute bit_addr of (BIRD_POS, y_pos)
     !display_buffer !u4f4.ld2 !u4f4.in clc !u4f4.shl orr x07 !bird_pos sub @const
-    # clear pixel at (x_pos, y_pos)
+    # clear pixel at (BIRD_POS, y_pos)
     !clear_bit clc
 
     # x_pos += x_vel
@@ -42,9 +42,9 @@ main!
 
     # compute bit_addr of (BIRD_POS, y_pos)
     !display_buffer !u4f4.ld2 !u4f4.in clc !u4f4.shl orr x07 !bird_pos sub @const
-    # if pixel at (x_pos, y_pos) is set, game over
+    # if pixel at (BIRD_POS, y_pos) is set, game over
     !u8u8.ld0 !load_bit !z :game_over !bcc pop
-    # set pixel at (x_pos, y_pos)
+    # set pixel at (BIRD_POS, y_pos)
     !set_bit
 
     # if x_pos % 0x80 == 0, generate a new pipe
@@ -66,12 +66,12 @@ main!
   :loop !jmp
 
   game_over:
-    # blink pixel at (x_pos, y_pos)
+    # blink pixel at (BIRD_POS, y_pos)
     blink: pop
       !u8u8.ld0 !flip_bit
       # `!delay`, but with optimized conditional jump
-      x20 stall: x1F !stall x01 sub @dyn
-    :stall :blink iff !jmp
+      x20 delay: x1F !stall x01 sub @dyn :delay !bcc
+    :blink !jmp
 
   !display_buffer @org
     !deep_void

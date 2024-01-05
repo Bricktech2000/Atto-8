@@ -48,8 +48,8 @@ main!
     # increment `ptr` and loop while `*ptr`; otherwise go to `replay`. we
     # omit `sec` because the only way `!bcc` exits is with carry set. see
     # below for `sec shr` rationale
-    inc ld0 shr lda !z :replay # bleed `(0x00, ptr)`
-  :loop swp iff !jmp
+    inc ld0 shr lda !z :replay !bcs # bleed `(0x00, ptr)`
+  :loop !jmp
 
   # format is `DST dir_xor: DATA`; `DATA` must be `DIR_XOR_LEN` bytes long. `DATA`
   # represents which bits to XOR with the display buffer to toggle a button on the

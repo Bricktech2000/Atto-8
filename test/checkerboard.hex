@@ -1,7 +1,7 @@
 # main! !nop
 #   loop:
 #     x55 ld0 ld0 not ld0
-#   lds !display_buffer !eq :loop !here iff !jmp
+#   lds !display_buffer !eq !here !bcs :loop !jmp
 
 EE
 55 C0 C0 B6 C0

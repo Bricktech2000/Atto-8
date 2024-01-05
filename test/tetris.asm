@@ -27,8 +27,11 @@ main!
   spawn_tetromino:
     # if we're here we probably failed to move a tetromino down; move it back up
     x10 sub
-    # display back the tetromino at its previous (current) position
-    !flip :display_tetromino !call
+    # if moving the tetromino upwards overflowed, game over and halt. otherwise,
+    # display back the tetromino at its previous (current) position.
+    # below is equivalent to `!flip !here !bcs :display_tetromino !call`
+    !flip .ret !here !bcs :display_tetromino !jmp ret.
+
     # new_type = (pos + frame + type) & TYPE_MASK; new_pos = SPAWN_POS
     # `pos, frame, type` happen to be easily accessible on the stack, so we use
     # them as a random seed
@@ -55,8 +58,10 @@ main!
   loop:
     # briefly display at `pos` the tetromino at index `index`
     !flip :display_tetromino !call
-    !tick_delay !delay
-    !flip :display_tetromino !call
+    # below is equivalent to `!tick_delay !delay !flip :display_tetromino !call`
+    !tick_delay :ret
+      delay: x1F !stall x01 su2 @dyn :delay !bcc
+    :display_tetromino !jmp ret:
 
     # compute `(pos_delta, index_delta)`
     x00 x00 !getc ld0
@@ -83,7 +88,8 @@ main!
     # if the new tetromino position is invalid then spawn a new tetromino.
     # otherwise, loop
     !check :display_tetromino !call
-  :spawn_tetromino :loop iff !jmp
+    :spawn_tetromino !bcc
+  :loop !jmp
 
   # if `do_flip` is `0x00` then return whether a tetromino's position is valid in `CF`.
   # if `do_flip` is `0xFF` then flip the tetromino's pixels in the display buffer to

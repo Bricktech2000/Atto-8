@@ -701,7 +701,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
   // a convenience function to replace slice patterns within a vector
   fn match_replace<const N: usize>(
     roots: &Vec<(Pos, Root)>,
-    replacer: fn(&[Root; N]) -> Option<Vec<Root>>,
+    mut replacer: impl FnMut(&[Root; N]) -> Option<Vec<Root>>,
   ) -> Vec<(Pos, Root)> {
     if roots.len() < N {
       return roots.clone();
@@ -824,18 +824,13 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
     last_roots = roots.clone();
     // println!("roots: {:?}\nlen: {}", roots, roots.len());
 
-    // directives
+    // higher priority for directives
     roots = match_replace(&roots, |window| match window {
       [node @ Root::Node(_), Root::Const] => Some(vec![node.clone()]),
-
       [Root::Instruction(instruction), Root::Dyn(None)] => {
         Some(vec![Root::Dyn(Some(instruction.clone()))])
       }
-
-      [node @ Root::Data(Some(_)), Root::Dyn(None)] => Some(vec![node.clone()]),
-
       [r#dyn @ Root::Dyn(Some(_)), Root::Dyn(None)] => Some(vec![r#dyn.clone()]),
-
       [Root::Node(Node::Value(value)), Root::Dyn(None)] => {
         match common::opcode_to_instruction(*value) {
           Ok(instruction @ Instruction::Psh(_)) => Some(vec![Root::Dyn(Some(instruction))]),
@@ -843,27 +838,45 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
           _ => None,
         }
       }
-
       [Root::Node(node), Root::Data(None)] => Some(vec![Root::Data(Some(node.clone()))]),
-
       [Root::Node(node), Root::Org(None)] => Some(vec![Root::Org(Some(node.clone()))]),
-
       _ => None,
     });
+
+    // for `!pad` macro
     roots = match_replace(&roots, |window| match window {
-      // for `!pad` macro
       [node @ Root::Node(_), label @ Root::LabelDef(_), r#const @ Root::Const] => {
         Some(vec![node.clone(), r#const.clone(), label.clone()])
       }
-
       [node @ Root::Node(_), label @ Root::LabelDef(_), data @ Root::Data(None)] => {
         Some(vec![node.clone(), data.clone(), label.clone()])
       }
-
       [node @ Root::Node(_), label @ Root::LabelDef(_), org @ Root::Org(None)] => {
         Some(vec![label.clone(), node.clone(), org.clone()])
       }
+      _ => None,
+    });
 
+    // for patterns such as `:label1 !bcs :label2 !jmp`
+    let mut label_aliases: HashMap<Label, Vec<Label>> = HashMap::new();
+    roots = match_replace(&roots, |window| match window {
+      [Root::LabelDef(diff_label1), Root::Node(Node::LabelRef(diff_label2)), Root::Instruction(Instruction::Sti)]
+        if diff_label1 != diff_label2 =>
+      {
+        label_aliases
+          .entry(diff_label2.clone())
+          .or_insert_with(|| vec![])
+          .push(diff_label1.clone());
+        Some(vec![])
+      }
+      _ => None,
+    });
+    roots = match_replace(&roots, |window| match window {
+      [Root::LabelDef(label)] => label_aliases.get(label).map(|aliases| {
+        std::iter::once(Root::LabelDef(label.clone()))
+          .chain(aliases.iter().map(|alias| Root::LabelDef(alias.clone())))
+          .collect()
+      }),
       _ => None,
     });
 
@@ -871,6 +884,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
     roots = match_replace(&roots, |window| match window {
       // `OpType`s
       [no_op] if op_type(no_op) == OpType::NoOp => Some(vec![]),
+
       _ => None,
     });
 
@@ -1160,6 +1174,13 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
           Root::Instruction(Instruction::Xnd(0x01)),
           Root::Instruction(Instruction::Not),
         ])
+      }
+
+      // for `cc` macro return codegen
+      [Root::Node(Node::LabelRef(same_label1)), Root::Instruction(Instruction::Sti), Root::LabelDef(same_label2)]
+        if same_label1 == same_label2 =>
+      {
+        Some(vec![Root::LabelDef(same_label2.clone())])
       }
 
       // `OpType`s
@@ -1611,11 +1632,9 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
           Root::Instruction(Instruction::Ldo(0x00)),
         ])
       }
-
       [Root::Instruction(Instruction::Swp(size)), Root::Instruction(Instruction::Pop)] => {
         Some(vec![Root::Instruction(Instruction::Sto(*size - 1))])
       }
-
       _ => None,
     });
 
@@ -1630,7 +1649,6 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
           Root::Instruction(Instruction::Ldo(0x01)),
         ])
       }
-
       _ => None,
     });
 
@@ -1648,7 +1666,6 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
           Root::Instruction(Instruction::Ldo(0x02)),
         ])
       }
-
       _ => None,
     });
 
@@ -1668,7 +1685,6 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
           Root::Instruction(Instruction::Ldo(0x03)),
         ])
       }
-
       _ => None,
     });
 
@@ -1690,7 +1706,6 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
           Root::Instruction(Instruction::Ldo(0x04)),
         ])
       }
-
       _ => None,
     });
   }

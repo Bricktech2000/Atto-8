@@ -41,8 +41,8 @@ main!
       ld1 !u8.sta
     inc !z :break !bcs
       # block until `'@'` is sent through `stdin`
-      block: !getc !char.commercial_at !eq :block
-    :for_load iff !jmp break: pop
+      block: !getc !char.commercial_at !eq :block !bcc
+    :for_load !jmp break: pop
     # fall through
 
   store:

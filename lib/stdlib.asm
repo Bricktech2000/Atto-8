@@ -14,10 +14,10 @@ rand.min! clc # seed = rand.min(seed)
 
 
 delay! # delay(iterations)
-  stall. x1F !stall x01 sub @dyn .stall !bcc pop
+  delay. x1F !stall x01 sub @dyn .delay !bcc pop
 
 delay_long! # delay_long(iterations)
-  x00 stall. x1F !stall x00 x01 su2 @dyn su2 @dyn .stall !bcc pop pop
+  x00 delay. x1F !stall x00 x01 su2 @dyn su2 @dyn .delay !bcc pop pop
 
 
 # block until a key is pressed
