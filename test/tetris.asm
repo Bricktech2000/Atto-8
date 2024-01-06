@@ -186,5 +186,5 @@ type_mask! x07 # `index & TYPE_MASK` gives `type`
 rot_parity! x08 # `index & ROT_PARITY` gives rotation parity
 
 fall_speed! x56 # speed at which tetrominoes fall
-tick_delay! x0E # delay per game tick
+tick_delay! x0C # delay per game tick
 spawn_pos! x05 !u4u4 # position at which tetrominoes spawn

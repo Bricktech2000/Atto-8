@@ -135,115 +135,135 @@ fn global(
   errors: &mut Vec<(Pos, Error)>,
 ) -> Option<TypedGlobal> {
   match global {
-    Global::FunctionDeclaration(function_declaration) => {
-      let () = typecheck::function_declaration_global(function_declaration, state, errors);
+    Global::FunctionDeclaration(is_inline, Object(return_type, name), parameters, is_variadic) => {
+      let () = typecheck::function_declaration_global(
+        is_inline,
+        Object(return_type.clone(), name.clone()),
+        parameters.clone(),
+        is_variadic,
+        state,
+        errors,
+      );
       None
     }
 
-    Global::FunctionDefinition(function_definition) => Some(typecheck::function_definition_global(
-      function_definition,
-      state,
-      errors,
-    )),
+    Global::FunctionDefinition(
+      is_inline,
+      Object(return_type, name),
+      parameters,
+      is_variadic,
+      body,
+    ) => {
+      let global = typecheck::function_definition_global(
+        is_inline,
+        Object(return_type.clone(), name.clone()),
+        parameters.clone(),
+        is_variadic,
+        body,
+        state,
+        errors,
+      );
+      Some(global)
+    }
 
-    Global::GlobalAssembly(assembly) => Some(typecheck::assembly_global(assembly, state, errors)),
+    Global::GlobalAssembly(assembly) => {
+      let global = typecheck::assembly_global(assembly, state, errors);
+      Some(global)
+    }
   }
 }
 
 fn function_declaration_global(
-  function_declaration: FunctionDeclaration,
+  is_inline: bool,
+  Object(return_type, name): Object,
+  parameters: Vec<Object>,
+  is_variadic: bool,
   state: &mut State,
   errors: &mut Vec<(Pos, Error)>,
 ) -> () {
-  match function_declaration {
-    FunctionDeclaration(is_inline, Object(return_type, name), parameters, is_variadic) => {
-      let parameter_types = match parameters[..] {
-        [Object(Type::Void, _)] => vec![], // for `T func(void)`-style declarations
-        _ => parameters
-          .iter()
-          .map(|Object(r#type, _name)| r#type.clone())
-          .collect::<Vec<Type>>(),
-      };
+  let parameter_types = match parameters[..] {
+    [Object(Type::Void, _)] => vec![], // for `T func(void)`-style declarations
+    _ => parameters
+      .iter()
+      .map(|Object(r#type, _name)| r#type.clone())
+      .collect::<Vec<Type>>(),
+  };
 
-      state
-        .declarations
-        .entry(name.clone())
-        .and_modify(|r#type| match (is_inline, r#type) {
-          (false, Type::Function(return_type_, parameter_types_, is_variadic_))
-          | (true, Type::Macro(return_type_, _, parameter_types_, is_variadic_))
-            if return_type == **return_type_
-              && parameter_types == *parameter_types_
-              && is_variadic == *is_variadic_ => {}
-          _ => errors.push((
-            Pos("pos".to_string(), 0),
-            Error(format!(
-              "Function `{}` previously declared with different prototype",
-              name.clone()
-            )),
-          )),
-        })
-        .or_insert(match is_inline {
-          true => Type::Macro(Box::new(return_type), name, parameter_types, is_variadic),
-          false => Type::Function(Box::new(return_type), parameter_types, is_variadic),
-        });
-    }
-  }
+  state
+    .declarations
+    .entry(name.clone())
+    .and_modify(|r#type| match (is_inline, r#type) {
+      (false, Type::Function(return_type_, parameter_types_, is_variadic_))
+      | (true, Type::Macro(return_type_, _, parameter_types_, is_variadic_))
+        if return_type == **return_type_
+          && parameter_types == *parameter_types_
+          && is_variadic == *is_variadic_ => {}
+      _ => errors.push((
+        Pos("pos".to_string(), 0),
+        Error(format!(
+          "Function `{}` previously declared with different prototype",
+          name.clone()
+        )),
+      )),
+    })
+    .or_insert(match is_inline {
+      true => Type::Macro(Box::new(return_type), name, parameter_types, is_variadic),
+      false => Type::Function(Box::new(return_type), parameter_types, is_variadic),
+    });
 }
 
 fn function_definition_global(
-  function_definition: FunctionDefinition,
+  is_inline: bool,
+  Object(return_type, name): Object,
+  parameters: Vec<Object>,
+  is_variadic: bool,
+  body: Statement,
   state: &mut State,
   errors: &mut Vec<(Pos, Error)>,
 ) -> TypedGlobal {
-  match function_definition {
-    FunctionDefinition(is_inline, Object(return_type, name), parameters, is_variadic, body) => {
-      // TODO optimize: only do so if function does not end with return
-      let body = Statement::Compound(vec![body, Statement::Return(None)]);
+  // TODO optimize: only do so if function does not end with return
+  let body = Statement::Compound(vec![body, Statement::Return(None)]);
 
-      let () = typecheck::function_declaration_global(
-        FunctionDeclaration(
-          is_inline,
-          Object(return_type.clone(), name.clone()),
-          parameters.clone(),
-          is_variadic,
-        ),
-        state,
-        errors,
-      );
+  let () = typecheck::function_declaration_global(
+    is_inline,
+    Object(return_type.clone(), name.clone()),
+    parameters.clone(),
+    is_variadic,
+    state,
+    errors,
+  );
 
-      if is_variadic {
-        errors.push((
-          Pos("[todo]".to_string(), 0),
-          Error(format!("Variadic function definitions unimplemented",)),
-        ))
-      }
-
-      state.definitions.get(&name).is_some().then(|| {
-        errors.push((
-          Pos("pos".to_string(), 0),
-          Error(format!(
-            "Function `{}` has already been defined",
-            name.clone()
-          )),
-        ))
-      });
-      state.definitions.insert(name.clone());
-
-      state.stack.push(match is_inline {
-        true => StackEntry::MacroBoundary(return_type.clone(), parameters.clone()),
-        false => StackEntry::FunctionBoundary(return_type.clone(), parameters.clone()),
-      });
-
-      let statement = match is_inline {
-        true => TypedGlobal::Macro(name, typecheck::statement(body, state, errors)),
-        false => TypedGlobal::Function(name, typecheck::statement(body, state, errors)),
-      };
-
-      state.stack.pop();
-
-      statement
-    }
+  if is_variadic {
+    errors.push((
+      Pos("[todo]".to_string(), 0),
+      Error(format!("Variadic function definitions unimplemented",)),
+    ))
   }
+
+  state.definitions.get(&name).is_some().then(|| {
+    errors.push((
+      Pos("pos".to_string(), 0),
+      Error(format!(
+        "Function `{}` has already been defined",
+        name.clone()
+      )),
+    ))
+  });
+  state.definitions.insert(name.clone());
+
+  state.stack.push(match is_inline {
+    true => StackEntry::MacroBoundary(return_type.clone(), parameters.clone()),
+    false => StackEntry::FunctionBoundary(return_type.clone(), parameters.clone()),
+  });
+
+  let statement = match is_inline {
+    true => TypedGlobal::Macro(name, typecheck::statement(body, state, errors)),
+    false => TypedGlobal::Function(name, typecheck::statement(body, state, errors)),
+  };
+
+  state.stack.pop();
+
+  statement
 }
 
 fn assembly_global(
@@ -262,6 +282,13 @@ fn statement(
   match statement {
     Statement::Expression(expression) => typecheck::expression_statement(expression, state, errors),
     Statement::Compound(statements) => typecheck::compound_statement(statements, state, errors),
+    Statement::If(condition, if_body, else_body) => typecheck::if_statement(
+      condition,
+      *if_body,
+      else_body.map(|else_body| *else_body),
+      state,
+      errors,
+    ),
     Statement::While(condition, body) => {
       typecheck::while_statement(condition, *body, state, errors)
     }
@@ -331,6 +358,38 @@ fn while_statement(
   state.uid += 1;
 
   state.stack.pop();
+
+  statement
+}
+
+fn if_statement(
+  condition: Expression,
+  if_body: Statement,
+  else_body: Option<Statement>,
+  state: &mut State,
+  errors: &mut Vec<(Pos, Error)>,
+) -> TypedStatement {
+  let (r#type, condition) = typecheck::expression(
+    Expression::Cast(Type::Bool, Box::new(condition)),
+    state,
+    errors,
+  );
+
+  if r#type != Type::Bool {
+    panic!("Expected if condition to have type `bool`");
+  }
+
+  let if_body = typecheck::statement(if_body, state, errors);
+  let else_body = else_body.map(|else_body| typecheck::statement(else_body, state, errors));
+
+  let statement = TypedStatement::IfN1(
+    format!("if.{}", state.uid),
+    condition,
+    Box::new(if_body),
+    else_body.map(Box::new),
+  );
+
+  state.uid += 1;
 
   statement
 }
@@ -562,13 +621,41 @@ fn expression(
     //   Expression::RightShift(expression1, expression2) => {
     //     typecheck::right_shift_expression(*expression1, *expression2, state, errors)
     //   }
+    //
+    Expression::EqualTo(expression1, expression2) => {
+      let promoted1 = integer_promotions(*expression1, state, errors);
+      let promoted2 = integer_promotions(*expression2, state, errors);
+      let (r#type, expression1, expression2) =
+        typecheck_usual_arithmetic_conversions((promoted1, promoted2), state, errors);
 
-    //   Expression::EqualTo(expression1, expression2) => {
-    //     typecheck::equal_to_expression(*expression1, *expression2, state, errors)
-    //   }
-    //   Expression::NotEqualTo(expression1, expression2) => {
-    //     typecheck::not_equal_to_expression(*expression1, *expression2, state, errors)
-    //   }
+      (
+        Type::Bool,
+        match r#type.range() {
+          Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+          Range::U8 | Range::I8 => {
+            TypedExpression::N1EqualToN8(Box::new(expression1), Box::new(expression2))
+          }
+          _ => todo!(),
+        },
+      )
+    }
+    Expression::NotEqualTo(expression1, expression2) => {
+      let promoted1 = integer_promotions(*expression1, state, errors);
+      let promoted2 = integer_promotions(*expression2, state, errors);
+      let (r#type, expression1, expression2) =
+        typecheck_usual_arithmetic_conversions((promoted1, promoted2), state, errors);
+
+      (
+        Type::Bool,
+        match r#type.range() {
+          Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+          Range::U8 | Range::I8 => TypedExpression::N1BitwiseComplement(Box::new(
+            TypedExpression::N1EqualToN8(Box::new(expression1), Box::new(expression2)),
+          )),
+          _ => todo!(),
+        },
+      )
+    }
     //   Expression::LessThan(expression1, expression2) => {
     //     typecheck::less_than_expression(*expression1, *expression2, state, errors)
     //   }
@@ -581,7 +668,7 @@ fn expression(
     //   Expression::GreaterThanOrEqualTo(expression1, expression2) => {
     //     typecheck::greater_than_or_equal_to_expression(*expression1, *expression2, state, errors)
     //   }
-
+    //
     //   Expression::Conditional(expression1, expression2, expression3) => {
     //     typecheck::conditional_expression(*expression1, *expression2, *expression3, state, errors)
     //   }
@@ -602,204 +689,6 @@ fn expression(
   }
 }
 
-// fn negation_expression(
-//   expression: Expression,
-//   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens) = typecheck::expression(expression, state, errors);
-//
-//   (
-//     r#type.clone(),
-//     match r#type {
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens)
-//         .chain(vec![Ok(Token::Neg)])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.push((
-//           Pos("[todo]".to_string(), 0),
-//           Error(format!("Negation unimplemented for type `{:?}`", r#type)),
-//         ));
-//         vec![]
-//       }
-//     },
-//   )
-// }
-//
-// fn logical_negation_expression(
-//   expression: Expression,
-//   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens) = typecheck::expression(expression, state, errors);
-//
-//   (
-//     r#type.clone(),
-//     match r#type {
-//       Type::Bool => std::iter::empty()
-//         .chain(tokens)
-//         .chain(vec![
-//           Ok(Token::Shr),
-//           Ok(Token::AtDyn),
-//           Ok(Token::Flc),
-//           Ok(Token::Shl),
-//           Ok(Token::AtDyn),
-//         ])
-//         .collect(),
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens)
-//         .chain(vec![
-//           Ok(Token::Buf),
-//           Ok(Token::AtDyn),
-//           Ok(Token::Pop),
-//           Ok(Token::Flc),
-//           Ok(Token::XXX(0x00)),
-//           Ok(Token::Shl),
-//           Ok(Token::AtDyn),
-//         ])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.push((
-//           Pos("[todo]".to_string(), 0),
-//           Error(format!(
-//             "Logical Negation unimplemented for type `{:?}`",
-//             r#type
-//           )),
-//         ));
-//         vec![]
-//       }
-//     },
-//   )
-// }
-//
-// fn bitwise_complement_expression(
-//   expression: Expression,
-//   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens) = typecheck::expression(expression, state, errors);
-//
-//   (
-//     r#type.clone(),
-//     match r#type {
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens)
-//         .chain(vec![Ok(Token::Not)])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.push((
-//           Pos("[todo]".to_string(), 0),
-//           Error(format!(
-//             "Bitwise Complement unimplemented for type `{:?}`",
-//             r#type
-//           )),
-//         ));
-//         vec![]
-//       }
-//     },
-//   )
-// }
-//
-// fn multiplication_expression(
-//   expression1: Expression,
-//   expression2: Expression,
-//   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens1, tokens2) =
-//     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
-//
-//   let mul_macro = Macro("mul".to_string());
-//
-//   (
-//     r#type.clone(),
-//     match r#type {
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain(vec![Ok(Token::MacroRef(mul_macro))])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.push((
-//           Pos("[todo]".to_string(), 0),
-//           Error(format!(
-//             "Multiplication unimplemented for type `{:?}`",
-//             r#type
-//           )),
-//         ));
-//         vec![]
-//       }
-//     },
-//   )
-// }
-//
-// fn division_expression(
-//   expression1: Expression,
-//   expression2: Expression,
-//   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens1, tokens2) =
-//     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
-//
-//   let div_macro = Macro("div".to_string());
-//
-//   (
-//     r#type.clone(),
-//     match r#type {
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain(vec![Ok(Token::MacroRef(div_macro))])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.push((
-//           Pos("[todo]".to_string(), 0),
-//           Error(format!("Division unimplemented for type `{:?}`", r#type)),
-//         ));
-//         vec![]
-//       }
-//     },
-//   )
-// }
-//
-// fn modulo_expression(
-//   expression1: Expression,
-//   expression2: Expression,
-//   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens1, tokens2) =
-//     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
-//
-//   let mod_macro = Macro("mod".to_string());
-//
-//   (
-//     r#type.clone(),
-//     match r#type {
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain(vec![Ok(Token::MacroRef(mod_macro))])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.push((
-//           Pos("[todo]".to_string(), 0),
-//           Error(format!("Modulo unimplemented for type `{:?}`", r#type)),
-//         ));
-//         vec![]
-//       }
-//     },
-//   )
-// }
-//
 // fn logical_and_expression(
 //   _expression1: Expression,
 //   _expression2: Expression,
@@ -951,97 +840,6 @@ fn expression(
 //   ));
 //
 //   (Type::Int, vec![])
-// }
-//
-// fn equal_to_expression(
-//   expression1: Expression,
-//   expression2: Expression,
-//   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens1, tokens2) =
-//     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
-//
-//   (
-//     Type::Bool,
-//     match r#type {
-//       Type::Bool => std::iter::empty()
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain(vec![Ok(Token::Xor), Ok(Token::Clc)])
-//         .collect(),
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain(vec![
-//           Ok(Token::Xor),
-//           Ok(Token::AtDyn),
-//           Ok(Token::Pop),
-//           Ok(Token::XXX(0x00)),
-//           Ok(Token::Shl),
-//           Ok(Token::AtDyn),
-//         ])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.push((
-//           Pos("[todo]".to_string(), 0),
-//           Error(format!("Equal To unimplemented for type `{:?}`", r#type)),
-//         ));
-//         vec![]
-//       }
-//     },
-//   )
-// }
-//
-// fn not_equal_to_expression(
-//   expression1: Expression,
-//   expression2: Expression,
-//   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens1, tokens2) =
-//     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
-//
-//   (
-//     Type::Bool,
-//     match r#type {
-//       Type::Bool => std::iter::empty()
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain(vec![
-//           Ok(Token::Xor),
-//           Ok(Token::XXX(0x01)),
-//           Ok(Token::Xor),
-//           Ok(Token::Clc),
-//         ])
-//         .collect(),
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain(vec![
-//           Ok(Token::Xor),
-//           Ok(Token::AtDyn),
-//           Ok(Token::Pop),
-//           Ok(Token::Flc),
-//           Ok(Token::XXX(0x00)),
-//           Ok(Token::Shl),
-//           Ok(Token::AtDyn),
-//         ])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.push((
-//           Pos("[todo]".to_string(), 0),
-//           Error(format!(
-//             "Not Equal To unimplemented for type `{:?}`",
-//             r#type
-//           )),
-//         ));
-//         vec![]
-//       }
-//     },
-//   )
 // }
 //
 // fn less_than_expression(
@@ -1257,7 +1055,12 @@ fn cast_expression(
       | (Type::UnsignedInt, Type::Bool)
       | (Type::Char, Type::Bool)
       | (Type::SignedChar, Type::Bool)
-      | (Type::UnsignedChar, Type::Bool) => TypedExpression::N1IsZeroN8(Box::new(expression1)),
+      | (Type::UnsignedChar, Type::Bool) => {
+        TypedExpression::N1BitwiseComplement(Box::new(TypedExpression::N1EqualToN8(
+          Box::new(expression1),
+          Box::new(TypedExpression::N8Constant(0x00)),
+        )))
+      }
 
       (Type::Int, Type::Void)
       | (Type::UnsignedInt, Type::Void)

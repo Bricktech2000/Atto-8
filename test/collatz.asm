@@ -4,7 +4,7 @@
 @ lib/stdio.asm
 
 # input any of `0123456789:;<=>?@ABC...` to start.
-# note that inputs `0?GNSW` overflow `u8`s
+# inputs `0?GNSW` overflow `u8`s
 
 main! !nop
   loop:

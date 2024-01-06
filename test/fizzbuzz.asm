@@ -4,7 +4,7 @@
 @ lib/stdio.asm
 
 # input any of `0123456789:;<=>?@ABC...` to start.
-# use `0` to display all numbers
+# input `0` displays all numbers
 
 main! !nop
   loop:

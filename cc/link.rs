@@ -73,6 +73,16 @@ fn statement(statement: &TypedStatement) -> BTreeSet<(bool, String)> {
       .into_iter()
       .flat_map(|statement| link::statement(statement))
       .collect(),
+    TypedStatement::IfN1(_label, condition, if_body, else_body) => std::iter::empty()
+      .chain(link::expression(condition))
+      .chain(link::statement(if_body))
+      .chain(
+        else_body
+          .as_ref()
+          .map(|else_body| link::statement(&else_body))
+          .unwrap_or_else(BTreeSet::new),
+      )
+      .collect(),
     TypedStatement::WhileN1(_label, condition, body) => std::iter::empty()
       .chain(link::expression(condition))
       .chain(link::statement(body))
@@ -108,10 +118,14 @@ fn expression(expression: &TypedExpression) -> BTreeSet<(bool, String)> {
       .chain(link::expression(expression2))
       .collect(),
 
+    TypedExpression::N1EqualToN8(expression1, expression2) => std::iter::empty()
+      .chain(link::expression(expression1))
+      .chain(link::expression(expression2))
+      .collect(),
+
     TypedExpression::N0CastN1(expression)
     | TypedExpression::N0CastN8(expression)
-    | TypedExpression::N1CastN8(expression)
-    | TypedExpression::N1IsZeroN8(expression) => link::expression(expression),
+    | TypedExpression::N1CastN8(expression) => link::expression(expression),
     TypedExpression::N0Constant(_)
     | TypedExpression::N1Constant(_)
     | TypedExpression::N8Constant(_)

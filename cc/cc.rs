@@ -115,16 +115,10 @@ pub struct Program(Vec<Global>);
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Global {
-  FunctionDeclaration(FunctionDeclaration),
-  FunctionDefinition(FunctionDefinition),
+  FunctionDeclaration(bool, Object, Vec<Object>, bool),
+  FunctionDefinition(bool, Object, Vec<Object>, bool, Statement),
   GlobalAssembly(String),
 }
-
-#[derive(Clone, PartialEq, Debug)]
-pub struct FunctionDeclaration(bool, Object, Vec<Object>, bool);
-
-#[derive(Clone, PartialEq, Debug)]
-pub struct FunctionDefinition(bool, Object, Vec<Object>, bool, Statement);
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Expression {
@@ -166,6 +160,7 @@ pub enum Expression {
 pub enum Statement {
   Expression(Expression),
   Compound(Vec<Statement>),
+  If(Expression, Box<Statement>, Option<Box<Statement>>),
   While(Expression, Box<Statement>),
   Return(Option<Expression>),
   Assembly(String),
@@ -196,10 +191,11 @@ pub enum TypedExpression {
   U8Division(Box<TypedExpression>, Box<TypedExpression>),
   U8Modulo(Box<TypedExpression>, Box<TypedExpression>),
 
+  N1EqualToN8(Box<TypedExpression>, Box<TypedExpression>),
+
   N0CastN1(Box<TypedExpression>),
   N0CastN8(Box<TypedExpression>),
   N1CastN8(Box<TypedExpression>),
-  N1IsZeroN8(Box<TypedExpression>),
   N0Constant(()),
   N1Constant(bool),
   N8Constant(u8),
@@ -219,6 +215,12 @@ pub enum TypedExpression {
 pub enum TypedStatement {
   ExpressionN0(TypedExpression),
   Compound(Vec<TypedStatement>),
+  IfN1(
+    String,
+    TypedExpression,
+    Box<TypedStatement>,
+    Option<Box<TypedStatement>>,
+  ),
   WhileN1(String, TypedExpression, Box<TypedStatement>),
   MacroReturnN0(usize, usize, Option<TypedExpression>), // TODO document: param count, local count
   MacroReturnN1(usize, usize, Option<TypedExpression>), // TODO document: param count, local count

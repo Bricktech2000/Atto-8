@@ -54,7 +54,7 @@ fn main() {
 enum Root {
   Instruction(Instruction),
   Conditional(Node, Node),
-  LabelDef(Label),
+  LabelDefs(Vec<Label>),
   Node(Node),
   Const,
   Data(Option<Node>),
@@ -365,7 +365,7 @@ fn assemble(
     .into_iter()
     .map(|(pos, token)| {
       let token = match token {
-        Token::LabelDef(label) => Root::LabelDef(label),
+        Token::LabelDef(label) => Root::LabelDefs(vec![label]),
         Token::LabelRef(label) => Root::Node(Node::LabelRef(label)),
         Token::MacroDef(_) => panic!("Macro definition found in intermediate representation"),
         Token::MacroRef(_) => panic!("Macro reference found in intermediate representation"),
@@ -506,16 +506,20 @@ fn assemble(
             instructions
           }
 
-          Root::LabelDef(Label::Local(_, None)) => panic!("Local label has no scope specified"),
+          Root::LabelDefs(labels) => {
+            labels.iter().for_each(|label| {
+              if matches!(label, Label::Local(_, None)) {
+                panic!("Local label has no scope specified")
+              }
 
-          Root::LabelDef(label) => {
-            if label_definitions.contains_key(&label) {
-              errors.push((
-                pos.clone(),
-                Error(format!("Duplicate label definition `{}`", label)),
-              ));
-            }
-            label_definitions.insert(label.clone(), location_counter as u8);
+              if label_definitions.contains_key(&label) {
+                errors.push((
+                  pos.clone(),
+                  Error(format!("Duplicate label definition `{}`", label)),
+                ));
+              }
+              label_definitions.insert(label.clone(), location_counter as u8);
+            });
             vec![]
           }
 
@@ -806,7 +810,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
         Instruction::Phn(_nimm) => OpType::PushOp,
       },
       Root::Conditional(_, _) => OpType::PushOp,
-      Root::LabelDef(_) => OpType::Impure,
+      Root::LabelDefs(_) => OpType::Impure,
       Root::Node(_) => OpType::PushOp,
       Root::Const => OpType::Impure,
       Root::Data(_) => OpType::Impure,
@@ -845,14 +849,14 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
 
     // for `!pad` macro
     roots = match_replace(&roots, |window| match window {
-      [node @ Root::Node(_), label @ Root::LabelDef(_), r#const @ Root::Const] => {
-        Some(vec![node.clone(), r#const.clone(), label.clone()])
+      [node @ Root::Node(_), label_defs @ Root::LabelDefs(_), r#const @ Root::Const] => {
+        Some(vec![node.clone(), r#const.clone(), label_defs.clone()])
       }
-      [node @ Root::Node(_), label @ Root::LabelDef(_), data @ Root::Data(None)] => {
-        Some(vec![node.clone(), data.clone(), label.clone()])
+      [node @ Root::Node(_), label_defs @ Root::LabelDefs(_), data @ Root::Data(None)] => {
+        Some(vec![node.clone(), data.clone(), label_defs.clone()])
       }
-      [node @ Root::Node(_), label @ Root::LabelDef(_), org @ Root::Org(None)] => {
-        Some(vec![label.clone(), node.clone(), org.clone()])
+      [node @ Root::Node(_), label_defs @ Root::LabelDefs(_), org @ Root::Org(None)] => {
+        Some(vec![label_defs.clone(), node.clone(), org.clone()])
       }
       _ => None,
     });
@@ -860,23 +864,28 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
     // for patterns such as `:label1 !bcs :label2 !jmp`
     let mut label_aliases: HashMap<Label, Vec<Label>> = HashMap::new();
     roots = match_replace(&roots, |window| match window {
-      [Root::LabelDef(diff_label1), Root::Node(Node::LabelRef(diff_label2)), Root::Instruction(Instruction::Sti)]
-        if diff_label1 != diff_label2 =>
+      [Root::LabelDefs(diff_labels), Root::Node(Node::LabelRef(diff_label)), Root::Instruction(Instruction::Sti)]
+        if !diff_labels.contains(&diff_label) =>
       {
         label_aliases
-          .entry(diff_label2.clone())
+          .entry(diff_label.clone())
           .or_insert_with(|| vec![])
-          .push(diff_label1.clone());
+          .extend(diff_labels.clone());
         Some(vec![])
       }
       _ => None,
     });
     roots = match_replace(&roots, |window| match window {
-      [Root::LabelDef(label)] => label_aliases.get(label).map(|aliases| {
-        std::iter::once(Root::LabelDef(label.clone()))
-          .chain(aliases.iter().map(|alias| Root::LabelDef(alias.clone())))
-          .collect()
-      }),
+      [Root::LabelDefs(labels)] => Some(vec![Root::LabelDefs(
+        labels
+          .iter()
+          .flat_map(|label| {
+            std::iter::once(label.clone())
+              .chain(label_aliases.get(label).cloned().unwrap_or(vec![]))
+          })
+          .collect(),
+      )]),
+
       _ => None,
     });
 
@@ -890,34 +899,26 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
 
     // length 2
     roots = match_replace(&roots, |window| match window {
+      // `Node`s
       [Root::Node(x00), Root::Instruction(Instruction::Add(_size))]
         if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
       {
         Some(vec![])
       }
-
       [Root::Node(x01), Root::Instruction(Instruction::Add(0x01))]
         if resolve_node_value(&x01, &HashMap::new()) == Ok(0x01) =>
       {
         Some(vec![Root::Instruction(Instruction::Inc)])
       }
-
       [Root::Node(x00), Root::Instruction(Instruction::Sub(_size))]
         if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
       {
         Some(vec![])
       }
-
       [Root::Node(x01), Root::Instruction(Instruction::Sub(0x01))]
         if resolve_node_value(&x01, &HashMap::new()) == Ok(0x01) =>
       {
         Some(vec![Root::Instruction(Instruction::Dec)])
-      }
-
-      [Root::Instruction(Instruction::Swp(same_size1)), Root::Instruction(Instruction::Swp(same_size2))]
-        if same_size1 == same_size2 =>
-      {
-        Some(vec![])
       }
 
       [Root::Node(div_by_eight), Root::Instruction(Instruction::Rot(_size))]
@@ -926,25 +927,21 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
       {
         Some(vec![])
       }
-
       [Root::Node(x00), Root::Instruction(Instruction::Orr(_size))]
         if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
       {
         Some(vec![])
       }
-
       [Root::Node(xff), Root::Instruction(Instruction::And(_size))]
         if resolve_node_value(&xff, &HashMap::new()) == Ok(0xFF) =>
       {
         Some(vec![])
       }
-
       [Root::Node(x00), Root::Instruction(Instruction::Xor(_size))]
         if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
       {
         Some(vec![])
       }
-
       [Root::Node(node), Root::Instruction(Instruction::Inc)] => Some(vec![Root::Node(Node::Add(
         Box::new(Node::Value(0x01)),
         Box::new(node.clone()),
@@ -959,51 +956,55 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
         Box::new(node.clone()),
         Box::new(Node::Value(0x00)),
       ))]),
-
       [Root::Instruction(Instruction::Neg), Root::Instruction(Instruction::Neg)] => Some(vec![]),
-
       [Root::Node(node), Root::Instruction(Instruction::Shl)] => {
         Some(vec![Root::Node(Node::Shl(Box::new(node.clone())))])
       }
-
       [Root::Node(node), Root::Instruction(Instruction::Shr)] => {
         Some(vec![Root::Node(Node::Shr(Box::new(node.clone())))])
       }
-
       [Root::Node(node), Root::Instruction(Instruction::Not)] => {
         Some(vec![Root::Node(Node::Not(Box::new(node.clone())))])
       }
-
       [Root::Instruction(Instruction::Not), Root::Instruction(Instruction::Not)] => {
         Some(vec![Root::Instruction(Instruction::Buf)])
       }
 
+      // `Ldo`s
+      [node @ Root::Node(_), Root::Instruction(Instruction::Ldo(0x00))] => {
+        Some(vec![node.clone(), node.clone()])
+      }
       [Root::Instruction(Instruction::Ldo(same_ofst1)), Root::Instruction(Instruction::Sto(same_ofst2))]
         if same_ofst1 == same_ofst2 =>
       {
         Some(vec![])
       }
 
-      [node @ Root::Node(_), Root::Instruction(Instruction::Ldo(0x00))] => {
-        Some(vec![node.clone(), node.clone()])
+      // idempotent and involutive `UnaryOp`s
+      [Root::Instruction(Instruction::Swp(same_size1)), Root::Instruction(Instruction::Swp(same_size2))]
+        if same_size1 == same_size2 =>
+      {
+        Some(vec![])
       }
-
       [clc @ Root::Instruction(Instruction::Clc), Root::Instruction(Instruction::Clc)] => {
         Some(vec![clc.clone()])
       }
-
       [sec @ Root::Instruction(Instruction::Sec), Root::Instruction(Instruction::Sec)] => {
         Some(vec![sec.clone()])
       }
-
       [Root::Instruction(Instruction::Flc), Root::Instruction(Instruction::Flc)] => Some(vec![]),
 
+      //  `Label`s
+      [Root::LabelDefs(labels1), Root::LabelDefs(labels2)] => Some(vec![Root::LabelDefs(
+        labels1.iter().chain(labels2.iter()).cloned().collect(),
+      )]),
+
+      // `OpType`s
       [push_op, pop_op]
         if op_type(push_op) == OpType::PushOp && op_type(pop_op) == OpType::PopOp =>
       {
         Some(vec![])
       }
-
       [unary_op, pop_op]
         if op_type(unary_op) == OpType::UnaryOp && op_type(pop_op) == OpType::PopOp =>
       {
@@ -1176,11 +1177,11 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Po
         ])
       }
 
-      // for `cc` macro return codegen
-      [Root::Node(Node::LabelRef(same_label1)), Root::Instruction(Instruction::Sti), Root::LabelDef(same_label2)]
-        if same_label1 == same_label2 =>
+      // for `cc` macro return and if statement codegen
+      [Root::Node(Node::LabelRef(same_label)), Root::Instruction(Instruction::Sti), Root::LabelDefs(same_labels)]
+        if same_labels.contains(&same_label) =>
       {
-        Some(vec![Root::LabelDef(same_label2.clone())])
+        Some(vec![Root::LabelDefs(same_labels.clone())])
       }
 
       // `OpType`s
