@@ -81,7 +81,7 @@ memset.def!
   # return* ptr
   !rt3
 memcpy.def!
-  memcpy: clc # memcpy(*dst, *src, len)
+  memcpy: # memcpy(*dst, *src, len)
     # for simplicity, ignore `restrict` qualifier
     !memmove.def
     # prevent unused label warning
@@ -121,7 +121,7 @@ memxor.def!
   # return*
   !rt3
 memmove.def!
-  memmove: # memmove(*dst, *src, len)
+  memmove: clc # memmove(*dst, *src, len)
     ld3 for_i. dec
       # *dst = *src
       ld3 ld1 add lda

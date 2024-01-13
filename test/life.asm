@@ -37,7 +37,7 @@ main!
     !z :for_xy !bcc !u4u4.pop
 
     # copy back buffer to display buffer
-    !display_buffer.len !back_buffer !display_buffer :memcpy !call
+    !display_buffer.len !back_buffer !display_buffer :memcpy !call clc
   :loop !jmp
 
   # implicitly include the current cell into its own neighborhood
@@ -52,10 +52,12 @@ main!
     # !diehard
     # !r-pentomino
     # !lightweight_spaceship
-    !heavyweight_spaceship
+    # !heavyweight_spaceship
     # !compact_pulsar
     # !copperhead
     # !figure_eight
+    # !two-glider_mess
+    # !4-8-12_diamond
 
 neighborhood.len! :neighborhood.end :neighborhood sub @const
 
@@ -148,3 +150,23 @@ figure_eight! x0A !pad
   @07 @00
   @07 @00
   @07 @00
+
+two-glider_mess! x02 !pad
+  @00 @00
+  @02 @00
+  @0A @00
+  @06 @00
+  @00 @01
+  @00 @06
+  @00 @03
+
+4-8-12_diamond! x06 !pad
+  @03 @C0
+  @00 @00
+  @0F @F0
+  @00 @00
+  @3F @FC
+  @00 @00
+  @0F @F0
+  @00 @00
+  @03 @C0
