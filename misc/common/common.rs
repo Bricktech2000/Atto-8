@@ -10,23 +10,20 @@ pub const STDIO_BUFFER: usize = 0x00;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ControlWord {
-  pub clr_sc: Signal,  // clear to step counter
-  pub data_il: Signal, // data bus to instruction latch
-  pub data_cf: Signal, // data bus to carry flag
-
-  pub ip_data: Signal, // instruction pointer to data bus
   pub data_ip: Signal, // data bus to instruction pointer
-
-  pub sp_data: Signal, // stack pointer to data bus
   pub data_sp: Signal, // data bus to stack pointer
+  pub data_cf: Signal, // data bus to carry flag
+  pub data_il: Signal, // data bus to instruction latch
+  pub data_al: Signal, // data bus to address latch
+  pub data_xl: Signal, // data bus to X latch
+  pub data_yl: Signal, // data bus to Y latch
+  pub data_zl: Signal, // data bus to Z latch
 
-  pub data_al: Signal,  // data bus to address latch
-  pub mem_data: Signal, // data bus to memory
-  pub data_mem: Signal, // memory to data bus
-
-  pub data_xl: Signal,   // data bus to X latch
-  pub data_yl: Signal,   // data bus to Y latch
-  pub data_zl: Signal,   // data bus to Z latch
+  pub ip_data: Signal,   // instruction pointer to data bus
+  pub sp_data: Signal,   // stack pointer to data bus
+  pub mem_data: Signal,  // data bus to memory
+  pub data_mem: Signal,  // memory to data bus
+  pub clr_sc: Signal,    // clear to step counter
   pub set_cin: Signal,   // set to carry in
   pub sum_data: Signal,  // sum to data bus
   pub nand_data: Signal, // not-and to data bus
@@ -378,10 +375,12 @@ pub fn render_controller(controller: &u8) -> String {
   fmt
 }
 
-const MICROCODE_FAULT_SENTINEL: u16 = -1i16 as u16;
-const ILLEGAL_OPCODE_SENTINEL: u16 = -2i16 as u16;
-const DEBUG_REQUEST_SENTINEL: u16 = -3i16 as u16;
-const BUS_FAULT_SENTINEL: u16 = -4i16 as u16;
+// `CLR_SC` is inactive in the sentinels below. `circ` briefly fetches junk from `MIC`
+// when `IL` is written to, and we don't want that junk to accidentally clear `SC`
+const MICROCODE_FAULT_SENTINEL: u16 = 0xFFF7;
+const ILLEGAL_OPCODE_SENTINEL: u16 = 0xFFF6;
+const DEBUG_REQUEST_SENTINEL: u16 = 0xFFF5;
+const BUS_FAULT_SENTINEL: u16 = 0xFFF4;
 
 impl From<u16> for ControlWord {
   fn from(control_word: u16) -> Self {

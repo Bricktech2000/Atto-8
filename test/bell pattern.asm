@@ -15,9 +15,10 @@ main!
   :for_byte !jmp
 
   pattern:
+    !rumba_clave !son_clave !son_clave !son_clave
     # !tresillo
     # !cinquillo
-    !son_clave
+    # !son_clave
     # !rumba_clave
     # !bossa_nova_clave
     # !standard_pattern

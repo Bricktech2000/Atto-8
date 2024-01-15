@@ -350,7 +350,7 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
               };
 
               let pre = seq![seq, clr_sc];
-              let post = seq![clr_sc];
+              let post = seq![noop];
               match 0x20usize.overflowing_sub(pre.len() + post.len()) {
                 (padding, false) => seq![pre, vec![Err(TickTrap::MicrocodeFault); padding], post],
                 (wrapped, true) => {

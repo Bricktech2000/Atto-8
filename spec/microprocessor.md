@@ -42,19 +42,19 @@ The control word is a 16-bit natural number output from `MIC`, the microcode ROM
 
 | Bit   | Control Signal | Name                            |
 | ----- | -------------- | ------------------------------- |
-| `0xF` | `CLR_SC`       | Clear to Step Counter           |
-| `0xE` | `DATA_IL`      | Data Bus to Instruction Latch   |
+| `0xF` | `DATA_IP`      | Data Bus to Instruction Pointer |
+| `0xE` | `DATA_SP`      | Data Bus to Stack Pointer       |
 | `0xD` | `DATA_CF`      | Data Bus to Carry Flag          |
-| `0xC` | `IP_DATA`      | Instruction Pointer to Data Bus |
-| `0xB` | `DATA_IP`      | Data Bus to Instruction Pointer |
-| `0xA` | `SP_DATA`      | Stack Pointer to Data Bus       |
-| `0x9` | `DATA_SP`      | Data Bus to Stack Pointer       |
-| `0x8` | `DATA_AL`      | Data Bus to Address Latch       |
-| `0x7` | `MEM_DATA`     | Data Bus to Memory              |
-| `0x6` | `DATA_MEM`     | Memory to Data Bus              |
-| `0x5` | `DATA_XL`      | Data Bus to X Latch             |
-| `0x4` | `DATA_YL`      | Data Bus to Y Latch             |
-| `0x3` | `DATA_ZL`      | Data Bus to Z Latch             |
+| `0xC` | `DATA_IL`      | Data Bus to Instruction Latch   |
+| `0xB` | `DATA_AL`      | Data Bus to Address Latch       |
+| `0xA` | `DATA_XL`      | Data Bus to X Latch             |
+| `0x9` | `DATA_YL`      | Data Bus to Y Latch             |
+| `0x8` | `DATA_ZL`      | Data Bus to Z Latch             |
+| `0x7` | `IP_DATA`      | Instruction Pointer to Data Bus |
+| `0x6` | `SP_DATA`      | Stack Pointer to Data Bus       |
+| `0x5` | `MEM_DATA`     | Data Bus to Memory              |
+| `0x4` | `DATA_MEM`     | Memory to Data Bus              |
+| `0x3` | `CLR_SC`       | Clear to Step Counter           |
 | `0x2` | `SET_CIN`      | Set to Carry In                 |
 | `0x1` | `SUM_DATA`     | Sum to Data Bus                 |
 | `0x0` | `NAND_DATA`    | Not-And to Data Bus             |
