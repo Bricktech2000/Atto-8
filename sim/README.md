@@ -6,7 +6,7 @@ _Cycle-accurate component-level simulator for Atto-8 microcomputer_
 
 The simulator loads a memory image file from `argv[1]` which must be exactly `0x100` bytes in size, and a microcode image file from `argv[2]` which must be exactly `0x2000` words in size. Simulation is performed at the component level; that is, the simulator is built to test microcode images by accurately mirroring the hardware. The simulator adheres to the Atto-8 microcomputer specification as defined in [/spec/microcomputer.md](../spec/microcomputer.md).
 
-Simulation will exit upon receiving `SIGINT` (Ctrl+C) or `SIGTERM` (kill). The simulator will enter debug mode upon encountering a bus fault (unofficial control word `0xFFF4`), an illegal opcode (unofficial control word `0xFFF6`) or a microcode fault (unofficial control word `0xFFF7`).
+Simulation will exit upon receiving `SIGINT` (Ctrl+C) or `SIGTERM` (kill). The simulator will enter debug mode upon encountering a bus fault (unofficial control word `0xFFFC`), an illegal opcode (unofficial control word `0xFFFE`) or a microcode fault (unofficial control word `0xFFFF`).
 
 ## Standard Input/Output
 

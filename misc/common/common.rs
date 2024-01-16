@@ -375,12 +375,10 @@ pub fn render_controller(controller: &u8) -> String {
   fmt
 }
 
-// `CLR_SC` is inactive in the sentinels below. `circ` briefly fetches junk from `MIC`
-// when `IL` is written to, and we don't want that junk to accidentally clear `SC`
-const MICROCODE_FAULT_SENTINEL: u16 = 0xFFF7;
-const ILLEGAL_OPCODE_SENTINEL: u16 = 0xFFF6;
-const DEBUG_REQUEST_SENTINEL: u16 = 0xFFF5;
-const BUS_FAULT_SENTINEL: u16 = 0xFFF4;
+const MICROCODE_FAULT_SENTINEL: u16 = 0xFFFF;
+const ILLEGAL_OPCODE_SENTINEL: u16 = 0xFFFE;
+const DEBUG_REQUEST_SENTINEL: u16 = 0xFFFD;
+const BUS_FAULT_SENTINEL: u16 = 0xFFFC;
 
 impl From<u16> for ControlWord {
   fn from(control_word: u16) -> Self {

@@ -140,8 +140,9 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
             .map(|(step, rest)| (step as usize, rest))
             .map(|(step, rest)| {
               let () = rest;
-              let seq =
-                match common::opcode_to_instruction(opcode).map_err(|_| TickTrap::IllegalOpcode)? {
+              let seq = match common::opcode_to_instruction(opcode) {
+                Err(_opcode) => seq![fetch, vec![Err(TickTrap::IllegalOpcode)]],
+                Ok(instruction) => match instruction {
                   Instruction::Psh(_imm) => {
                     unreachable!()
                   }
@@ -509,7 +510,8 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                       clr_yl    //
                     ]
                   }
-                };
+                },
+              };
 
               let pre = seq![seq, clr_sc];
               let post = seq![noop];
