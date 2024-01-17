@@ -174,10 +174,15 @@ main!
         @55 @5C @D4 @55 @B4 @74 @78       @00 # 3/4 turn clockwise
 
   !display_buffer @org
-    @E0 @07 @E0 @07 @E0 @07 @E0 @07
-    @E0 @07 @E0 @07 @E0 @07 @E0 @07
-    @E0 @07 @E0 @07 @E0 @07 @E0 @07
-    @E0 @07 @E0 @07 @E0 @07 @FF @FF
+    !classic
+    # !12_wide
+    # !14_wide
+    # !checker
+    # !garbage
+
+fall_speed! x56 # speed at which tetrominoes fall
+tick_delay! x0E # delay per game tick
+spawn_pos! x05 !u4u4 # position at which tetrominoes spawn
 
 flip! xFF # constant for `display_tetromino`
 check! x00 # constant for `display_tetromino`
@@ -185,6 +190,34 @@ rot_mask! x18 # `index & ROT_MASK >> 3` gives `rot`
 type_mask! x07 # `index & TYPE_MASK` gives `type`
 rot_parity! x08 # `index & ROT_PARITY` gives rotation parity
 
-fall_speed! x56 # speed at which tetrominoes fall
-tick_delay! x0E # delay per game tick
-spawn_pos! x05 !u4u4 # position at which tetrominoes spawn
+classic!
+  @E0 @07 @E0 @07 @E0 @07 @E0 @07
+  @E0 @07 @E0 @07 @E0 @07 @E0 @07
+  @E0 @07 @E0 @07 @E0 @07 @E0 @07
+  @E0 @07 @E0 @07 @E0 @07 @FF @FF
+
+checker!
+  @E0 @07 @E0 @07 @E0 @07 @E0 @07
+  @E0 @07 @E0 @07 @E0 @07 @E0 @07
+  @E0 @07 @E0 @07 @E0 @07 @E0 @07
+  @EA @AF @F5 @57 @EA @AF @FF @FF
+
+garbage!
+  @E0 @07 @E0 @07 @E0 @07 @E0 @07
+  @E0 @07 @E0 @07 @E0 @07 @E0 @07
+  @E0 @07 @E0 @07 @E0 @07 @E0 @07
+  @FD @77 @E4 @8F @F1 @B7 @FF @FF
+
+12_wide!
+  @C0 @03 @C0 @03 @C0 @03 @C0 @03
+  @C0 @03 @C0 @03 @C0 @03 @C0 @03
+  @C0 @03 @C0 @03 @C0 @03 @C0 @03
+  @C0 @03 @C0 @03 @C0 @03 @FF @FF
+
+
+14_wide!
+  @80 @01 @80 @01 @80 @01 @80 @01
+  @80 @01 @80 @01 @80 @01 @80 @01
+  @80 @01 @80 @01 @80 @01 @80 @01
+  @80 @01 @80 @01 @80 @01 @FF @FF
+
