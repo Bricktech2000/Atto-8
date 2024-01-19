@@ -1,6 +1,36 @@
 use crate::*;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
+#[rustfmt::skip] macro_rules! global_label { ($name:expr) => { Label::Global(format!("{}", $name)) }; }
+#[rustfmt::skip] macro_rules! deps_macro { ($name:expr) => { Macro(format!("{}.deps", $name)) }; }
+#[rustfmt::skip] macro_rules! def_macro { ($name:expr) => { Macro(format!("{}.def", $name)) }; }
+#[rustfmt::skip] macro_rules! jmp_macro { () => { Macro(format!("jmp")) }; }
+#[rustfmt::skip] macro_rules! ret_macro { () => { Macro(format!("ret")) }; }
+#[rustfmt::skip] macro_rules! bcc_macro { () => { Macro(format!("bcc")) }; }
+#[rustfmt::skip] macro_rules! bcs_macro { () => { Macro(format!("bcs")) }; }
+#[rustfmt::skip] macro_rules! zr_macro { () => { Macro(format!("zr")) }; }
+#[rustfmt::skip] macro_rules! cl_macro { () => { Macro(format!("cl")) }; }
+#[rustfmt::skip] macro_rules! eq_macro { () => { Macro(format!("eq")) }; }
+#[rustfmt::skip] macro_rules! call_macro { () => { Macro(format!("call")) }; }
+#[rustfmt::skip] macro_rules! mul_macro { () => { Macro(format!("mul")) }; }
+#[rustfmt::skip] macro_rules! div_macro { () => { Macro(format!("div")) }; }
+#[rustfmt::skip] macro_rules! mod_macro { () => { Macro(format!("mod")) }; }
+
+#[rustfmt::skip] pub(crate) use global_label;
+#[rustfmt::skip] pub(crate) use deps_macro;
+#[rustfmt::skip] pub(crate) use def_macro;
+#[rustfmt::skip] pub(crate) use jmp_macro;
+#[rustfmt::skip] pub(crate) use ret_macro;
+#[rustfmt::skip] pub(crate) use bcc_macro;
+#[rustfmt::skip] pub(crate) use bcs_macro;
+#[rustfmt::skip] pub(crate) use zr_macro;
+#[rustfmt::skip] pub(crate) use cl_macro;
+#[rustfmt::skip] pub(crate) use eq_macro;
+#[rustfmt::skip] pub(crate) use call_macro;
+#[rustfmt::skip] pub(crate) use mul_macro;
+#[rustfmt::skip] pub(crate) use div_macro;
+#[rustfmt::skip] pub(crate) use mod_macro;
+
 pub fn link(program: &TypedProgram, _errors: &mut Vec<(Pos, Error)>) -> Vec<Result<Token, String>> {
   let mut dependencies: BTreeMap<String, BTreeSet<(bool, String)>> = match program {
     TypedProgram(globals) => globals
@@ -54,12 +84,10 @@ pub fn link(program: &TypedProgram, _errors: &mut Vec<(Pos, Error)>) -> Vec<Resu
   dependencies
     .iter()
     .flat_map(|(name, deps)| {
-      let deps_macro = Macro(format!("{}.deps", name.clone()));
       std::iter::empty()
-        .chain(vec![Ok(Token::MacroDef(deps_macro.clone()))])
+        .chain(vec![Ok(Token::MacroDef(link::deps_macro!(&name)))])
         .chain(deps.iter().filter_map(|(is_labeled, dep)| {
-          let def_macro = Macro(format!("{}.def", dep.clone()));
-          is_labeled.then_some(Ok(Token::MacroRef(def_macro.clone())))
+          is_labeled.then_some(Ok(Token::MacroRef(link::def_macro!(&dep))))
         }))
         .chain(vec![Err("".to_string())])
     })

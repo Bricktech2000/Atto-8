@@ -388,7 +388,6 @@ fn if_statement(
     Box::new(if_body),
     else_body.map(Box::new),
   );
-
   state.uid += 1;
 
   statement

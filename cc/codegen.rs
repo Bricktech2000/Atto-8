@@ -1,5 +1,17 @@
 use crate::*;
 
+#[rustfmt::skip] macro_rules! ret_label { () => { Label::Local(format!("ret"), None) }; }
+#[rustfmt::skip] macro_rules! end_label { ($name:expr) => { Label::Local(format!("{}.end", $name), None) }; }
+#[rustfmt::skip] macro_rules! else_label { ($name:expr) => { Label::Local(format!("{}.else", $name), None) }; }
+#[rustfmt::skip] macro_rules! cond_label { ($name:expr) => { Label::Local(format!("{}.cond", $name), None) }; }
+#[rustfmt::skip] macro_rules! begin_label { ($name:expr) => { Label::Local(format!("{}.begin", $name), None) }; }
+
+#[rustfmt::skip] pub(crate) use ret_label;
+#[rustfmt::skip] pub(crate) use end_label;
+#[rustfmt::skip] pub(crate) use else_label;
+#[rustfmt::skip] pub(crate) use cond_label;
+#[rustfmt::skip] pub(crate) use begin_label;
+
 pub fn codegen(
   program: TypedProgram,
   _errors: &mut Vec<(Pos, Error)>,
@@ -21,8 +33,8 @@ fn global(global: TypedGlobal) -> Vec<Result<Token, String>> {
     TypedGlobal::String(label, value) => {
       std::iter::empty()
         .chain(vec![
-          Ok(Token::MacroDef(Macro(format!("{}.def", label.clone())))),
-          Ok(Token::LabelDef(Label::Global(label.clone()))),
+          Ok(Token::MacroDef(link::def_macro!(&label))),
+          Ok(Token::LabelDef(link::global_label!(&label))),
         ])
         .chain(
           value
@@ -39,16 +51,13 @@ fn global(global: TypedGlobal) -> Vec<Result<Token, String>> {
     TypedGlobal::Macro(label, statement) => std::iter::empty()
       .chain(vec![Ok(Token::MacroDef(Macro(label)))])
       .chain(codegen::statement(statement))
-      .chain(vec![Ok(Token::LabelDef(Label::Local(
-        format!("macro.end"),
-        None,
-      )))])
+      .chain(vec![Ok(Token::LabelDef(codegen::ret_label!()))])
       .chain(vec![Err(format!(""))])
       .collect(),
 
     TypedGlobal::Function(label, statement) => std::iter::empty()
       .chain(vec![
-        Ok(Token::MacroDef(Macro(format!("{}.def", label.clone())))),
+        Ok(Token::MacroDef(link::def_macro!(&label))),
         Ok(Token::LabelDef(Label::Global(label))),
       ])
       .chain(codegen::statement(statement))
@@ -83,23 +92,20 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
     }
 
     TypedStatement::MacroReturnN0(parameters_size, locals_size, expression) => {
-      let jmp_macro = Macro("jmp".to_string());
-      let end_label = Label::Local(format!("macro.end"), None);
-
       match (parameters_size, locals_size, expression) {
         (parameters_size, locals_size, Some(expression)) => std::iter::empty()
           .chain(codegen::n0_expression(expression, 0))
           .chain(vec![Ok(Token::Pop); parameters_size + locals_size])
           .chain(vec![
-            Ok(Token::LabelRef(end_label)),
-            Ok(Token::MacroRef(jmp_macro)),
+            Ok(Token::LabelRef(codegen::ret_label!())),
+            Ok(Token::MacroRef(link::jmp_macro!())),
           ])
           .collect(),
         (parameters_size, locals_size, None) => std::iter::empty()
           .chain(vec![Ok(Token::Pop); parameters_size + locals_size])
           .chain(vec![
-            Ok(Token::LabelRef(end_label)),
-            Ok(Token::MacroRef(jmp_macro)),
+            Ok(Token::LabelRef(codegen::ret_label!())),
+            Ok(Token::MacroRef(link::jmp_macro!())),
           ])
           .collect(),
       }
@@ -107,15 +113,12 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
 
     TypedStatement::MacroReturnN1(parameters_size, locals_size, expression)
     | TypedStatement::MacroReturnN8(parameters_size, locals_size, expression) => {
-      let jmp_macro = Macro("jmp".to_string());
-      let end_label = Label::Local(format!("macro.end"), None);
-
       match (parameters_size, locals_size, expression) {
         (0, 0, Some(expression)) => std::iter::empty()
           .chain(codegen::expression(expression, 0))
           .chain(vec![
-            Ok(Token::LabelRef(end_label)),
-            Ok(Token::MacroRef(jmp_macro)),
+            Ok(Token::LabelRef(codegen::ret_label!())),
+            Ok(Token::MacroRef(link::jmp_macro!())),
           ])
           .collect(),
         (parameters_size, locals_size, Some(expression)) => std::iter::empty()
@@ -125,96 +128,92 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
           ))])
           .chain(vec![Ok(Token::Pop); parameters_size + locals_size - 1])
           .chain(vec![
-            Ok(Token::LabelRef(end_label)),
-            Ok(Token::MacroRef(jmp_macro)),
+            Ok(Token::LabelRef(codegen::ret_label!())),
+            Ok(Token::MacroRef(link::jmp_macro!())),
           ])
           .collect(),
         (0, 0, None) => std::iter::empty()
           .chain(vec![Ok(Token::XXX(0x00))])
           .chain(vec![
-            Ok(Token::LabelRef(end_label)),
-            Ok(Token::MacroRef(jmp_macro)),
+            Ok(Token::LabelRef(codegen::ret_label!())),
+            Ok(Token::MacroRef(link::jmp_macro!())),
           ])
           .collect(),
         (parameters_size, locals_size, None) => std::iter::empty()
           .chain(vec![Ok(Token::Pop); parameters_size + locals_size - 1])
           .chain(vec![
-            Ok(Token::LabelRef(end_label)),
-            Ok(Token::MacroRef(jmp_macro)),
+            Ok(Token::LabelRef(codegen::ret_label!())),
+            Ok(Token::MacroRef(link::jmp_macro!())),
           ])
           .collect(),
       }
     }
 
     TypedStatement::FunctionReturnN0(parameters_size, locals_size, expression) => {
-      let ret_macro = Macro("ret".to_string());
-
       match (parameters_size, locals_size, expression) {
         (0, locals_size, None) => std::iter::empty()
           .chain(vec![Ok(Token::Pop); locals_size])
-          .chain(vec![Ok(Token::MacroRef(ret_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (0, locals_size, Some(expression)) => std::iter::empty()
           .chain(codegen::n0_expression(expression, 0))
           .chain(vec![Ok(Token::Pop); locals_size])
-          .chain(vec![Ok(Token::MacroRef(ret_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (parameters_size, locals_size, None) => std::iter::empty()
           .chain(vec![Ok(Token::Pop); locals_size])
           .chain(vec![Ok(Token::StO((parameters_size - 1) as u8))])
           .chain(vec![Ok(Token::Pop); parameters_size - 1])
-          .chain(vec![Ok(Token::MacroRef(ret_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (parameters_size, locals_size, Some(expression)) => std::iter::empty()
           .chain(codegen::n0_expression(expression, 0))
           .chain(vec![Ok(Token::Pop); locals_size])
           .chain(vec![Ok(Token::StO((parameters_size - 1) as u8))])
           .chain(vec![Ok(Token::Pop); parameters_size - 1])
-          .chain(vec![Ok(Token::MacroRef(ret_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
       }
     }
 
     TypedStatement::FunctionReturnN1(parameters_size, locals_size, expression)
     | TypedStatement::FunctionReturnN8(parameters_size, locals_size, expression) => {
-      let ret_macro = Macro("ret".to_string());
-
       match (parameters_size, locals_size, expression) {
         (0, 0, Some(expression)) => std::iter::empty()
           .chain(codegen::expression(expression, 0))
           .chain(vec![Ok(Token::Swp)])
-          .chain(vec![Ok(Token::MacroRef(ret_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (0, locals_size, Some(expression)) => std::iter::empty()
           .chain(codegen::expression(expression, 0))
           .chain(vec![Ok(Token::StO((locals_size - 1) as u8))])
           .chain(vec![Ok(Token::Pop); locals_size - 1])
           .chain(vec![Ok(Token::Swp)])
-          .chain(vec![Ok(Token::MacroRef(ret_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (0, 0, None) => std::iter::empty()
           .chain(vec![Ok(Token::XXX(0x00)), Ok(Token::Swp)])
-          .chain(vec![Ok(Token::MacroRef(ret_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (0, locals_size, None) => std::iter::empty()
           .chain(vec![Ok(Token::Pop); locals_size - 1])
-          .chain(vec![Ok(Token::MacroRef(ret_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (1, locals_size, None) => std::iter::empty()
           .chain(vec![Ok(Token::Pop); locals_size])
-          .chain(vec![Ok(Token::MacroRef(ret_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (1, locals_size, Some(expression)) => std::iter::empty()
           .chain(codegen::expression(expression, 0))
           .chain(vec![Ok(Token::StO((locals_size + 1) as u8))])
           .chain(vec![Ok(Token::Pop); locals_size])
-          .chain(vec![Ok(Token::MacroRef(ret_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (parameters_size, locals_size, None) => std::iter::empty()
           .chain(vec![Ok(Token::Pop); locals_size])
           .chain(vec![Ok(Token::StO((parameters_size - 2) as u8))])
           .chain(vec![Ok(Token::Pop); parameters_size - 2])
-          .chain(vec![Ok(Token::MacroRef(ret_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (parameters_size, locals_size, Some(expression)) => std::iter::empty()
           .chain(codegen::expression(expression, 0))
@@ -222,7 +221,7 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
           .chain(vec![Ok(Token::Pop); locals_size])
           .chain(vec![Ok(Token::StO((parameters_size - 2) as u8))])
           .chain(vec![Ok(Token::Pop); parameters_size - 2])
-          .chain(vec![Ok(Token::MacroRef(ret_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
       }
     }
@@ -243,16 +242,6 @@ fn if_n1_statement(
   if_body: TypedStatement,
   else_body: Option<TypedStatement>,
 ) -> Vec<Result<Token, String>> {
-  let jmp_macro = Macro("jmp".to_string());
-  let bcc_macro = Macro("bcc".to_string());
-  let bcs_macro = Macro("bcs".to_string());
-  let zr_macro = Macro("zr".to_string());
-  let cl_macro = Macro("cl".to_string());
-  let eq_macro = Macro("eq".to_string());
-
-  let else_label = Label::Local(format!("{}.else", label), None);
-  let end_label = Label::Local(format!("{}.end", label), None);
-
   let (negated, condition) = match condition {
     TypedExpression::N1BitwiseComplement(expression) => (true, *expression),
     _ => (false, condition),
@@ -270,21 +259,21 @@ fn if_n1_statement(
       std::iter::empty()
         .chain(codegen::n8_expression(*expression, 0))
         .chain(vec![
-          Ok(Token::MacroRef(zr_macro.clone())),
-          Ok(Token::LabelRef(else_label.clone())),
+          Ok(Token::MacroRef(link::zr_macro!())),
+          Ok(Token::LabelRef(codegen::else_label!(&label))),
           Ok(Token::MacroRef(match negated {
-            true => bcs_macro.clone(),
-            false => bcc_macro.clone(),
+            true => link::bcs_macro!(),
+            false => link::bcc_macro!(),
           })),
         ])
         .chain(codegen::statement(if_body))
         .chain(vec![
-          Ok(Token::LabelRef(end_label.clone())),
-          Ok(Token::MacroRef(jmp_macro.clone())),
-          Ok(Token::LabelDef(else_label.clone())),
+          Ok(Token::LabelRef(codegen::end_label!(&label))),
+          Ok(Token::MacroRef(link::jmp_macro!())),
+          Ok(Token::LabelDef(codegen::else_label!(&label))),
         ])
         .chain(else_body.map(codegen::statement).unwrap_or_else(Vec::new))
-        .chain(vec![Ok(Token::LabelDef(end_label.clone()))])
+        .chain(vec![Ok(Token::LabelDef(codegen::end_label!(&label)))])
         .collect()
     }
 
@@ -292,42 +281,42 @@ fn if_n1_statement(
       .chain(codegen::n8_expression(*expression1, 0))
       .chain(codegen::n8_expression(*expression2, 1))
       .chain(vec![
-        Ok(Token::MacroRef(eq_macro.clone())),
-        Ok(Token::LabelRef(else_label.clone())),
+        Ok(Token::MacroRef(link::eq_macro!())),
+        Ok(Token::LabelRef(codegen::else_label!(&label))),
         Ok(Token::MacroRef(match negated {
-          true => bcs_macro.clone(),
-          false => bcc_macro.clone(),
+          true => link::bcs_macro!(),
+          false => link::bcc_macro!(),
         })),
       ])
       .chain(codegen::statement(if_body))
       .chain(vec![
-        Ok(Token::LabelRef(end_label.clone())),
-        Ok(Token::MacroRef(jmp_macro.clone())),
-        Ok(Token::LabelDef(else_label.clone())),
+        Ok(Token::LabelRef(codegen::end_label!(&label))),
+        Ok(Token::MacroRef(link::jmp_macro!())),
+        Ok(Token::LabelDef(codegen::else_label!(&label))),
       ])
       .chain(else_body.map(codegen::statement).unwrap_or_else(Vec::new))
-      .chain(vec![Ok(Token::LabelDef(end_label.clone()))])
+      .chain(vec![Ok(Token::LabelDef(codegen::end_label!(&label)))])
       .collect(),
 
     TypedExpression::N1CastN8(expression) => std::iter::empty()
       .chain(codegen::n8_expression(*expression, 0))
       .chain(vec![
         Ok(Token::XXX(0x01)),
-        Ok(Token::MacroRef(cl_macro.clone())),
-        Ok(Token::LabelRef(else_label.clone())),
+        Ok(Token::MacroRef(link::cl_macro!())),
+        Ok(Token::LabelRef(codegen::else_label!(&label))),
         Ok(Token::MacroRef(match negated {
-          true => bcc_macro.clone(),
-          false => bcs_macro.clone(),
+          true => link::bcc_macro!(),
+          false => link::bcs_macro!(),
         })),
       ])
       .chain(codegen::statement(if_body))
       .chain(vec![
-        Ok(Token::LabelRef(end_label.clone())),
-        Ok(Token::MacroRef(jmp_macro.clone())),
-        Ok(Token::LabelDef(else_label.clone())),
+        Ok(Token::LabelRef(codegen::end_label!(&label))),
+        Ok(Token::MacroRef(link::jmp_macro!())),
+        Ok(Token::LabelDef(codegen::else_label!(&label))),
       ])
       .chain(else_body.map(codegen::statement).unwrap_or_else(Vec::new))
-      .chain(vec![Ok(Token::LabelDef(end_label.clone()))])
+      .chain(vec![Ok(Token::LabelDef(codegen::end_label!(&label)))])
       .collect(),
 
     TypedExpression::N1Constant(constant) if constant == negated => std::iter::empty()
@@ -347,16 +336,6 @@ fn while_n1_statement(
   condition: TypedExpression,
   body: TypedStatement,
 ) -> Vec<Result<Token, String>> {
-  let jmp_macro = Macro("jmp".to_string());
-  let bcc_macro = Macro("bcc".to_string());
-  let bcs_macro = Macro("bcs".to_string());
-  let zr_macro = Macro("zr".to_string());
-  let cl_macro = Macro("cl".to_string());
-  let eq_macro = Macro("eq".to_string());
-
-  let while_label = Label::Local(format!("{}", label), None);
-  let cond_label = Label::Local(format!("{}.cond", label), None);
-
   let (negated, condition) = match condition {
     TypedExpression::N1BitwiseComplement(expression) => (true, *expression),
     _ => (false, condition),
@@ -373,19 +352,19 @@ fn while_n1_statement(
     {
       std::iter::empty()
         .chain(vec![
-          Ok(Token::LabelRef(cond_label.clone())),
-          Ok(Token::MacroRef(jmp_macro.clone())),
-          Ok(Token::LabelDef(while_label.clone())),
+          Ok(Token::LabelRef(codegen::cond_label!(&label))),
+          Ok(Token::MacroRef(link::jmp_macro!())),
+          Ok(Token::LabelDef(codegen::begin_label!(&label))),
         ])
         .chain(codegen::statement(body))
-        .chain(vec![Ok(Token::LabelDef(cond_label.clone()))])
+        .chain(vec![Ok(Token::LabelDef(codegen::cond_label!(&label)))])
         .chain(codegen::n8_expression(*expression, 0))
         .chain(vec![
-          Ok(Token::MacroRef(zr_macro.clone())),
-          Ok(Token::LabelRef(while_label.clone())),
+          Ok(Token::MacroRef(link::zr_macro!())),
+          Ok(Token::LabelRef(codegen::begin_label!(&label))),
           Ok(Token::MacroRef(match negated {
-            true => bcc_macro.clone(),
-            false => bcs_macro.clone(),
+            true => link::bcc_macro!(),
+            false => link::bcs_macro!(),
           })),
         ])
         .collect()
@@ -393,40 +372,40 @@ fn while_n1_statement(
 
     TypedExpression::N1EqualToN8(expression1, expression2) => std::iter::empty()
       .chain(vec![
-        Ok(Token::LabelRef(cond_label.clone())),
-        Ok(Token::MacroRef(jmp_macro.clone())),
-        Ok(Token::LabelDef(while_label.clone())),
+        Ok(Token::LabelRef(codegen::cond_label!(&label))),
+        Ok(Token::MacroRef(link::jmp_macro!())),
+        Ok(Token::LabelDef(codegen::begin_label!(&label))),
       ])
       .chain(codegen::statement(body))
-      .chain(vec![Ok(Token::LabelDef(cond_label.clone()))])
+      .chain(vec![Ok(Token::LabelDef(codegen::cond_label!(&label)))])
       .chain(codegen::n8_expression(*expression1, 0))
       .chain(codegen::n8_expression(*expression2, 1))
       .chain(vec![
-        Ok(Token::MacroRef(eq_macro.clone())),
-        Ok(Token::LabelRef(while_label.clone())),
+        Ok(Token::MacroRef(link::eq_macro!())),
+        Ok(Token::LabelRef(codegen::begin_label!(&label))),
         Ok(Token::MacroRef(match negated {
-          true => bcc_macro.clone(),
-          false => bcs_macro.clone(),
+          true => link::bcc_macro!(),
+          false => link::bcs_macro!(),
         })),
       ])
       .collect(),
 
     TypedExpression::N1CastN8(expression) => std::iter::empty()
       .chain(vec![
-        Ok(Token::LabelRef(cond_label.clone())),
-        Ok(Token::MacroRef(jmp_macro.clone())),
-        Ok(Token::LabelDef(while_label.clone())),
+        Ok(Token::LabelRef(codegen::cond_label!(&label))),
+        Ok(Token::MacroRef(link::jmp_macro!())),
+        Ok(Token::LabelDef(codegen::begin_label!(&label))),
       ])
       .chain(codegen::statement(body))
-      .chain(vec![Ok(Token::LabelDef(cond_label.clone()))])
+      .chain(vec![Ok(Token::LabelDef(codegen::cond_label!(&label)))])
       .chain(codegen::n8_expression(*expression, 0))
       .chain(vec![
         Ok(Token::XXX(0x01)),
-        Ok(Token::MacroRef(cl_macro.clone())),
-        Ok(Token::LabelRef(while_label.clone())),
+        Ok(Token::MacroRef(link::cl_macro!())),
+        Ok(Token::LabelRef(codegen::begin_label!(&label))),
         Ok(Token::MacroRef(match negated {
-          true => bcs_macro.clone(),
-          false => bcc_macro.clone(),
+          true => link::bcs_macro!(),
+          false => link::bcc_macro!(),
         })),
       ])
       .collect(),
@@ -434,11 +413,11 @@ fn while_n1_statement(
     TypedExpression::N1Constant(constant) if constant == negated => std::iter::empty().collect(),
 
     TypedExpression::N1Constant(constant) if constant != negated => std::iter::empty()
-      .chain(vec![Ok(Token::LabelDef(while_label.clone()))])
+      .chain(vec![Ok(Token::LabelDef(codegen::begin_label!(&label)))])
       .chain(codegen::statement(body))
       .chain(vec![
-        Ok(Token::LabelRef(while_label.clone())),
-        Ok(Token::MacroRef(jmp_macro.clone())),
+        Ok(Token::LabelRef(codegen::begin_label!(&label))),
+        Ok(Token::MacroRef(link::jmp_macro!())),
       ])
       .collect(),
 
@@ -505,7 +484,6 @@ fn n0_expression(
       .collect(),
 
     TypedExpression::N0FunctionCall(designator, arguments) => {
-      let call_macro = Macro("call".to_string());
       let arguments_size = arguments.len();
 
       arguments
@@ -518,7 +496,7 @@ fn n0_expression(
           // TODO assumes all arguments are one byte in size
           temporaries_size + arguments_size,
         ))
-        .chain(vec![Ok(Token::MacroRef(call_macro))])
+        .chain(vec![Ok(Token::MacroRef(link::call_macro!()))])
         .collect()
     }
 
@@ -545,12 +523,10 @@ fn n1_expression(
     | TypedExpression::N1EqualToN8(constant, expression)
       if *constant == TypedExpression::N8Constant(0x00) =>
     {
-      let zr_macro = Macro("zr".to_string());
-
       std::iter::empty()
         .chain(codegen::n8_expression(*expression, temporaries_size))
         .chain(vec![
-          Ok(Token::MacroRef(zr_macro)),
+          Ok(Token::MacroRef(link::zr_macro!())),
           Ok(Token::XXX(0x00)),
           Ok(Token::Shl),
           Ok(Token::AtDyn),
@@ -558,20 +534,16 @@ fn n1_expression(
         .collect()
     }
 
-    TypedExpression::N1EqualToN8(expression1, expression2) => {
-      let eq_macro = Macro("eq".to_string());
-
-      std::iter::empty()
-        .chain(codegen::n8_expression(*expression1, temporaries_size))
-        .chain(codegen::n8_expression(*expression2, temporaries_size + 1))
-        .chain(vec![
-          Ok(Token::MacroRef(eq_macro)),
-          Ok(Token::XXX(0x00)),
-          Ok(Token::Shl),
-          Ok(Token::AtDyn),
-        ])
-        .collect()
-    }
+    TypedExpression::N1EqualToN8(expression1, expression2) => std::iter::empty()
+      .chain(codegen::n8_expression(*expression1, temporaries_size))
+      .chain(codegen::n8_expression(*expression2, temporaries_size + 1))
+      .chain(vec![
+        Ok(Token::MacroRef(link::eq_macro!())),
+        Ok(Token::XXX(0x00)),
+        Ok(Token::Shl),
+        Ok(Token::AtDyn),
+      ])
+      .collect(),
 
     TypedExpression::N1Constant(constant) => match constant {
       true => vec![Ok(Token::XXX(0x01))],
@@ -648,8 +620,6 @@ fn n8_expression(
     }
 
     TypedExpression::U8Multiplication(expression1, expression2) => {
-      let mul_macro = Macro("mul".to_string());
-
       match (*expression1, *expression2) {
         (expression, TypedExpression::N8Constant(0x02))
         | (TypedExpression::N8Constant(0x02), expression) => std::iter::empty()
@@ -667,14 +637,12 @@ fn n8_expression(
         (expression1, expression2) => std::iter::empty()
           .chain(codegen::n8_expression(expression1, temporaries_size))
           .chain(codegen::n8_expression(expression2, temporaries_size + 1))
-          .chain(vec![Ok(Token::MacroRef(mul_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::mul_macro!()))])
           .collect(),
       }
     }
 
     TypedExpression::U8Division(expression1, expression2) => {
-      let div_macro = Macro("div".to_string());
-
       match (*expression1, *expression2) {
         (expression1, TypedExpression::N8Constant(0x02)) => std::iter::empty()
           .chain(codegen::n8_expression(expression1, temporaries_size))
@@ -690,14 +658,12 @@ fn n8_expression(
         (expression1, expression2) => std::iter::empty()
           .chain(codegen::n8_expression(expression1, temporaries_size))
           .chain(codegen::n8_expression(expression2, temporaries_size + 1))
-          .chain(vec![Ok(Token::MacroRef(div_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::div_macro!()))])
           .collect(),
       }
     }
 
     TypedExpression::U8Modulo(expression1, expression2) => {
-      let mod_macro = Macro("mod".to_string());
-
       match (*expression1, *expression2) {
         (expression1, TypedExpression::N8Constant(0x02)) => std::iter::empty()
           .chain(codegen::n8_expression(expression1, temporaries_size))
@@ -713,7 +679,7 @@ fn n8_expression(
         (expression1, expression2) => std::iter::empty()
           .chain(codegen::n8_expression(expression1, temporaries_size))
           .chain(codegen::n8_expression(expression2, temporaries_size + 1))
-          .chain(vec![Ok(Token::MacroRef(mod_macro))])
+          .chain(vec![Ok(Token::MacroRef(link::mod_macro!()))])
           .collect(),
       }
     }
@@ -745,7 +711,6 @@ fn n8_expression(
       .collect(),
 
     TypedExpression::N8FunctionCall(designator, arguments) => {
-      let call_macro = Macro("call".to_string());
       let arguments_size = arguments.len();
 
       arguments
@@ -758,7 +723,7 @@ fn n8_expression(
           // TODO assumes all arguments are one byte in size
           temporaries_size + arguments_size,
         ))
-        .chain(vec![Ok(Token::MacroRef(call_macro))])
+        .chain(vec![Ok(Token::MacroRef(link::call_macro!()))])
         .collect()
     }
 
