@@ -10,9 +10,9 @@
 # - Primary Down -- soft drop
 #
 # worth noting:
-# - no hold, no hard drop, no wall kicks, no delayed autoshift
+# - no hold, no hard drop, no kicks, no delayed autoshift
 # - all timings and tetromino spawn probabilities are made up
-# - rotations conform to the Super Rotation System modulo wall kicks
+# - rotations conform to the Super Rotation System modulo kicks
 #
 # some implementation details:
 # - `frame` is a frame counter. we use it to move tetrominoes down every few game ticks

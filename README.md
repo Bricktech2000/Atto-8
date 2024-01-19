@@ -66,6 +66,7 @@ python3 test.py hanoi.asm asm emu
 python3 test.py rot13.asm asm emu
 python3 test.py simon.asm asm emu
 python3 test.py tetris.asm asm emu
+python3 test.py doom.asm asm emu
 
 # test programs
 python3 test.py printf.asm asm emu
