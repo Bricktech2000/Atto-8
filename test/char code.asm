@@ -10,5 +10,4 @@ main!
     # !char.null swp !u8.to_dec !stack_puts !char.space !putc
     # !char.to_lower !putc
     # !char.to_upper !putc
-    !block_null
   :loop !jmp

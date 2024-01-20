@@ -923,12 +923,15 @@
     <comp lib="4" loc="(1440,550)" name="ROM">
       <a name="addrWidth" val="13"/>
       <a name="appearance" val="logisim_evolution"/>
-            <a name="dataWidth" val="16"/>
+      <a name="contents">addr/data: 13 16
+0
+</a>
+      <a name="dataWidth" val="16"/>
       <a name="label" val="MIC"/>
     </comp>
     <comp lib="4" loc="(1590,1620)" name="ROM">
       <a name="appearance" val="logisim_evolution"/>
-            <a name="label" val="ROM0"/>
+      <a name="label" val="ROM0"/>
     </comp>
     <comp lib="4" loc="(600,1030)" name="Register">
       <a name="appearance" val="logisim_evolution"/>

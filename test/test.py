@@ -40,11 +40,12 @@ if len(sys.argv) <= 1:
 target = 'target'
 input = sys.argv[1:][::-1]
 shutil.rmtree(rel_path(target), ignore_errors=True)
-shutil.copytree(rel_path('./'), rel_path(target), dirs_exist_ok=True)
 shutil.copytree(rel_path('../lib/'), rel_path(target, 'lib/'), dirs_exist_ok=True)
 shutil.copytree(rel_path('../libc/'), rel_path(target, 'libc/'), dirs_exist_ok=True)
 shutil.copytree(rel_path('../misc/'), rel_path(target, 'misc/'), dirs_exist_ok=True)
+shutil.copytree(rel_path('../test/'), rel_path(target), dirs_exist_ok=True)
 shutil.copytree(rel_path('../libc/incl/'), rel_path(target), dirs_exist_ok=True)
+shutil.copytree(rel_path('../circ/impl/'), rel_path(target), dirs_exist_ok=True)
 shutil.copytree(rel_path('../bf/test/'), rel_path(target), dirs_exist_ok=True)
 
 
@@ -98,10 +99,11 @@ while input:
         operations.append((operation, functools.partial(
             run_cargo, f'{operation}', memory_image_file, microcode_image_file)))
       case 'circ':
+        circuit_file = filenames.pop()
         microcode_image_file = filenames.pop()
         memory_image_file = filenames.pop()
         operations.append((operation, functools.partial(run_python, rel_path(
-            f'../{operation}/{operation}.py'), memory_image_file, microcode_image_file)))
+            f'../{operation}/{operation}.py'), memory_image_file, microcode_image_file, circuit_file)))
       case 'bf':
         brainfuck_source_file = filenames.pop()
         memory_image_file = brainfuck_source_file + '.mem'

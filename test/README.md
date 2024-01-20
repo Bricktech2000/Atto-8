@@ -34,15 +34,18 @@ python3 test.py flappy.asm asm dasm pop
 # compile to assembly with stdio, assemble assembly, emulate binary
 python3 test.py pipe.c libc/stdio.c libc/crt0.c cc asm emu
 
-# assemble source code, emulate binary. assemble source code, build microcode, simulate binary with microcode
-python3 test.py ctf.asm asm emu ctf.asm asm mic sim
+# assemble source code, emulate binary. assemble source code, build microcode, launch circuit with binary and microcode
+python3 test.py ctf.asm asm emu ctf.asm asm mic block.circ circ
 
-# encode from hex, disassemble binary, assemble disassembly, build microcode, launch circuit with resulting binary and microcode
-python3 test.py checkerboard.hex enc dasm asm mic circ
+# encode from hex, disassemble binary, assemble disassembly, build microcode, simulate resulting binary with microcode
+python3 test.py checkerboard.hex enc dasm asm mic sim
 
 # assemble source code, decode to hex, encode from hex, disassemble binary, assemble disassembly, build microcode, simulate resulting binary with microcode
 python3 test.py life.asm asm dec enc dasm asm mic sim
 
-# build brainfuck microcode, simulate brainfuck source
-python3 test.py fib.bf bf sim
+# build brainfuck microcode, simulate brainfuck source with microcode
+python3 test.py squares.bf bf sim
+
+# build brainfuck microcode, launch circuit with brainfuck source and microcode
+python3 test.py fib.bf bf block.circ circ
 ```

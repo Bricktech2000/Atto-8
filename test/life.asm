@@ -52,7 +52,7 @@ main!
     # !diehard
     # !r-pentomino
     # !lightweight_spaceship
-    # !heavyweight_spaceship
+    !heavyweight_spaceship
     # !compact_pulsar
     # !copperhead
     # !figure_eight
