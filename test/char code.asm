@@ -3,7 +3,7 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 
-main!
+main! !nop
   loop:
     !block_getc
     !u8.to_hex !putc !putc !char.space !putc

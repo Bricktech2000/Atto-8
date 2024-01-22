@@ -63,7 +63,7 @@ div_10_constant_time! clc # quotient = div_10_constant_time(n)
   ld0 xF0 and x04 rot # 51/64 n =~ 0.7969 n
   # n += n >> 7
   ld1 shl @dyn pop add @dyn # 411/512 n =~ 0.8027 n
-  # n >>= 8
+  # n >>= 3
   xF8 and x05 rot # 411/4096 n =~ 0.1003 n
   # return* n
 

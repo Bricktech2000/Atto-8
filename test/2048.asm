@@ -118,7 +118,7 @@ main!
 
     # the controller being in any state other than `0x01 | 0x02 | 0x04 | 0x08`
     # unfortunately breaks the game logic. not much we can do about that.
-    # below is similar to `!block_getc` but updates `rand_seed` while waiting
+    # below is similar to `!block_getc`, but updates `rand_seed` while waiting
     block: !char.add !getc !char.check_null :block !bcs
   :while !jmp
 
