@@ -96,7 +96,7 @@ main!
           # first term maps every byte to the first element of its board row. second term moves right by
           # two if the byte is on the right half of the display. third term moves right by one if the current
           # nibble is the second nibble of the byte. this gives a pointer to the tile we're looking for
-          :board ld3 x06 not @const and clc shr x00 shl @dyn xFF xo4 shl @dyn orr clc add lda
+          :board ld3 x06 not @const and clc shr @dyn x00 shl @dyn xFF xo4 @dyn shl @dyn orr clc add lda
           # 2048_char = 2048_chars[tile]
           :2048_chars !ofst lda
           # nibble = (2048_char << (byte & 0x06)) & 0x60

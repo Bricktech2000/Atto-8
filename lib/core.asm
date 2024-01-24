@@ -5,7 +5,7 @@ xnorr! xor not
 xnand! xnd not
 abs! ld0 x01 rot x01 and neg swp ld1 add xor @const
 abs.dyn! ld0 neg ld1 !ng iff
-min.dyn! ld1 ld1 !le iff
+min.dyn! ld1 ld1 !lt iff
 max.dyn! ld1 ld1 !gt iff
 asr.dyn! ld0 !ng shr @dyn
 
@@ -35,14 +35,13 @@ rt0! !ret
 rt1! st0 !ret
 rt2! st1 pop !ret
 rt3! st2 pop pop !ret
-rt4! st3 pop pop pop !ret
 
 dbg! @BB # unofficial `0xBB` treated as debug request
 here! lbl. .lbl
 nop! nop @dyn
 hlt! !here !jmp
 pad! .lbl add lbl. @org
-stall! @const shl shl shl rot @dyn # argument at most 0x1F
+stall! shl shl shl @const rot @dyn # argument at most 0x1F
 ofst! neg @const sub # add large constant by subtraction
 
 mul! clc # product = mul(a, b)

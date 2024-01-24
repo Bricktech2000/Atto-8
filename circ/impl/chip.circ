@@ -81,11 +81,11 @@
     <a name="simulationFrequency" val="2048000.0"/>
     <comp lib="0" loc="(1020,3520)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="nIP_DATA"/>
+      <a name="label" val="N_IP_DATA"/>
     </comp>
     <comp lib="0" loc="(1040,3490)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="nSP_DATA"/>
+      <a name="label" val="N_SP_DATA"/>
     </comp>
     <comp lib="0" loc="(1070,1860)" name="Tunnel">
       <a name="facing" val="east"/>
@@ -94,11 +94,11 @@
     </comp>
     <comp lib="0" loc="(1080,3460)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="nSUM_DATA"/>
+      <a name="label" val="N_SUM_DATA"/>
     </comp>
     <comp lib="0" loc="(1080,3640)" name="Tunnel">
       <a name="facing" val="north"/>
-      <a name="label" val="nMEM_DATA"/>
+      <a name="label" val="N_MEM_DATA"/>
     </comp>
     <comp lib="0" loc="(1100,1930)" name="Pull Resistor"/>
     <comp lib="0" loc="(1100,3080)" name="Tunnel">
@@ -107,7 +107,7 @@
     </comp>
     <comp lib="0" loc="(1100,3430)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="nNAND_DATA"/>
+      <a name="label" val="N_NAND_DATA"/>
     </comp>
     <comp lib="0" loc="(1110,1730)" name="Tunnel">
       <a name="facing" val="east"/>
@@ -123,19 +123,19 @@
     </comp>
     <comp lib="0" loc="(1120,4620)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="cDATA_SP"/>
+      <a name="label" val="C_DATA_SP"/>
     </comp>
     <comp lib="0" loc="(1170,2990)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="nSUM_DATA"/>
+      <a name="label" val="N_SUM_DATA"/>
     </comp>
     <comp lib="0" loc="(1170,4050)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="nNAND_DATA"/>
+      <a name="label" val="N_NAND_DATA"/>
     </comp>
     <comp lib="0" loc="(1170,4590)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="nSP_DATA"/>
+      <a name="label" val="N_SP_DATA"/>
     </comp>
     <comp lib="0" loc="(1230,1760)" name="Tunnel">
       <a name="label" val="DISPLAY"/>
@@ -352,7 +352,7 @@
     </comp>
     <comp lib="0" loc="(1730,2890)" name="Tunnel">
       <a name="facing" val="east"/>
-      <a name="label" val="cDATA_IP"/>
+      <a name="label" val="N_DATA_IP"/>
     </comp>
     <comp lib="0" loc="(1730,4130)" name="Tunnel">
       <a name="facing" val="north"/>
@@ -360,7 +360,7 @@
     </comp>
     <comp lib="0" loc="(1740,2860)" name="Tunnel">
       <a name="facing" val="east"/>
-      <a name="label" val="cDATA_SP"/>
+      <a name="label" val="N_DATA_SP"/>
     </comp>
     <comp lib="0" loc="(1750,2130)" name="Splitter">
       <a name="appear" val="right"/>
@@ -384,28 +384,28 @@
     </comp>
     <comp lib="0" loc="(1750,2830)" name="Tunnel">
       <a name="facing" val="east"/>
-      <a name="label" val="cDATA_CF"/>
+      <a name="label" val="N_DATA_CF"/>
     </comp>
     <comp lib="0" loc="(1750,4050)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="nSUM_DATA"/>
+      <a name="label" val="N_SUM_DATA"/>
     </comp>
     <comp lib="0" loc="(1760,2800)" name="Tunnel">
       <a name="facing" val="east"/>
-      <a name="label" val="cDATA_IL"/>
+      <a name="label" val="N_DATA_IL"/>
     </comp>
     <comp lib="0" loc="(1790,2800)" name="Tunnel">
-      <a name="label" val="cDATA_AL"/>
+      <a name="label" val="N_DATA_AL"/>
     </comp>
     <comp lib="0" loc="(1800,2830)" name="Tunnel">
-      <a name="label" val="cDATA_XL"/>
+      <a name="label" val="N_DATA_XL"/>
     </comp>
     <comp lib="0" loc="(1810,2860)" name="Tunnel">
-      <a name="label" val="cDATA_YL"/>
+      <a name="label" val="N_DATA_YL"/>
     </comp>
     <comp lib="0" loc="(1810,4020)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="nNAND_DATA"/>
+      <a name="label" val="N_NAND_DATA"/>
     </comp>
     <comp lib="0" loc="(1820,1540)" name="Tunnel">
       <a name="facing" val="east"/>
@@ -413,11 +413,11 @@
       <a name="width" val="8"/>
     </comp>
     <comp lib="0" loc="(1820,2890)" name="Tunnel">
-      <a name="label" val="cDATA_ZL"/>
+      <a name="label" val="N_DATA_ZL"/>
     </comp>
     <comp lib="0" loc="(1830,3990)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="nZERO"/>
+      <a name="label" val="N_ZERO"/>
     </comp>
     <comp lib="0" loc="(1850,2100)" name="Tunnel">
       <a name="facing" val="east"/>
@@ -430,7 +430,7 @@
     </comp>
     <comp lib="0" loc="(1860,3120)" name="Tunnel">
       <a name="facing" val="north"/>
-      <a name="label" val="nSET_CIN"/>
+      <a name="label" val="N_SET_CIN"/>
     </comp>
     <comp lib="0" loc="(1860,3520)" name="Tunnel">
       <a name="facing" val="south"/>
@@ -446,7 +446,7 @@
     </comp>
     <comp lib="0" loc="(1880,4520)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="cDATA_AL"/>
+      <a name="label" val="C_DATA_AL"/>
     </comp>
     <comp lib="0" loc="(1890,3520)" name="Tunnel">
       <a name="facing" val="south"/>
@@ -491,15 +491,15 @@
     </comp>
     <comp lib="0" loc="(1940,4050)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="cDATA_CF"/>
+      <a name="label" val="C_DATA_CF"/>
     </comp>
     <comp lib="0" loc="(1940,5000)" name="Tunnel">
       <a name="facing" val="east"/>
-      <a name="label" val="nMEM_DATA"/>
+      <a name="label" val="N_MEM_DATA"/>
     </comp>
     <comp lib="0" loc="(1940,5030)" name="Tunnel">
       <a name="facing" val="east"/>
-      <a name="label" val="nDATA_MEM"/>
+      <a name="label" val="N_DATA_MEM"/>
     </comp>
     <comp lib="0" loc="(1960,4190)" name="Tunnel">
       <a name="facing" val="north"/>
@@ -525,7 +525,7 @@
     </comp>
     <comp lib="0" loc="(2050,3990)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="nCLR_SC"/>
+      <a name="label" val="N_CLR_SC"/>
     </comp>
     <comp lib="0" loc="(2110,4190)" name="Tunnel">
       <a name="facing" val="north"/>
@@ -641,7 +641,7 @@
     </comp>
     <comp lib="0" loc="(2330,2880)" name="Tunnel">
       <a name="facing" val="east"/>
-      <a name="label" val="nIP_DATA"/>
+      <a name="label" val="N_IP_DATA"/>
     </comp>
     <comp lib="0" loc="(2330,4510)" name="Tunnel">
       <a name="facing" val="south"/>
@@ -649,35 +649,35 @@
     </comp>
     <comp lib="0" loc="(2340,2850)" name="Tunnel">
       <a name="facing" val="east"/>
-      <a name="label" val="nSP_DATA"/>
+      <a name="label" val="N_SP_DATA"/>
     </comp>
     <comp lib="0" loc="(2350,2820)" name="Tunnel">
       <a name="facing" val="east"/>
-      <a name="label" val="nMEM_DATA"/>
+      <a name="label" val="N_MEM_DATA"/>
     </comp>
     <comp lib="0" loc="(2360,2790)" name="Tunnel">
       <a name="facing" val="east"/>
-      <a name="label" val="nDATA_MEM"/>
+      <a name="label" val="N_DATA_MEM"/>
     </comp>
     <comp lib="0" loc="(2390,2790)" name="Tunnel">
-      <a name="label" val="nCLR_SC"/>
+      <a name="label" val="N_CLR_SC"/>
     </comp>
     <comp lib="0" loc="(2390,4510)" name="Tunnel">
       <a name="facing" val="south"/>
       <a name="label" val="A12"/>
     </comp>
     <comp lib="0" loc="(2400,2820)" name="Tunnel">
-      <a name="label" val="nSET_CIN"/>
+      <a name="label" val="N_SET_CIN"/>
     </comp>
     <comp lib="0" loc="(2410,2850)" name="Tunnel">
-      <a name="label" val="nSUM_DATA"/>
+      <a name="label" val="N_SUM_DATA"/>
     </comp>
     <comp lib="0" loc="(2410,4470)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="cDATA_IL"/>
+      <a name="label" val="C_DATA_IL"/>
     </comp>
     <comp lib="0" loc="(2420,2880)" name="Tunnel">
-      <a name="label" val="nNAND_DATA"/>
+      <a name="label" val="N_NAND_DATA"/>
     </comp>
     <comp lib="0" loc="(2530,3480)" name="Splitter">
       <a name="bit0" val="13"/>
@@ -848,11 +848,11 @@
     </comp>
     <comp lib="0" loc="(570,2980)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="cDATA_XL"/>
+      <a name="label" val="C_DATA_XL"/>
     </comp>
     <comp lib="0" loc="(570,4620)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="cDATA_IP"/>
+      <a name="label" val="C_DATA_IP"/>
     </comp>
     <comp lib="0" loc="(580,1880)" name="Tunnel">
       <a name="facing" val="east"/>
@@ -876,7 +876,7 @@
     </comp>
     <comp lib="0" loc="(610,4040)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="cDATA_ZL"/>
+      <a name="label" val="C_DATA_ZL"/>
     </comp>
     <comp lib="0" loc="(620,1890)" name="Ground">
       <a name="facing" val="west"/>
@@ -893,7 +893,7 @@
     </comp>
     <comp lib="0" loc="(620,4590)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="nIP_DATA"/>
+      <a name="label" val="N_IP_DATA"/>
     </comp>
     <comp lib="0" loc="(630,2180)" name="Splitter">
       <a name="bit4" val="5"/>
@@ -922,7 +922,7 @@
     </comp>
     <comp lib="0" loc="(670,3510)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="cDATA_YL"/>
+      <a name="label" val="C_DATA_YL"/>
     </comp>
     <comp lib="0" loc="(690,2160)" name="Ground">
       <a name="facing" val="north"/>
@@ -938,7 +938,7 @@
     </comp>
     <comp lib="0" loc="(780,2890)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="cDATA_YL"/>
+      <a name="label" val="C_DATA_YL"/>
     </comp>
     <comp lib="0" loc="(790,1430)" name="Tunnel">
       <a name="facing" val="east"/>
@@ -971,7 +971,7 @@
     </comp>
     <comp lib="0" loc="(820,3950)" name="Tunnel">
       <a name="facing" val="south"/>
-      <a name="label" val="cDATA_YL"/>
+      <a name="label" val="C_DATA_YL"/>
     </comp>
     <comp lib="0" loc="(830,2030)" name="Power">
       <a name="facing" val="west"/>
@@ -1019,7 +1019,7 @@
     </comp>
     <comp lib="0" loc="(950,3610)" name="Tunnel">
       <a name="facing" val="north"/>
-      <a name="label" val="nZERO"/>
+      <a name="label" val="N_ZERO"/>
     </comp>
     <comp lib="0" loc="(960,1500)" name="Tunnel">
       <a name="facing" val="north"/>
@@ -1448,7 +1448,7 @@
       <a name="text" val="DISPLAY"/>
     </comp>
     <comp lib="8" loc="(1465,2690)" name="Text">
-      <a name="text" val="GND, VCC, DATA7..=DATA0, nCLK, nRST"/>
+      <a name="text" val="GND, VCC, DATA7..=DATA0, N_CLK, N_RST"/>
     </comp>
     <comp lib="8" loc="(1465,5125)" name="Text">
       <a name="font" val="SansSerif bold 32"/>

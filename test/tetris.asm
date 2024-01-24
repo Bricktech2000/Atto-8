@@ -46,10 +46,10 @@ main!
     xFD xFD ld0 lda for_line: # (src, dst)
       # *src = *dst
       ld0 ld3 sta
-      # lodad value at `src ^ 0x01`, the other byte in the same line
+      # load value at `src ^ 0x01`, the other byte in the same line
       ld1 x01 xor lda
       # if `*src == *(src ^ 0x01) == 0xFF` then don't advance `dst`
-      and not @dyn pop xFF ad2
+      !nand @dyn pop xFF ad2
       # loop while `*(--src) != 0x00`. the byte at `display_buffer - 1`
       # is `ofst[0x04]`, which happens to be `0x00`
       dec ld0 lda !z

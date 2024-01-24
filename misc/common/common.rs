@@ -3,7 +3,7 @@
 use std::collections::VecDeque;
 
 pub const MEM_SIZE: usize = 0x100;
-pub const MIC_SIZE: usize = 0x80 * 0x02 * 0x20;
+pub const MIC_SIZE: usize = 0x80 * 0x02 * 0x20; // 0x2000
 pub const DISPLAY_BUFFER: usize = 0xE0;
 pub const DISPLAY_BUFFER_LEN: usize = 0x20;
 pub const STDIO_BUFFER: usize = 0x00;
@@ -555,19 +555,19 @@ pub enum Instruction {
 
 pub fn opcode_to_instruction(opcode: u8) -> Result<Instruction, u8> {
   fn decode_imm(opcode: u8) -> u8 {
-    return opcode & 0b01111111;
+    opcode & 0b01111111
   }
 
   fn decode_size(opcode: u8) -> u8 {
-    return 1 << (opcode & 0b00000011);
+    1 << (opcode & 0b00000011)
   }
 
   fn decode_ofst(opcode: u8) -> u8 {
-    return opcode & 0b00001111;
+    opcode & 0b00001111
   }
 
   fn decode_nimm(opcode: u8) -> u8 {
-    return opcode | 0b11110000;
+    opcode | 0b11110000
   }
 
   match (opcode & 0b10000000) >> 7 {

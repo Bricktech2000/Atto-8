@@ -8,9 +8,9 @@ The circuit designs are a pair of [Logisim Evolution](https://github.com/logisim
 
 ## Conventions
 
-Tunnels whose label begins with an `n` are _negated_ and tunnels whose label begins with a `c` are _clocked_. Expressed in pseudocode,
+Tunnels whose label begins with an `N_` are _negated_ and tunnels whose label begins with a `C_` are _clocked_. Expressed in pseudocode,
 
 ```rust
-let nTUNNEL_LABEL = !TUNNEL_LABEL; // negated tunnel
-let cTUNNEL_LABEL = CLK & TUNNEL_LABEL; // clocked tunnel
+let N_TUNNEL_LABEL = !TUNNEL_LABEL; // negated tunnel
+let C_TUNNEL_LABEL = CLK & TUNNEL_LABEL; // clocked tunnel
 ```

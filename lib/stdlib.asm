@@ -36,7 +36,7 @@ popcnt! # count = popcnt(n, init)
   # loop while n != 0
   !z .while !bcc # bleed `0x00`
   # set carry flag if count == 0x00
-  orr
+  orr @dyn
 
 
 mul_10! # product = mul_10(n)

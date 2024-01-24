@@ -49,7 +49,7 @@ fn global(global: TypedGlobal) -> Vec<Result<Token, String>> {
     }
 
     TypedGlobal::Macro(label, statement) => std::iter::empty()
-      .chain(vec![Ok(Token::MacroDef(Macro(label)))])
+      .chain(vec![Ok(Token::MacroDef(link::global_macro!(&label)))])
       .chain(codegen::statement(statement))
       .chain(vec![Ok(Token::LabelDef(codegen::ret_label!()))])
       .chain(vec![Err(format!(""))])
@@ -58,7 +58,7 @@ fn global(global: TypedGlobal) -> Vec<Result<Token, String>> {
     TypedGlobal::Function(label, statement) => std::iter::empty()
       .chain(vec![
         Ok(Token::MacroDef(link::def_macro!(&label))),
-        Ok(Token::LabelDef(Label::Global(label))),
+        Ok(Token::LabelDef(link::global_label!(&label))),
       ])
       .chain(codegen::statement(statement))
       .chain(vec![Err(format!(""))])
@@ -480,7 +480,7 @@ fn n0_expression(
       .enumerate()
       // TODO assumes all expressions are one byte in size
       .flat_map(|(index, expression)| codegen::expression(expression, temporaries_size + index))
-      .chain(vec![Ok(Token::MacroRef(Macro(label)))])
+      .chain(vec![Ok(Token::MacroRef(link::global_macro!(&label)))])
       .collect(),
 
     TypedExpression::N0FunctionCall(designator, arguments) => {
@@ -694,12 +694,12 @@ fn n8_expression(
     TypedExpression::N8AddrLocal(_offset) => todo!(),
 
     TypedExpression::N8GetGlobal(label) => std::iter::empty()
-      .chain(vec![Ok(Token::LabelRef(Label::Global(label)))])
+      .chain(vec![Ok(Token::LabelRef(link::global_label!(&label)))])
       .chain(vec![Ok(Token::Lda)])
       .collect(),
 
     TypedExpression::N8AddrGlobal(label) => std::iter::empty()
-      .chain(vec![Ok(Token::LabelRef(Label::Global(label)))])
+      .chain(vec![Ok(Token::LabelRef(link::global_label!(&label)))])
       .collect(),
 
     TypedExpression::N8MacroCall(label, arguments) => arguments
@@ -707,7 +707,7 @@ fn n8_expression(
       .enumerate()
       // TODO assumes all expressions are one byte in size
       .flat_map(|(index, expression)| codegen::expression(expression, temporaries_size + index))
-      .chain(vec![Ok(Token::MacroRef(Macro(label)))])
+      .chain(vec![Ok(Token::MacroRef(link::global_macro!(&label)))])
       .collect(),
 
     TypedExpression::N8FunctionCall(designator, arguments) => {

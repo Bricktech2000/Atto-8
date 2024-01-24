@@ -2,6 +2,7 @@ use crate::*;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 #[rustfmt::skip] macro_rules! global_label { ($name:expr) => { Label::Global(format!("{}", $name)) }; }
+#[rustfmt::skip] macro_rules! global_macro { ($name:expr) => { Macro(format!("{}", $name)) }; }
 #[rustfmt::skip] macro_rules! deps_macro { ($name:expr) => { Macro(format!("{}.deps", $name)) }; }
 #[rustfmt::skip] macro_rules! def_macro { ($name:expr) => { Macro(format!("{}.def", $name)) }; }
 #[rustfmt::skip] macro_rules! jmp_macro { () => { Macro(format!("jmp")) }; }
@@ -17,6 +18,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 #[rustfmt::skip] macro_rules! mod_macro { () => { Macro(format!("mod")) }; }
 
 #[rustfmt::skip] pub(crate) use global_label;
+#[rustfmt::skip] pub(crate) use global_macro;
 #[rustfmt::skip] pub(crate) use deps_macro;
 #[rustfmt::skip] pub(crate) use def_macro;
 #[rustfmt::skip] pub(crate) use jmp_macro;

@@ -49,9 +49,9 @@ All instructions are 8 bits in length and most operands are sourced from the sta
 | `iff SIZE`  | Conditional with Carry    | `CF ? *SP : *(SP + SIZE) -> *(SP + SIZE); SP++;`                                         | `0b100100SS` (`0x90..=0x93`) |
 | `swp SIZE`  | Swap                      | `*(SP + SIZE) <-> *SP;`                                                                  | `0b100101SS` (`0x94..=0x97`) |
 | `rot SIZE`  | Rotate                    | `(*(SP + SIZE) << *SP) \| (*(SP + SIZE) >> (8 - *SP)) -> *(SP + SIZE); 0b0 -> CF; SP++;` | `0b100110SS` (`0x98..=0x9B`) |
-| `orr SIZE`  | Bitwise OR                | `*SP \| *(SP + SIZE) -> *(SP + SIZE); *(SP + SIZE) == 0b0 -> CF; SP++;`                  | `0b101000SS` (`0xA0..=0xA3`) |
-| `and SIZE`  | Bitwise AND               | `*SP & *(SP + SIZE) -> *(SP + SIZE); *(SP + SIZE) == 0b0 -> CF; SP++;`                   | `0b101001SS` (`0xA4..=0xA7`) |
-| `xor SIZE`  | Bitwise XOR               | `*SP ^ *(SP + SIZE) -> *(SP + SIZE); *(SP + SIZE) == 0b0 -> CF; SP++;`                   | `0b101010SS` (`0xA8..=0xAB`) |
+| `orr SIZE`  | Bitwise OR                | `*SP \| *(SP + SIZE) -> *(SP + SIZE); *(SP + SIZE) == 0x00 -> CF; SP++;`                 | `0b101000SS` (`0xA0..=0xA3`) |
+| `and SIZE`  | Bitwise AND               | `*SP & *(SP + SIZE) -> *(SP + SIZE); *(SP + SIZE) == 0x00 -> CF; SP++;`                  | `0b101001SS` (`0xA4..=0xA7`) |
+| `xor SIZE`  | Bitwise XOR               | `*SP ^ *(SP + SIZE) -> *(SP + SIZE); *(SP + SIZE) == 0x00 -> CF; SP++;`                  | `0b101010SS` (`0xA8..=0xAB`) |
 | `xnd SIZE`  | Bitwise XAND              | `0x00 -> *(SP + SIZE); *(SP + SIZE) == 0x00 -> CF; SP++`                                 | `0b101011SS` (`0xAC..=0xAF`) |
 | `inc`       | Increment                 | `*SP + 1 -> *SP;`                                                                        | `0b10110000` (`0xB0`)        |
 | `dec`       | Decrement                 | `*SP - 1 -> *SP;`                                                                        | `0b10110001` (`0xB1`)        |
