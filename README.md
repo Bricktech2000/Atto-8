@@ -72,6 +72,7 @@ python3 test.py doom.asm asm emu
 python3 test.py printf.asm asm emu
 python3 test.py sorting.asm asm emu
 python3 test.py strings.asm asm emu
+python3 test.py greeting.asm asm emu
 python3 test.py allocation.asm asm emu
 python3 test.py hello\ world.asm asm emu
 python3 test.py multiplication.asm asm emu

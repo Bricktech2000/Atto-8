@@ -352,7 +352,7 @@
     </comp>
     <comp lib="0" loc="(1730,2890)" name="Tunnel">
       <a name="facing" val="east"/>
-      <a name="label" val="N_DATA_IP"/>
+      <a name="label" val="C_DATA_IP"/>
     </comp>
     <comp lib="0" loc="(1730,4130)" name="Tunnel">
       <a name="facing" val="north"/>
@@ -360,7 +360,7 @@
     </comp>
     <comp lib="0" loc="(1740,2860)" name="Tunnel">
       <a name="facing" val="east"/>
-      <a name="label" val="N_DATA_SP"/>
+      <a name="label" val="C_DATA_SP"/>
     </comp>
     <comp lib="0" loc="(1750,2130)" name="Splitter">
       <a name="appear" val="right"/>
@@ -384,7 +384,7 @@
     </comp>
     <comp lib="0" loc="(1750,2830)" name="Tunnel">
       <a name="facing" val="east"/>
-      <a name="label" val="N_DATA_CF"/>
+      <a name="label" val="C_DATA_CF"/>
     </comp>
     <comp lib="0" loc="(1750,4050)" name="Tunnel">
       <a name="facing" val="south"/>
@@ -392,16 +392,16 @@
     </comp>
     <comp lib="0" loc="(1760,2800)" name="Tunnel">
       <a name="facing" val="east"/>
-      <a name="label" val="N_DATA_IL"/>
+      <a name="label" val="C_DATA_IL"/>
     </comp>
     <comp lib="0" loc="(1790,2800)" name="Tunnel">
-      <a name="label" val="N_DATA_AL"/>
+      <a name="label" val="C_DATA_AL"/>
     </comp>
     <comp lib="0" loc="(1800,2830)" name="Tunnel">
-      <a name="label" val="N_DATA_XL"/>
+      <a name="label" val="C_DATA_XL"/>
     </comp>
     <comp lib="0" loc="(1810,2860)" name="Tunnel">
-      <a name="label" val="N_DATA_YL"/>
+      <a name="label" val="C_DATA_YL"/>
     </comp>
     <comp lib="0" loc="(1810,4020)" name="Tunnel">
       <a name="facing" val="south"/>
@@ -413,7 +413,7 @@
       <a name="width" val="8"/>
     </comp>
     <comp lib="0" loc="(1820,2890)" name="Tunnel">
-      <a name="label" val="N_DATA_ZL"/>
+      <a name="label" val="C_DATA_ZL"/>
     </comp>
     <comp lib="0" loc="(1830,3990)" name="Tunnel">
       <a name="facing" val="south"/>
@@ -548,13 +548,13 @@
       <a name="label" val="A7"/>
     </comp>
     <comp lib="0" loc="(2220,4610)" name="Splitter">
+      <a name="facing" val="north"/>
+    </comp>
+    <comp lib="0" loc="(2220,4610)" name="Splitter">
       <a name="appear" val="right"/>
       <a name="bit0" val="1"/>
       <a name="bit1" val="0"/>
       <a name="facing" val="south"/>
-    </comp>
-    <comp lib="0" loc="(2220,4610)" name="Splitter">
-      <a name="facing" val="north"/>
     </comp>
     <comp lib="0" loc="(2240,3480)" name="Splitter">
       <a name="bit0" val="13"/>
