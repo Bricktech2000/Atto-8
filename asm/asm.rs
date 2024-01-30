@@ -310,60 +310,6 @@ fn assemble(
 
   // turn assembly tokens into roots, an intermediate representation for optimization. roots correspond to valid instructions
 
-  #[allow(dead_code)]
-  fn assert_imm(imm: u8, errors: &mut impl Extend<(Pos, Error)>, pos: &Pos) -> u8 {
-    match imm {
-      0b00000000..=0b01111111 => imm,
-      _ => {
-        errors.extend([(
-          pos.clone(),
-          Error(format!("Invalid IMM operand `{:02X}`", imm)),
-        )]);
-        0b00000000
-      }
-    }
-  }
-
-  fn assert_size(size: u8, errors: &mut impl Extend<(Pos, Error)>, pos: &Pos) -> u8 {
-    match size {
-      0x01 | 0x02 | 0x04 | 0x08 => size,
-      _ => {
-        errors.extend([(
-          pos.clone(),
-          Error(format!("Invalid SIZE operand `{:02X}`", size)),
-        )]);
-        0x01
-      }
-    }
-  }
-
-  fn assert_ofst(ofst: u8, errors: &mut impl Extend<(Pos, Error)>, pos: &Pos) -> u8 {
-    match ofst {
-      0b00000000..=0b00001111 => ofst,
-      _ => {
-        errors.extend([(
-          pos.clone(),
-          Error(format!("Invalid OFST operand `{:02X}`", ofst)),
-        )]);
-        0b00000000
-      }
-    }
-  }
-
-  #[allow(dead_code)]
-  fn assert_nimm(nimm: u8, errors: &mut impl Extend<(Pos, Error)>, pos: &Pos) -> u8 {
-    match nimm {
-      0b11110000..=0b11111111 => nimm,
-      _ => {
-        errors.extend([(
-          pos.clone(),
-          Error(format!("Invalid NIMM operand `{:02X}`", nimm)),
-        )]);
-        0b00000000
-      }
-    }
-  }
-
   let roots: Vec<(Pos, Root)> = tokens
     .into_iter()
     .map(|(pos, token)| {
@@ -378,24 +324,24 @@ fn assemble(
         Token::AtDyn => Root::Dyn(None),
         Token::AtOrg => Root::Org(None),
         Token::XXX(value) => Root::Node(Node::Value(value)),
-        Token::Add => Root::Instruction(Instruction::Add(assert_size(0x01, errors, &pos))),
-        Token::AdS(size) => Root::Instruction(Instruction::Add(assert_size(size, errors, &pos))),
-        Token::Sub => Root::Instruction(Instruction::Sub(assert_size(0x01, errors, &pos))),
-        Token::SuS(size) => Root::Instruction(Instruction::Sub(assert_size(size, errors, &pos))),
-        Token::Iff => Root::Instruction(Instruction::Iff(assert_size(0x01, errors, &pos))),
-        Token::IfS(size) => Root::Instruction(Instruction::Iff(assert_size(size, errors, &pos))),
-        Token::Swp => Root::Instruction(Instruction::Swp(assert_size(0x01, errors, &pos))),
-        Token::SwS(size) => Root::Instruction(Instruction::Swp(assert_size(size, errors, &pos))),
-        Token::Rot => Root::Instruction(Instruction::Rot(assert_size(0x01, errors, &pos))),
-        Token::RoS(size) => Root::Instruction(Instruction::Rot(assert_size(size, errors, &pos))),
-        Token::Orr => Root::Instruction(Instruction::Orr(assert_size(0x01, errors, &pos))),
-        Token::OrS(size) => Root::Instruction(Instruction::Orr(assert_size(size, errors, &pos))),
-        Token::And => Root::Instruction(Instruction::And(assert_size(0x01, errors, &pos))),
-        Token::AnS(size) => Root::Instruction(Instruction::And(assert_size(size, errors, &pos))),
-        Token::Xor => Root::Instruction(Instruction::Xor(assert_size(0x01, errors, &pos))),
-        Token::XoS(size) => Root::Instruction(Instruction::Xor(assert_size(size, errors, &pos))),
-        Token::Xnd => Root::Instruction(Instruction::Xnd(assert_size(0x01, errors, &pos))),
-        Token::XnS(size) => Root::Instruction(Instruction::Xnd(assert_size(size, errors, &pos))),
+        Token::Add => Root::Instruction(Instruction::Add(Size::assert(0x01))),
+        Token::AdS(size) => Root::Instruction(Instruction::Add(size)),
+        Token::Sub => Root::Instruction(Instruction::Sub(Size::assert(0x01))),
+        Token::SuS(size) => Root::Instruction(Instruction::Sub(size)),
+        Token::Iff => Root::Instruction(Instruction::Iff(Size::assert(0x01))),
+        Token::IfS(size) => Root::Instruction(Instruction::Iff(size)),
+        Token::Swp => Root::Instruction(Instruction::Swp(Size::assert(0x01))),
+        Token::SwS(size) => Root::Instruction(Instruction::Swp(size)),
+        Token::Rot => Root::Instruction(Instruction::Rot(Size::assert(0x01))),
+        Token::RoS(size) => Root::Instruction(Instruction::Rot(size)),
+        Token::Orr => Root::Instruction(Instruction::Orr(Size::assert(0x01))),
+        Token::OrS(size) => Root::Instruction(Instruction::Orr(size)),
+        Token::And => Root::Instruction(Instruction::And(Size::assert(0x01))),
+        Token::AnS(size) => Root::Instruction(Instruction::And(size)),
+        Token::Xor => Root::Instruction(Instruction::Xor(Size::assert(0x01))),
+        Token::XoS(size) => Root::Instruction(Instruction::Xor(size)),
+        Token::Xnd => Root::Instruction(Instruction::Xnd(Size::assert(0x01))),
+        Token::XnS(size) => Root::Instruction(Instruction::Xnd(size)),
         Token::Inc => Root::Instruction(Instruction::Inc),
         Token::Dec => Root::Instruction(Instruction::Dec),
         Token::Neg => Root::Instruction(Instruction::Neg),
@@ -403,8 +349,8 @@ fn assemble(
         Token::Shr => Root::Instruction(Instruction::Shr),
         Token::Not => Root::Instruction(Instruction::Not),
         Token::Buf => Root::Instruction(Instruction::Buf),
-        Token::LdO(ofst) => Root::Instruction(Instruction::Ldo(assert_ofst(ofst, errors, &pos))),
-        Token::StO(ofst) => Root::Instruction(Instruction::Sto(assert_ofst(ofst, errors, &pos))),
+        Token::LdO(ofst) => Root::Instruction(Instruction::Ldo(ofst)),
+        Token::StO(ofst) => Root::Instruction(Instruction::Sto(ofst)),
         Token::Lda => Root::Instruction(Instruction::Lda),
         Token::Sta => Root::Instruction(Instruction::Sta),
         Token::Ldi => Root::Instruction(Instruction::Ldi),
@@ -433,18 +379,23 @@ fn assemble(
     // we then optionally use `Neg` and `Inc` to get the ability to push arbitrary 8-bit
     // values. we also use `Phn` as a shorthand when possible.
 
-    match value {
-      0b11110000..=0b11111111 => vec![(pos.clone(), Instruction::Phn(value))],
+    let instructions = match value {
+      0b11110000..=0b11111111 => vec![Instruction::Phn(Nimm::assert(value))],
       0b10000000..=0b10000000 => vec![
-        (pos.clone(), Instruction::Psh(value.wrapping_sub(1))),
-        (pos.clone(), Instruction::Inc),
+        Instruction::Psh(Imm::assert(value.wrapping_sub(1))),
+        Instruction::Inc,
       ],
-      0b00000000..=0b01111111 => vec![(pos.clone(), Instruction::Psh(value))],
+      0b00000000..=0b01111111 => vec![(Instruction::Psh(Imm::assert(value)))],
       0b10000000..=0b11111111 => vec![
-        (pos.clone(), Instruction::Psh(value.wrapping_neg())),
-        (pos.clone(), Instruction::Neg),
+        Instruction::Psh(Imm::assert(value.wrapping_neg())),
+        Instruction::Neg,
       ],
-    }
+    };
+
+    instructions
+      .into_iter()
+      .map(|instruction| (pos.clone(), instruction))
+      .collect()
   }
 
   // if every label a node depends on could be resolved, we can replace it with a value.
@@ -490,7 +441,7 @@ fn assemble(
                 allocation_size!(&node1) + allocation_size!(&node2)
               ]);
               instructions.extend(vec![
-                (pos.clone(), Ok(Instruction::Iff(0x01))),
+                (pos.clone(), Ok(Instruction::Iff(Size::assert(0x01)))),
                 (pos.clone(), Ok(Instruction::Neg)),
               ]);
             } else {
@@ -500,7 +451,10 @@ fn assemble(
                 (pos.clone(), Ok(Instruction::Nop));
                 allocation_size!(&node1) + allocation_size!(&node2)
               ]);
-              instructions.extend(vec![(pos.clone(), Ok(Instruction::Iff(0x01)))]);
+              instructions.extend(vec![(
+                pos.clone(),
+                Ok(Instruction::Iff(Size::assert(0x01))),
+              )]);
             }
             unevaluated_nodes.insert(location_counter as u8, (pos.clone(), node1.clone()));
             unevaluated_nodes.insert(
@@ -775,23 +729,23 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
     match root {
       Root::Instruction(instruction) => match instruction {
         Instruction::Psh(_imm) => OpType::PushOp,
-        Instruction::Add(0x01) => OpType::BinaryOp,
+        Instruction::Add(Size(0x01)) => OpType::BinaryOp,
         Instruction::Add(_size) => OpType::Impure,
-        Instruction::Sub(0x01) => OpType::BinaryOp,
+        Instruction::Sub(Size(0x01)) => OpType::BinaryOp,
         Instruction::Sub(_size) => OpType::Impure,
-        Instruction::Iff(0x01) => OpType::BinaryOp,
+        Instruction::Iff(Size(0x01)) => OpType::BinaryOp,
         Instruction::Iff(_size) => OpType::Impure,
-        Instruction::Swp(0x01) => OpType::DualOp,
+        Instruction::Swp(Size(0x01)) => OpType::DualOp,
         Instruction::Swp(_size) => OpType::Impure,
-        Instruction::Rot(0x01) => OpType::BinaryOp,
+        Instruction::Rot(Size(0x01)) => OpType::BinaryOp,
         Instruction::Rot(_size) => OpType::Impure,
-        Instruction::Orr(0x01) => OpType::BinaryOp,
+        Instruction::Orr(Size(0x01)) => OpType::BinaryOp,
         Instruction::Orr(_size) => OpType::Impure,
-        Instruction::And(0x01) => OpType::BinaryOp,
+        Instruction::And(Size(0x01)) => OpType::BinaryOp,
         Instruction::And(_size) => OpType::Impure,
-        Instruction::Xor(0x01) => OpType::BinaryOp,
+        Instruction::Xor(Size(0x01)) => OpType::BinaryOp,
         Instruction::Xor(_size) => OpType::Impure,
-        Instruction::Xnd(0x01) => OpType::BinaryOp,
+        Instruction::Xnd(Size(0x01)) => OpType::BinaryOp,
         Instruction::Xnd(_size) => OpType::Impure,
         Instruction::Inc => OpType::UnaryOp,
         Instruction::Dec => OpType::UnaryOp,
@@ -912,7 +866,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
       {
         Some(vec![])
       }
-      [Root::Node(x01), Root::Instruction(Instruction::Add(0x01))]
+      [Root::Node(x01), Root::Instruction(Instruction::Add(Size(0x01)))]
         if resolve_node_value(&x01, &HashMap::new()) == Ok(0x01) =>
       {
         Some(vec![Root::Instruction(Instruction::Inc)])
@@ -922,7 +876,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
       {
         Some(vec![])
       }
-      [Root::Node(x01), Root::Instruction(Instruction::Sub(0x01))]
+      [Root::Node(x01), Root::Instruction(Instruction::Sub(Size(0x01)))]
         if resolve_node_value(&x01, &HashMap::new()) == Ok(0x01) =>
       {
         Some(vec![Root::Instruction(Instruction::Dec)])
@@ -978,7 +932,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
       }
 
       // `Ldo`s
-      [node @ Root::Node(_), Root::Instruction(Instruction::Ldo(0x00))] => {
+      [node @ Root::Node(_), Root::Instruction(Instruction::Ldo(Ofst(0x00)))] => {
         Some(vec![node.clone(), node.clone()])
       }
       [Root::Instruction(Instruction::Ldo(same_ofst1)), Root::Instruction(Instruction::Sto(same_ofst2))]
@@ -1022,192 +976,205 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
     });
 
     // length 3
-    roots = match_replace(&roots, |window| match window {
-      // `Conditional`s
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Iff(0x01))] => {
-        Some(vec![Root::Conditional(node1.clone(), node2.clone())])
-      }
+    roots = match_replace(&roots, |window| {
+      match window {
+        // `Conditional`s
+        [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Iff(Size(0x01)))] => {
+          Some(vec![Root::Conditional(node1.clone(), node2.clone())])
+        }
 
-      // `Node`s
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Add(0x01))] => {
-        Some(vec![Root::Node(Node::Add(
-          Box::new(node2.clone()),
-          Box::new(node1.clone()),
-        ))])
-      }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Sub(0x01))] => {
-        Some(vec![Root::Node(Node::Sub(
-          Box::new(node2.clone()),
-          Box::new(node1.clone()),
-        ))])
-      }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Rot(0x01))] => {
-        Some(vec![Root::Node(Node::Rot(
-          Box::new(node2.clone()),
-          Box::new(node1.clone()),
-        ))])
-      }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Orr(0x01))] => {
-        Some(vec![Root::Node(Node::Orr(
-          Box::new(node2.clone()),
-          Box::new(node1.clone()),
-        ))])
-      }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::And(0x01))] => {
-        Some(vec![Root::Node(Node::And(
-          Box::new(node2.clone()),
-          Box::new(node1.clone()),
-        ))])
-      }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Xor(0x01))] => {
-        Some(vec![Root::Node(Node::Xor(
-          Box::new(node2.clone()),
-          Box::new(node1.clone()),
-        ))])
-      }
-      [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Xnd(0x01))] => {
-        Some(vec![Root::Node(Node::Xnd(
-          Box::new(node2.clone()),
-          Box::new(node1.clone()),
-        ))])
-      }
+        // `Node`s
+        [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Add(Size(0x01)))] => {
+          Some(vec![Root::Node(Node::Add(
+            Box::new(node2.clone()),
+            Box::new(node1.clone()),
+          ))])
+        }
+        [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Sub(Size(0x01)))] => {
+          Some(vec![Root::Node(Node::Sub(
+            Box::new(node2.clone()),
+            Box::new(node1.clone()),
+          ))])
+        }
+        [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Rot(Size(0x01)))] => {
+          Some(vec![Root::Node(Node::Rot(
+            Box::new(node2.clone()),
+            Box::new(node1.clone()),
+          ))])
+        }
+        [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Orr(Size(0x01)))] => {
+          Some(vec![Root::Node(Node::Orr(
+            Box::new(node2.clone()),
+            Box::new(node1.clone()),
+          ))])
+        }
+        [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::And(Size(0x01)))] => {
+          Some(vec![Root::Node(Node::And(
+            Box::new(node2.clone()),
+            Box::new(node1.clone()),
+          ))])
+        }
+        [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Xor(Size(0x01)))] => {
+          Some(vec![Root::Node(Node::Xor(
+            Box::new(node2.clone()),
+            Box::new(node1.clone()),
+          ))])
+        }
+        [Root::Node(node1), Root::Node(node2), Root::Instruction(Instruction::Xnd(Size(0x01)))] => {
+          Some(vec![Root::Node(Node::Xnd(
+            Box::new(node2.clone()),
+            Box::new(node1.clone()),
+          ))])
+        }
 
-      // `Swp`s
-      [Root::Instruction(Instruction::Swp(0x01)), Root::Instruction(Instruction::Inc), Root::Instruction(Instruction::Swp(0x01))] => {
-        Some(vec![
-          Root::Node(Node::Value(0x01)),
-          Root::Instruction(Instruction::Add(0x02)),
-        ])
-      }
-      [Root::Instruction(Instruction::Swp(0x01)), Root::Instruction(Instruction::Dec), Root::Instruction(Instruction::Swp(0x01))] => {
-        Some(vec![
-          Root::Node(Node::Value(0x01)),
-          Root::Instruction(Instruction::Sub(0x02)),
-        ])
-      }
-      [node1 @ Root::Node(_), node2 @ Root::Node(_), Root::Instruction(Instruction::Swp(0x01))] => {
-        Some(vec![node2.clone(), node1.clone()])
-      }
-      [Root::Instruction(Instruction::Ldo(ofst)), node2 @ Root::Node(_), Root::Instruction(Instruction::Swp(0x01))]
-        if *ofst as i8 + 1 <= 0b00001111 =>
-      {
-        Some(vec![
-          node2.clone(),
-          Root::Instruction(Instruction::Ldo(*ofst + 1)),
-        ])
-      }
-      [node1 @ Root::Node(_), Root::Instruction(Instruction::Ldo(ofst)), Root::Instruction(Instruction::Swp(0x01))]
-        if *ofst as i8 - 1 >= 0b00000000 =>
-      {
-        Some(vec![
-          Root::Instruction(Instruction::Ldo(*ofst - 1)),
-          node1.clone(),
-        ])
-      }
-      [Root::Instruction(Instruction::Ldo(ofst1)), Root::Instruction(Instruction::Ldo(ofst2)), Root::Instruction(Instruction::Swp(0x01))]
-        if *ofst1 as i8 + 1 <= 0b00001111 && *ofst2 as i8 - 1 >= 0b00000000 =>
-      {
-        Some(vec![
-          Root::Instruction(Instruction::Ldo(*ofst2 - 1)),
-          Root::Instruction(Instruction::Ldo(*ofst1 + 1)),
-        ])
-      }
+        // `Swp`s
+        [Root::Instruction(Instruction::Swp(Size(0x01))), Root::Instruction(Instruction::Inc), Root::Instruction(Instruction::Swp(Size(0x01)))] => {
+          Some(vec![
+            Root::Node(Node::Value(0x01)),
+            Root::Instruction(Instruction::Add(Size::assert(0x02))),
+          ])
+        }
+        [Root::Instruction(Instruction::Swp(Size(0x01))), Root::Instruction(Instruction::Dec), Root::Instruction(Instruction::Swp(Size(0x01)))] => {
+          Some(vec![
+            Root::Node(Node::Value(0x01)),
+            Root::Instruction(Instruction::Sub(Size::assert(0x02))),
+          ])
+        }
+        [node1 @ Root::Node(_), node2 @ Root::Node(_), Root::Instruction(Instruction::Swp(Size(0x01)))] => {
+          Some(vec![node2.clone(), node1.clone()])
+        }
 
-      // `Ldo`s
-      [node @ Root::Node(_), push_op, Root::Instruction(Instruction::Ldo(0x01))]
-        if op_type(push_op) == OpType::PushOp =>
-      {
-        Some(vec![node.clone(), push_op.clone(), node.clone()])
-      }
+        [Root::Instruction(Instruction::Ldo(Ofst(ofst))), node @ Root::Node(_), Root::Instruction(Instruction::Swp(Size(0x01)))]
+          if ofst.checked_add(1).and_then(Ofst::new).is_some() =>
+        {
+          Some(vec![
+            node.clone(),
+            Root::Instruction(Instruction::Ldo(Ofst::assert(ofst + 1))),
+          ])
+        }
 
-      // `Sto`s
-      [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(0x07))]
-      | [Root::Node(x00), Root::Instruction(Instruction::Sto(0x08)), Root::Instruction(Instruction::Pop)]
-        if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
-      {
-        // OpType::PopOp
-        Some(vec![Root::Instruction(Instruction::Xnd(0x08))])
-      }
-      [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(0x03))]
-      | [Root::Node(x00), Root::Instruction(Instruction::Sto(0x04)), Root::Instruction(Instruction::Pop)]
-        if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
-      {
-        // OpType::PopOp
-        Some(vec![Root::Instruction(Instruction::Xnd(0x04))])
-      }
-      [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(0x01))]
-      | [Root::Node(x00), Root::Instruction(Instruction::Sto(0x02)), Root::Instruction(Instruction::Pop)]
-        if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
-      {
-        // OpType::PopOp
-        Some(vec![Root::Instruction(Instruction::Xnd(0x02))])
-      }
-      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(x00)]
-      | [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(0x00))]
-      | [Root::Node(x00), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
-        if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
-      {
-        // OpType::PopOp
-        Some(vec![Root::Instruction(Instruction::Xnd(0x01))])
-      }
-      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(x01)]
-      | [Root::Instruction(Instruction::Pop), Root::Node(x01), Root::Instruction(Instruction::Sto(0x00))]
-      | [Root::Node(x01), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
-        if resolve_node_value(&x01, &HashMap::new()) == Ok(0x01) =>
-      {
-        // OpType::PopOp
-        Some(vec![
-          Root::Instruction(Instruction::Xnd(0x01)),
-          Root::Instruction(Instruction::Shl),
-        ])
-      }
-      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(x80)]
-      | [Root::Instruction(Instruction::Pop), Root::Node(x80), Root::Instruction(Instruction::Sto(0x00))]
-      | [Root::Node(x80), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
-        if resolve_node_value(&x80, &HashMap::new()) == Ok(0x80) =>
-      {
-        // OpType::PopOp
-        Some(vec![
-          Root::Instruction(Instruction::Xnd(0x01)),
-          Root::Instruction(Instruction::Shr),
-        ])
-      }
-      [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(xff)]
-      | [Root::Instruction(Instruction::Pop), Root::Node(xff), Root::Instruction(Instruction::Sto(0x00))]
-      | [Root::Node(xff), Root::Instruction(Instruction::Sto(0x01)), Root::Instruction(Instruction::Pop)]
-        if resolve_node_value(&xff, &HashMap::new()) == Ok(0xFF) =>
-      {
-        // OpType::PopOp
-        Some(vec![
-          Root::Instruction(Instruction::Xnd(0x01)),
-          Root::Instruction(Instruction::Not),
-        ])
-      }
+        [node @ Root::Node(_), Root::Instruction(Instruction::Ldo(Ofst(ofst))), Root::Instruction(Instruction::Swp(Size(0x01)))]
+          if ofst.checked_sub(1).and_then(Ofst::new).is_some() =>
+        {
+          Some(vec![
+            Root::Instruction(Instruction::Ldo(Ofst::assert(ofst - 1))),
+            node.clone(),
+          ])
+        }
+        [Root::Instruction(Instruction::Ldo(Ofst(ofst1))), Root::Instruction(Instruction::Ldo(Ofst(ofst2))), Root::Instruction(Instruction::Swp(Size(0x01)))]
+          if ofst1.checked_add(1).and_then(Ofst::new).is_some()
+            && ofst2.checked_sub(1).and_then(Ofst::new).is_some() =>
+        {
+          Some(vec![
+            Root::Instruction(Instruction::Ldo(Ofst::assert(ofst2 - 1))),
+            Root::Instruction(Instruction::Ldo(Ofst::assert(ofst1 + 1))),
+          ])
+        }
 
-      // for `cc` macro return and if statement codegen
-      [Root::Node(Node::LabelRef(same_label)), Root::Instruction(Instruction::Sti), Root::LabelDefs(same_labels)]
-        if same_labels.contains(&same_label) =>
-      {
-        Some(vec![Root::LabelDefs(same_labels.clone())])
-      }
+        // `Ldo`s
+        [node @ Root::Node(_), push_op, Root::Instruction(Instruction::Ldo(Ofst(0x01)))]
+          if op_type(push_op) == OpType::PushOp =>
+        {
+          Some(vec![node.clone(), push_op.clone(), node.clone()])
+        }
 
-      // `OpType`s
-      [push_op, binary_op, pop_op]
-        if op_type(push_op) == OpType::PushOp
-          && op_type(binary_op) == OpType::BinaryOp
-          && op_type(pop_op) == OpType::PopOp =>
-      {
-        Some(vec![pop_op.clone()])
-      }
-      [dual_op, pop_op1, pop_op2]
-        if op_type(dual_op) == OpType::DualOp
-          && op_type(pop_op1) == OpType::PopOp
-          && op_type(pop_op2) == OpType::PopOp =>
-      {
-        Some(vec![])
-      }
+        // `Sto`s
+        [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(Ofst(0x07)))]
+        | [Root::Node(x00), Root::Instruction(Instruction::Sto(Ofst(0x08))), Root::Instruction(Instruction::Pop)]
+          if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
+        {
+          // OpType::PopOp
+          Some(vec![Root::Instruction(Instruction::Xnd(Size::assert(
+            0x08,
+          )))])
+        }
+        [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(Ofst(0x03)))]
+        | [Root::Node(x00), Root::Instruction(Instruction::Sto(Ofst(0x04))), Root::Instruction(Instruction::Pop)]
+          if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
+        {
+          // OpType::PopOp
+          Some(vec![Root::Instruction(Instruction::Xnd(Size::assert(
+            0x04,
+          )))])
+        }
+        [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(Ofst(0x01)))]
+        | [Root::Node(x00), Root::Instruction(Instruction::Sto(Ofst(0x02))), Root::Instruction(Instruction::Pop)]
+          if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
+        {
+          // OpType::PopOp
+          Some(vec![Root::Instruction(Instruction::Xnd(Size::assert(
+            0x02,
+          )))])
+        }
+        [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(x00)]
+        | [Root::Instruction(Instruction::Pop), Root::Node(x00), Root::Instruction(Instruction::Sto(Ofst(0x00)))]
+        | [Root::Node(x00), Root::Instruction(Instruction::Sto(Ofst(0x01))), Root::Instruction(Instruction::Pop)]
+          if resolve_node_value(&x00, &HashMap::new()) == Ok(0x00) =>
+        {
+          // OpType::PopOp
+          Some(vec![Root::Instruction(Instruction::Xnd(Size::assert(
+            0x01,
+          )))])
+        }
+        [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(x01)]
+        | [Root::Instruction(Instruction::Pop), Root::Node(x01), Root::Instruction(Instruction::Sto(Ofst(0x00)))]
+        | [Root::Node(x01), Root::Instruction(Instruction::Sto(Ofst(0x01))), Root::Instruction(Instruction::Pop)]
+          if resolve_node_value(&x01, &HashMap::new()) == Ok(0x01) =>
+        {
+          // OpType::PopOp
+          Some(vec![
+            Root::Instruction(Instruction::Xnd(Size::assert(0x01))),
+            Root::Instruction(Instruction::Shl),
+          ])
+        }
+        [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(x80)]
+        | [Root::Instruction(Instruction::Pop), Root::Node(x80), Root::Instruction(Instruction::Sto(Ofst(0x00)))]
+        | [Root::Node(x80), Root::Instruction(Instruction::Sto(Ofst(0x01))), Root::Instruction(Instruction::Pop)]
+          if resolve_node_value(&x80, &HashMap::new()) == Ok(0x80) =>
+        {
+          // OpType::PopOp
+          Some(vec![
+            Root::Instruction(Instruction::Xnd(Size::assert(0x01))),
+            Root::Instruction(Instruction::Shr),
+          ])
+        }
+        [Root::Instruction(Instruction::Pop), Root::Instruction(Instruction::Pop), Root::Node(xff)]
+        | [Root::Instruction(Instruction::Pop), Root::Node(xff), Root::Instruction(Instruction::Sto(Ofst(0x00)))]
+        | [Root::Node(xff), Root::Instruction(Instruction::Sto(Ofst(0x01))), Root::Instruction(Instruction::Pop)]
+          if resolve_node_value(&xff, &HashMap::new()) == Ok(0xFF) =>
+        {
+          // OpType::PopOp
+          Some(vec![
+            Root::Instruction(Instruction::Xnd(Size::assert(0x01))),
+            Root::Instruction(Instruction::Not),
+          ])
+        }
 
-      _ => None,
+        // for `cc` macro return and if statement codegen
+        [Root::Node(Node::LabelRef(same_label)), Root::Instruction(Instruction::Sti), Root::LabelDefs(same_labels)]
+          if same_labels.contains(&same_label) =>
+        {
+          Some(vec![Root::LabelDefs(same_labels.clone())])
+        }
+
+        // `OpType`s
+        [push_op, binary_op, pop_op]
+          if op_type(push_op) == OpType::PushOp
+            && op_type(binary_op) == OpType::BinaryOp
+            && op_type(pop_op) == OpType::PopOp =>
+        {
+          Some(vec![pop_op.clone()])
+        }
+        [dual_op, pop_op1, pop_op2]
+          if op_type(dual_op) == OpType::DualOp
+            && op_type(pop_op1) == OpType::PopOp
+            && op_type(pop_op2) == OpType::PopOp =>
+        {
+          Some(vec![])
+        }
+
+        _ => None,
+      }
     });
 
     // length 4
@@ -1306,7 +1273,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
         }
 
         // `Conditional`s
-        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Iff(0x02))]
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Iff(Size(0x02)))]
           if op_type(push_op) == OpType::PushOp =>
         {
           Some(vec![
@@ -1316,7 +1283,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
         }
 
         // `Node`s
-        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Add(0x02))]
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Add(Size(0x02)))]
           if op_type(push_op) == OpType::PushOp =>
         {
           Some(vec![
@@ -1324,7 +1291,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
             push_op.clone(),
           ])
         }
-        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Sub(0x02))]
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Sub(Size(0x02)))]
           if op_type(push_op) == OpType::PushOp =>
         {
           Some(vec![
@@ -1332,7 +1299,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
             push_op.clone(),
           ])
         }
-        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Rot(0x02))]
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Rot(Size(0x02)))]
           if op_type(push_op) == OpType::PushOp =>
         {
           Some(vec![
@@ -1340,7 +1307,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
             push_op.clone(),
           ])
         }
-        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Orr(0x02))]
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Orr(Size(0x02)))]
           if op_type(push_op) == OpType::PushOp =>
         {
           Some(vec![
@@ -1348,7 +1315,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
             push_op.clone(),
           ])
         }
-        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::And(0x02))]
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::And(Size(0x02)))]
           if op_type(push_op) == OpType::PushOp =>
         {
           Some(vec![
@@ -1356,7 +1323,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
             push_op.clone(),
           ])
         }
-        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Xor(0x02))]
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Xor(Size(0x02)))]
           if op_type(push_op) == OpType::PushOp =>
         {
           Some(vec![
@@ -1364,7 +1331,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
             push_op.clone(),
           ])
         }
-        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Xnd(0x02))]
+        [Root::Node(node1), push_op, Root::Node(node2), Root::Instruction(Instruction::Xnd(Size(0x02)))]
           if op_type(push_op) == OpType::PushOp =>
         {
           Some(vec![
@@ -1374,50 +1341,52 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
         }
 
         // `Swp`s
-        [node1 @ Root::Node(_), push_op, node2 @ Root::Node(_), Root::Instruction(Instruction::Swp(0x02))]
+        [node1 @ Root::Node(_), push_op, node2 @ Root::Node(_), Root::Instruction(Instruction::Swp(Size(0x02)))]
           if op_type(push_op) == OpType::PushOp =>
         {
           Some(vec![node2.clone(), push_op.clone(), node1.clone()])
         }
-        [Root::Instruction(Instruction::Ldo(ofst)), push_op, node2 @ Root::Node(_), Root::Instruction(Instruction::Swp(0x02))]
-          if op_type(push_op) == OpType::PushOp && *ofst as i8 + 2 <= 0b00001111 =>
-        {
-          Some(vec![
-            node2.clone(),
-            push_op.clone(),
-            Root::Instruction(Instruction::Ldo(*ofst + 2)),
-          ])
-        }
-        [node1 @ Root::Node(_), push_op, Root::Instruction(Instruction::Ldo(ofst)), Root::Instruction(Instruction::Swp(0x02))]
-          if op_type(push_op) == OpType::PushOp && *ofst as i8 - 2 >= 0b00000000 =>
-        {
-          Some(vec![
-            Root::Instruction(Instruction::Ldo(*ofst - 2)),
-            push_op.clone(),
-            node1.clone(),
-          ])
-        }
-        [Root::Instruction(Instruction::Ldo(ofst1)), push_op, Root::Instruction(Instruction::Ldo(ofst2)), Root::Instruction(Instruction::Swp(0x02))]
+        [Root::Instruction(Instruction::Ldo(Ofst(ofst))), push_op, node @ Root::Node(_), Root::Instruction(Instruction::Swp(Size(0x02)))]
           if op_type(push_op) == OpType::PushOp
-            && *ofst1 as i8 + 2 <= 0b00001111
-            && *ofst2 as i8 - 2 >= 0b00000000 =>
+            && ofst.checked_add(2).and_then(Ofst::new).is_some() =>
         {
           Some(vec![
-            Root::Instruction(Instruction::Ldo(*ofst2 - 2)),
+            node.clone(),
             push_op.clone(),
-            Root::Instruction(Instruction::Ldo(*ofst1 + 2)),
+            Root::Instruction(Instruction::Ldo(Ofst::assert(ofst + 2))),
+          ])
+        }
+        [node @ Root::Node(_), push_op, Root::Instruction(Instruction::Ldo(Ofst(ofst))), Root::Instruction(Instruction::Swp(Size(0x02)))]
+          if op_type(push_op) == OpType::PushOp
+            && ofst.checked_sub(2).and_then(Ofst::new).is_some() =>
+        {
+          Some(vec![
+            Root::Instruction(Instruction::Ldo(Ofst::assert(ofst - 2))),
+            push_op.clone(),
+            node.clone(),
+          ])
+        }
+        [Root::Instruction(Instruction::Ldo(Ofst(ofst1))), push_op, Root::Instruction(Instruction::Ldo(Ofst(ofst2))), Root::Instruction(Instruction::Swp(Size(0x02)))]
+          if op_type(push_op) == OpType::PushOp
+            && ofst1.checked_add(2).and_then(Ofst::new).is_some()
+            && ofst2.checked_sub(2).and_then(Ofst::new).is_some() =>
+        {
+          Some(vec![
+            Root::Instruction(Instruction::Ldo(Ofst::assert(ofst2 - 2))),
+            push_op.clone(),
+            Root::Instruction(Instruction::Ldo(Ofst::assert(ofst1 + 2))),
           ])
         }
 
         // `Ldo`s
-        [node1 @ Root::Node(_), push_op1, push_op2, Root::Instruction(Instruction::Ldo(0x02))]
+        [node @ Root::Node(_), push_op1, push_op2, Root::Instruction(Instruction::Ldo(Ofst(0x02)))]
           if op_type(push_op1) == OpType::PushOp && op_type(push_op2) == OpType::PushOp =>
         {
           Some(vec![
-            node1.clone(),
+            node.clone(),
             push_op1.clone(),
             push_op2.clone(),
-            node1.clone(),
+            node.clone(),
           ])
         }
 
@@ -1428,17 +1397,17 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
     // length 5
     roots = match_replace(&roots, |window| match window {
       // `Ldo`s
-      [node1 @ Root::Node(_), push_op1, push_op2, push_op3, Root::Instruction(Instruction::Ldo(0x03))]
+      [node @ Root::Node(_), push_op1, push_op2, push_op3, Root::Instruction(Instruction::Ldo(Ofst(0x03)))]
         if op_type(push_op1) == OpType::PushOp
           && op_type(push_op2) == OpType::PushOp
           && op_type(push_op3) == OpType::PushOp =>
       {
         Some(vec![
-          node1.clone(),
+          node.clone(),
           push_op1.clone(),
           push_op2.clone(),
           push_op3.clone(),
-          node1.clone(),
+          node.clone(),
         ])
       }
 
@@ -1448,7 +1417,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
     // length 6
     roots = match_replace(&roots, |window| match window {
       // `Conditional`s
-      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Iff(0x04))]
+      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Iff(Size(0x04)))]
         if op_type(push_op1) == OpType::PushOp
           && op_type(push_op2) == OpType::PushOp
           && op_type(push_op3) == OpType::PushOp =>
@@ -1462,7 +1431,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
       }
 
       // `Node`s
-      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Add(0x04))]
+      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Add(Size(0x04)))]
         if op_type(push_op1) == OpType::PushOp
           && op_type(push_op2) == OpType::PushOp
           && op_type(push_op3) == OpType::PushOp =>
@@ -1474,7 +1443,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
           push_op3.clone(),
         ])
       }
-      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Sub(0x04))]
+      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Sub(Size(0x04)))]
         if op_type(push_op1) == OpType::PushOp
           && op_type(push_op2) == OpType::PushOp
           && op_type(push_op3) == OpType::PushOp =>
@@ -1486,7 +1455,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
           push_op3.clone(),
         ])
       }
-      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Rot(0x04))]
+      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Rot(Size(0x04)))]
         if op_type(push_op1) == OpType::PushOp
           && op_type(push_op2) == OpType::PushOp
           && op_type(push_op3) == OpType::PushOp =>
@@ -1498,7 +1467,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
           push_op3.clone(),
         ])
       }
-      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Orr(0x04))]
+      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Orr(Size(0x04)))]
         if op_type(push_op1) == OpType::PushOp
           && op_type(push_op2) == OpType::PushOp
           && op_type(push_op3) == OpType::PushOp =>
@@ -1510,7 +1479,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
           push_op3.clone(),
         ])
       }
-      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::And(0x04))]
+      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::And(Size(0x04)))]
         if op_type(push_op1) == OpType::PushOp
           && op_type(push_op2) == OpType::PushOp
           && op_type(push_op3) == OpType::PushOp =>
@@ -1522,7 +1491,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
           push_op3.clone(),
         ])
       }
-      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Xor(0x04))]
+      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Xor(Size(0x04)))]
         if op_type(push_op1) == OpType::PushOp
           && op_type(push_op2) == OpType::PushOp
           && op_type(push_op3) == OpType::PushOp =>
@@ -1534,7 +1503,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
           push_op3.clone(),
         ])
       }
-      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Xnd(0x04))]
+      [Root::Node(node1), push_op1, push_op2, push_op3, Root::Node(node2), Root::Instruction(Instruction::Xnd(Size(0x04)))]
         if op_type(push_op1) == OpType::PushOp
           && op_type(push_op2) == OpType::PushOp
           && op_type(push_op3) == OpType::PushOp =>
@@ -1548,7 +1517,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
       }
 
       // `Swp`s
-      [node1 @ Root::Node(_), push_op1, push_op2, push_op3, node2 @ Root::Node(_), Root::Instruction(Instruction::Swp(0x04))]
+      [node1 @ Root::Node(_), push_op1, push_op2, push_op3, node2 @ Root::Node(_), Root::Instruction(Instruction::Swp(Size(0x04)))]
         if op_type(push_op1) == OpType::PushOp
           && op_type(push_op2) == OpType::PushOp
           && op_type(push_op3) == OpType::PushOp =>
@@ -1561,64 +1530,64 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
           node1.clone(),
         ])
       }
-      [Root::Instruction(Instruction::Ldo(ofst)), push_op1, push_op2, push_op3, node2 @ Root::Node(_), Root::Instruction(Instruction::Swp(0x04))]
+      [Root::Instruction(Instruction::Ldo(Ofst(ofst))), push_op1, push_op2, push_op3, node @ Root::Node(_), Root::Instruction(Instruction::Swp(Size(0x04)))]
         if op_type(push_op1) == OpType::PushOp
           && op_type(push_op2) == OpType::PushOp
           && op_type(push_op3) == OpType::PushOp
-          && *ofst as i8 + 4 <= 0b00001111 =>
+          && ofst.checked_add(4).and_then(Ofst::new).is_some() =>
       {
         Some(vec![
-          node2.clone(),
+          node.clone(),
           push_op1.clone(),
           push_op2.clone(),
           push_op3.clone(),
-          Root::Instruction(Instruction::Ldo(*ofst + 4)),
+          Root::Instruction(Instruction::Ldo(Ofst::assert(ofst + 4))),
         ])
       }
-      [node1 @ Root::Node(_), push_op1, push_op2, push_op3, Root::Instruction(Instruction::Ldo(ofst)), Root::Instruction(Instruction::Swp(0x04))]
+      [node @ Root::Node(_), push_op1, push_op2, push_op3, Root::Instruction(Instruction::Ldo(Ofst(ofst))), Root::Instruction(Instruction::Swp(Size(0x04)))]
         if op_type(push_op1) == OpType::PushOp
           && op_type(push_op2) == OpType::PushOp
           && op_type(push_op3) == OpType::PushOp
-          && *ofst as i8 - 4 >= 0b00000000 =>
+          && ofst.checked_sub(4).and_then(Ofst::new).is_some() =>
       {
         Some(vec![
-          Root::Instruction(Instruction::Ldo(*ofst - 4)),
+          Root::Instruction(Instruction::Ldo(Ofst::assert(ofst - 4))),
           push_op1.clone(),
           push_op2.clone(),
           push_op3.clone(),
-          node1.clone(),
+          node.clone(),
         ])
       }
-      [Root::Instruction(Instruction::Ldo(ofst1)), push_op1, push_op2, push_op3, Root::Instruction(Instruction::Ldo(ofst2)), Root::Instruction(Instruction::Swp(0x04))]
+      [Root::Instruction(Instruction::Ldo(Ofst(ofst1))), push_op1, push_op2, push_op3, Root::Instruction(Instruction::Ldo(Ofst(ofst2))), Root::Instruction(Instruction::Swp(Size(0x04)))]
         if op_type(push_op1) == OpType::PushOp
           && op_type(push_op2) == OpType::PushOp
           && op_type(push_op3) == OpType::PushOp
-          && *ofst1 as i8 + 4 <= 0b00001111
-          && *ofst2 as i8 - 4 >= 0b00000000 =>
+          && ofst1.checked_add(4).and_then(Ofst::new).is_some()
+          && ofst2.checked_sub(4).and_then(Ofst::new).is_some() =>
       {
         Some(vec![
-          Root::Instruction(Instruction::Ldo(*ofst2 - 4)),
+          Root::Instruction(Instruction::Ldo(Ofst::assert(ofst2 - 4))),
           push_op1.clone(),
           push_op2.clone(),
           push_op3.clone(),
-          Root::Instruction(Instruction::Ldo(*ofst1 + 4)),
+          Root::Instruction(Instruction::Ldo(Ofst::assert(ofst1 + 4))),
         ])
       }
 
       // `Ldo`s
-      [node1 @ Root::Node(_), push_op1, push_op2, push_op3, push_op4, Root::Instruction(Instruction::Ldo(0x04))]
+      [node @ Root::Node(_), push_op1, push_op2, push_op3, push_op4, Root::Instruction(Instruction::Ldo(Ofst(0x04)))]
         if op_type(push_op1) == OpType::PushOp
           && op_type(push_op2) == OpType::PushOp
           && op_type(push_op3) == OpType::PushOp
           && op_type(push_op4) == OpType::PushOp =>
       {
         Some(vec![
-          node1.clone(),
+          node.clone(),
           push_op1.clone(),
           push_op2.clone(),
           push_op3.clone(),
           push_op4.clone(),
-          node1.clone(),
+          node.clone(),
         ])
       }
 
@@ -1637,11 +1606,15 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
       [same_node1 @ Root::Node(_), same_node2 @ Root::Node(_)] if same_node1 == same_node2 => {
         Some(vec![
           same_node1.clone(),
-          Root::Instruction(Instruction::Ldo(0x00)),
+          Root::Instruction(Instruction::Ldo(Ofst::assert(0x00))),
         ])
       }
-      [Root::Instruction(Instruction::Swp(size)), Root::Instruction(Instruction::Pop)] => {
-        Some(vec![Root::Instruction(Instruction::Sto(*size - 1))])
+      [Root::Instruction(Instruction::Swp(Size(size))), Root::Instruction(Instruction::Pop)]
+        if size.checked_sub(1).and_then(Ofst::new).is_some() =>
+      {
+        Some(vec![Root::Instruction(Instruction::Sto(Ofst::assert(
+          size - 1,
+        )))])
       }
       _ => None,
     });
@@ -1654,7 +1627,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
         Some(vec![
           same_node1.clone(),
           push_op.clone(),
-          Root::Instruction(Instruction::Ldo(0x01)),
+          Root::Instruction(Instruction::Ldo(Ofst::assert(0x01))),
         ])
       }
       _ => None,
@@ -1671,7 +1644,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
           same_node1.clone(),
           push_op1.clone(),
           push_op2.clone(),
-          Root::Instruction(Instruction::Ldo(0x02)),
+          Root::Instruction(Instruction::Ldo(Ofst::assert(0x02))),
         ])
       }
       _ => None,
@@ -1690,7 +1663,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
           push_op1.clone(),
           push_op2.clone(),
           push_op3.clone(),
-          Root::Instruction(Instruction::Ldo(0x03)),
+          Root::Instruction(Instruction::Ldo(Ofst::assert(0x03))),
         ])
       }
       _ => None,
@@ -1711,7 +1684,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
           push_op2.clone(),
           push_op3.clone(),
           push_op4.clone(),
-          Root::Instruction(Instruction::Ldo(0x04)),
+          Root::Instruction(Instruction::Ldo(Ofst::assert(0x04))),
         ])
       }
       _ => None,

@@ -147,7 +147,7 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     unreachable!()
                   }
 
-                  Instruction::Add(size) => {
+                  Instruction::Add(Size(size)) => {
                     seq![
                       fetch, //
                       sp_alxl,
@@ -168,7 +168,7 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Sub(size) => {
+                  Instruction::Sub(Size(size)) => {
                     seq![
                       fetch, //
                       sp_alxl,
@@ -191,7 +191,7 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Iff(size) => {
+                  Instruction::Iff(Size(size)) => {
                     seq![
                       fetch, //
                       sp_alxl,
@@ -209,7 +209,7 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Swp(size) => {
+                  Instruction::Swp(Size(size)) => {
                     seq![
                       fetch, //
                       sp_alxl,
@@ -225,7 +225,7 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Rot(size) => {
+                  Instruction::Rot(Size(size)) => {
                     seq![
                       match carry {
                         true => seq![clr_yl, noop],
@@ -252,7 +252,7 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Orr(size) => {
+                  Instruction::Orr(Size(size)) => {
                     seq![
                       fetch, //
                       sp_alxl,
@@ -269,7 +269,7 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::And(size) => {
+                  Instruction::And(Size(size)) => {
                     seq![
                       fetch, //
                       sp_alxl,
@@ -283,7 +283,7 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Xor(size) => {
+                  Instruction::Xor(Size(size)) => {
                     seq![
                       fetch, //
                       sp_alxl,
@@ -309,7 +309,7 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Xnd(size) => {
+                  Instruction::Xnd(Size(size)) => {
                     seq![
                       fetch, //
                       sp_alxl,
@@ -397,7 +397,7 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     seq![fetch, vec![Err(TickTrap::DebugRequest)]]
                   }
 
-                  Instruction::Ldo(ofst) => {
+                  Instruction::Ldo(Ofst(ofst)) => {
                     seq![
                       fetch, //
                       sp_alxl,
@@ -412,7 +412,7 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Sto(ofst) => {
+                  Instruction::Sto(Ofst(ofst)) => {
                     seq![
                       fetch, //
                       sp_alxl,

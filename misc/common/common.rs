@@ -478,23 +478,23 @@ pub enum Token {
   AtDD(u8),
   XXX(u8),
   Add,
-  AdS(u8),
+  AdS(Size),
   Sub,
-  SuS(u8),
+  SuS(Size),
   Iff,
-  IfS(u8),
+  IfS(Size),
   Swp,
-  SwS(u8),
+  SwS(Size),
   Rot,
-  RoS(u8),
+  RoS(Size),
   Orr,
-  OrS(u8),
+  OrS(Size),
   And,
-  AnS(u8),
+  AnS(Size),
   Xor,
-  XoS(u8),
+  XoS(Size),
   Xnd,
-  XnS(u8),
+  XnS(Size),
   Inc,
   Dec,
   Neg,
@@ -502,8 +502,8 @@ pub enum Token {
   Shr,
   Not,
   Buf,
-  LdO(u8),
-  StO(u8),
+  LdO(Ofst),
+  StO(Ofst),
   Lda,
   Sta,
   Ldi,
@@ -519,16 +519,16 @@ pub enum Token {
 
 #[derive(Clone, Eq, PartialEq)]
 pub enum Instruction {
-  Psh(u8),
-  Add(u8),
-  Sub(u8),
-  Iff(u8),
-  Swp(u8),
-  Rot(u8),
-  Orr(u8),
-  And(u8),
-  Xor(u8),
-  Xnd(u8),
+  Psh(Imm),
+  Add(Size),
+  Sub(Size),
+  Iff(Size),
+  Swp(Size),
+  Rot(Size),
+  Orr(Size),
+  And(Size),
+  Xor(Size),
+  Xnd(Size),
   Inc,
   Dec,
   Neg,
@@ -537,8 +537,8 @@ pub enum Instruction {
   Not,
   Buf,
   Dbg,
-  Ldo(u8),
-  Sto(u8),
+  Ldo(Ofst),
+  Sto(Ofst),
   Lda,
   Sta,
   Ldi,
@@ -550,24 +550,74 @@ pub enum Instruction {
   Flc,
   Nop,
   Pop,
-  Phn(u8),
+  Phn(Nimm),
+}
+
+// `pub u8` required for destructuring and pattern matching. do not use constructors directly
+#[derive(Clone, Eq, PartialEq)]
+pub struct Imm(pub u8);
+#[derive(Clone, Eq, PartialEq)]
+pub struct Size(pub u8);
+#[derive(Clone, Eq, PartialEq)]
+pub struct Ofst(pub u8);
+#[derive(Clone, Eq, PartialEq)]
+pub struct Nimm(pub u8);
+
+impl Imm {
+  pub fn new(imm: u8) -> Option<Imm> {
+    matches!(imm, 0b00000000..=0b01111111).then_some(Imm(imm))
+  }
+
+  pub fn assert(imm: u8) -> Imm {
+    Imm::new(imm).unwrap()
+  }
+}
+
+impl Size {
+  pub fn new(size: u8) -> Option<Size> {
+    matches!(size, 0x01 | 0x02 | 0x04 | 0x08).then_some(Size(size))
+  }
+
+  pub fn assert(size: u8) -> Size {
+    Size::new(size).unwrap()
+  }
+}
+
+impl Ofst {
+  pub fn new(ofst: u8) -> Option<Ofst> {
+    matches!(ofst, 0b00000000..=0b00001111).then_some(Ofst(ofst))
+  }
+
+  pub fn assert(ofst: u8) -> Ofst {
+    Ofst::new(ofst).unwrap()
+  }
+}
+
+impl Nimm {
+  pub fn new(nimm: u8) -> Option<Nimm> {
+    matches!(nimm, 0b11110000..=0b11111111).then_some(Nimm(nimm))
+  }
+
+  pub fn assert(nimm: u8) -> Nimm {
+    Nimm::new(nimm).unwrap()
+  }
 }
 
 pub fn opcode_to_instruction(opcode: u8) -> Result<Instruction, u8> {
-  fn decode_imm(opcode: u8) -> u8 {
-    opcode & 0b01111111
+  fn decode_imm(opcode: u8) -> Imm {
+    Imm::assert(opcode & 0b01111111)
   }
 
-  fn decode_size(opcode: u8) -> u8 {
-    1 << (opcode & 0b00000011)
+  fn decode_size(opcode: u8) -> Size {
+    Size::assert(1 << (opcode & 0b00000011))
   }
 
-  fn decode_ofst(opcode: u8) -> u8 {
-    opcode & 0b00001111
+  fn decode_ofst(opcode: u8) -> Ofst {
+    Ofst::assert(opcode & 0b00001111)
   }
 
-  fn decode_nimm(opcode: u8) -> u8 {
-    opcode | 0b11110000
+  fn decode_nimm(opcode: u8) -> Nimm {
+    Nimm::assert(opcode | 0b11110000)
   }
 
   match (opcode & 0b10000000) >> 7 {
@@ -644,32 +694,24 @@ pub fn opcode_to_instruction(opcode: u8) -> Result<Instruction, u8> {
 }
 
 pub fn instruction_to_opcode(instruction: Result<Instruction, u8>) -> u8 {
-  fn encode_imm(imm: u8) -> u8 {
-    match imm {
-      0b00000000..=0b01111111 => imm,
-      _ => panic!("Invalid IMM operand in Instruction"),
-    }
+  fn encode_imm(Imm(imm): Imm) -> u8 {
+    let Imm(imm) = Imm::assert(imm); // sanity check
+    imm
   }
 
-  fn encode_size(size: u8) -> u8 {
-    match size {
-      0x01 | 0x02 | 0x04 | 0x08 => size.trailing_zeros() as u8,
-      _ => panic!("Invalid SIZE operand in Instruction"),
-    }
+  fn encode_size(Size(size): Size) -> u8 {
+    let Size(size) = Size::assert(size); // sanity check
+    size.trailing_zeros() as u8
   }
 
-  fn encode_ofst(ofst: u8) -> u8 {
-    match ofst {
-      0b00000000..=0b00001111 => ofst,
-      _ => panic!("Invalid OFST operand in Instruction"),
-    }
+  fn encode_ofst(Ofst(ofst): Ofst) -> u8 {
+    let Ofst(ofst) = Ofst::assert(ofst); // sanity check
+    ofst
   }
 
-  fn encode_nimm(nimm: u8) -> u8 {
-    match nimm {
-      0b11110000..=0b11111111 => nimm & 0b00001111,
-      _ => panic!("Invalid NIMM operand in Instruction"),
-    }
+  fn encode_nimm(Nimm(nimm): Nimm) -> u8 {
+    let Nimm(nimm) = Nimm::assert(nimm); // sanity check
+    nimm & 0b00001111
   }
 
   match instruction {
@@ -732,23 +774,23 @@ pub fn token_to_mnemonic(token: Token) -> Mnemonic {
     Token::AtDD(value) => Mnemonic(format!("@{:02X}", value)),
     Token::XXX(value) => Mnemonic(format!("x{:02X}", value)),
     Token::Add => Mnemonic(format!("add")),
-    Token::AdS(size) => Mnemonic(format!("ad{:01X}", size)),
+    Token::AdS(Size(size)) => Mnemonic(format!("ad{:01X}", size)),
     Token::Sub => Mnemonic(format!("sub")),
-    Token::SuS(size) => Mnemonic(format!("su{:01X}", size)),
+    Token::SuS(Size(size)) => Mnemonic(format!("su{:01X}", size)),
     Token::Iff => Mnemonic(format!("iff")),
-    Token::IfS(size) => Mnemonic(format!("if{:01X}", size)),
+    Token::IfS(Size(size)) => Mnemonic(format!("if{:01X}", size)),
     Token::Swp => Mnemonic(format!("swp")),
-    Token::SwS(size) => Mnemonic(format!("sw{:01X}", size)),
+    Token::SwS(Size(size)) => Mnemonic(format!("sw{:01X}", size)),
     Token::Rot => Mnemonic(format!("rot")),
-    Token::RoS(size) => Mnemonic(format!("ro{:01X}", size)),
+    Token::RoS(Size(size)) => Mnemonic(format!("ro{:01X}", size)),
     Token::Orr => Mnemonic(format!("orr")),
-    Token::OrS(size) => Mnemonic(format!("or{:01X}", size)),
+    Token::OrS(Size(size)) => Mnemonic(format!("or{:01X}", size)),
     Token::And => Mnemonic(format!("and")),
-    Token::AnS(size) => Mnemonic(format!("an{:01X}", size)),
+    Token::AnS(Size(size)) => Mnemonic(format!("an{:01X}", size)),
     Token::Xor => Mnemonic(format!("xor")),
-    Token::XoS(size) => Mnemonic(format!("xo{:01X}", size)),
+    Token::XoS(Size(size)) => Mnemonic(format!("xo{:01X}", size)),
     Token::Xnd => Mnemonic(format!("xnd")),
-    Token::XnS(size) => Mnemonic(format!("xn{:01X}", size)),
+    Token::XnS(Size(size)) => Mnemonic(format!("xn{:01X}", size)),
     Token::Inc => Mnemonic(format!("inc")),
     Token::Dec => Mnemonic(format!("dec")),
     Token::Neg => Mnemonic(format!("neg")),
@@ -756,8 +798,8 @@ pub fn token_to_mnemonic(token: Token) -> Mnemonic {
     Token::Shr => Mnemonic(format!("shr")),
     Token::Not => Mnemonic(format!("not")),
     Token::Buf => Mnemonic(format!("buf")),
-    Token::LdO(ofst) => Mnemonic(format!("ld{:01X}", ofst)),
-    Token::StO(ofst) => Mnemonic(format!("st{:01X}", ofst)),
+    Token::LdO(Ofst(ofst)) => Mnemonic(format!("ld{:01X}", ofst)),
+    Token::StO(Ofst(ofst)) => Mnemonic(format!("st{:01X}", ofst)),
     Token::Lda => Mnemonic(format!("lda")),
     Token::Sta => Mnemonic(format!("sta")),
     Token::Ldi => Mnemonic(format!("ldi")),
@@ -833,17 +875,17 @@ pub fn mnemonic_to_token(mnemonic: Mnemonic) -> Option<Token> {
     "flc" => Some(Token::Flc),
     "pop" => Some(Token::Pop),
     _ if mnemonic.len() == 3 => match mnemonic.split_at(2) {
-      ("ad", hex) => parse_hex(&hex).map(Token::AdS),
-      ("su", hex) => parse_hex(&hex).map(Token::SuS),
-      ("if", hex) => parse_hex(&hex).map(Token::IfS),
-      ("sw", hex) => parse_hex(&hex).map(Token::SwS),
-      ("ro", hex) => parse_hex(&hex).map(Token::RoS),
-      ("or", hex) => parse_hex(&hex).map(Token::OrS),
-      ("an", hex) => parse_hex(&hex).map(Token::AnS),
-      ("xo", hex) => parse_hex(&hex).map(Token::XoS),
-      ("xn", hex) => parse_hex(&hex).map(Token::XnS),
-      ("ld", hex) => parse_hex(&hex).map(Token::LdO),
-      ("st", hex) => parse_hex(&hex).map(Token::StO),
+      ("ad", hex) => parse_hex(&hex).and_then(Size::new).map(Token::AdS),
+      ("su", hex) => parse_hex(&hex).and_then(Size::new).map(Token::SuS),
+      ("if", hex) => parse_hex(&hex).and_then(Size::new).map(Token::IfS),
+      ("sw", hex) => parse_hex(&hex).and_then(Size::new).map(Token::SwS),
+      ("ro", hex) => parse_hex(&hex).and_then(Size::new).map(Token::RoS),
+      ("or", hex) => parse_hex(&hex).and_then(Size::new).map(Token::OrS),
+      ("an", hex) => parse_hex(&hex).and_then(Size::new).map(Token::AnS),
+      ("xo", hex) => parse_hex(&hex).and_then(Size::new).map(Token::XoS),
+      ("xn", hex) => parse_hex(&hex).and_then(Size::new).map(Token::XnS),
+      ("ld", hex) => parse_hex(&hex).and_then(Ofst::new).map(Token::LdO),
+      ("st", hex) => parse_hex(&hex).and_then(Ofst::new).map(Token::StO),
       _ => match mnemonic.split_at(1) {
         ("@", hex) => parse_hex(&hex).map(Token::AtDD),
         ("x", hex) => parse_hex(&hex).map(Token::XXX),
@@ -856,24 +898,24 @@ pub fn mnemonic_to_token(mnemonic: Mnemonic) -> Option<Token> {
 
 pub fn instruction_to_token(instruction: Result<Instruction, u8>) -> Token {
   match instruction {
-    Ok(Instruction::Psh(imm)) => Token::XXX(imm),
-    Ok(Instruction::Add(0x01)) => Token::Add,
+    Ok(Instruction::Psh(Imm(imm))) => Token::XXX(imm),
+    Ok(Instruction::Add(Size(0x01))) => Token::Add,
     Ok(Instruction::Add(size)) => Token::AdS(size),
-    Ok(Instruction::Sub(0x01)) => Token::Sub,
+    Ok(Instruction::Sub(Size(0x01))) => Token::Sub,
     Ok(Instruction::Sub(size)) => Token::SuS(size),
-    Ok(Instruction::Iff(0x01)) => Token::Iff,
+    Ok(Instruction::Iff(Size(0x01))) => Token::Iff,
     Ok(Instruction::Iff(size)) => Token::IfS(size),
-    Ok(Instruction::Swp(0x01)) => Token::Swp,
+    Ok(Instruction::Swp(Size(0x01))) => Token::Swp,
     Ok(Instruction::Swp(size)) => Token::SwS(size),
-    Ok(Instruction::Rot(0x01)) => Token::Rot,
+    Ok(Instruction::Rot(Size(0x01))) => Token::Rot,
     Ok(Instruction::Rot(size)) => Token::RoS(size),
-    Ok(Instruction::Orr(0x01)) => Token::Orr,
+    Ok(Instruction::Orr(Size(0x01))) => Token::Orr,
     Ok(Instruction::Orr(size)) => Token::OrS(size),
-    Ok(Instruction::And(0x01)) => Token::And,
+    Ok(Instruction::And(Size(0x01))) => Token::And,
     Ok(Instruction::And(size)) => Token::AnS(size),
-    Ok(Instruction::Xor(0x01)) => Token::Xor,
+    Ok(Instruction::Xor(Size(0x01))) => Token::Xor,
     Ok(Instruction::Xor(size)) => Token::XoS(size),
-    Ok(Instruction::Xnd(0x01)) => Token::Xnd,
+    Ok(Instruction::Xnd(Size(0x01))) => Token::Xnd,
     Ok(Instruction::Xnd(size)) => Token::XnS(size),
     Ok(Instruction::Inc) => Token::Inc,
     Ok(Instruction::Dec) => Token::Dec,
@@ -896,7 +938,7 @@ pub fn instruction_to_token(instruction: Result<Instruction, u8>) -> Token {
     Ok(Instruction::Flc) => Token::Flc,
     Ok(Instruction::Nop) => Token::Nop,
     Ok(Instruction::Pop) => Token::Pop,
-    Ok(Instruction::Phn(nimm)) => Token::XXX(nimm),
+    Ok(Instruction::Phn(Nimm(nimm))) => Token::XXX(nimm),
     Err(opcode) => Token::AtDD(opcode),
   }
 }

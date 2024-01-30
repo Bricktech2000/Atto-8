@@ -123,9 +123,7 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
           .collect(),
         (parameters_size, locals_size, Some(expression)) => std::iter::empty()
           .chain(codegen::expression(expression, 0))
-          .chain(vec![Ok(Token::StO(
-            (parameters_size + locals_size - 1) as u8,
-          ))])
+          .chain(store_to_offset(parameters_size + locals_size - 1))
           .chain(vec![Ok(Token::Pop); parameters_size + locals_size - 1])
           .chain(vec![
             Ok(Token::LabelRef(codegen::ret_label!())),
@@ -162,14 +160,14 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
           .collect(),
         (parameters_size, locals_size, None) => std::iter::empty()
           .chain(vec![Ok(Token::Pop); locals_size])
-          .chain(vec![Ok(Token::StO((parameters_size - 1) as u8))])
+          .chain(store_to_offset(parameters_size - 1))
           .chain(vec![Ok(Token::Pop); parameters_size - 1])
           .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (parameters_size, locals_size, Some(expression)) => std::iter::empty()
           .chain(codegen::n0_expression(expression, 0))
           .chain(vec![Ok(Token::Pop); locals_size])
-          .chain(vec![Ok(Token::StO((parameters_size - 1) as u8))])
+          .chain(store_to_offset(parameters_size - 1))
           .chain(vec![Ok(Token::Pop); parameters_size - 1])
           .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
@@ -186,7 +184,7 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
           .collect(),
         (0, locals_size, Some(expression)) => std::iter::empty()
           .chain(codegen::expression(expression, 0))
-          .chain(vec![Ok(Token::StO((locals_size - 1) as u8))])
+          .chain(store_to_offset(locals_size - 1))
           .chain(vec![Ok(Token::Pop); locals_size - 1])
           .chain(vec![Ok(Token::Swp)])
           .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
@@ -205,21 +203,21 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
           .collect(),
         (1, locals_size, Some(expression)) => std::iter::empty()
           .chain(codegen::expression(expression, 0))
-          .chain(vec![Ok(Token::StO((locals_size + 1) as u8))])
+          .chain(store_to_offset(locals_size + 1))
           .chain(vec![Ok(Token::Pop); locals_size])
           .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (parameters_size, locals_size, None) => std::iter::empty()
           .chain(vec![Ok(Token::Pop); locals_size])
-          .chain(vec![Ok(Token::StO((parameters_size - 2) as u8))])
+          .chain(store_to_offset(parameters_size - 2))
           .chain(vec![Ok(Token::Pop); parameters_size - 2])
           .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (parameters_size, locals_size, Some(expression)) => std::iter::empty()
           .chain(codegen::expression(expression, 0))
-          .chain(vec![Ok(Token::StO((parameters_size + locals_size) as u8))])
+          .chain(store_to_offset(parameters_size + locals_size))
           .chain(vec![Ok(Token::Pop); locals_size])
-          .chain(vec![Ok(Token::StO((parameters_size - 2) as u8))])
+          .chain(store_to_offset(parameters_size - 2))
           .chain(vec![Ok(Token::Pop); parameters_size - 2])
           .chain(vec![Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
@@ -688,7 +686,7 @@ fn n8_expression(
 
     // TODO assumes the stack contains no temporaries
     TypedExpression::N8GetLocal(offset) => std::iter::empty()
-      .chain(vec![Ok(Token::LdO((offset + temporaries_size) as u8))])
+      .chain(load_from_offset(offset + temporaries_size))
       .collect(),
 
     TypedExpression::N8AddrLocal(_offset) => todo!(),
@@ -728,5 +726,39 @@ fn n8_expression(
     }
 
     _ => unreachable!(),
+  }
+}
+
+fn load_from_offset(offset: usize) -> Vec<Result<Token, String>> {
+  match u8::try_from(offset) {
+    Ok(offset) => match Ofst::new(offset) {
+      Some(ofst) => vec![Ok(Token::LdO(ofst))],
+      None => vec![
+        Ok(Token::Lds),
+        Ok(Token::XXX(offset)),
+        Ok(Token::Clc),
+        Ok(Token::Add),
+        Ok(Token::Lda),
+      ],
+    },
+    // throw assembly-time error
+    Err(_) => vec![Ok(Token::AtError), Err(format!("# `Ldo` stack overflow"))],
+  }
+}
+
+fn store_to_offset(offset: usize) -> Vec<Result<Token, String>> {
+  match u8::try_from(offset) {
+    Ok(offset) => match Ofst::new(offset) {
+      Some(ofst) => vec![Ok(Token::StO(ofst))],
+      None => vec![
+        Ok(Token::Lds),
+        Ok(Token::XXX(offset)),
+        Ok(Token::Clc),
+        Ok(Token::Add),
+        Ok(Token::Sta),
+      ],
+    },
+    // throw assembly-time error
+    Err(_) => vec![Ok(Token::AtError), Err(format!("# `Sto` stack overflow"))],
   }
 }

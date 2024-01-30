@@ -120,12 +120,12 @@ impl Tickable for Microcomputer {
     let instruction = common::opcode_to_instruction(opcode).map_err(|_| TickTrap::IllegalOpcode)?;
 
     match instruction {
-      Instruction::Psh(imm) => {
+      Instruction::Psh(Imm(imm)) => {
         push!(imm);
         Ok(10)
       }
 
-      Instruction::Add(size) => {
+      Instruction::Add(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
         let result = mem_read!(addr) as u16 + pop!() as u16 + mp.cf as u16;
         mem_write!(addr, result as u8);
@@ -133,7 +133,7 @@ impl Tickable for Microcomputer {
         Ok(14 + size as u128)
       }
 
-      Instruction::Sub(size) => {
+      Instruction::Sub(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
         let result = mem_read!(addr) as i16 - pop!() as i16 - mp.cf as i16;
         mem_write!(addr, result as u8);
@@ -141,14 +141,14 @@ impl Tickable for Microcomputer {
         Ok(14 + size as u128)
       }
 
-      Instruction::Iff(size) => {
+      Instruction::Iff(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
         let first = pop!();
         mem_write!(addr, if mp.cf { first } else { mem_read!(addr) });
         Ok(13 + size as u128)
       }
 
-      Instruction::Swp(size) => {
+      Instruction::Swp(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
         let first = pop!();
         push!(mem_read!(addr));
@@ -156,7 +156,7 @@ impl Tickable for Microcomputer {
         Ok(13 + size as u128)
       }
 
-      Instruction::Rot(size) => {
+      Instruction::Rot(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
         let first = pop!();
         let temp = (mem_read!(addr) as u16) << first % 8;
@@ -166,7 +166,7 @@ impl Tickable for Microcomputer {
         Ok((18 + size as u128) * (first as u128 + 1))
       }
 
-      Instruction::Orr(size) => {
+      Instruction::Orr(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
         let result = pop!() | mem_read!(addr);
         mem_write!(addr, result);
@@ -174,7 +174,7 @@ impl Tickable for Microcomputer {
         Ok(14 + size as u128)
       }
 
-      Instruction::And(size) => {
+      Instruction::And(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
         let result = pop!() & mem_read!(addr);
         mem_write!(addr, result);
@@ -182,7 +182,7 @@ impl Tickable for Microcomputer {
         Ok(11 + size as u128)
       }
 
-      Instruction::Xor(size) => {
+      Instruction::Xor(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
         let result = pop!() ^ mem_read!(addr);
         mem_write!(addr, result);
@@ -190,7 +190,7 @@ impl Tickable for Microcomputer {
         Ok(22 + size as u128)
       }
 
-      Instruction::Xnd(size) => {
+      Instruction::Xnd(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
         let result = pop!() & 0x00;
         mem_write!(addr, result);
@@ -243,13 +243,13 @@ impl Tickable for Microcomputer {
 
       Instruction::Dbg => Err(TickTrap::DebugRequest),
 
-      Instruction::Ldo(ofst) => {
+      Instruction::Ldo(Ofst(ofst)) => {
         let addr = mp.sp.wrapping_add(ofst);
         push!(mem_read!(addr));
         Ok(12 + ofst as u128)
       }
 
-      Instruction::Sto(ofst) => {
+      Instruction::Sto(Ofst(ofst)) => {
         let first = pop!();
         let addr = mp.sp.wrapping_add(ofst);
         mem_write!(addr, first);
@@ -308,7 +308,7 @@ impl Tickable for Microcomputer {
         Ok(5)
       }
 
-      Instruction::Phn(nimm) => {
+      Instruction::Phn(Nimm(nimm)) => {
         push!(nimm);
         Ok(10)
       }
