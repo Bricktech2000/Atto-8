@@ -9,7 +9,7 @@ const DUNDER_LINE: &str = "__LINE__";
 pub fn preprocess(
   file: File,
   defines: &mut HashMap<String, TextLine>,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
   scope: Option<&str>,
 ) -> String {
   // remove comments and resolve includes and defines
@@ -35,10 +35,10 @@ pub fn preprocess(
   defines.insert(DUNDER_LINE.to_string(), vec![Ok(0.to_string())]);
 
   let source = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {
-    errors.push((
+    errors.extend([(
       Pos(scope.unwrap_or("[bootstrap]").to_string(), 0),
       Error(format!("Unable to read file `{}`", file)),
-    ));
+    )]);
     format!("")
   });
 
@@ -95,10 +95,10 @@ pub fn preprocess(
       }
 
       Err(error) => {
-        errors.push((
+        errors.extend([(
           Pos(format!("{}", file), 0),
           Error(format!("Could not preprocess: {}", error)),
-        ));
+        )]);
         (preprocessed, "".to_string())
       }
     }
@@ -111,7 +111,7 @@ pub fn preprocess(
 fn preprocess_text_line_directive(
   text_line: TextLine,
   defines: &mut HashMap<String, TextLine>,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> String {
   // resolve defines recursively in text line and return preprocessed text line
 
@@ -138,7 +138,7 @@ fn preprocess_text_line_directive(
 fn preprocess_pragma_directive(
   _arguments: TextLine,
   _defines: &mut HashMap<String, TextLine>,
-  _errors: &mut Vec<(Pos, Error)>,
+  _errors: &mut impl Extend<(Pos, Error)>,
 ) -> String {
   // silently ignore unsupported pragmas as per standard
   "".to_string()
@@ -148,14 +148,14 @@ fn preprocess_error_directive(
   message: TextLine,
   file: &File,
   defines: &mut HashMap<String, TextLine>,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> String {
   let message = preprocess_text_line_directive(message.clone(), defines, errors);
 
-  errors.push((
+  errors.extend([(
     Pos(format!("{}", file), 0),
     Error(format!("Error directive: {}", message)),
-  ));
+  )]);
 
   "".to_string()
 }
@@ -164,7 +164,7 @@ fn preprocess_include_directive(
   filename: TextLine,
   file: &File,
   defines: &mut HashMap<String, TextLine>,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> String {
   // resolve defines in include directive and preprocess included file
 
@@ -188,22 +188,22 @@ fn preprocess_include_directive(
         Some(&format!("{}", file)),
       ),
       _ => {
-        errors.push((
+        errors.extend([(
           Pos(format!("{}", file), 0),
           Error(format!(
             "Trailing characters in include directive filename: `{}`",
             filename
           )),
-        ));
+        )]);
         format!("")
       }
     },
 
     Err(error) => {
-      errors.push((
+      errors.extend([(
         Pos(format!("{}", file), 0),
         Error(format!("Could not parse: {}", error)),
-      ));
+      )]);
       format!("")
     }
   }

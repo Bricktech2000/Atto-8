@@ -43,7 +43,7 @@ fn main() {
   println!("Mic: Done");
 }
 
-fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
+fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
   // sets specified fields to `true` and wraps to ensure compatibility with `seq!`
   macro_rules! ControlWord {
     ($($field:ident),*) => {
@@ -519,12 +519,12 @@ fn build_microcode(errors: &mut Vec<Error>) -> [u16; common::MIC_SIZE] {
                 (padding, false) => seq![pre, vec![Err(TickTrap::MicrocodeFault); padding], post],
                 (wrapped, true) => {
                   if step == 0x00 {
-                    errors.push(Error(format!(
+                    errors.extend([Error(format!(
                       "Microcode for opcode `{:02X}` with carry `{:01X}` overflows by {} steps",
                       opcode,
                       carry as u8,
                       wrapped.wrapping_neg()
-                    )));
+                    ))]);
                   }
                   vec![Err(TickTrap::MicrocodeFault); 0x20]
                 }

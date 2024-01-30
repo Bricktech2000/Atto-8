@@ -1,7 +1,7 @@
 use crate::*;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-pub fn typecheck(program: Program, errors: &mut Vec<(Pos, Error)>) -> TypedProgram {
+pub fn typecheck(program: Program, errors: &mut impl Extend<(Pos, Error)>) -> TypedProgram {
   typecheck::program(program, &mut State::default(), errors)
 }
 
@@ -107,7 +107,11 @@ impl Object {
   }
 }
 
-fn program(program: Program, state: &mut State, errors: &mut Vec<(Pos, Error)>) -> TypedProgram {
+fn program(
+  program: Program,
+  state: &mut State,
+  errors: &mut impl Extend<(Pos, Error)>,
+) -> TypedProgram {
   match program {
     Program(globals) => TypedProgram(
       std::iter::empty()
@@ -132,7 +136,7 @@ fn program(program: Program, state: &mut State, errors: &mut Vec<(Pos, Error)>) 
 fn global(
   global: Global,
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> Option<TypedGlobal> {
   match global {
     Global::FunctionDeclaration(is_inline, Object(return_type, name), parameters, is_variadic) => {
@@ -179,7 +183,7 @@ fn function_declaration_global(
   parameters: Vec<Object>,
   is_variadic: bool,
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> () {
   let parameter_types = match parameters[..] {
     [Object(Type::Void, _)] => vec![], // for `T func(void)`-style declarations
@@ -198,13 +202,13 @@ fn function_declaration_global(
         if return_type == **return_type_
           && parameter_types == *parameter_types_
           && is_variadic == *is_variadic_ => {}
-      _ => errors.push((
+      _ => errors.extend([(
         Pos("pos".to_string(), 0),
         Error(format!(
           "Function `{}` previously declared with different prototype",
           name.clone()
         )),
-      )),
+      )]),
     })
     .or_insert(match is_inline {
       true => Type::Macro(Box::new(return_type), name, parameter_types, is_variadic),
@@ -219,7 +223,7 @@ fn function_definition_global(
   is_variadic: bool,
   body: Statement,
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedGlobal {
   // TODO optimize: only do so if function does not end with return
   let body = Statement::Compound(vec![body, Statement::Return(None)]);
@@ -234,20 +238,20 @@ fn function_definition_global(
   );
 
   if is_variadic {
-    errors.push((
+    errors.extend([(
       Pos("[todo]".to_string(), 0),
       Error(format!("Variadic function definitions unimplemented",)),
-    ))
+    )])
   }
 
   state.definitions.get(&name).is_some().then(|| {
-    errors.push((
+    errors.extend([(
       Pos("pos".to_string(), 0),
       Error(format!(
         "Function `{}` has already been defined",
         name.clone()
       )),
-    ))
+    )])
   });
   state.definitions.insert(name.clone());
 
@@ -269,7 +273,7 @@ fn function_definition_global(
 fn assembly_global(
   assembly: String,
   _state: &mut State,
-  _errors: &mut Vec<(Pos, Error)>,
+  _errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedGlobal {
   TypedGlobal::Assembly(assembly)
 }
@@ -277,7 +281,7 @@ fn assembly_global(
 fn statement(
   statement: Statement,
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
   match statement {
     Statement::Expression(expression) => typecheck::expression_statement(expression, state, errors),
@@ -300,7 +304,7 @@ fn statement(
 fn expression_statement(
   expression: Expression,
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
   let (r#type, statement) = typecheck::expression(
     Expression::Cast(Type::Void, Box::new(expression)),
@@ -318,7 +322,7 @@ fn expression_statement(
 fn compound_statement(
   statements: Vec<Statement>,
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
   state.stack.push(StackEntry::BlockBoundary(vec![]));
 
@@ -336,7 +340,7 @@ fn while_statement(
   condition: Expression,
   body: Statement,
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
   let (r#type, condition) = typecheck::expression(
     Expression::Cast(Type::Bool, Box::new(condition)),
@@ -367,7 +371,7 @@ fn if_statement(
   if_body: Statement,
   else_body: Option<Statement>,
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
   let (r#type, condition) = typecheck::expression(
     Expression::Cast(Type::Bool, Box::new(condition)),
@@ -396,7 +400,7 @@ fn if_statement(
 fn return_statement(
   expression: Option<Expression>,
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
   let mut locals_size = 0;
   let (is_inline, return_type, parameters_size) = state
@@ -421,10 +425,10 @@ fn return_statement(
       }
     })
     .unwrap_or_else(|| {
-      errors.push((
+      errors.extend([(
         Pos("pos".to_string(), 0),
         Error(format!("`return` encountered outside of function")),
-      ));
+      )]);
       (false, Type::Void, 0)
     });
 
@@ -462,10 +466,10 @@ fn return_statement(
       TypedStatement::FunctionReturnN8(parameters_size, locals_size, expression)
     }
     _ => {
-      errors.push((
+      errors.extend([(
         Pos("[todo]".to_string(), 0),
         Error(format!("Return unimplemented for type `{:?}`", return_type)),
-      ));
+      )]);
       TypedStatement::Assembly("".to_string())
     }
   }
@@ -474,7 +478,7 @@ fn return_statement(
 fn assembly_statement(
   assembly: String,
   _state: &mut State,
-  _errors: &mut Vec<(Pos, Error)>,
+  _errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
   TypedStatement::Assembly(assembly)
 }
@@ -482,7 +486,7 @@ fn assembly_statement(
 fn expression(
   expression: Expression,
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression) {
   match expression.clone() {
     //   Expression::Negation(expression) => typecheck::negation_expression(*expression, state, errors),
@@ -542,10 +546,10 @@ fn expression(
             TypedExpression::U8Multiplication(Box::new(expression1), Box::new(expression2))
           }
           Range::I8 => {
-            errors.push((
+            errors.extend([(
               Pos("[todo]".to_string(), 0),
               Error(format!("Signed multiplication unimplemented",)),
-            ));
+            )]);
             TypedExpression::U8Multiplication(Box::new(expression1), Box::new(expression2))
           }
           _ => todo!(),
@@ -565,10 +569,10 @@ fn expression(
           Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
           Range::U8 => TypedExpression::U8Division(Box::new(expression1), Box::new(expression2)),
           Range::I8 => {
-            errors.push((
+            errors.extend([(
               Pos("[todo]".to_string(), 0),
               Error(format!("Signed division unimplemented",)),
-            ));
+            )]);
             TypedExpression::U8Division(Box::new(expression1), Box::new(expression2))
           }
           _ => todo!(),
@@ -588,10 +592,10 @@ fn expression(
           Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
           Range::U8 => TypedExpression::U8Modulo(Box::new(expression1), Box::new(expression2)),
           Range::I8 => {
-            errors.push((
+            errors.extend([(
               Pos("[todo]".to_string(), 0),
               Error(format!("Signed modulo unimplemented",)),
-            ));
+            )]);
             TypedExpression::U8Modulo(Box::new(expression1), Box::new(expression2))
           }
           _ => todo!(),
@@ -692,13 +696,13 @@ fn expression(
 //   _expression1: Expression,
 //   _expression2: Expression,
 //   _state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
+//   errors: &mut impl Extend<(Pos, Error)>,
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   // TODO implement
-//   errors.push((
+//   errors.extend([(
 //     Pos("[todo]".to_string(), 0),
 //     Error(format!("Logical AND unimplemented")),
-//   ));
+//   )]);
 //
 //   (Type::Bool, vec![])
 // }
@@ -707,13 +711,13 @@ fn expression(
 //   _expression1: Expression,
 //   _expression2: Expression,
 //   _state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
+//   errors: &mut impl Extend<(Pos, Error)>,
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   // TODO implement
-//   errors.push((
+//   errors.extend([(
 //     Pos("[todo]".to_string(), 0),
 //     Error(format!("Logical OR unimplemented")),
-//   ));
+//   )]);
 //
 //   (Type::Bool, vec![])
 // }
@@ -722,7 +726,7 @@ fn expression(
 //   expression1: Expression,
 //   expression2: Expression,
 //   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
+//   errors: &mut impl Extend<(Pos, Error)>,
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   let (r#type, tokens1, tokens2) =
 //     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
@@ -737,10 +741,10 @@ fn expression(
 //         .collect(),
 //       _ => {
 //         // TODO implement
-//         errors.push((
+//         errors.extend([(
 //           Pos("[todo]".to_string(), 0),
 //           Error(format!("Bitwise AND unimplemented for type `{:?}`", r#type)),
-//         ));
+//         )]);
 //         vec![]
 //       }
 //     },
@@ -751,7 +755,7 @@ fn expression(
 //   expression1: Expression,
 //   expression2: Expression,
 //   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
+//   errors: &mut impl Extend<(Pos, Error)>,
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   let (r#type, tokens1, tokens2) =
 //     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
@@ -766,13 +770,13 @@ fn expression(
 //         .collect(),
 //       _ => {
 //         // TODO implement
-//         errors.push((
+//         errors.extend([(
 //           Pos("[todo]".to_string(), 0),
 //           Error(format!(
 //             "Bitwise Inclusive OR unimplemented for type `{:?}`",
 //             r#type
 //           )),
-//         ));
+//         )]);
 //         vec![]
 //       }
 //     },
@@ -783,7 +787,7 @@ fn expression(
 //   expression1: Expression,
 //   expression2: Expression,
 //   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
+//   errors: &mut impl Extend<(Pos, Error)>,
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   let (r#type, tokens1, tokens2) =
 //     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
@@ -798,13 +802,13 @@ fn expression(
 //         .collect(),
 //       _ => {
 //         // TODO implement
-//         errors.push((
+//         errors.extend([(
 //           Pos("[todo]".to_string(), 0),
 //           Error(format!(
 //             "Bitwise Exclusive OR unimplemented for type `{:?}`",
 //             r#type
 //           )),
-//         ));
+//         )]);
 //         vec![]
 //       }
 //     },
@@ -815,13 +819,13 @@ fn expression(
 //   _expression1: Expression,
 //   _expression2: Expression,
 //   _state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
+//   errors: &mut impl Extend<(Pos, Error)>,
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   // TODO implement
-//   errors.push((
+//   errors.extend([(
 //     Pos("[todo]".to_string(), 0),
 //     Error(format!("Left Shift unimplemented")),
-//   ));
+//   )]);
 //
 //   (Type::Int, vec![])
 // }
@@ -830,13 +834,13 @@ fn expression(
 //   _expression1: Expression,
 //   _expression2: Expression,
 //   _state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
+//   errors: &mut impl Extend<(Pos, Error)>,
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   // TODO implement
-//   errors.push((
+//   errors.extend([(
 //     Pos("[todo]".to_string(), 0),
 //     Error(format!("Right Shift unimplemented")),
-//   ));
+//   )]);
 //
 //   (Type::Int, vec![])
 // }
@@ -845,7 +849,7 @@ fn expression(
 //   expression1: Expression,
 //   expression2: Expression,
 //   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
+//   errors: &mut impl Extend<(Pos, Error)>,
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   let (r#type, tokens1, tokens2) =
 //     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
@@ -867,10 +871,10 @@ fn expression(
 //         .collect(),
 //       _ => {
 //         // TODO implement
-//         errors.push((
+//         errors.extend([(
 //           Pos("[todo]".to_string(), 0),
 //           Error(format!("Less Than unimplemented for type `{:?}`", r#type)),
-//         ));
+//         )]);
 //         vec![]
 //       }
 //     },
@@ -881,7 +885,7 @@ fn expression(
 //   expression1: Expression,
 //   expression2: Expression,
 //   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
+//   errors: &mut impl Extend<(Pos, Error)>,
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   let (r#type, tokens1, tokens2) =
 //     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
@@ -904,13 +908,13 @@ fn expression(
 //         .collect(),
 //       _ => {
 //         // TODO implement
-//         errors.push((
+//         errors.extend([(
 //           Pos("[todo]".to_string(), 0),
 //           Error(format!(
 //             "Less Than Or Equal To unimplemented for type `{:?}`",
 //             r#type
 //           )),
-//         ));
+//         )]);
 //         vec![]
 //       }
 //     },
@@ -921,7 +925,7 @@ fn expression(
 //   expression1: Expression,
 //   expression2: Expression,
 //   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
+//   errors: &mut impl Extend<(Pos, Error)>,
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   let (r#type, tokens1, tokens2) =
 //     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
@@ -943,13 +947,13 @@ fn expression(
 //         .collect(),
 //       _ => {
 //         // TODO implement
-//         errors.push((
+//         errors.extend([(
 //           Pos("[todo]".to_string(), 0),
 //           Error(format!(
 //             "Greater Than unimplemented for type `{:?}`",
 //             r#type
 //           )),
-//         ));
+//         )]);
 //         vec![]
 //       }
 //     },
@@ -960,7 +964,7 @@ fn expression(
 //   expression1: Expression,
 //   expression2: Expression,
 //   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
+//   errors: &mut impl Extend<(Pos, Error)>,
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   let (r#type, tokens1, tokens2) =
 //     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
@@ -983,13 +987,13 @@ fn expression(
 //         .collect(),
 //       _ => {
 //         // TODO implement
-//         errors.push((
+//         errors.extend([(
 //           Pos("[todo]".to_string(), 0),
 //           Error(format!(
 //             "Greater Than Or Equal To unimplemented for type `{:?}`",
 //             r#type
 //           )),
-//         ));
+//         )]);
 //         vec![]
 //       }
 //     },
@@ -1001,7 +1005,7 @@ fn expression(
 //   expression2: Expression,
 //   expression3: Expression,
 //   state: &mut State,
-//   errors: &mut Vec<(Pos, Error)>,
+//   errors: &mut impl Extend<(Pos, Error)>,
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   let (type1, tokens1) = typecheck::expression(expression1, state, errors);
 //   let (type2, tokens2, tokens3) =
@@ -1023,13 +1027,13 @@ fn expression(
 //         .collect(),
 //       _ => {
 //         // TODO implement
-//         errors.push((
+//         errors.extend([(
 //           Pos("[todo]".to_string(), 0),
 //           Error(format!(
 //             "Conditional unimplemented for types `{:?}, {:?}`",
 //             type1, type2
 //           )),
-//         ));
+//         )]);
 //         vec![]
 //       }
 //     },
@@ -1040,7 +1044,7 @@ fn cast_expression(
   r#type: Type,
   expression: Expression,
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression) {
   let (type1, expression1) = typecheck::expression(expression, state, errors);
 
@@ -1070,13 +1074,13 @@ fn cast_expression(
       (Type::Bool, Type::Void) => TypedExpression::N0CastN1(Box::new(expression1)),
 
       _ => {
-        errors.push((
+        errors.extend([(
           Pos("[todo]".to_string(), 0),
           Error(format!(
             "Type Cast unimplemented from `{:?}` to `{:?}`",
             type1, r#type
           )),
-        ));
+        )]);
         TypedExpression::N0Constant(())
       }
     },
@@ -1086,7 +1090,7 @@ fn cast_expression(
 fn string_literal_expression(
   value: String,
   state: &mut State,
-  _errors: &mut Vec<(Pos, Error)>,
+  _errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression) {
   let name = state
     .strings
@@ -1103,7 +1107,7 @@ fn string_literal_expression(
 fn identifier_expression(
   identifier: String,
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression) {
   let mut offset = 0;
 
@@ -1162,10 +1166,10 @@ fn identifier_expression(
             match r#type.range() {
               Range::U8 | Range::I8 => TypedExpression::N8GetGlobal(identifier.clone()),
               _ => {
-                errors.push((
+                errors.extend([(
                   Pos("[todo]".to_string(), 0),
                   Error(format!("Identifier unimplemented for type `{:?}`", r#type)),
-                ));
+                )]);
                 TypedExpression::N0Constant(())
               }
             },
@@ -1173,10 +1177,10 @@ fn identifier_expression(
         })
     })
     .unwrap_or_else(|| {
-      errors.push((
+      errors.extend([(
         Pos("pos".to_string(), 0),
         Error(format!("Identifier `{}` not found", identifier)),
-      ));
+      )]);
       (Type::Void, TypedExpression::N0Constant(()))
     })
 }
@@ -1185,7 +1189,7 @@ fn function_call_expression(
   designator: Expression,
   arguments: Vec<Expression>,
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression) {
   let (designator_type, designator) = typecheck::expression(designator, state, errors);
 
@@ -1203,16 +1207,16 @@ fn function_call_expression(
     }
     _ => {
       // TODO uses debug formatting
-      errors.push((
+      errors.extend([(
         Pos("pos".to_string(), 0),
         Error(format!("`{:?}` is not a function", designator)),
-      ));
+      )]);
       return (Type::Void, TypedExpression::N0Constant(()));
     }
   };
 
   if is_variadic && arguments.len() < parameter_types.len() {
-    errors.push((
+    errors.extend([(
       Pos("pos".to_string(), 0),
       // TODO uses debug formatting
       Error(format!(
@@ -1221,11 +1225,11 @@ fn function_call_expression(
         designator,
         arguments.len()
       )),
-    ));
+    )]);
   }
 
   if !is_variadic && arguments.len() != parameter_types.len() {
-    errors.push((
+    errors.extend([(
       Pos("pos".to_string(), 0),
       // TODO uses debug formatting
       Error(format!(
@@ -1234,7 +1238,7 @@ fn function_call_expression(
         designator,
         arguments.len()
       )),
-    ));
+    )]);
   }
 
   let arguments =
@@ -1279,13 +1283,13 @@ fn function_call_expression(
         TypedExpression::N8FunctionCall(Box::new(designator), arguments)
       }
       _ => {
-        errors.push((
+        errors.extend([(
           Pos("[todo]".to_string(), 0),
           Error(format!(
             "Function call unimplemented for type `{:?}`",
             return_type
           )),
-        ));
+        )]);
         TypedExpression::N0Constant(())
       }
     },
@@ -1295,7 +1299,7 @@ fn function_call_expression(
 fn integer_promotions(
   expression: Expression,
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> Expression {
   let (r#type, _) = typecheck::expression(expression.clone(), state, errors);
 
@@ -1323,7 +1327,7 @@ fn integer_promotions(
 fn usual_arithmetic_conversions(
   (expression1, expression2): (Expression, Expression),
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Expression, Expression) {
   // TODO nonstandard, completely ad-hoc
 
@@ -1351,13 +1355,13 @@ fn usual_arithmetic_conversions(
       | Type::Function(_, _, _)
       | Type::Pointer(_),
     ) => {
-      errors.push((
+      errors.extend([(
         Pos("pos".to_string(), 0),
         Error(format!(
           "Invalid operand types `{:?}` and `{:?}`",
           type1, type2
         )),
-      ));
+      )]);
 
       Type::Int
     }
@@ -1368,14 +1372,14 @@ fn usual_arithmetic_conversions(
     (Type::UnsignedInt, Type::Int) | (Type::Int, Type::UnsignedInt) => Type::UnsignedInt,
 
     _ => {
-      errors.push((
+      errors.extend([(
         Pos("[todo]".to_string(), 0),
         Error(format!(
           // TODO uses debug formatting
           "Usual Arithmetic Conversions unimplemented between `{:?}` and `{:?}`",
           type1, type2
         )),
-      ));
+      )]);
 
       type1
     }
@@ -1390,7 +1394,7 @@ fn usual_arithmetic_conversions(
 fn typecheck_usual_arithmetic_conversions(
   (expression1, expression2): (Expression, Expression),
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression, TypedExpression) {
   let (expression1, expression2) =
     usual_arithmetic_conversions((expression1, expression2), state, errors);
@@ -1408,7 +1412,7 @@ fn typecheck_usual_arithmetic_conversions(
 fn pointer_arithmetic_conversions(
   (expression1, expression2): (Expression, Expression),
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Expression, Expression) {
   // TODO nonstandard, completely ad-hoc
 
@@ -1417,13 +1421,13 @@ fn pointer_arithmetic_conversions(
 
   match (&type1, &type2) {
     (Type::Pointer(_) | Type::Array(_), Type::Pointer(_) | Type::Array(_)) => {
-      errors.push((
+      errors.extend([(
         Pos("pos".to_string(), 0),
         Error(format!(
           "Invalid operand types `{:?}` and `{:?}`",
           type1, type2
         )),
-      ));
+      )]);
 
       (
         Expression::IntegerConstant(0),
@@ -1460,7 +1464,7 @@ fn pointer_arithmetic_conversions(
 fn typecheck_pointer_arithmetic_conversions(
   (expression1, expression2): (Expression, Expression),
   state: &mut State,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression, TypedExpression) {
   let (expression1, expression2) =
     pointer_arithmetic_conversions((expression1, expression2), state, errors);

@@ -78,15 +78,15 @@ enum Node {
   Not(Box<Node>),
 }
 
-fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -> String {
+fn preprocess(file: File, errors: &mut impl Extend<(Pos, Error)>, scope: Option<&str>) -> String {
   // remove comments and resolve includes
 
   use std::path::Path;
   let assembly = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {
-    errors.push((
+    errors.extend([(
       Pos(scope.unwrap_or("[bootstrap]").to_string(), 0),
       Error(format!("Unable to read file `{}`", file)),
-    ));
+    )]);
     format!("")
   });
 
@@ -120,7 +120,7 @@ fn preprocess(file: File, errors: &mut Vec<(Pos, Error)>, scope: Option<&str>) -
   assembly
 }
 
-fn mnemonize(assembly: String, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Mnemonic)> {
+fn mnemonize(assembly: String, _errors: &mut impl Extend<(Pos, Error)>) -> Vec<(Pos, Mnemonic)> {
   let mnemonics: Vec<(Pos, Mnemonic)> = assembly
     .split_whitespace()
     .map(|mnemonic| Mnemonic(mnemonic.to_string()))
@@ -131,7 +131,10 @@ fn mnemonize(assembly: String, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Mne
   mnemonics
 }
 
-fn tokenize(mnemonics: Vec<(Pos, Mnemonic)>, errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Token)> {
+fn tokenize(
+  mnemonics: Vec<(Pos, Mnemonic)>,
+  errors: &mut impl Extend<(Pos, Error)>,
+) -> Vec<(Pos, Token)> {
   // tokenize to valid tokens. tokens might be invalid instructions
 
   let tokens: Vec<(Pos, Token)> = mnemonics
@@ -142,10 +145,10 @@ fn tokenize(mnemonics: Vec<(Pos, Mnemonic)>, errors: &mut Vec<(Pos, Error)>) -> 
         match common::mnemonic_to_token(mnemonic.clone()) {
           Some(token) => token,
           None => {
-            errors.push((
+            errors.extend([(
               pos.clone(),
               Error(format!("Invalid mnemonic `{}`", mnemonic)),
-            ));
+            )]);
             Token::Nop
           }
         },
@@ -158,7 +161,7 @@ fn tokenize(mnemonics: Vec<(Pos, Mnemonic)>, errors: &mut Vec<(Pos, Error)>) -> 
 
 fn assemble(
   tokens: Vec<(Pos, Token)>,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
   entry_point: &str,
 ) -> Vec<(Pos, Result<Instruction, u8>)> {
   // resolve macros recursively from `entry_point` and identify unused labels
@@ -173,10 +176,10 @@ fn assemble(
         macro_definitions
           .entry(r#macro.clone())
           .and_modify(|_| {
-            errors.push((
+            errors.extend([(
               pos.clone(),
               Error(format!("Duplicate macro definition `{}`", r#macro)),
-            ));
+            )]);
           })
           .or_insert(vec![]);
       }
@@ -192,7 +195,7 @@ fn assemble(
           ),
           token,
         )),
-        None => errors.push((pos, Error(format!("Orphan token `{}` encountered", token)))),
+        None => errors.extend([(pos, Error(format!("Orphan token `{}` encountered", token)))]),
       },
     }
   }
@@ -213,14 +216,14 @@ fn assemble(
     scope_uid: &mut usize,
     parent_macros: &mut Vec<Macro>,
     macro_definitions: &HashMap<Macro, Vec<(Pos, Token)>>,
-    errors: &mut Vec<(Pos, Error)>,
+    errors: &mut impl Extend<(Pos, Error)>,
   ) -> Vec<(Pos, Token)> {
     tokens
       .into_iter()
       .flat_map(|(pos, token)| match token {
         Token::MacroRef(r#macro) => {
           if parent_macros.contains(&r#macro) {
-            errors.push((
+            errors.extend([(
               pos.clone(),
               Error(format!(
                 "Macro self-reference {} -> `{}`",
@@ -231,14 +234,14 @@ fn assemble(
                   .join(" -> "),
                 r#macro
               )),
-            ));
+            )]);
             return vec![];
           }
 
           let tokens = match macro_definitions.get(&r#macro) {
             Some(tokens) => tokens.clone(),
             None => {
-              errors.push((pos.clone(), Error(format!("Undefined macro `{}`", r#macro))));
+              errors.extend([(pos.clone(), Error(format!("Undefined macro `{}`", r#macro)))]);
               vec![]
             }
           };
@@ -273,10 +276,10 @@ fn assemble(
         }
 
         Token::AtError => {
-          errors.push((
+          errors.extend([(
             pos.clone(),
             Error(format!("`{}` directive encountered", token)),
-          ));
+          )]);
           vec![]
         }
         _ => vec![(pos.clone(), token.clone())],
@@ -308,54 +311,54 @@ fn assemble(
   // turn assembly tokens into roots, an intermediate representation for optimization. roots correspond to valid instructions
 
   #[allow(dead_code)]
-  fn assert_imm(imm: u8, errors: &mut Vec<(Pos, Error)>, pos: &Pos) -> u8 {
+  fn assert_imm(imm: u8, errors: &mut impl Extend<(Pos, Error)>, pos: &Pos) -> u8 {
     match imm {
       0b00000000..=0b01111111 => imm,
       _ => {
-        errors.push((
+        errors.extend([(
           pos.clone(),
           Error(format!("Invalid IMM operand `{:02X}`", imm)),
-        ));
+        )]);
         0b00000000
       }
     }
   }
 
-  fn assert_size(size: u8, errors: &mut Vec<(Pos, Error)>, pos: &Pos) -> u8 {
+  fn assert_size(size: u8, errors: &mut impl Extend<(Pos, Error)>, pos: &Pos) -> u8 {
     match size {
       0x01 | 0x02 | 0x04 | 0x08 => size,
       _ => {
-        errors.push((
+        errors.extend([(
           pos.clone(),
           Error(format!("Invalid SIZE operand `{:02X}`", size)),
-        ));
+        )]);
         0x01
       }
     }
   }
 
-  fn assert_ofst(ofst: u8, errors: &mut Vec<(Pos, Error)>, pos: &Pos) -> u8 {
+  fn assert_ofst(ofst: u8, errors: &mut impl Extend<(Pos, Error)>, pos: &Pos) -> u8 {
     match ofst {
       0b00000000..=0b00001111 => ofst,
       _ => {
-        errors.push((
+        errors.extend([(
           pos.clone(),
           Error(format!("Invalid OFST operand `{:02X}`", ofst)),
-        ));
+        )]);
         0b00000000
       }
     }
   }
 
   #[allow(dead_code)]
-  fn assert_nimm(nimm: u8, errors: &mut Vec<(Pos, Error)>, pos: &Pos) -> u8 {
+  fn assert_nimm(nimm: u8, errors: &mut impl Extend<(Pos, Error)>, pos: &Pos) -> u8 {
     match nimm {
       0b11110000..=0b11111111 => nimm,
       _ => {
-        errors.push((
+        errors.extend([(
           pos.clone(),
           Error(format!("Invalid NIMM operand `{:02X}`", nimm)),
-        ));
+        )]);
         0b00000000
       }
     }
@@ -451,6 +454,7 @@ fn assemble(
 
   let mut instructions: Vec<(Pos, Result<Instruction, u8>)>;
   let mut allocation_sizes: HashMap<Node, usize> = HashMap::new();
+  let mut bruteforce_errors: Vec<(Pos, Error)> = vec![];
 
   macro_rules! allocation_size {
     ($node:expr) => {
@@ -513,10 +517,10 @@ fn assemble(
               }
 
               if label_definitions.contains_key(&label) {
-                errors.push((
+                bruteforce_errors.extend([(
                   pos.clone(),
                   Error(format!("Duplicate label definition `{}`", label)),
-                ));
+                )]);
               }
               label_definitions.insert(label.clone(), location_counter as u8);
             });
@@ -535,50 +539,50 @@ fn assemble(
           },
 
           Root::Const => {
-            errors.push((
+            bruteforce_errors.extend([(
               pos.clone(),
               Error(format!(
                 "`{}` argument could not be reduced to a constant expression",
                 Token::AtConst,
               )),
-            ));
+            )]);
             vec![]
           }
 
           Root::Data(Some(node)) => match resolve_node_value(&node, &label_definitions) {
             Ok(value) => vec![(pos.clone(), Err(value))],
             Err(label) => {
-              errors.push((
+              bruteforce_errors.extend([(
                 pos.clone(),
                 Error(format!(
                   "`{}` argument contains currently unresolved label `{}`",
                   Token::AtData,
                   label
                 )),
-              ));
+              )]);
               vec![]
             }
           },
 
           Root::Data(None) => {
-            errors.push((
+            bruteforce_errors.extend([(
               pos.clone(),
               Error(format!(
                 "`{}` argument could not be reduced to a constant expression",
                 Token::AtData,
               )),
-            ));
+            )]);
             vec![]
           }
 
           Root::Dyn(None) => {
-            errors.push((
+            bruteforce_errors.extend([(
               pos.clone(),
               Error(format!(
                 "`{}` argument could not be reduced to an instruction",
                 Token::AtDyn,
               )),
-            ));
+            )]);
             vec![]
           }
 
@@ -588,7 +592,7 @@ fn assemble(
                 vec![(pos.clone(), Err(0x00)); padding]
               }
               None => {
-                errors.push((
+                bruteforce_errors.extend([(
                   pos.clone(),
                   Error(format!(
                     "`{}` cannot move location counter backward from `{:02X}` to `{:02X}`",
@@ -596,31 +600,31 @@ fn assemble(
                     location_counter,
                     value
                   )),
-                ));
+                )]);
                 vec![]
               }
             },
             Err(label) => {
-              errors.push((
+              bruteforce_errors.extend([(
                 pos.clone(),
                 Error(format!(
                   "`{}` argument contains currently unresolved label `{}`",
                   Token::AtOrg,
                   label
                 )),
-              ));
+              )]);
               vec![]
             }
           },
 
           Root::Org(None) => {
-            errors.push((
+            bruteforce_errors.extend([(
               pos.clone(),
               Error(format!(
                 "`{}` argument could not be reduced to a constant expression",
                 Token::AtOrg,
               )),
-            ));
+            )]);
             vec![]
           }
         };
@@ -635,7 +639,8 @@ fn assemble(
         let value = match resolve_node_value(&node, &label_definitions) {
           Ok(value) => value,
           Err(label) => {
-            errors.push((pos.clone(), Error(format!("Undefined label `{}`", label))));
+            bruteforce_errors
+              .extend([(pos.clone(), Error(format!("Undefined label `{}`", label)))]);
             0x00
           }
         };
@@ -659,17 +664,19 @@ fn assemble(
     }
 
     // abort brute force if errors were encountered
-    if errors.len() > 0 {
+    if bruteforce_errors.len() > 0 {
       break 'bruteforce;
     }
   }
+
+  errors.extend(bruteforce_errors);
 
   instructions
 }
 
 fn codegen(
   instructions: Vec<(Pos, Result<Instruction, u8>)>,
-  errors: &mut Vec<(Pos, Error)>,
+  errors: &mut impl Extend<(Pos, Error)>,
 ) -> Vec<(Pos, u8)> {
   // codegen instructions into opcodes
 
@@ -684,21 +691,21 @@ fn codegen(
   match common::MEM_SIZE.checked_sub(opcodes.len()) {
     Some(padding) => opcodes.extend(vec![(pos, 0x00); padding]),
     None => {
-      errors.push((
+      errors.extend([(
         pos,
         Error(format!(
           "Program size `{:02X}` exceeds available memory of size `{:02X}`",
           opcodes.len(),
           common::MEM_SIZE
         )),
-      ));
+      )]);
     }
   }
 
   opcodes
 }
 
-fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut Vec<(Pos, Error)>) -> Vec<(Pos, Root)> {
+fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) -> Vec<(Pos, Root)> {
   // build a tree of nodes representing everything we can compute at compile time
   // this removes redundant instructions and makes macros usable
 

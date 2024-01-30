@@ -195,7 +195,7 @@ pub fn binary_operation<T: Clone + 'static>(
 
 // C99 grammar
 
-pub fn parse(input: String, errors: &mut Vec<(Pos, Error)>) -> Program {
+pub fn parse(input: String, errors: &mut impl Extend<(Pos, Error)>) -> Program {
   let program = parse::translation_unit().0(&input).map(|(programm, input)| match &input[..] {
     "" => programm,
     _ => panic!("Input not fully parsed"),
@@ -204,10 +204,10 @@ pub fn parse(input: String, errors: &mut Vec<(Pos, Error)>) -> Program {
   match program {
     Ok(program) => program,
     Err(error) => {
-      errors.push((
+      errors.extend([(
         Pos("[parse]".to_string(), 0),
         Error(format!("Could not parse: {}", error)),
-      ));
+      )]);
       Program(vec![])
     }
   }
