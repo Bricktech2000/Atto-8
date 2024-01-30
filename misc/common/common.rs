@@ -19,10 +19,10 @@ pub struct ControlWord {
   pub data_yl: Signal, // data bus to Y latch
   pub data_zl: Signal, // data bus to Z latch
 
-  pub ip_data: Signal,   // instruction pointer to data bus
-  pub sp_data: Signal,   // stack pointer to data bus
   pub mem_data: Signal,  // data bus to memory
   pub data_mem: Signal,  // memory to data bus
+  pub ip_data: Signal,   // instruction pointer to data bus
+  pub sp_data: Signal,   // stack pointer to data bus
   pub clr_sc: Signal,    // clear to step counter
   pub set_cin: Signal,   // set to carry in
   pub sum_data: Signal,  // sum to data bus

@@ -185,9 +185,9 @@ impl Tickable for Microcomputer {
       mp.mic[il as usize * 0x02 * 0x20 | mp.cf as usize * 0x20 | mp.sc as usize],
     )?;
     let active_count = [
+      mp.ctrl.mem_data,
       mp.ctrl.ip_data,
       mp.ctrl.sp_data,
-      mp.ctrl.mem_data,
       mp.ctrl.sum_data,
       mp.ctrl.nand_data,
     ]
@@ -377,10 +377,10 @@ impl std::fmt::Display for Microprocessor {
         self.ctrl.data_xl,
         self.ctrl.data_yl,
         self.ctrl.data_zl,
-        self.ctrl.ip_data,
-        self.ctrl.sp_data,
         self.ctrl.mem_data,
         self.ctrl.data_mem,
+        self.ctrl.ip_data,
+        self.ctrl.sp_data,
         self.ctrl.clr_sc,
         self.ctrl.set_cin,
         self.ctrl.sum_data,

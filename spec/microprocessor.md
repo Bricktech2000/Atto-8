@@ -50,10 +50,10 @@ The control word is a 16-bit natural number output from `MIC`, the microcode ROM
 | `0xA` | `DATA_XL`      | Data Bus to X Latch             |
 | `0x9` | `DATA_YL`      | Data Bus to Y Latch             |
 | `0x8` | `DATA_ZL`      | Data Bus to Z Latch             |
-| `0x7` | `IP_DATA`      | Instruction Pointer to Data Bus |
-| `0x6` | `SP_DATA`      | Stack Pointer to Data Bus       |
-| `0x5` | `MEM_DATA`     | Data Bus to Memory              |
-| `0x4` | `DATA_MEM`     | Memory to Data Bus              |
+| `0x7` | `MEM_DATA`     | Data Bus to Memory              |
+| `0x6` | `DATA_MEM`     | Memory to Data Bus              |
+| `0x5` | `IP_DATA`      | Instruction Pointer to Data Bus |
+| `0x4` | `SP_DATA`      | Stack Pointer to Data Bus       |
 | `0x3` | `CLR_SC`       | Clear to Step Counter           |
 | `0x2` | `SET_CIN`      | Set to Carry In                 |
 | `0x1` | `SUM_DATA`     | Sum to Data Bus                 |
