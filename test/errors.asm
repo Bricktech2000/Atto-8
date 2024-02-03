@@ -23,7 +23,9 @@ main!
   lda @org
   x00 @org
   lda @data
-  :future @org future:
+  :future @org
+  :future @data
+  future:
   dyn: :dyn @dyn
   !self
   @error

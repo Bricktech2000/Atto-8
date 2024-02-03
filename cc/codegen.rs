@@ -684,7 +684,6 @@ fn n8_expression(
 
     TypedExpression::N8Constant(constant) => vec![Ok(Token::XXX(constant))],
 
-    // TODO assumes the stack contains no temporaries
     TypedExpression::N8GetLocal(offset) => std::iter::empty()
       .chain(load_from_offset(offset + temporaries_size))
       .collect(),

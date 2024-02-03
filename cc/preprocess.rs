@@ -126,6 +126,7 @@ pub fn preprocess(
   };
 
   defines.insert(DUNDER_FILE.to_string(), last_file.clone());
+
   preprocessed
 }
 
@@ -239,6 +240,27 @@ enum Directive {
   EOF,
 }
 
+fn any() -> Parser<char> {
+  parse::satisfy(|c| c != '\n').meta(format!("Non-Newline"))
+}
+
+fn whitespace() -> Parser<char> {
+  parse::satisfy(|c| c.is_whitespace() && c != '\n').meta(format!("Whitespace"))
+}
+
+#[allow(dead_code)]
+fn whitespaces_eof() -> Parser<()> {
+  parse::many(preprocess::whitespace()).and_then(|_| parse::eof())
+}
+
+fn whitespaces_char(char: char) -> Parser<()> {
+  parse::many(preprocess::whitespace()).and_then(move |_| parse::char(char))
+}
+
+fn whitespaces_string(string: &'static str) -> Parser<()> {
+  parse::many(preprocess::whitespace()).and_then(move |_| parse::string(string))
+}
+
 type TextLine = Vec<Result<String, char>>;
 
 fn include_directive() -> Parser<Directive> {
@@ -258,7 +280,7 @@ fn define_directive() -> Parser<Directive> {
   Parser::r#return(())
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_string("define"))
-    .and_then(|_| parse::identifier())
+    .and_then(|_| preprocess::identifier())
     .and_then(|identifier| {
       let identifier2 = identifier.clone();
       preprocess::text_line()
@@ -276,7 +298,7 @@ fn undef_directive() -> Parser<Directive> {
   Parser::r#return(())
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_string("undef"))
-    .and_then(|_| parse::identifier())
+    .and_then(|_| preprocess::identifier())
     .and_then(|identifier| {
       preprocess::whitespaces_char('\n').map(move |_| Directive::Undef(identifier))
     })
@@ -341,8 +363,9 @@ fn text_line() -> Parser<TextLine> {
     .and_then(|_| {
       parse::many(
         Parser::error(Error(format!("")))
+          .or_else(|_| preprocess::whitespace().map(|character| Err(character)))
           .or_else(|_| preprocess::identifier().map(|identifier| Ok(identifier)))
-          .or_else(|_| preprocess::non_newline().map(|character| Err(character))),
+          .or_else(|_| preprocess::any().map(|character| Err(character))),
       )
     })
     .meta(format!("Text Line"))
@@ -350,35 +373,17 @@ fn text_line() -> Parser<TextLine> {
 
 fn identifier() -> Parser<String> {
   // TODO does not obey grammar
-  parse::many1(
-    Parser::error(Error(format!("")))
-      .or_else(|_| parse::digit(10))
-      .or_else(|_| parse::alphabetic())
-      .or_else(|_| parse::char('_').map(|_| '_')),
-  )
-  .map(|chars| chars.iter().collect::<String>())
-  .meta(format!("Identifier"))
-}
-
-fn non_newline() -> Parser<char> {
-  parse::satisfy(|c| c != '\n').meta(format!("Non-Newline"))
-}
-
-fn whitespace() -> Parser<char> {
-  parse::satisfy(|c| c.is_whitespace() && c != '\n').meta(format!("Whitespace"))
-}
-
-#[allow(dead_code)]
-pub fn whitespaces_eof() -> Parser<()> {
-  parse::many(preprocess::whitespace()).and_then(|_| parse::eof())
-}
-
-pub fn whitespaces_char(char: char) -> Parser<()> {
-  parse::many(preprocess::whitespace()).and_then(move |_| parse::char(char))
-}
-
-pub fn whitespaces_string(string: &'static str) -> Parser<()> {
-  parse::many(preprocess::whitespace()).and_then(move |_| parse::string(string))
+  parse::many(preprocess::whitespace())
+    .and_then(|_| {
+      parse::many1(
+        Parser::error(Error(format!("")))
+          .or_else(|_| parse::digit(10))
+          .or_else(|_| parse::alphabetic())
+          .or_else(|_| parse::char('_').map(|_| '_')),
+      )
+    })
+    .map(|chars| chars.iter().collect::<String>())
+    .meta(format!("Identifier"))
 }
 
 fn include_directive_filename() -> Parser<String> {

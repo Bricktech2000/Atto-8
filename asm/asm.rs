@@ -253,7 +253,10 @@ fn assemble(
           let tokens = match macro_definitions.get(&r#macro) {
             Some(tokens) => tokens.clone(),
             None => {
-              errors.extend([(pos.clone(), Error(format!("Undefined macro `{}`", r#macro)))]);
+              errors.extend([(
+                pos.clone(),
+                Error(format!("Reference to undefined macro `{}`", r#macro)),
+              )]);
               vec![]
             }
           };
@@ -316,8 +319,10 @@ fn assemble(
     .collect();
 
   errors.extend(label_definitions.iter().filter_map(|(label, pos)| {
-    (!label_references.contains(label))
-      .then_some((pos.clone(), Error(format!("Unused label `{}`", label))))
+    (!label_references.contains(label)).then_some((
+      pos.clone(),
+      Error(format!("Unused label definition `{}`", label)),
+    ))
   }));
 
   // turn assembly tokens into roots, an intermediate representation for optimization. roots correspond to valid instructions
@@ -521,7 +526,7 @@ fn assemble(
               bruteforce_errors.extend([(
                 pos.clone(),
                 Error(format!(
-                  "`{}` argument contains currently unresolved label `{}`",
+                  "`{}` argument references currently unresolved label `{}`",
                   Token::AtData,
                   label
                 )),
@@ -574,7 +579,7 @@ fn assemble(
               bruteforce_errors.extend([(
                 pos.clone(),
                 Error(format!(
-                  "`{}` argument contains currently unresolved label `{}`",
+                  "`{}` argument references currently unresolved label `{}`",
                   Token::AtOrg,
                   label
                 )),
@@ -605,8 +610,10 @@ fn assemble(
         let value = match resolve_node_value(&node, &label_definitions) {
           Ok(value) => value,
           Err(label) => {
-            bruteforce_errors
-              .extend([(pos.clone(), Error(format!("Undefined label `{}`", label)))]);
+            bruteforce_errors.extend([(
+              pos.clone(),
+              Error(format!("Reference to undefined label `{}`", label)),
+            )]);
             0x00
           }
         };
