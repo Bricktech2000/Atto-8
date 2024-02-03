@@ -459,7 +459,7 @@ pub struct Macro(pub String);
 pub struct Error(pub String);
 
 #[derive(Clone, Eq, PartialEq)]
-pub struct Pos(pub String, pub usize);
+pub struct Pos(pub File, pub usize, pub usize);
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct Mnemonic(pub String);
@@ -975,7 +975,7 @@ impl std::fmt::Display for Error {
 
 impl std::fmt::Display for Pos {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    write!(f, "{}#{}", self.0, self.1)
+    write!(f, "{}:{}:{}", self.0, self.1 + 1, self.2 + 1)
   }
 }
 

@@ -203,7 +203,7 @@ fn function_declaration_global(
           && parameter_types == *parameter_types_
           && is_variadic == *is_variadic_ => {}
       _ => errors.extend([(
-        Pos("pos".to_string(), 0),
+        Pos(File("pos".to_string()), 0, 0),
         Error(format!(
           "Function `{}` previously declared with different prototype",
           name.clone()
@@ -239,14 +239,14 @@ fn function_definition_global(
 
   if is_variadic {
     errors.extend([(
-      Pos("[todo]".to_string(), 0),
+      Pos(File("[todo]".to_string()), 0, 0),
       Error(format!("Variadic function definitions unimplemented",)),
     )])
   }
 
   state.definitions.get(&name).is_some().then(|| {
     errors.extend([(
-      Pos("pos".to_string(), 0),
+      Pos(File("pos".to_string()), 0, 0),
       Error(format!(
         "Function `{}` has already been defined",
         name.clone()
@@ -426,7 +426,7 @@ fn return_statement(
     })
     .unwrap_or_else(|| {
       errors.extend([(
-        Pos("pos".to_string(), 0),
+        Pos(File("pos".to_string()), 0, 0),
         Error(format!("`return` encountered outside of function")),
       )]);
       (false, Type::Void, 0)
@@ -467,7 +467,7 @@ fn return_statement(
     }
     _ => {
       errors.extend([(
-        Pos("[todo]".to_string(), 0),
+        Pos(File("[todo]".to_string()), 0, 0),
         Error(format!("Return unimplemented for type `{:?}`", return_type)),
       )]);
       TypedStatement::Assembly("".to_string())
@@ -547,7 +547,7 @@ fn expression(
           }
           Range::I8 => {
             errors.extend([(
-              Pos("[todo]".to_string(), 0),
+              Pos(File("[todo]".to_string()), 0, 0),
               Error(format!("Signed multiplication unimplemented",)),
             )]);
             TypedExpression::U8Multiplication(Box::new(expression1), Box::new(expression2))
@@ -570,7 +570,7 @@ fn expression(
           Range::U8 => TypedExpression::U8Division(Box::new(expression1), Box::new(expression2)),
           Range::I8 => {
             errors.extend([(
-              Pos("[todo]".to_string(), 0),
+              Pos(File("[todo]".to_string()), 0, 0),
               Error(format!("Signed division unimplemented",)),
             )]);
             TypedExpression::U8Division(Box::new(expression1), Box::new(expression2))
@@ -593,7 +593,7 @@ fn expression(
           Range::U8 => TypedExpression::U8Modulo(Box::new(expression1), Box::new(expression2)),
           Range::I8 => {
             errors.extend([(
-              Pos("[todo]".to_string(), 0),
+              Pos(File("[todo]".to_string()), 0, 0),
               Error(format!("Signed modulo unimplemented",)),
             )]);
             TypedExpression::U8Modulo(Box::new(expression1), Box::new(expression2))
@@ -700,7 +700,7 @@ fn expression(
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   // TODO implement
 //   errors.extend([(
-//     Pos("[todo]".to_string(), 0),
+//     Pos(File("[todo]".to_string()), 0, 0),
 //     Error(format!("Logical AND unimplemented")),
 //   )]);
 //
@@ -715,7 +715,7 @@ fn expression(
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   // TODO implement
 //   errors.extend([(
-//     Pos("[todo]".to_string(), 0),
+//     Pos(File("[todo]".to_string()), 0, 0),
 //     Error(format!("Logical OR unimplemented")),
 //   )]);
 //
@@ -742,7 +742,7 @@ fn expression(
 //       _ => {
 //         // TODO implement
 //         errors.extend([(
-//           Pos("[todo]".to_string(), 0),
+//           Pos(File("[todo]".to_string()), 0, 0),
 //           Error(format!("Bitwise AND unimplemented for type `{:?}`", r#type)),
 //         )]);
 //         vec![]
@@ -771,7 +771,7 @@ fn expression(
 //       _ => {
 //         // TODO implement
 //         errors.extend([(
-//           Pos("[todo]".to_string(), 0),
+//           Pos(File("[todo]".to_string()), 0, 0),
 //           Error(format!(
 //             "Bitwise Inclusive OR unimplemented for type `{:?}`",
 //             r#type
@@ -803,7 +803,7 @@ fn expression(
 //       _ => {
 //         // TODO implement
 //         errors.extend([(
-//           Pos("[todo]".to_string(), 0),
+//           Pos(File("[todo]".to_string()), 0, 0),
 //           Error(format!(
 //             "Bitwise Exclusive OR unimplemented for type `{:?}`",
 //             r#type
@@ -823,7 +823,7 @@ fn expression(
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   // TODO implement
 //   errors.extend([(
-//     Pos("[todo]".to_string(), 0),
+//     Pos(File("[todo]".to_string()), 0, 0),
 //     Error(format!("Left Shift unimplemented")),
 //   )]);
 //
@@ -838,7 +838,7 @@ fn expression(
 // ) -> (Type, Vec<Result<Token, String>>) {
 //   // TODO implement
 //   errors.extend([(
-//     Pos("[todo]".to_string(), 0),
+//     Pos(File("[todo]".to_string()), 0, 0),
 //     Error(format!("Right Shift unimplemented")),
 //   )]);
 //
@@ -872,7 +872,7 @@ fn expression(
 //       _ => {
 //         // TODO implement
 //         errors.extend([(
-//           Pos("[todo]".to_string(), 0),
+//           Pos(File("[todo]".to_string()), 0, 0),
 //           Error(format!("Less Than unimplemented for type `{:?}`", r#type)),
 //         )]);
 //         vec![]
@@ -909,7 +909,7 @@ fn expression(
 //       _ => {
 //         // TODO implement
 //         errors.extend([(
-//           Pos("[todo]".to_string(), 0),
+//           Pos(File("[todo]".to_string()), 0, 0),
 //           Error(format!(
 //             "Less Than Or Equal To unimplemented for type `{:?}`",
 //             r#type
@@ -948,7 +948,7 @@ fn expression(
 //       _ => {
 //         // TODO implement
 //         errors.extend([(
-//           Pos("[todo]".to_string(), 0),
+//           Pos(File("[todo]".to_string()), 0, 0),
 //           Error(format!(
 //             "Greater Than unimplemented for type `{:?}`",
 //             r#type
@@ -988,7 +988,7 @@ fn expression(
 //       _ => {
 //         // TODO implement
 //         errors.extend([(
-//           Pos("[todo]".to_string(), 0),
+//           Pos(File("[todo]".to_string()), 0, 0),
 //           Error(format!(
 //             "Greater Than Or Equal To unimplemented for type `{:?}`",
 //             r#type
@@ -1028,7 +1028,7 @@ fn expression(
 //       _ => {
 //         // TODO implement
 //         errors.extend([(
-//           Pos("[todo]".to_string(), 0),
+//           Pos(File("[todo]".to_string()), 0, 0),
 //           Error(format!(
 //             "Conditional unimplemented for types `{:?}, {:?}`",
 //             type1, type2
@@ -1075,7 +1075,7 @@ fn cast_expression(
 
       _ => {
         errors.extend([(
-          Pos("[todo]".to_string(), 0),
+          Pos(File("[todo]".to_string()), 0, 0),
           Error(format!(
             "Type Cast unimplemented from `{:?}` to `{:?}`",
             type1, r#type
@@ -1167,7 +1167,7 @@ fn identifier_expression(
               Range::U8 | Range::I8 => TypedExpression::N8GetGlobal(identifier.clone()),
               _ => {
                 errors.extend([(
-                  Pos("[todo]".to_string(), 0),
+                  Pos(File("[todo]".to_string()), 0, 0),
                   Error(format!("Identifier unimplemented for type `{:?}`", r#type)),
                 )]);
                 TypedExpression::N0Constant(())
@@ -1178,7 +1178,7 @@ fn identifier_expression(
     })
     .unwrap_or_else(|| {
       errors.extend([(
-        Pos("pos".to_string(), 0),
+        Pos(File("pos".to_string()), 0, 0),
         Error(format!("Identifier `{}` not found", identifier)),
       )]);
       (Type::Void, TypedExpression::N0Constant(()))
@@ -1208,7 +1208,7 @@ fn function_call_expression(
     _ => {
       // TODO uses debug formatting
       errors.extend([(
-        Pos("pos".to_string(), 0),
+        Pos(File("pos".to_string()), 0, 0),
         Error(format!("`{:?}` is not a function", designator)),
       )]);
       return (Type::Void, TypedExpression::N0Constant(()));
@@ -1217,7 +1217,7 @@ fn function_call_expression(
 
   if is_variadic && arguments.len() < parameter_types.len() {
     errors.extend([(
-      Pos("pos".to_string(), 0),
+      Pos(File("pos".to_string()), 0, 0),
       // TODO uses debug formatting
       Error(format!(
         "Expected at least {} arguments to variadic function `{:?}`, got {}",
@@ -1230,7 +1230,7 @@ fn function_call_expression(
 
   if !is_variadic && arguments.len() != parameter_types.len() {
     errors.extend([(
-      Pos("pos".to_string(), 0),
+      Pos(File("pos".to_string()), 0, 0),
       // TODO uses debug formatting
       Error(format!(
         "Expected {} arguments to function `{:?}`, got {}",
@@ -1284,7 +1284,7 @@ fn function_call_expression(
       }
       _ => {
         errors.extend([(
-          Pos("[todo]".to_string(), 0),
+          Pos(File("[todo]".to_string()), 0, 0),
           Error(format!(
             "Function call unimplemented for type `{:?}`",
             return_type
@@ -1356,7 +1356,7 @@ fn usual_arithmetic_conversions(
       | Type::Pointer(_),
     ) => {
       errors.extend([(
-        Pos("pos".to_string(), 0),
+        Pos(File("pos".to_string()), 0, 0),
         Error(format!(
           "Invalid operand types `{:?}` and `{:?}`",
           type1, type2
@@ -1373,7 +1373,7 @@ fn usual_arithmetic_conversions(
 
     _ => {
       errors.extend([(
-        Pos("[todo]".to_string(), 0),
+        Pos(File("[todo]".to_string()), 0, 0),
         Error(format!(
           // TODO uses debug formatting
           "Usual Arithmetic Conversions unimplemented between `{:?}` and `{:?}`",
@@ -1422,7 +1422,7 @@ fn pointer_arithmetic_conversions(
   match (&type1, &type2) {
     (Type::Pointer(_) | Type::Array(_), Type::Pointer(_) | Type::Array(_)) => {
       errors.extend([(
-        Pos("pos".to_string(), 0),
+        Pos(File("pos".to_string()), 0, 0),
         Error(format!(
           "Invalid operand types `{:?}` and `{:?}`",
           type1, type2

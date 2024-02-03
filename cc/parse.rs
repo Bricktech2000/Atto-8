@@ -205,7 +205,7 @@ pub fn parse(input: String, errors: &mut impl Extend<(Pos, Error)>) -> Program {
     Ok(program) => program,
     Err(error) => {
       errors.extend([(
-        Pos("[parse]".to_string(), 0),
+        Pos(File("[parse]".to_string()), 0, 0),
         Error(format!("Could not parse: {}", error)),
       )]);
       Program(vec![])
@@ -752,12 +752,8 @@ pub fn escape_sequence() -> Parser<char> {
     .or_else(|_| parse::string("\\0").map(|_| '\0')) // TODO should be <octal-escape-sequence>
 }
 
-pub fn whitespace() -> Parser<()> {
-  Parser::error(Error(format!("")))
-    .or_else(|_| parse::char(' '))
-    .or_else(|_| parse::char('\r'))
-    .or_else(|_| parse::char('\n'))
-    .or_else(|_| parse::char('\t'))
+pub fn whitespace() -> Parser<char> {
+  parse::satisfy(move |c| c.is_whitespace()).meta(format!("Whitespace"))
 }
 
 pub fn digit(radix: u32) -> Parser<char> {

@@ -10,7 +10,7 @@ pub fn preprocess(
   file: File,
   defines: &mut HashMap<String, TextLine>,
   errors: &mut impl Extend<(Pos, Error)>,
-  scope: Option<&str>,
+  pos: Option<Pos>,
 ) -> String {
   // remove comments and resolve includes and defines
 
@@ -36,7 +36,7 @@ pub fn preprocess(
 
   let source = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {
     errors.extend([(
-      Pos(scope.unwrap_or("[bootstrap]").to_string(), 0),
+      pos.unwrap_or(Pos(File("[bootstrap]".to_string()), 0, 0)),
       Error(format!("Unable to read file `{}`", file)),
     )]);
     format!("")
@@ -56,7 +56,14 @@ pub fn preprocess(
   let preprocessed = loop {
     (preprocessed, source) = match preprocessor.0(&source) {
       Ok((Directive::Include(filename), input)) => (
-        preprocessed + &preprocess_include_directive(filename, &file, defines, errors),
+        preprocessed
+          + &preprocess_include_directive(
+            &file,
+            filename,
+            defines,
+            errors,
+            Pos(File("pos".to_string()), 0, 0),
+          ),
         input,
       ),
 
@@ -71,12 +78,26 @@ pub fn preprocess(
       }
 
       Ok((Directive::Pragma(arguments), input)) => (
-        preprocessed + &preprocess_pragma_directive(arguments, defines, errors) + "\n",
+        preprocessed
+          + &preprocess_pragma_directive(
+            arguments,
+            defines,
+            errors,
+            Pos(File("pos".to_string()), 0, 0),
+          )
+          + "\n",
         input,
       ),
 
       Ok((Directive::Error(message), input)) => (
-        preprocessed + &preprocess_error_directive(message, &file, defines, errors) + "\n",
+        preprocessed
+          + &preprocess_error_directive(
+            message,
+            defines,
+            errors,
+            Pos(File("pos".to_string()), 0, 0),
+          )
+          + "\n",
         input,
       ),
 
@@ -96,7 +117,7 @@ pub fn preprocess(
 
       Err(error) => {
         errors.extend([(
-          Pos(format!("{}", file), 0),
+          Pos(File("pos".to_string()), 0, 0),
           Error(format!("Could not preprocess: {}", error)),
         )]);
         (preprocessed, "".to_string())
@@ -139,6 +160,7 @@ fn preprocess_pragma_directive(
   _arguments: TextLine,
   _defines: &mut HashMap<String, TextLine>,
   _errors: &mut impl Extend<(Pos, Error)>,
+  _pos: Pos,
 ) -> String {
   // silently ignore unsupported pragmas as per standard
   "".to_string()
@@ -146,25 +168,23 @@ fn preprocess_pragma_directive(
 
 fn preprocess_error_directive(
   message: TextLine,
-  file: &File,
   defines: &mut HashMap<String, TextLine>,
   errors: &mut impl Extend<(Pos, Error)>,
+  pos: Pos,
 ) -> String {
   let message = preprocess_text_line_directive(message.clone(), defines, errors);
 
-  errors.extend([(
-    Pos(format!("{}", file), 0),
-    Error(format!("Error directive: {}", message)),
-  )]);
+  errors.extend([(pos.clone(), Error(format!("Error directive: {}", message)))]);
 
   "".to_string()
 }
 
 fn preprocess_include_directive(
-  filename: TextLine,
   file: &File,
+  filename: TextLine,
   defines: &mut HashMap<String, TextLine>,
   errors: &mut impl Extend<(Pos, Error)>,
+  pos: Pos,
 ) -> String {
   // resolve defines in include directive and preprocess included file
 
@@ -173,8 +193,8 @@ fn preprocess_include_directive(
 
   match preprocess::include_directive_filename().0(&filename) {
     Ok((filename, trailing)) => match &trailing[..] {
-      "" => preprocess(
-        File(
+      "" => {
+        let incl = File(
           Path::new(&file.0)
             .parent()
             .unwrap()
@@ -182,14 +202,12 @@ fn preprocess_include_directive(
             .to_str()
             .unwrap()
             .to_string(),
-        ),
-        defines,
-        errors,
-        Some(&format!("{}", file)),
-      ),
+        );
+        preprocess(incl, defines, errors, Some(pos))
+      }
       _ => {
         errors.extend([(
-          Pos(format!("{}", file), 0),
+          Pos(File("pos".to_string()), 0, 0),
           Error(format!(
             "Trailing characters in include directive filename: `{}`",
             filename
@@ -201,7 +219,7 @@ fn preprocess_include_directive(
 
     Err(error) => {
       errors.extend([(
-        Pos(format!("{}", file), 0),
+        Pos(File("pos".to_string()), 0, 0),
         Error(format!("Could not parse: {}", error)),
       )]);
       format!("")

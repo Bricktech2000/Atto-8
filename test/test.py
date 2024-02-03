@@ -10,16 +10,20 @@ import common  # noqa
 
 open_safe = common.open_safe('Test')
 
+debug_mode = False
+
 
 def pipe(filename):
   with open_safe(filename, 'rb') as file:
-    print(f'Test: Pipe `{filename}`')
+    if debug_mode:
+      print(f'Test: Pipe `{filename}`')
     sys.stdout.flush()
     sys.stdout.buffer.write(file.read())
 
 
 def run(*args):
-  print(f'Test: Running `{" ".join(args)}`')
+  if debug_mode:
+    print(f'Test: Running `{" ".join(args)}`')
   sys.stdout.flush()
   subprocess.run([*args], check=True)
 
@@ -136,7 +140,8 @@ try:
     try:
       func()
     except subprocess.CalledProcessError as e:
-      print(f'Test: Warning: Operation subprocess `{name}` exited with code `{e.returncode}`')
+      if debug_mode:
+        print(f'Test: Warning: Operation subprocess `{name}` exited with code `{e.returncode}`')
 except KeyboardInterrupt:
   print('Test: Interrupted')
   sys.exit(1)

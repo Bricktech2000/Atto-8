@@ -15,7 +15,7 @@ fn main() {
   let memory_image_file = &args[2];
   let assembly_source_file: File = File(args[1].clone());
 
-  let preprocessed: String = preprocess(assembly_source_file, &mut errors, None);
+  let preprocessed: Vec<(Pos, String)> = preprocess(assembly_source_file, &mut errors, None);
   let mnemonics: Vec<(Pos, Mnemonic)> = mnemonize(preprocessed, &mut errors);
   let tokens: Vec<(Pos, Token)> = tokenize(mnemonics, &mut errors);
   let instructions: Vec<(Pos, Result<Instruction, u8>)> = assemble(tokens, &mut errors, "main");
@@ -78,54 +78,72 @@ enum Node {
   Not(Box<Node>),
 }
 
-fn preprocess(file: File, errors: &mut impl Extend<(Pos, Error)>, scope: Option<&str>) -> String {
+fn preprocess(
+  file: File,
+  errors: &mut impl Extend<(Pos, Error)>,
+  pos: Option<Pos>,
+) -> Vec<(Pos, String)> {
   // remove comments and resolve includes
 
   use std::path::Path;
   let assembly = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {
     errors.extend([(
-      Pos(scope.unwrap_or("[bootstrap]").to_string(), 0),
+      pos.unwrap_or(Pos(File("[bootstrap]".to_string()), 0, 0)),
       Error(format!("Unable to read file `{}`", file)),
     )]);
     format!("")
   });
 
-  let assembly: String = assembly
+  let lines: Vec<(Pos, String)> = assembly
     .split("\n")
     .map(|line| line.strip_suffix("#").unwrap_or(line))
     .map(|line| line.split("# ").next().unwrap_or(line))
-    .map(|line| match line.find("@ ") {
-      Some(i) => {
-        line[..i].to_owned()
-          + preprocess(
-            File(
-              Path::new(&file.0)
-                .parent()
-                .unwrap()
-                .join(&line[i..]["@ ".len()..])
-                .to_str()
-                .unwrap()
-                .to_string(),
-            ),
-            errors,
-            Some(&format!("{}", file)),
-          )
-          .as_str()
+    .enumerate()
+    .flat_map(|(row, line)| match line.find("@ ") {
+      Some(col) => {
+        let incl = File(
+          Path::new(&file.0)
+            .parent()
+            .unwrap()
+            .join(&line[col..]["@ ".len()..])
+            .to_str()
+            .unwrap()
+            .to_string(),
+        );
+        std::iter::once((Pos(file.clone(), row, 0), line[..col].to_string()))
+          .chain(preprocess(incl, errors, Some(Pos(file.clone(), row, col))))
+          .collect::<Vec<_>>()
       }
-      None => line.to_string(),
+      None => vec![(Pos(file.clone(), row, 0), line.to_string())],
     })
-    .map(|line| line.to_string() + "\n")
-    .collect::<String>();
+    .collect();
 
-  assembly
+  lines
 }
 
-fn mnemonize(assembly: String, _errors: &mut impl Extend<(Pos, Error)>) -> Vec<(Pos, Mnemonic)> {
-  let mnemonics: Vec<(Pos, Mnemonic)> = assembly
-    .split_whitespace()
-    .map(|mnemonic| Mnemonic(mnemonic.to_string()))
-    .enumerate()
-    .map(|(index, mnemonic)| (Pos("[token stream]".to_string(), index), mnemonic))
+fn mnemonize(
+  lines: Vec<(Pos, String)>,
+  _errors: &mut impl Extend<(Pos, Error)>,
+) -> Vec<(Pos, Mnemonic)> {
+  let mnemonics: Vec<(Pos, Mnemonic)> = lines
+    .into_iter()
+    .flat_map(|(mut pos, line)| {
+      let mut mnemonic = "".to_string();
+      let mut mnemonics = vec![];
+      for (col, char) in line.chars().enumerate() {
+        if char.is_whitespace() {
+          mnemonics.push((pos.clone(), mnemonic.clone()));
+          mnemonic = "".to_string();
+          pos = Pos(pos.0.clone(), pos.1, col + 1);
+        } else {
+          mnemonic.push(char);
+        }
+      }
+      mnemonics.push((pos.clone(), mnemonic.clone()));
+      mnemonics
+    })
+    .filter(|(_, mnemonic)| mnemonic.len() > 0)
+    .map(|(pos, mnemonic)| (pos, Mnemonic(mnemonic)))
     .collect();
 
   mnemonics
@@ -188,13 +206,7 @@ fn assemble(
         .as_ref()
         .and_then(|r#macro| macro_definitions.get_mut(&r#macro))
       {
-        Some(macro_tokens) => macro_tokens.push((
-          Pos(
-            format!("{}", current_macro.as_ref().unwrap()),
-            macro_tokens.len(),
-          ),
-          token,
-        )),
+        Some(macro_tokens) => macro_tokens.push((pos, token)),
         None => errors.extend([(pos, Error(format!("Orphan token `{}` encountered", token)))]),
       },
     }
@@ -202,7 +214,7 @@ fn assemble(
 
   let tokens = expand_macros(
     &vec![(
-      Pos("[bootstrap]".to_string(), 0),
+      Pos(File("[bootstrap]".to_string()), 0, 0),
       Token::MacroRef(Macro(entry_point.to_string())),
     )],
     &mut 0,
@@ -640,7 +652,7 @@ fn codegen(
     .collect();
 
   let mut opcodes = opcodes;
-  let pos = Pos("[codegen]".to_string(), 0);
+  let pos = Pos(File("[codegen]".to_string()), 0, 0);
 
   match common::MEM_SIZE.checked_sub(opcodes.len()) {
     Some(padding) => opcodes.extend(vec![(pos, 0x00); padding]),
