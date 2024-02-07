@@ -113,23 +113,17 @@ fn program(
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedProgram {
   match program {
-    Program(globals) => TypedProgram(
-      std::iter::empty()
-        .chain(
-          globals
-            .into_iter()
-            .filter_map(|global| typecheck::global(global, state, errors)),
-        )
-        .collect::<Vec<_>>()
+    Program(globals) => {
+      let globals = globals
         .into_iter()
-        .chain(
-          state
-            .strings
-            .iter()
-            .map(|(value, label)| TypedGlobal::String(label.clone(), value.clone())),
-        )
-        .collect(),
-    ),
+        .filter_map(|global| typecheck::global(global, state, errors))
+        .collect::<Vec<_>>();
+      let strings = state
+        .strings
+        .iter()
+        .map(|(value, label)| TypedGlobal::String(label.clone(), value.clone()));
+      TypedProgram(strings.chain(globals).collect())
+    }
   }
 }
 

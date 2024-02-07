@@ -47,7 +47,7 @@ void main(void) {
   // puts("Atto-8");
 
   free(malloc(10));
-  putc(foo(42, "test") + (char)1);
+  putc(foo(42, "test") + '\000' + '\x00' + 000 + 0b0 + 0B0 + 0x0 + 0X0);
   puts("***ok\r\n" + (unsigned)0b0011);
 
   asm { xE0 sts } // `!display_buffer`

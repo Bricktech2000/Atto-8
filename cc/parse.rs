@@ -200,6 +200,15 @@ impl<T: Clone + 'static> Parser<T> {
       ParseResult::Err((expecteds.clone(), input.to_string()))
     }))
   }
+
+  pub fn info(self, info: &'static str) -> Parser<T> {
+    self.map_err(move |expecteds| {
+      expecteds
+        .into_iter()
+        .map(|expected| format!("{} {}", expected, info))
+        .collect()
+    })
+  }
 }
 
 // elementary parsers
@@ -264,10 +273,10 @@ pub fn group<T: Clone + 'static>(name: String, parser: Parser<T>) -> Parser<T> {
 pub fn digit(radix: u32) -> Parser<char> {
   parse::group(
     match radix {
-      2 => format!("binary digit"),
-      8 => format!("octal digit"),
+      0b10 => format!("binary digit"),
+      0o10 => format!("octal digit"),
       10 => format!("decimal digit"),
-      16 => format!("hexadecimal digit"),
+      0x10 => format!("hexadecimal digit"),
       _ => format!("base-{} digit", radix),
     },
     parse::satisfy(move |c| c.is_digit(radix)),
@@ -281,11 +290,12 @@ pub fn alphabetic() -> Parser<char> {
   )
 }
 
+pub fn newline() -> Parser<()> {
+  parse::group(format!("newline character"), parse::char('\n'))
+}
+
 pub fn whitespace() -> Parser<char> {
-  parse::group(
-    format!("whitespace character"),
-    parse::satisfy(|c| c.is_whitespace()),
-  )
+  parse::satisfy(|c| c.is_whitespace()).map_err(|_| vec![]) // ignore whitespace errors
 }
 
 pub fn whitespaces_group<T: Clone + 'static>(expected: String, parser: Parser<T>) -> Parser<T> {
@@ -302,6 +312,11 @@ pub fn whitespaces_char(char: char) -> Parser<()> {
 
 pub fn whitespaces_string(string: &'static str) -> Parser<()> {
   parse::many(parse::whitespace()).and_then(move |_| parse::string(string))
+}
+
+#[allow(dead_code)]
+pub fn whitespaces_newline() -> Parser<()> {
+  parse::many(parse::whitespace()).and_then(|_| parse::newline())
 }
 
 // parser combinators
@@ -411,27 +426,18 @@ fn function_declaration_global() -> Parser<Global> {
         parse::type_name().and_then(move |type_name| {
           parse::identifier().and_then(move |identifier| {
             Parser::pure(())
-              .and_then(|_| {
-                parse::whitespaces_char('(')
-                  .map_err(|_| vec![format!("'(' to begin parameter list")])
-              })
+              .and_then(|_| parse::whitespaces_char('(').info("to begin parameter list"))
               .and_then(|_| parse::parameter_list())
               .and_then(move |parameters| {
                 parse::maybe(
                   parse::whitespaces_char(',')
-                    .map_err(|_| vec![format!("',' then \"...\" for variadic parameter")])
+                    .info("then ellipsis for variadic parameter")
                     .and_then(|_| parse::whitespaces_string("...")),
                 )
                 .and_then(move |is_variadic| {
                   Parser::pure(())
-                    .and_then(|_| {
-                      parse::whitespaces_char(')')
-                        .map_err(|_| vec![format!("')' to end parameter list")])
-                    })
-                    .and_then(|_| {
-                      parse::whitespaces_char(';')
-                        .map_err(|_| vec![format!("';' to end declaration")])
-                    })
+                    .and_then(|_| parse::whitespaces_char(')').info("to end parameter list"))
+                    .and_then(|_| parse::whitespaces_char(';').info("to end declaration"))
                     .map(move |_| {
                       Global::FunctionDeclaration(
                         is_inline.is_some(),
@@ -458,24 +464,23 @@ fn function_definition_global() -> Parser<Global> {
         parse::type_name().and_then(move |type_name| {
           parse::identifier().and_then(move |identifier| {
             Parser::pure(())
-              .and_then(|_| {
-                parse::whitespaces_char('(')
-                  .map_err(|_| vec![format!("'(' to begin parameter list")])
-              })
+              .and_then(|_| parse::whitespaces_char('(').info("to begin parameter list"))
               .and_then(|_| parse::parameter_list())
               .and_then(move |parameters| {
                 parse::maybe(
                   parse::whitespaces_char(',')
-                    .map_err(|_| vec![format!("',' then \"...\" for variadic parameter")])
+                    .info("then ellipsis for variadic parameter")
                     .and_then(|_| parse::whitespaces_string("...")),
                 )
                 .and_then(move |is_variadic| {
                   Parser::pure(())
+                    .and_then(|_| parse::whitespaces_char(')').info("to end parameter list"))
                     .and_then(|_| {
-                      parse::whitespaces_char(')')
-                        .map_err(|_| vec![format!("')' to end parameter list")])
+                      parse::whitespaces_group(
+                        format!("statement to begin function body"),
+                        parse::statement(),
+                      )
                     })
-                    .and_then(|_| parse::statement())
                     .map(move |statement| {
                       Global::FunctionDefinition(
                         is_inline.is_some(),
@@ -503,7 +508,7 @@ fn parameter_list() -> Parser<Vec<Object>> {
           .or_else(|_| Parser::pure("".to_string()))
           .map(|identifier| Object(type_name, identifier))
       }),
-      parse::whitespaces_char(',').map_err(|_| vec![format!("',' to continue parameter list")]),
+      parse::whitespaces_char(',').info("to continue parameter list"),
     ),
   )
 }
@@ -581,11 +586,11 @@ fn compound_statement() -> Parser<Statement> {
   parse::whitespaces_group(
     format!("compound statement"),
     Parser::pure(())
-      .and_then(|_| parse::whitespaces_char('{').map_err(|_| vec![format!("'{{' to begin block")]))
+      .and_then(|_| parse::whitespaces_char('{').info("to begin block"))
       .and_then(|_| {
         parse::many(parse::statement()).and_then(|statements| {
           parse::whitespaces_char('}')
-            .map_err(|_| vec![format!("'}}' to end block")])
+            .info("to end block")
             .map(move |_| statements)
         })
       })
@@ -614,7 +619,7 @@ fn jump_statement() -> Parser<Statement> {
     .and_then(|_| {
       parse::maybe(parse::expression()).and_then(|expression| {
         parse::whitespaces_char(';')
-          .map_err(|_| vec![format!("';' to end statement")])
+          .info("to end statement")
           .map(|_| expression)
       })
     }) // TODO does not obey grammar
@@ -632,11 +637,11 @@ fn selection_statement() -> Parser<Statement> {
 fn if_statement() -> Parser<Statement> {
   Parser::pure(())
     .and_then(|_| parse::whitespaces_string("if"))
-    .and_then(|_| parse::whitespaces_char('(').map_err(|_| vec![format!("'(' to begin condition")]))
+    .and_then(|_| parse::whitespaces_char('(').info("to begin condition"))
     .and_then(|_| parse::expression())
     .and_then(|expression| {
       parse::whitespaces_char(')')
-        .map_err(|_| vec![format!("')' to end condition")])
+        .info("to end condition")
         .and_then(|_| parse::statement())
         .map(|statement| Statement::If(expression, Box::new(statement), None))
     })
@@ -645,11 +650,11 @@ fn if_statement() -> Parser<Statement> {
 fn if_else_statement() -> Parser<Statement> {
   Parser::pure(())
     .and_then(|_| parse::whitespaces_string("if"))
-    .and_then(|_| parse::whitespaces_char('(').map_err(|_| vec![format!("'(' to begin condition")]))
+    .and_then(|_| parse::whitespaces_char('(').info("to begin condition"))
     .and_then(|_| parse::expression())
     .and_then(|expression| {
       parse::whitespaces_char(')')
-        .map_err(|_| vec![format!("')' to end condition")])
+        .info("to end condition")
         .and_then(|_| parse::statement())
         .and_then(|statement1| {
           parse::whitespaces_string("else")
@@ -677,11 +682,11 @@ fn iteration_statement() -> Parser<Statement> {
 fn while_statement() -> Parser<Statement> {
   Parser::pure(())
     .and_then(|_| parse::whitespaces_string("while"))
-    .and_then(|_| parse::whitespaces_char('(').map_err(|_| vec![format!("'(' to begin condition")]))
+    .and_then(|_| parse::whitespaces_char('(').info("to begin condition"))
     .and_then(|_| parse::expression())
     .and_then(|expression| {
       parse::whitespaces_char(')')
-        .map_err(|_| vec![format!("')' to end condition")])
+        .info("to end condition")
         .and_then(|_| parse::compound_statement())
         .map(|statements| Statement::While(expression, Box::new(statements)))
     })
@@ -703,7 +708,7 @@ fn expression_statement() -> Parser<Statement> {
     .and_then(|_| parse::expression())
     .and_then(|expression| {
       parse::whitespaces_char(';')
-        .map_err(|_| vec![format!("';' to end statement")])
+        .info("to end statement")
         .map(|_| Statement::Expression(expression))
     })
 }
@@ -711,19 +716,18 @@ fn expression_statement() -> Parser<Statement> {
 fn assembly_statement() -> Parser<Statement> {
   Parser::pure(())
     .and_then(|_| parse::whitespaces_string("asm"))
-    .and_then(|_| {
-      parse::whitespaces_char('{').map_err(|_| vec![format!("'{{' to begin assembly statement")])
-    })
+    .and_then(|_| parse::whitespaces_char('{').info("to begin assembly statement"))
     .and_then(|_| {
       parse::many(
         parse::satisfy(|c| c != '}')
-          .map_err(|_| vec![format!("non-'}}' to continue assembly statement")]),
+          .map_err(|_| vec![format!("non-'}}'")])
+          .info("to continue assembly statement"),
       )
     })
     .map(|chars| chars.iter().collect::<String>().trim().to_string())
     .and_then(|assembly| {
       parse::whitespaces_char('}')
-        .map_err(|_| vec![format!("'}}' to end assembly statement")])
+        .info("to end assembly statement")
         .map(move |_| Statement::Assembly(assembly))
     })
 }
@@ -743,13 +747,11 @@ fn conditional_expression() -> Parser<Expression> {
   parse::logical_or_expression().and_then(|expression1| {
     let expression = expression1.clone();
     Parser::pure(())
-      .and_then(|_| {
-        parse::whitespaces_char('?').map_err(|_| vec![format!("'?' to begin ternary operator")])
-      })
+      .and_then(|_| parse::whitespaces_char('?').info("to begin ternary operator"))
       .and_then(|_| parse::expression())
       .and_then(|expression2| {
         parse::whitespaces_char(':')
-          .map_err(|_| vec![format!("':' then expression to end ternary operator")])
+          .info("then expression to end ternary operator")
           .and_then(|_| parse::conditional_expression())
           .map(|expression3| {
             Expression::Conditional(
@@ -852,11 +854,11 @@ fn multiplicative_expression() -> Parser<Expression> {
 
 fn cast_expression() -> Parser<Expression> {
   parse::whitespaces_char('(')
-    .map_err(|_| vec![format!("'(' to begin cast")])
+    .info("to begin cast")
     .and_then(|_| parse::type_name())
     .and_then(|type_name| {
       parse::whitespaces_char(')')
-        .map_err(|_| vec![format!("')' then expression to end cast")])
+        .info("then expression to end cast")
         .and_then(|_| parse::cast_expression())
         .map(|cast_expression| Expression::Cast(type_name, Box::new(cast_expression)))
     })
@@ -891,13 +893,11 @@ fn unary_expression() -> Parser<Expression> {
     })
     .or_else(|_| {
       Parser::pure(())
-        .and_then(|_| {
-          parse::whitespaces_char('(').map_err(|_| vec![format!("'(' to begin expression")])
-        })
+        .and_then(|_| parse::whitespaces_char('(').info("to begin expression"))
         .and_then(|_| parse::expression()) // TODO does not obey grammar
         .and_then(|expression| {
           parse::whitespaces_char(')')
-            .map_err(|_| vec![format!("')' to end expression")])
+            .info("to end expression")
             .map(|_| expression)
         })
     })
@@ -915,19 +915,16 @@ fn unary_expression() -> Parser<Expression> {
       Parser::expected(vec![])
         .or_else(|_| {
           Parser::pure(())
-            .and_then(|_| {
-              parse::whitespaces_char('(').map_err(|_| vec![format!("'(' to begin argument list")])
-            })
+            .and_then(|_| parse::whitespaces_char('(').info("to begin argument list"))
             .and_then(|_| {
               parse::sepby(
                 parse::expression(),
-                parse::whitespaces_char(',')
-                  .map_err(|_| vec![format!("',' to continue argument list")]),
+                parse::whitespaces_char(',').info("to continue argument list"),
               )
             })
             .and_then(|arguments| {
               parse::whitespaces_char(')')
-                .map_err(|_| vec![format!("')' to end argument list")])
+                .info("to end argument list")
                 .map(|_| Expression::FunctionCall(Box::new(expression1), arguments))
             })
         })
@@ -953,26 +950,39 @@ fn identifier() -> Parser<String> {
 }
 
 fn integer_constant() -> Parser<Expression> {
-  // TODO does not obey grammar
+  // TODO does not support suffixes
   parse::whitespaces_group(
     format!("integer constant"),
     Parser::expected(vec![])
       .or_else(|_| {
-        parse::whitespaces_string("0x")
-          .and_then(|_| parse::many1(parse::digit(0x10)))
-          .map(|digits| digits.into_iter().collect::<String>())
-          .map(|digits| u8::from_str_radix(&digits, 0x10))
-      })
-      .or_else(|_| {
+        // TODO non-standard <binary-constant>
         parse::whitespaces_string("0b")
+          .or_else(|_| parse::whitespaces_string("0B"))
           .and_then(|_| parse::many1(parse::digit(0b10)))
           .map(|digits| digits.into_iter().collect::<String>())
           .map(|digits| u8::from_str_radix(&digits, 0b10))
       })
       .or_else(|_| {
-        parse::many(parse::whitespace())
-          .and_then(|_| parse::many1(parse::digit(10)))
+        // <hexadecimal-constant>
+        parse::whitespaces_string("0x")
+          .or_else(|_| parse::whitespaces_string("0X"))
+          .and_then(|_| parse::many1(parse::digit(0x10)))
           .map(|digits| digits.into_iter().collect::<String>())
+          .map(|digits| u8::from_str_radix(&digits, 0x10))
+      })
+      .or_else(|_| {
+        // <octal-constant>
+        parse::whitespaces_char('0')
+          .and_then(|_| parse::many(parse::digit(0o10)))
+          .map(|digits| std::iter::once('0').chain(digits).collect::<String>())
+          .map(|digits| u8::from_str_radix(&digits, 0o10))
+      })
+      .or_else(|_| {
+        // <decimal-constant>
+        parse::many(parse::whitespace())
+          .and_then(|_| parse::satisfy(|c| c.is_digit(10) && c != '0'))
+          .and_then(|first| parse::many(parse::digit(10)).map(move |rest| (first, rest)))
+          .map(|(first, rest)| std::iter::once(first).chain(rest).collect::<String>())
           .map(|digits| u8::from_str_radix(&digits, 10))
       })
       .map(|digits| digits.unwrap_or_else(|_| panic!("Could not parse integer constant")))
@@ -981,7 +991,6 @@ fn integer_constant() -> Parser<Expression> {
 }
 
 fn character_constant() -> Parser<Expression> {
-  // TODO currently only parsing <simple-escape-sequence>s
   parse::whitespaces_group(
     format!("character constant"),
     Parser::pure(())
@@ -991,7 +1000,11 @@ fn character_constant() -> Parser<Expression> {
           .map_err(|_| vec![format!("character constant character")])
           .or_else(|_| parse::escape_sequence())
       })
-      .and_then(|char| parse::char('\'').map(move |_| Expression::CharacterConstant(char))),
+      .and_then(|char| {
+        parse::char('\'')
+          .info("to end character constant")
+          .map(move |_| Expression::CharacterConstant(char))
+      }),
   )
 }
 
@@ -1008,24 +1021,66 @@ fn string_literal() -> Parser<Expression> {
         )
         .map(|chars| chars.into_iter().collect::<String>())
       })
-      .and_then(|string| parse::char('"').map(move |_| Expression::StringLiteral(string))),
+      .and_then(|string| {
+        parse::char('"')
+          .info("to end string literal")
+          .map(move |_| Expression::StringLiteral(string))
+      }),
   )
 }
 
 fn escape_sequence() -> Parser<char> {
   parse::group(
     format!("escape sequence"),
-    Parser::expected(vec![])
-      .or_else(|_| parse::string("\\\'").map(|_| '\''))
-      .or_else(|_| parse::string("\\\"").map(|_| '\"'))
-      .or_else(|_| parse::string("\\?").map(|_| '?'))
-      .or_else(|_| parse::string("\\\\").map(|_| '\\'))
-      .or_else(|_| parse::string("\\a").map(|_| '\x07'))
-      .or_else(|_| parse::string("\\b").map(|_| '\x08'))
-      .or_else(|_| parse::string("\\f").map(|_| '\x0C'))
-      .or_else(|_| parse::string("\\n").map(|_| '\n'))
-      .or_else(|_| parse::string("\\r").map(|_| '\r'))
-      .or_else(|_| parse::string("\\t").map(|_| '\t'))
-      .or_else(|_| parse::string("\\0").map(|_| '\0')), // TODO should be <octal-escape-sequence>
+    parse::char('\\').and_then(|_| {
+      Parser::expected(vec![])
+        .or_else(|_| {
+          // <simple-escape-sequence>
+          Parser::expected(vec![])
+            .or_else(|_| parse::char('\'').map(|_| '\''))
+            .or_else(|_| parse::char('"').map(|_| '"'))
+            .or_else(|_| parse::char('?').map(|_| '?'))
+            .or_else(|_| parse::char('\\').map(|_| '\\'))
+            .or_else(|_| parse::char('a').map(|_| '\x07'))
+            .or_else(|_| parse::char('b').map(|_| '\x08'))
+            .or_else(|_| parse::char('f').map(|_| '\x0C'))
+            .or_else(|_| parse::char('n').map(|_| '\n'))
+            .or_else(|_| parse::char('r').map(|_| '\r'))
+            .or_else(|_| parse::char('t').map(|_| '\t'))
+            .or_else(|_| parse::char('v').map(|_| '\x0B'))
+            .map_err(|_| vec![format!("one of `'\"?\\abfnrtv`")])
+        })
+        .or_else(|_| {
+          // <octal-escape-sequence>
+          parse::digit(0o10).and_then(|first| {
+            parse::maybe(parse::digit(0o10)).and_then(move |second| {
+              parse::maybe(parse::digit(0o10)).map(move |third| {
+                let digits = std::iter::once(first)
+                  .chain(second.into_iter())
+                  .chain(third.into_iter());
+                let digits = digits.collect::<String>();
+                u8::from_str_radix(&digits, 0o10)
+                  .unwrap_or_else(|_| panic!("Could not parse escape sequence"))
+                  as char
+              })
+            })
+          })
+        })
+        .or_else(|_| {
+          // <hexadecimal-escape-sequence>
+          parse::char('x')
+            .info("then hexadecimal digit")
+            .and_then(|_| parse::digit(0x10))
+            .and_then(|first| {
+              parse::maybe(parse::digit(0x10)).map(move |second| {
+                let digits = std::iter::once(first).chain(second.into_iter());
+                let digits = digits.collect::<String>();
+                u8::from_str_radix(&digits, 0x10)
+                  .unwrap_or_else(|_| panic!("Could not parse escape sequence"))
+                  as char
+              })
+            })
+        })
+    }),
   )
 }

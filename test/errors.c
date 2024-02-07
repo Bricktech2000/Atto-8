@@ -6,16 +6,16 @@
 
 /* int main(void) { return 0b1234; } */
 
-/* void main( { */
+/* int main( { */
 /*   return 0; } */
 
-/* void main(void) { return 5 + ; } */
+/* int main(void) { return 5 + ; } */
 
 /* 123 */
 
-/* void main(void) { 1 ? 2; } */
+/* int main(void) { 1 ? 2; } */
 
-/* void main(void) { */
+/* int main(void) { */
 /*   if (1 */
 /*     return 0; */
 /* } */
@@ -32,5 +32,11 @@
 
 /* #include "file" trailing */
 
-/* void main(void) { */
-/*   "hello; } */
+/* char *main(void) { */
+/*   "unclosed; } */
+
+/* char main(void) { return 'abc'; } */
+
+/* char *main(void) { return "\X1F"; } */
+
+/* char *main(void) { return "\xyz"; } */

@@ -174,7 +174,7 @@ fn preprocess_error_directive(
 ) -> String {
   let message = preprocess_text_line_directive(message.clone(), defines, errors);
 
-  errors.extend([(pos.clone(), Error(format!("Error directive: {}", message)))]);
+  errors.extend([(pos.clone(), Error(format!("#error {}", message)))]);
 
   "".to_string()
 }
@@ -231,10 +231,7 @@ fn any() -> Parser<char> {
 }
 
 fn whitespace() -> Parser<char> {
-  parse::group(
-    format!("non-newline whitespace"),
-    parse::satisfy(|c| c.is_whitespace() && c != '\n'),
-  )
+  parse::satisfy(|c| c.is_whitespace() && c != '\n').map_err(|_| vec![]) // ignore whitespace errors
 }
 
 pub fn whitespaces_group<T: Clone + 'static>(expected: String, parser: Parser<T>) -> Parser<T> {
@@ -254,6 +251,10 @@ fn whitespaces_string(string: &'static str) -> Parser<()> {
   parse::many(preprocess::whitespace()).and_then(move |_| parse::string(string))
 }
 
+fn whitespaces_newline() -> Parser<()> {
+  parse::many(preprocess::whitespace()).and_then(|_| parse::newline())
+}
+
 type TextLine = Vec<Result<String, char>>;
 
 fn include_directive() -> Parser<Directive> {
@@ -263,7 +264,7 @@ fn include_directive() -> Parser<Directive> {
     .and_then(|_| preprocess::whitespaces_string("include"))
     .and_then(|_| preprocess::text_line())
     .and_then(|filename| {
-      preprocess::whitespaces_char('\n').map(move |_| Directive::Include(filename))
+      preprocess::whitespaces_newline().map(move |_| Directive::Include(filename))
     })
 }
 
@@ -277,7 +278,7 @@ fn define_directive() -> Parser<Directive> {
       let identifier2 = identifier.clone();
       preprocess::text_line()
         .and_then(|replacement_list| {
-          preprocess::whitespaces_char('\n')
+          preprocess::whitespaces_newline()
             .map(move |_| Directive::Define(identifier, replacement_list))
         })
         .or_else(|_| Parser::pure(Directive::Define(identifier2, vec![])))
@@ -291,7 +292,7 @@ fn undef_directive() -> Parser<Directive> {
     .and_then(|_| preprocess::whitespaces_string("undef"))
     .and_then(|_| preprocess::identifier())
     .and_then(|identifier| {
-      preprocess::whitespaces_char('\n').map(move |_| Directive::Undef(identifier))
+      preprocess::whitespaces_newline().map(move |_| Directive::Undef(identifier))
     })
 }
 
@@ -302,7 +303,7 @@ fn pragma_directive() -> Parser<Directive> {
     .and_then(|_| preprocess::whitespaces_string("pragma"))
     .and_then(|_| preprocess::text_line())
     .and_then(|arguments| {
-      preprocess::whitespaces_char('\n').map(move |_| Directive::Pragma(arguments))
+      preprocess::whitespaces_newline().map(move |_| Directive::Pragma(arguments))
     })
 }
 
@@ -312,14 +313,14 @@ fn error_directive() -> Parser<Directive> {
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_string("error"))
     .and_then(|_| preprocess::text_line())
-    .and_then(|message| preprocess::whitespaces_char('\n').map(move |_| Directive::Error(message)))
+    .and_then(|message| preprocess::whitespaces_newline().map(move |_| Directive::Error(message)))
 }
 
 fn null_directive() -> Parser<Directive> {
   // TODO does not obey grammar
   Parser::pure(())
     .and_then(|_| preprocess::whitespaces_char('#'))
-    .and_then(|_| preprocess::whitespaces_char('\n').map(|_| Directive::Null))
+    .and_then(|_| preprocess::whitespaces_newline().map(|_| Directive::Null))
 }
 
 fn text_line_directive() -> Parser<Directive> {
@@ -335,7 +336,7 @@ fn text_line_directive() -> Parser<Directive> {
         Parser::expected(vec![])
       } else {
         preprocess::text_line().and_then(|text_line| {
-          preprocess::whitespaces_char('\n').map(move |_| Directive::TextLine(text_line))
+          preprocess::whitespaces_newline().map(move |_| Directive::TextLine(text_line))
         })
       }
     })
