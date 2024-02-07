@@ -14,10 +14,6 @@
 // #include EMPTY<file.h>
 // EMPTY #include <file.h>
 
-// #error test error in file __FILE__ on line __LINE__
-
-// #invalid directive
-
 #// null directive
 
 #define ADDITION                                                               \

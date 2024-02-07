@@ -62,6 +62,7 @@ python3 test.py fizzbuzz.asm asm emu
 python3 test.py rule\ 110.asm asm emu
 python3 test.py collatz.asm asm emu
 python3 test.py reverse.asm asm emu
+python3 test.py str2asm.asm asm emu
 python3 test.py hanoi.asm asm emu
 python3 test.py rot13.asm asm emu
 python3 test.py simon.asm asm emu
@@ -80,11 +81,12 @@ python3 test.py addition.hex enc emu
 python3 test.py checkerboard.hex enc emu
 python3 test.py pipe.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py hello\ world.c libc/stdio.c libc/crt0.c cc asm emu
-python3 test.py test.c libc/string.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
+python3 test.py misc.c libc/string.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py fibonacci.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py printf.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py hanoi.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py errors.asm asm emu
+python3 test.py errors.c libc/crt0.c cc asm emu
 ```
 
 ![Bad Apple Playback Demo](misc/assets/bad%20apple.gif) ![Brainfuck Standard Output Demo](misc/assets/brainfuck.gif) ![Snake Game Demo](misc/assets/snake.gif) ![2048 Clone Demo](misc/assets/2048.gif) ![Flappy Bird Clone Demo](misc/assets/flappy.gif) ![Game of Life Simulation Demo](misc/assets/life.gif)
