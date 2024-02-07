@@ -1,7 +1,6 @@
 use crate::*;
 use parse::Parser;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 const DUNDER_FILE: &str = "__FILE__";
 const DUNDER_LINE: &str = "__LINE__";
@@ -14,7 +13,7 @@ pub fn preprocess(
 ) -> String {
   // remove comments and resolve includes and defines
 
-  let preprocessor = Parser::error(Error(format!("")))
+  let preprocessor = Parser::expected(vec![])
     .or_else(|_| preprocess::include_directive())
     .or_else(|_| preprocess::define_directive())
     .or_else(|_| preprocess::undef_directive())
@@ -54,7 +53,7 @@ pub fn preprocess(
     .collect::<String>();
 
   let preprocessed = loop {
-    (preprocessed, source) = match preprocessor.0(&source) {
+    (preprocessed, source) = match preprocessor.0(&source).into_result() {
       Ok((Directive::Include(filename), input)) => (
         preprocessed
           + &preprocess_include_directive(
@@ -62,7 +61,7 @@ pub fn preprocess(
             filename,
             defines,
             errors,
-            Pos(File("pos".to_string()), 0, 0),
+            Pos(File("[preprocess]".to_string()), 0, 0),
           ),
         input,
       ),
@@ -83,7 +82,7 @@ pub fn preprocess(
             arguments,
             defines,
             errors,
-            Pos(File("pos".to_string()), 0, 0),
+            Pos(File("[preprocess]".to_string()), 0, 0),
           )
           + "\n",
         input,
@@ -95,7 +94,7 @@ pub fn preprocess(
             message,
             defines,
             errors,
-            Pos(File("pos".to_string()), 0, 0),
+            Pos(File("[preprocess]".to_string()), 0, 0),
           )
           + "\n",
         input,
@@ -115,10 +114,10 @@ pub fn preprocess(
         };
       }
 
-      Err(error) => {
+      Err(expecteds) => {
         errors.extend([(
-          Pos(File("pos".to_string()), 0, 0),
-          Error(format!("Could not preprocess: {}", error)),
+          Pos(File("[preprocess]".to_string()), 0, 0),
+          Error(parse::format_expecteds(expecteds)),
         )]);
         (preprocessed, "".to_string())
       }
@@ -192,37 +191,21 @@ fn preprocess_include_directive(
   use std::path::Path;
   let filename = preprocess_text_line_directive(filename, defines, errors);
 
-  match preprocess::include_directive_filename().0(&filename) {
-    Ok((filename, trailing)) => match &trailing[..] {
-      "" => {
-        let incl = File(
-          Path::new(&file.0)
-            .parent()
-            .unwrap()
-            .join(filename)
-            .to_str()
-            .unwrap()
-            .to_string(),
-        );
-        preprocess(incl, defines, errors, Some(pos))
-      }
-      _ => {
-        errors.extend([(
-          Pos(File("pos".to_string()), 0, 0),
-          Error(format!(
-            "Trailing characters in include directive filename: `{}`",
-            filename
-          )),
-        )]);
-        format!("")
-      }
-    },
-
+  match preprocess::include_directive_filename().parse(&filename) {
+    Ok(filename) => {
+      let incl = File(
+        Path::new(&file.0)
+          .parent()
+          .unwrap()
+          .join(filename)
+          .to_str()
+          .unwrap()
+          .to_string(),
+      );
+      preprocess(incl, defines, errors, Some(pos))
+    }
     Err(error) => {
-      errors.extend([(
-        Pos(File("pos".to_string()), 0, 0),
-        Error(format!("Could not parse: {}", error)),
-      )]);
+      errors.extend([(Pos(File("[preprocess]".to_string()), 0, 0), Error(error))]);
       format!("")
     }
   }
@@ -241,11 +224,21 @@ enum Directive {
 }
 
 fn any() -> Parser<char> {
-  parse::satisfy(|c| c != '\n').meta(format!("Non-Newline"))
+  parse::group(
+    format!("non-newline character"),
+    parse::satisfy(|c| c != '\n'),
+  )
 }
 
 fn whitespace() -> Parser<char> {
-  parse::satisfy(|c| c.is_whitespace() && c != '\n').meta(format!("Whitespace"))
+  parse::group(
+    format!("non-newline whitespace"),
+    parse::satisfy(|c| c.is_whitespace() && c != '\n'),
+  )
+}
+
+pub fn whitespaces_group<T: Clone + 'static>(expected: String, parser: Parser<T>) -> Parser<T> {
+  parse::many(preprocess::whitespace()).and_then(|_| parse::group(expected, parser))
 }
 
 #[allow(dead_code)]
@@ -265,19 +258,18 @@ type TextLine = Vec<Result<String, char>>;
 
 fn include_directive() -> Parser<Directive> {
   // TODO does not obey grammar
-  Parser::r#return(())
+  Parser::pure(())
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_string("include"))
     .and_then(|_| preprocess::text_line())
     .and_then(|filename| {
       preprocess::whitespaces_char('\n').map(move |_| Directive::Include(filename))
     })
-    .meta(format!("Include Directive"))
 }
 
 fn define_directive() -> Parser<Directive> {
   // TODO does not obey grammar
-  Parser::r#return(())
+  Parser::pure(())
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_string("define"))
     .and_then(|_| preprocess::identifier())
@@ -288,116 +280,106 @@ fn define_directive() -> Parser<Directive> {
           preprocess::whitespaces_char('\n')
             .map(move |_| Directive::Define(identifier, replacement_list))
         })
-        .or_else(|_| Parser::r#return(Directive::Define(identifier2, vec![])))
+        .or_else(|_| Parser::pure(Directive::Define(identifier2, vec![])))
     })
-    .meta(format!("Define Directive"))
 }
 
 fn undef_directive() -> Parser<Directive> {
   // TODO does not obey grammar
-  Parser::r#return(())
+  Parser::pure(())
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_string("undef"))
     .and_then(|_| preprocess::identifier())
     .and_then(|identifier| {
       preprocess::whitespaces_char('\n').map(move |_| Directive::Undef(identifier))
     })
-    .meta(format!("Undef Directive"))
 }
 
 fn pragma_directive() -> Parser<Directive> {
   // TODO does not obey grammar
-  Parser::r#return(())
+  Parser::pure(())
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_string("pragma"))
     .and_then(|_| preprocess::text_line())
     .and_then(|arguments| {
       preprocess::whitespaces_char('\n').map(move |_| Directive::Pragma(arguments))
     })
-    .meta(format!("Pragma Directive"))
 }
 
 fn error_directive() -> Parser<Directive> {
   // TODO does not obey grammar
-  Parser::r#return(())
+  Parser::pure(())
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_string("error"))
     .and_then(|_| preprocess::text_line())
     .and_then(|message| preprocess::whitespaces_char('\n').map(move |_| Directive::Error(message)))
-    .meta(format!("Error Directive"))
 }
 
 fn null_directive() -> Parser<Directive> {
   // TODO does not obey grammar
-  Parser::r#return(())
+  Parser::pure(())
     .and_then(|_| preprocess::whitespaces_char('#'))
     .and_then(|_| preprocess::whitespaces_char('\n').map(|_| Directive::Null))
-    .meta(format!("Null Directive"))
 }
 
 fn text_line_directive() -> Parser<Directive> {
   // TODO does not obey grammar
-  preprocess::text_line()
-    .and_then(|text_line| {
-      // if first non-whitespace character is `#`, assume it was a misparsed directive
-      // and error out here in the preprocessor rather than in later stages
-      Parser(Rc::new(move |input: &str| {
-        match text_line
-          .iter()
-          .find(|item| !item.as_ref().err().map_or(false, |c| c.is_whitespace()))
-        {
-          Some(Err('#')) => Err(Error(format!("got directive"))),
-          _ => Ok((text_line.clone(), input.to_string())),
-        }
-      }))
+
+  // if first non-whitespace character is `'#'`, assume misparsed directive
+  // and error out here in the preprocessor rather than later in the parser
+  preprocess::whitespaces_char('#')
+    // using `"include"` as sentinel is hacky but works
+    .and_then(|_| Parser::expected(vec!["\"include\"".to_string()]))
+    .or_else(|expecteds| {
+      if expecteds.contains(&"\"include\"".to_string()) {
+        Parser::expected(vec![])
+      } else {
+        preprocess::text_line().and_then(|text_line| {
+          preprocess::whitespaces_char('\n').map(move |_| Directive::TextLine(text_line))
+        })
+      }
     })
-    .and_then(|text_line| {
-      preprocess::whitespaces_char('\n').map(move |_| Directive::TextLine(text_line))
-    })
-    .meta(format!("Text Line Directive"))
 }
 
 fn text_line() -> Parser<TextLine> {
   // TODO does not obey grammar
-  parse::many(preprocess::whitespace())
-    .and_then(|_| {
-      parse::many(
-        Parser::error(Error(format!("")))
-          .or_else(|_| preprocess::whitespace().map(|character| Err(character)))
-          .or_else(|_| preprocess::identifier().map(|identifier| Ok(identifier)))
-          .or_else(|_| preprocess::any().map(|character| Err(character))),
-      )
-    })
-    .meta(format!("Text Line"))
+  parse::many(preprocess::whitespace()).and_then(|_| {
+    parse::many(
+      Parser::expected(vec![])
+        .or_else(|_| preprocess::whitespace().map(|character| Err(character)))
+        .or_else(|_| preprocess::identifier().map(|identifier| Ok(identifier)))
+        .or_else(|_| preprocess::any().map(|character| Err(character))),
+    )
+  })
 }
 
 fn identifier() -> Parser<String> {
   // TODO does not obey grammar
-  parse::many(preprocess::whitespace())
-    .and_then(|_| {
-      parse::many1(
-        Parser::error(Error(format!("")))
-          .or_else(|_| parse::digit(10))
-          .or_else(|_| parse::alphabetic())
-          .or_else(|_| parse::char('_').map(|_| '_')),
-      )
-    })
-    .map(|chars| chars.iter().collect::<String>())
-    .meta(format!("Identifier"))
+  preprocess::whitespaces_group(
+    format!("preprocessor identifier"),
+    parse::many1(
+      Parser::expected(vec![])
+        .or_else(|_| parse::digit(10))
+        .or_else(|_| parse::alphabetic())
+        .or_else(|_| parse::char('_').map(|_| '_')),
+    )
+    .map(|chars| chars.iter().collect::<String>()),
+  )
 }
 
 fn include_directive_filename() -> Parser<String> {
-  Parser::error(Error(format!("")))
+  Parser::expected(vec![])
     .or_else(|_| {
       parse::char('"')
         .and_then(|_| parse::many(parse::satisfy(|c| c != '"')))
         .and_then(|chars| parse::char('"').map(|_| chars))
+        .and_then(|chars| parse::eof().map(|_| chars))
     })
     .or_else(|_| {
       parse::char('<')
         .and_then(|_| parse::many(parse::satisfy(|c| c != '>')))
         .and_then(|chars| parse::char('>').map(|_| chars))
+        .and_then(|chars| parse::eof().map(|_| chars))
     })
     .map(|chars| chars.into_iter().collect::<String>())
-    .meta(format!("Include Directive Filename"))
 }

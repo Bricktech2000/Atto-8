@@ -659,13 +659,15 @@ fn codegen(
     .collect();
 
   let mut opcodes = opcodes;
-  let pos = Pos(File("[codegen]".to_string()), 0, 0);
 
   match common::MEM_SIZE.checked_sub(opcodes.len()) {
-    Some(padding) => opcodes.extend(vec![(pos, 0x00); padding]),
+    Some(padding) => opcodes.extend(vec![
+      (Pos(File("[codegen]".to_string()), 0, 0), 0x00);
+      padding
+    ]),
     None => {
       errors.extend([(
-        pos,
+        opcodes[common::MEM_SIZE].0.clone(),
         Error(format!(
           "Program size `{:02X}` exceeds available memory of size `{:02X}`",
           opcodes.len(),
