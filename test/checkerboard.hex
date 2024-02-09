@@ -1,3 +1,6 @@
+# @ lib/core.asm
+# @ lib/display.asm
+#
 # main! !nop
 #   loop:
 #     x55 ld0 ld0 not ld0

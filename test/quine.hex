@@ -1,0 +1,15 @@
+# prints its own source code by reading through memeory,
+# converting every byte to hex, and sending result to `stdout`
+
+# @ lib/core.asm
+# @ lib/types.asm
+#
+# main!
+#   x01
+#     !char.digit_zero st1 !char.digit_one st1 # `!putc`
+#   for_b:
+#     !char.space st1 # `!putc`
+#     ld0 lda !u8.to_hex st2 st1 # `!putc !putc`
+#   inc ld0 :end !eq !here !bcs :for_b !jmp end:
+
+01 30 D1 31 D1 20 D1 C0 E0 C0 0F A4 E8 0A 84 41 39 90 80 94 F0 A4 04 98 0A 84 41 39 90 80 D2 D1 B0 C0 29 A8 EF 05 25 90 E3

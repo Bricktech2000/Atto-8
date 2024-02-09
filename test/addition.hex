@@ -1,3 +1,5 @@
+# @ lib/core.asm
+#
 # main!
 #   x05 x04 add !hlt
 

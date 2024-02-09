@@ -77,6 +77,7 @@ python3 test.py greeting.asm asm emu
 python3 test.py allocation.asm asm emu
 python3 test.py hello\ world.asm asm emu
 python3 test.py multiplication.asm asm emu
+python3 test.py quine.hex enc emu
 python3 test.py addition.hex enc emu
 python3 test.py checkerboard.hex enc emu
 python3 test.py hello\ world.c libc/stdio.c libc/crt0.c cc asm emu
