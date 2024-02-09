@@ -31,8 +31,8 @@ python3 test.py dino.asm asm emu
 # assemble source code, disassemble binary
 python3 test.py flappy.asm asm dasm pop
 
-# compile to assembly with stdio, assemble assembly, emulate binary
-python3 test.py pipe.c libc/stdio.c libc/crt0.c cc asm emu
+# compile to assembly with stdlib and stdio, assemble assembly, emulate binary
+python3 test.py hanoi.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 
 # assemble source code, emulate binary. assemble source code, build microcode, launch block-level circuit with binary and microcode
 python3 test.py ctf.asm asm emu ctf.asm asm mic block.circ circ

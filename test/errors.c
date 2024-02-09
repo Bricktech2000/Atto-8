@@ -1,42 +1,52 @@
-/* #error test error in file __FILE__ on line __LINE__ */
+// #error test error in file __FILE__ on line __LINE__
 
-/* #foobar */
+// #foobar
 
-/* int main(void) { return 0x; } */
+// int main(void) { return 0x; }
 
-/* int main(void) { return 0b1234; } */
+// int main(void) { return 0b1234; }
 
-/* int main( { */
-/*   return 0; } */
+// int main( {
+//   return 0; }
 
-/* int main(void) { return 5 + ; } */
+// int main(void) { return 5 + ; }
 
-/* 123 */
+// int main(void) { return (char
 
-/* int main(void) { 1 ? 2; } */
+// int main(void) { return 5 !a; }
 
-/* int main(void) { */
-/*   if (1 */
-/*     return 0; */
-/* } */
+// 123
 
-/* void main(void) */
+// int main(void) { 1 ? 2; }
 
-/* void main(void) { */
+// void main(void, );
 
-/* asm("parentheses") */
+// int main(void) {
+//   if (1
+//     return 0;
+// }
 
-/* asm { */
+// void main(void)
 
-/* #include no_quotes */
+// void main(void) {
 
-/* #include "file" trailing */
+// asm("parentheses")
 
-/* char *main(void) { */
-/*   "unclosed; } */
+// asm {
 
-/* char main(void) { return 'abc'; } */
+// #include no_quotes
 
-/* char *main(void) { return "\X1F"; } */
+// #include "unclosed
 
-/* char *main(void) { return "\xyz"; } */
+// #include <misclosed"
+
+// #include "file" trailing
+
+// char *main(void) {
+//   "unclosed; }
+
+// char main(void) { return 'abc'; }
+
+// char *main(void) { return "\X1F"; }
+
+// char *main(void) { return "\xyz"; }

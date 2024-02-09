@@ -1173,7 +1173,10 @@ fn identifier_expression(
     .unwrap_or_else(|| {
       errors.extend([(
         Pos(File("pos".to_string()), 0, 0),
-        Error(format!("Identifier `{}` not found", identifier)),
+        Error(format!(
+          "Reference to undefined identifier `{}`",
+          identifier
+        )),
       )]);
       (Type::Void, TypedExpression::N0Constant(()))
     })
