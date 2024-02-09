@@ -50,7 +50,7 @@ payload.len! :payload.end :payload sub @const
 
 
 source!
-  :str_api_key pop
+  :str_api_key pop # prevent unused label warning
   :str_message :puts.min !call
   :exit !jmp
 

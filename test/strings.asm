@@ -15,8 +15,8 @@ main!
   :str_abc :str_abc :strcmp !call # 0x00
   x06 x63 :str_abcdef :memchr !call :strlen !call # 0x04
   # x06 xCC :str_abcdef :memchr !call # 0x00
-  x04 :str_abc :str_buffer :memcmp !call # 0x00
   x03 :str_ac :str_ab :memcmp !call # 0x01
+  x04 :str_abc :str_abc :memcmp !call # 0x00
   !hlt
 
   str_ab: @61 @62 @00 # "ab"

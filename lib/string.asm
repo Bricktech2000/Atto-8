@@ -3,9 +3,7 @@ strcat.def!
     # seek to end of dst
     ld1 !strend st1
     # copy src to dst
-    !strcpy.def
-    # prevent unused label warning
-    :strcpy pop
+    :strcpy !jmp
 strchr.def!
   strchr: # *ptr = strchr(*str, char)
     ld1 for_c.
@@ -81,11 +79,17 @@ memset.def!
   # return* ptr
   !rt3
 memcpy.def!
-  memcpy: # memcpy(*dst, *src, len)
-    # for simplicity, ignore `restrict` qualifier
-    !memmove.def
+  memcpy: clc # memcpy(*dst, *src, len)
+    ld3 for_i. dec
+      # *dst = *src
+      ld3 ld1 add lda
+      ld3 ld2 add sta
+    # loop if i > 0
+    !z .for_i !bcc memcpy.end: pop
     # prevent unused label warning
-    :memmove pop
+    :memcpy.end pop
+  # return*
+  !rt3
 memcmp.def!
   memcmp: clc # cmp = memcmp(*ptr1, *ptr2, len)
     ld3 for_i. dec
@@ -101,10 +105,11 @@ memswp.def!
   memswp: clc # memswp(*ptr1, *ptr2, len)
     ld3 for_i. dec
       # swap *ptr1 and *ptr2
-      ld2 ld1 add lda
-      ld4 ld2 add lda
-      ld4 ld3 add sta
-      ld4 ld2 add sta
+      ld3 ld1 add
+      ld3 ld2 add
+      ld1 lda sw2
+      ld1 lda swp
+      sta sta
     # loop if i > 0
     !z .for_i !bcc pop
   # return*
@@ -122,11 +127,14 @@ memxor.def!
   !rt3
 memmove.def!
   memmove: clc # memmove(*dst, *src, len)
-    ld3 for_i. dec
+    # copy backward if dst > src
+    ld2 ld2 !gt :memcpy !bcs
+    # copy forward otherwise
+    x00 for_i. inc
       # *dst = *src
       ld3 ld1 add lda
       ld3 ld2 add sta
     # loop if i > 0
-    !z .for_i !bcc pop
+    ld4 ld1 !eq .for_i !bcc
   # return*
-  !rt3
+  :memcpy.end !jmp
