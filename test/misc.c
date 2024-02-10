@@ -26,6 +26,11 @@
 #define DISPLAY_BUFFER (void *)0xE0
 #define DISPLAY_BUFFER_LEN 0x20
 
+char *str_lit_concat(void) {
+  return "string literal "
+         "concatenation";
+}
+
 inline void bar(void) memset(DISPLAY_BUFFER, 0xFF, DISPLAY_BUFFER_LEN);
 inline void baz(void) { memset(DISPLAY_BUFFER, 0x00, DISPLAY_BUFFER_LEN); }
 

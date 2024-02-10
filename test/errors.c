@@ -1,3 +1,5 @@
+// clang-format off
+
 // #error test error in file __FILE__ on line __LINE__
 
 // #foobar
@@ -6,14 +8,13 @@
 
 // int main(void) { return 0b1234; }
 
-// int main( {
-//   return 0; }
+// int main( { return 0; }
 
 // int main(void) { return 5 + ; }
 
 // int main(void) { return (char
 
-// int main(void) { return 5 !a; }
+// int main(void) { return 5 ! a; }
 
 // 123
 
@@ -21,10 +22,7 @@
 
 // void main(void, );
 
-// int main(void) {
-//   if (1
-//     return 0;
-// }
+// int main(void) { if (1 return 0; }
 
 // void main(void)
 
@@ -42,11 +40,12 @@
 
 // #include "file" trailing
 
-// char *main(void) {
-//   "unclosed; }
+// char *main(void) { "unclosed; }
 
 // char main(void) { return 'abc'; }
 
 // char *main(void) { return "\X1F"; }
 
 // char *main(void) { return "\xyz"; }
+
+// void main(void) { return 1/**/2; }

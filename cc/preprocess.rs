@@ -43,6 +43,7 @@ pub fn preprocess(
     format!("")
   });
 
+  // adjacent string literals are concatenated later by the parser
   let mut preprocessed = "".to_string();
   let mut source = source
     .replace("\\\n", "") // line continuation
@@ -52,6 +53,7 @@ pub fn preprocess(
     .collect::<String>()
     .split("*/")
     .map(|item| item.split("/*").next().unwrap_or(item)) // block comments
+    .map(|item| item.to_owned() + " ")
     .collect::<String>();
 
   let preprocessed = loop {

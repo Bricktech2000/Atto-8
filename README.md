@@ -70,6 +70,7 @@ python3 test.py tetris.asm asm emu
 python3 test.py doom.asm asm emu
 
 # test programs
+python3 test.py quine.asm asm emu
 python3 test.py printf.asm asm emu
 python3 test.py sorting.asm asm emu
 python3 test.py strings.asm asm emu
@@ -84,6 +85,7 @@ python3 test.py hello\ world.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py misc.c libc/string.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py fibonacci.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py printf.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
+python3 test.py quine.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py hanoi.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py errors.asm asm emu
 python3 test.py errors.c libc/crt0.c cc asm emu

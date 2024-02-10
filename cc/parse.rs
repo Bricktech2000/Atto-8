@@ -878,7 +878,8 @@ fn identifier() -> Parser<String> {
         Parser::expected(vec![])
           .or_else(|_| parse::digit(10))
           .or_else(|_| parse::alphabetic())
-          .or_else(|_| parse::char('_').map(|_| '_')),
+          .or_else(|_| parse::char('_').map(|_| '_'))
+          .name(format!("identifier character")),
       ))
       .map(move |rest| std::iter::once(first).chain(rest).collect())
     })
@@ -939,21 +940,23 @@ fn character_constant() -> Parser<Expression> {
 }
 
 fn string_literal() -> Parser<Expression> {
-  Parser::pure(())
-    .and_then(|_| parse::char('"'))
-    .and_then(|_| {
-      parse::many(
-        parse::char_none_of("\"\\\n")
-          .name(format!("string literal character"))
-          .or_else(|_| parse::escape_sequence()),
-      )
-      .map(|chars| chars.into_iter().collect())
-    })
-    .and_then(|string| {
-      parse::ws(parse::char('"').info("to end string literal"))
-        .map(move |_| Expression::StringLiteral(string))
-    })
-    .name(format!("string literal"))
+  // also concatenates adjacent string literals
+  parse::many1(
+    Parser::pure(())
+      .and_then(|_| parse::char('"'))
+      .and_then(|_| {
+        parse::many(
+          parse::char_none_of("\"\\\n")
+            .name(format!("string literal character"))
+            .or_else(|_| parse::escape_sequence()),
+        )
+      })
+      .and_then(|chars| {
+        parse::ws(parse::char('"').info("to end string literal")).map(move |_| chars)
+      }),
+  )
+  .map(|strings| Expression::StringLiteral(strings.into_iter().flatten().collect()))
+  .name(format!("string literal"))
 }
 
 fn escape_sequence() -> Parser<char> {
