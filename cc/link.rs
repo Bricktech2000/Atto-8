@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 #[rustfmt::skip] macro_rules! bcc_macro { () => { Macro(format!("bcc")) }; }
 #[rustfmt::skip] macro_rules! bcs_macro { () => { Macro(format!("bcs")) }; }
 #[rustfmt::skip] macro_rules! zr_macro { () => { Macro(format!("zr")) }; }
+#[rustfmt::skip] macro_rules! lt_macro { () => { Macro(format!("lt")) }; }
 #[rustfmt::skip] macro_rules! cl_macro { () => { Macro(format!("cl")) }; }
 #[rustfmt::skip] macro_rules! eq_macro { () => { Macro(format!("eq")) }; }
 #[rustfmt::skip] macro_rules! call_macro { () => { Macro(format!("call")) }; }
@@ -26,6 +27,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 #[rustfmt::skip] pub(crate) use bcc_macro;
 #[rustfmt::skip] pub(crate) use bcs_macro;
 #[rustfmt::skip] pub(crate) use zr_macro;
+#[rustfmt::skip] pub(crate) use lt_macro;
 #[rustfmt::skip] pub(crate) use cl_macro;
 #[rustfmt::skip] pub(crate) use eq_macro;
 #[rustfmt::skip] pub(crate) use call_macro;
@@ -87,11 +89,11 @@ pub fn link(program: &TypedProgram, _errors: &mut Vec<(Pos, Error)>) -> Vec<Resu
     .iter()
     .flat_map(|(name, deps)| {
       std::iter::empty()
-        .chain(vec![Ok(Token::MacroDef(link::deps_macro!(&name)))])
+        .chain([Ok(Token::MacroDef(link::deps_macro!(&name)))])
         .chain(deps.iter().filter_map(|(is_labeled, dep)| {
           is_labeled.then_some(Ok(Token::MacroRef(link::def_macro!(&dep))))
         }))
-        .chain(vec![Err("".to_string())])
+        .chain([Err("".to_string())])
     })
     .collect()
 }
@@ -135,8 +137,7 @@ fn statement(statement: &TypedStatement) -> BTreeSet<(bool, String)> {
 
 fn expression(expression: &TypedExpression) -> BTreeSet<(bool, String)> {
   match expression {
-    TypedExpression::N8Negation(expression)
-    | TypedExpression::N1BitwiseComplement(expression)
+    TypedExpression::N1BitwiseComplement(expression)
     | TypedExpression::N8BitwiseComplement(expression) => link::expression(expression),
 
     TypedExpression::N8Addition(expression1, expression2)
@@ -149,6 +150,10 @@ fn expression(expression: &TypedExpression) -> BTreeSet<(bool, String)> {
       .collect(),
 
     TypedExpression::N1EqualToN8(expression1, expression2) => std::iter::empty()
+      .chain(link::expression(expression1))
+      .chain(link::expression(expression2))
+      .collect(),
+    TypedExpression::N1LessThanU8(expression1, expression2) => std::iter::empty()
       .chain(link::expression(expression1))
       .chain(link::expression(expression2))
       .collect(),

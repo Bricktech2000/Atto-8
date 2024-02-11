@@ -17,10 +17,6 @@ fn b<T, U, V, F: FnOnce(T) -> U + Clone + 'static, G: FnOnce(U) -> V + Clone + '
   Rc::new(move |x| g.clone()(f.clone()(x)))
 }
 
-fn id<T>() -> Rc<dyn Fn(T) -> T> {
-  Rc::new(|x| x)
-}
-
 #[derive(Clone)]
 pub struct Parser<T: Clone + 'static>(pub Rc<dyn Fn(&str) -> ParseResult<T>>);
 pub type Expecteds = Vec<String>;
@@ -817,7 +813,7 @@ fn unary_expression() -> Parser<Expression> {
     .or_else(|_| {
       parse::unop(
         parse::unary_expression(),
-        parse::ws(parse::char('+')).map(|_| id()),
+        parse::ws(parse::char('+')).map(|_| b(Box::new, Expression::Positive)),
       )
     })
     .or_else(|_| {

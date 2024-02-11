@@ -40,6 +40,8 @@ int foo(int n, char *test);
 
 void main(void) {
   // return 0;
+  // return !5;
+  // return +-+-5;
   // return 1 + 2;
   // return ~2 + (3 + 4) * 5;
   // return 1 || 0 && 2;

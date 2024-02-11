@@ -12,7 +12,7 @@ main!
   !rand_seed.min # rand_seed
 
   x00 !u4f4 # x_pos
-  x02 !i4f4 # x_vel
+  x04 !i4f4 # x_vel
   x80 !u4f4 # y_pos
   xF0 !i4f4 # y_vel
 

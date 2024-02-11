@@ -483,13 +483,83 @@ fn expression(
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression) {
   match expression.clone() {
-    //   Expression::Negation(expression) => typecheck::negation_expression(*expression, state, errors),
-    //   Expression::LogicalNegation(expression) => {
-    //     typecheck::logical_negation_expression(*expression, state, errors)
-    //   }
-    //   Expression::BitwiseComplement(expression) => {
-    //     typecheck::bitwise_complement_expression(*expression, state, errors)
-    //   }
+    Expression::Positive(expression) => {
+      let promoted = integer_promotions(*expression, state, errors);
+      let (r#type, expression) = typecheck::expression(promoted, state, errors);
+
+      (
+        r#type.clone(),
+        match r#type.range() {
+          Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+          Range::U8 | Range::I8 => expression,
+          _ => todo!(),
+        },
+      )
+    }
+
+    Expression::Negation(expression) => {
+      let promoted = integer_promotions(*expression, state, errors);
+      let (r#type, expression) = typecheck::expression(promoted, state, errors);
+
+      (
+        r#type.clone(),
+        match r#type.range() {
+          Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+          Range::U8 | Range::I8 => TypedExpression::N8Subtraction(
+            Box::new(TypedExpression::N8Constant(0x00)),
+            Box::new(expression),
+          ),
+          _ => todo!(),
+        },
+      )
+    }
+
+    Expression::LogicalNegation(expression) => {
+      let (r#type, expression) = typecheck::expression(*expression, state, errors);
+
+      (
+        Type::Bool, // TODO logical negation returns `int` in C
+        match r#type.range() {
+          Range::U0 | Range::I0 => {
+            errors.extend([(
+              // TODO uses debug formatting
+              Pos(File("pos".to_string()), 0, 0),
+              Error(format!("Logical negation of type `{:?}`", r#type)),
+            )]);
+            TypedExpression::N1Constant(false)
+          }
+          Range::U1 | Range::I1 => TypedExpression::N1BitwiseComplement(Box::new(expression)),
+          Range::U8 | Range::I8 => TypedExpression::N1EqualToN8(
+            Box::new(expression),
+            Box::new(TypedExpression::N8Constant(0x00)),
+          ),
+          _ => todo!(),
+        },
+      )
+    }
+
+    Expression::BitwiseComplement(expression) => {
+      let promoted = integer_promotions(*expression, state, errors);
+      let (r#type, expression) = typecheck::expression(promoted, state, errors);
+
+      (
+        r#type.clone(),
+        match r#type.range() {
+          Range::U0 | Range::I0 => {
+            errors.extend([(
+              // TODO uses debug formatting
+              Pos(File("pos".to_string()), 0, 0),
+              Error(format!("Bitwise complement of type `{:?}`", r#type)),
+            )]);
+            TypedExpression::N0Constant(())
+          }
+          Range::U1 | Range::I1 => TypedExpression::N1BitwiseComplement(Box::new(expression)),
+          Range::U8 | Range::I8 => TypedExpression::N8BitwiseComplement(Box::new(expression)),
+          _ => todo!(),
+        },
+      )
+    }
+
     Expression::Addition(expression1, expression2) => {
       let promoted1 = integer_promotions(*expression1, state, errors);
       let promoted2 = integer_promotions(*expression2, state, errors);
@@ -600,21 +670,27 @@ fn expression(
     //   Expression::LogicalAnd(expression1, expression2) => {
     //     typecheck::logical_and_expression(*expression1, *expression2, state, errors)
     //   }
+    //
     //   Expression::LogicalOr(expression1, expression2) => {
     //     typecheck::logical_or_expression(*expression1, *expression2, state, errors)
     //   }
+    //
     //   Expression::BitwiseAnd(expression1, expression2) => {
     //     typecheck::bitwise_and_expression(*expression1, *expression2, state, errors)
     //   }
+    //
     //   Expression::BitwiseInclusiveOr(expression1, expression2) => {
     //     typecheck::bitwise_inclusive_or_expression(*expression1, *expression2, state, errors)
     //   }
+    //
     //   Expression::BitwiseExclusiveOr(expression1, expression2) => {
     //     typecheck::bitwise_exclusive_or_expression(*expression1, *expression2, state, errors)
     //   }
+    //
     //   Expression::LeftShift(expression1, expression2) => {
     //     typecheck::left_shift_expression(*expression1, *expression2, state, errors)
     //   }
+    //
     //   Expression::RightShift(expression1, expression2) => {
     //     typecheck::right_shift_expression(*expression1, *expression2, state, errors)
     //   }
@@ -636,7 +712,14 @@ fn expression(
         },
       )
     }
-    Expression::NotEqualTo(expression1, expression2) => {
+
+    Expression::NotEqualTo(expression1, expression2) => typecheck::expression(
+      Expression::LogicalNegation(Box::new(Expression::EqualTo(expression1, expression2))),
+      state,
+      errors,
+    ),
+
+    Expression::LessThan(expression1, expression2) => {
       let promoted1 = integer_promotions(*expression1, state, errors);
       let promoted2 = integer_promotions(*expression2, state, errors);
       let (r#type, expression1, expression2) =
@@ -646,42 +729,77 @@ fn expression(
         Type::Bool,
         match r#type.range() {
           Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
-          Range::U8 | Range::I8 => TypedExpression::N1BitwiseComplement(Box::new(
-            TypedExpression::N1EqualToN8(Box::new(expression1), Box::new(expression2)),
-          )),
+          Range::U8 => TypedExpression::N1LessThanU8(Box::new(expression1), Box::new(expression2)),
+          Range::I8 => {
+            errors.extend([(
+              Pos(File("[todo]".to_string()), 0, 0),
+              Error(format!("Signed less than unimplemented",)),
+            )]);
+            TypedExpression::N1LessThanU8(Box::new(expression1), Box::new(expression2))
+          }
           _ => todo!(),
         },
       )
     }
-    //   Expression::LessThan(expression1, expression2) => {
-    //     typecheck::less_than_expression(*expression1, *expression2, state, errors)
-    //   }
-    //   Expression::LessThanOrEqualTo(expression1, expression2) => {
-    //     typecheck::less_than_or_equal_to_expression(*expression1, *expression2, state, errors)
-    //   }
-    //   Expression::GreaterThan(expression1, expression2) => {
-    //     typecheck::greater_than_expression(*expression1, *expression2, state, errors)
-    //   }
-    //   Expression::GreaterThanOrEqualTo(expression1, expression2) => {
-    //     typecheck::greater_than_or_equal_to_expression(*expression1, *expression2, state, errors)
-    //   }
-    //
+
+    Expression::LessThanOrEqualTo(expression1, expression2) => typecheck::expression(
+      Expression::LogicalNegation(Box::new(Expression::GreaterThan(expression1, expression2))),
+      state,
+      errors,
+    ),
+
+    Expression::GreaterThan(expression1, expression2) => {
+      let promoted1 = integer_promotions(*expression1, state, errors);
+      let promoted2 = integer_promotions(*expression2, state, errors);
+      let (r#type, expression1, expression2) =
+        typecheck_usual_arithmetic_conversions((promoted1, promoted2), state, errors);
+
+      (
+        Type::Bool,
+        match r#type.range() {
+          Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+          Range::U8 => TypedExpression::N1LessThanU8(Box::new(expression2), Box::new(expression1)),
+          Range::I8 => {
+            errors.extend([(
+              Pos(File("[todo]".to_string()), 0, 0),
+              Error(format!("Signed greater than unimplemented",)),
+            )]);
+            TypedExpression::N1LessThanU8(Box::new(expression2), Box::new(expression1))
+          }
+          _ => todo!(),
+        },
+      )
+    }
+
+    Expression::GreaterThanOrEqualTo(expression1, expression2) => typecheck::expression(
+      Expression::LogicalNegation(Box::new(Expression::LessThan(expression1, expression2))),
+      state,
+      errors,
+    ),
+
     //   Expression::Conditional(expression1, expression2, expression3) => {
     //     typecheck::conditional_expression(*expression1, *expression2, *expression3, state, errors)
     //   }
+    //
     Expression::Cast(r#type, expression) => {
       typecheck::cast_expression(r#type, *expression, state, errors)
     }
+
     Expression::IntegerConstant(value) => (Type::Int, TypedExpression::N8Constant(value)),
+
     // TODO character constants are `int`s in C
     Expression::CharacterConstant(value) => (Type::Char, TypedExpression::N8Constant(value as u8)),
+
     Expression::StringLiteral(value) => typecheck::string_literal_expression(value, state, errors),
+
     Expression::Identifier(identifier) => {
       typecheck::identifier_expression(identifier, state, errors)
     }
+
     Expression::FunctionCall(designator, arguments) => {
       typecheck::function_call_expression(*designator, arguments, state, errors)
     }
+
     _ => todo!(), // TODO
   }
 }
@@ -731,7 +849,7 @@ fn expression(
 //       Type::Int | Type::Char => std::iter::empty()
 //         .chain(tokens1)
 //         .chain(tokens2)
-//         .chain(vec![Ok(Token::And)])
+//         .chain([Ok(Token::And)])
 //         .collect(),
 //       _ => {
 //         // TODO implement
@@ -760,7 +878,7 @@ fn expression(
 //       Type::Int | Type::Char => std::iter::empty()
 //         .chain(tokens1)
 //         .chain(tokens2)
-//         .chain(vec![Ok(Token::Orr)])
+//         .chain([Ok(Token::Orr)])
 //         .collect(),
 //       _ => {
 //         // TODO implement
@@ -792,7 +910,7 @@ fn expression(
 //       Type::Int | Type::Char => std::iter::empty()
 //         .chain(tokens1)
 //         .chain(tokens2)
-//         .chain(vec![Ok(Token::Xor)])
+//         .chain([Ok(Token::Xor)])
 //         .collect(),
 //       _ => {
 //         // TODO implement
@@ -854,7 +972,7 @@ fn expression(
 //       Type::Int | Type::Char => std::iter::empty()
 //         .chain(tokens1)
 //         .chain(tokens2)
-//         .chain(vec![
+//         .chain([
 //           Ok(Token::Sub),
 //           Ok(Token::AtDyn),
 //           Ok(Token::Pop),
@@ -890,7 +1008,7 @@ fn expression(
 //       Type::Int | Type::Char => std::iter::empty()
 //         .chain(tokens1)
 //         .chain(tokens2)
-//         .chain(vec![
+//         .chain([
 //           Ok(Token::Sub),
 //           Ok(Token::AtDyn),
 //           Ok(Token::Pop),
@@ -930,7 +1048,7 @@ fn expression(
 //       Type::Int | Type::Char => std::iter::empty()
 //         .chain(tokens1)
 //         .chain(tokens2)
-//         .chain(vec![
+//         .chain([
 //           Ok(Token::Sub),
 //           Ok(Token::AtDyn),
 //           Ok(Token::Pop),
@@ -969,7 +1087,7 @@ fn expression(
 //       Type::Int | Type::Char => std::iter::empty()
 //         .chain(tokens1)
 //         .chain(tokens2)
-//         .chain(vec![
+//         .chain([
 //           Ok(Token::Sub),
 //           Ok(Token::AtDyn),
 //           Ok(Token::Pop),
@@ -1012,7 +1130,7 @@ fn expression(
 //         .chain(tokens3)
 //         .chain(tokens1)
 //         .chain(tokens2)
-//         .chain(vec![
+//         .chain([
 //           Ok(Token::Buf),
 //           Ok(Token::AtDyn),
 //           Ok(Token::Pop),
@@ -1075,7 +1193,12 @@ fn cast_expression(
             type1, r#type
           )),
         )]);
-        TypedExpression::N0Constant(())
+        match r#type.range() {
+          Range::U0 | Range::I0 => TypedExpression::N0Constant(()),
+          Range::U1 | Range::I1 => TypedExpression::N1Constant(false),
+          Range::U8 | Range::I8 => TypedExpression::N8Constant(0x00),
+          _ => todo!(),
+        }
       }
     },
   )
