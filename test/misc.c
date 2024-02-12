@@ -4,6 +4,7 @@
 
 #include STDIO
 #include "display.h"
+#include <iso646.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,8 +43,8 @@ void main(void) {
   // return !5;
   // return +-+-5;
   // return 1 + 2;
-  // return ~2 + (3 + 4) * 5;
-  // return 1 || 0 && 2;
+  // return compl 2 + (3 + 4) * 5;
+  // return 1 or 0 and 2;
   // return 2 == 4 >= 2;
   // return 2 > 1 == 4 >= 2;
   // return 6 * 10 + 4;
@@ -57,7 +58,8 @@ void main(void) {
   putc(foo(42, "test") + '\000' + '\x00' + 000 + 0b0 + 0B0 + 0x0 + 0X0);
   puts("***ok\r\n" + (unsigned)0b0011);
 
-  asm { !display_buffer sts }
+  asm {
+    !display_buffer sts }
   while (1) {
     bar();
     delay(0x1F);
