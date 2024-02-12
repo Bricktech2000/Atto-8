@@ -1,11 +1,11 @@
 #define FILE char // TODO should be `typedef`
 
-#define stdin 0  // TODO should be `inline const FILE *stdin;`
-#define stdout 0 // TODO should be `inline const FILE *stdout;`
-#define stderr 0 // TODO should be `inline const FILE *stdout;`
-
 #define NULL 0
 #define EOF -1
+
+#define stdin (FILE *)0x00
+#define stdout (FILE *)0x00
+#define stderr (FILE *)0x00
 
 // TODO shoud be `int fgetc(FILE*);`
 inline char fgetc(FILE *stream);

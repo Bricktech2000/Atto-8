@@ -264,6 +264,7 @@ pub fn string(string: &'static str) -> Parser<()> {
 }
 
 pub fn char_not(char: char) -> Parser<char> {
+  // TODO uses debug formatting
   parse::satisfy(move |c| c != char).name(format!("non-{:?}", char))
 }
 
@@ -386,6 +387,8 @@ fn translation_unit() -> Parser<Program> {
     Parser::expected(vec![])
       .or_else(|_| parse::function_declaration_global())
       .or_else(|_| parse::function_definition_global())
+      .or_else(|_| parse::global_declaration_global())
+      .or_else(|_| parse::global_definition_global())
       .or_else(|_| parse::assembly_global()),
   )
   .and_then(|globals| parse::eof().map(move |_| globals))
@@ -415,7 +418,10 @@ fn function_declaration_global() -> Parser<Global> {
                     Global::FunctionDeclaration(
                       is_inline.is_some(),
                       Object(type_name, identifier),
-                      parameters,
+                      match parameters[..] {
+                        [Object(Type::Void, _)] => vec![], // for `T func(void)`-style declarations
+                        _ => parameters,
+                      },
                       is_variadic.is_some(),
                     )
                   })
@@ -452,7 +458,10 @@ fn function_definition_global() -> Parser<Global> {
                     Global::FunctionDefinition(
                       is_inline.is_some(),
                       Object(type_name, identifier),
-                      parameters,
+                      match parameters[..] {
+                        [Object(Type::Void, _)] => vec![], // for `T func(void)`-style declarations
+                        _ => parameters,
+                      },
                       is_variadic.is_some(),
                       statement,
                     )
@@ -478,11 +487,39 @@ fn parameter_list() -> Parser<Vec<Object>> {
   .name(format!("parameter list"))
 }
 
+fn global_declaration_global() -> Parser<Global> {
+  // TODO does not obey grammar
+  parse::type_name()
+    .and_then(move |type_name| {
+      parse::identifier().and_then(move |identifier| {
+        parse::ws(parse::char(';').info("to end declaration"))
+          .map(move |_| Global::GlobalDeclaration(Object(type_name, identifier)))
+      })
+    })
+    .name(format!("global declaration"))
+}
+
+fn global_definition_global() -> Parser<Global> {
+  // TODO does not obey grammar
+  parse::type_name()
+    .and_then(move |type_name| {
+      parse::identifier().and_then(move |identifier| {
+        parse::ws(parse::char('=').info("to begin initializer")).and_then(move |_| {
+          parse::expression().and_then(move |expression| {
+            parse::ws(parse::char(';').info("to end declaration"))
+              .map(move |_| Global::GlobalDefinition(Object(type_name, identifier), expression))
+          })
+        })
+      })
+    })
+    .name(format!("global definition"))
+}
+
 fn type_name() -> Parser<Type> {
   // TODO does not obey grammar
   Parser::pure(())
     .and_then(|_| parse::maybe(parse::ws(parse::string("const"))))
-    .and_then(|_const| {
+    .and_then(|_is_const| {
       Parser::expected(vec![])
         .or_else(|_| {
           parse::ws(parse::string("long long int").or_else(|_| parse::string("long long")))
@@ -519,7 +556,7 @@ fn type_name() -> Parser<Type> {
           .map(|_| Type::UnsignedShort)
         })
         .or_else(|_| parse::ws(parse::string("char")).map(|_| Type::Char))
-        .or_else(|_| parse::ws(parse::string("bool")).map(|_| Type::Bool))
+        .or_else(|_| parse::ws(parse::string("_Bool")).map(|_| Type::Bool))
         .or_else(|_| parse::ws(parse::string("void")).map(|_| Type::Void))
     })
     // TODO implement proper pointer types
@@ -582,8 +619,8 @@ fn jump_statement() -> Parser<Statement> {
 fn selection_statement() -> Parser<Statement> {
   // TODO cases missing
   Parser::expected(vec![])
-    .or_else(|_| parse::if_statement())
     .or_else(|_| parse::if_else_statement())
+    .or_else(|_| parse::if_statement())
     .or_else(|_| parse::switch_statement())
 }
 
@@ -951,7 +988,7 @@ fn string_literal() -> Parser<Expression> {
         parse::ws(parse::char('"').info("to end string literal")).map(move |_| chars)
       }),
   )
-  .map(|strings| Expression::StringLiteral(strings.into_iter().flatten().collect()))
+  .map(|strings| Expression::StringLiteral(strings.into_iter().flatten().chain(['\0']).collect()))
   .name(format!("string literal"))
 }
 

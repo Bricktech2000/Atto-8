@@ -40,7 +40,10 @@ pub fn link(program: &TypedProgram, _errors: &mut Vec<(Pos, Error)>) -> Vec<Resu
     TypedProgram(globals) => globals
       .into_iter()
       .filter_map(|global| match global {
-        TypedGlobal::String(_label, _value) => None,
+        TypedGlobal::Data(label, value) => Some((
+          label.clone(),
+          value.iter().flat_map(link::expression).collect(),
+        )),
         TypedGlobal::Macro(label, statement) => Some((label.clone(), link::statement(statement))),
         TypedGlobal::Function(label, statement) => {
           Some((label.clone(), link::statement(statement)))
@@ -54,7 +57,7 @@ pub fn link(program: &TypedProgram, _errors: &mut Vec<(Pos, Error)>) -> Vec<Resu
     TypedProgram(globals) => globals
       .into_iter()
       .filter_map(|global| match global {
-        TypedGlobal::String(label, _value) => Some(label.clone()),
+        TypedGlobal::Data(label, _value) => Some(label.clone()),
         TypedGlobal::Macro(_label, _statement) => None,
         TypedGlobal::Function(label, _statement) => Some(label.clone()),
         TypedGlobal::Assembly(_assembly) => None,

@@ -92,9 +92,9 @@ impl Type {
     match self.range() {
       Range::U0 | Range::I0 => 0,
       Range::U1 | Range::I1 => 1,
-      Range::U8 | Range::I8 => 5,
-      Range::U16 | Range::I16 => 6,
-      Range::U32 | Range::I32 => 7,
+      Range::U8 | Range::I8 => 8,
+      Range::U16 | Range::I16 => 16,
+      Range::U32 | Range::I32 => 32,
     }
   }
 }
@@ -118,10 +118,12 @@ fn program(
         .into_iter()
         .filter_map(|global| typecheck::global(global, state, errors))
         .collect::<Vec<_>>();
-      let strings = state
-        .strings
-        .iter()
-        .map(|(value, label)| TypedGlobal::String(label.clone(), value.clone()));
+      let strings = state.strings.iter().map(|(value, label)| {
+        TypedGlobal::Data(
+          label.clone(),
+          value.bytes().map(TypedExpression::N8Constant).collect(),
+        )
+      });
       TypedProgram(strings.chain(globals).collect())
     }
   }
@@ -164,6 +166,22 @@ fn global(
       Some(global)
     }
 
+    Global::GlobalDeclaration(Object(r#type, name)) => {
+      let () =
+        typecheck::global_declaration_global(Object(r#type.clone(), name.clone()), state, errors);
+      None
+    }
+
+    Global::GlobalDefinition(Object(r#type, name), value) => {
+      let global = typecheck::global_definition_global(
+        Object(r#type.clone(), name.clone()),
+        value,
+        state,
+        errors,
+      );
+      Some(global)
+    }
+
     Global::GlobalAssembly(assembly) => {
       let global = typecheck::assembly_global(assembly, state, errors);
       Some(global)
@@ -179,13 +197,10 @@ fn function_declaration_global(
   state: &mut State,
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> () {
-  let parameter_types = match parameters[..] {
-    [Object(Type::Void, _)] => vec![], // for `T func(void)`-style declarations
-    _ => parameters
-      .iter()
-      .map(|Object(r#type, _name)| r#type.clone())
-      .collect::<Vec<Type>>(),
-  };
+  let parameter_types: Vec<Type> = parameters
+    .into_iter()
+    .map(|Object(r#type, _name)| r#type)
+    .collect();
 
   state
     .declarations
@@ -262,6 +277,77 @@ fn function_definition_global(
   state.stack.pop();
 
   statement
+}
+
+fn global_declaration_global(
+  Object(global_type, name): Object,
+  state: &mut State,
+  errors: &mut impl Extend<(Pos, Error)>,
+) -> () {
+  state
+    .declarations
+    .entry(name.clone())
+    .and_modify(|r#type| {
+      if *r#type != global_type {
+        errors.extend([(
+          Pos(File("pos".to_string()), 0, 0),
+          Error(format!(
+            "Global `{}` previously declared with different type",
+            name.clone()
+          )),
+        )])
+      }
+    })
+    .or_insert(global_type.clone());
+}
+
+fn global_definition_global(
+  Object(global_type, name): Object,
+  value: Expression,
+  state: &mut State,
+  errors: &mut impl Extend<(Pos, Error)>,
+) -> TypedGlobal {
+  let () =
+    typecheck::global_declaration_global(Object(global_type.clone(), name.clone()), state, errors);
+
+  let (r#type, value) = typecheck::expression(
+    Expression::Cast(global_type.clone(), Box::new(value)),
+    state,
+    errors,
+  );
+
+  if global_type != r#type {
+    panic!("Expected global type to match initializer type");
+  }
+
+  state.definitions.get(&name).is_some().then(|| {
+    errors.extend([(
+      Pos(File("pos".to_string()), 0, 0),
+      Error(format!(
+        "Global `{}` has already been defined",
+        name.clone()
+      )),
+    )])
+  });
+  state.definitions.insert(name.clone());
+
+  match value {
+    // TODO should this be constant expressions?
+    TypedExpression::N0Constant(_) => TypedGlobal::Data(name, vec![value]),
+    TypedExpression::N1Constant(_) => TypedGlobal::Data(name, vec![value]),
+    TypedExpression::N8Constant(_) => TypedGlobal::Data(name, vec![value]),
+    TypedExpression::N8AddrGlobal(_) => TypedGlobal::Data(name, vec![value]),
+    _ => {
+      errors.extend([(
+        Pos(File("[todo]".to_string()), 0, 0),
+        Error(format!(
+          "Global initializer umimplemented for expression `{:?}`",
+          value
+        )),
+      )]);
+      TypedGlobal::Data(name, vec![])
+    }
+  }
 }
 
 fn assembly_global(

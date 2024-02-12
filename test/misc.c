@@ -3,6 +3,8 @@
 #define STDIO "stdio.h"
 
 #include STDIO
+#include "display.h"
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -23,15 +25,12 @@
 /* /* multi // line
    comment */
 
-#define DISPLAY_BUFFER (void *)0xE0
-#define DISPLAY_BUFFER_LEN 0x20
-
 char *str_lit_concat(void) {
   return "string literal "
          "concatenation";
 }
 
-inline void bar(void) memset(DISPLAY_BUFFER, 0xFF, DISPLAY_BUFFER_LEN);
+inline void bar(void) memset(DISPLAY_BUFFER, 0xff, DISPLAY_BUFFER_LEN);
 inline void baz(void) { memset(DISPLAY_BUFFER, 0x00, DISPLAY_BUFFER_LEN); }
 
 inline void delay(int iterations);
@@ -53,11 +52,12 @@ void main(void) {
   // sort(strlen("Atto-8"), "Atto-8");
   // puts("Atto-8");
 
-  free(malloc(10));
+  if (true)
+    free(malloc(10));
   putc(foo(42, "test") + '\000' + '\x00' + 000 + 0b0 + 0B0 + 0x0 + 0X0);
   puts("***ok\r\n" + (unsigned)0b0011);
 
-  asm { xE0 sts } // `!display_buffer`
+  asm { !display_buffer sts }
   while (1) {
     bar();
     delay(0x1F);
@@ -67,6 +67,6 @@ void main(void) {
 }
 
 int foo(int n, char *test) {
-  return n;
+  { return n; }
   foo(n + 1, test);
 }

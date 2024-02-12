@@ -138,6 +138,8 @@ pub struct Program(Vec<Global>);
 pub enum Global {
   FunctionDeclaration(bool, Object, Vec<Object>, bool),
   FunctionDefinition(bool, Object, Vec<Object>, bool, Statement),
+  GlobalDeclaration(Object),
+  GlobalDefinition(Object, Expression),
   GlobalAssembly(String),
 }
 
@@ -195,7 +197,7 @@ pub struct TypedProgram(Vec<TypedGlobal>);
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum TypedGlobal {
-  String(String, String),
+  Data(String, Vec<TypedExpression>),
   Macro(String, TypedStatement),
   Function(String, TypedStatement),
   Assembly(String),

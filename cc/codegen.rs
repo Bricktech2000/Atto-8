@@ -30,23 +30,7 @@ fn program(program: TypedProgram) -> Vec<Result<Token, String>> {
 
 fn global(global: TypedGlobal) -> Vec<Result<Token, String>> {
   match global {
-    TypedGlobal::String(label, value) => {
-      std::iter::empty()
-        .chain([
-          Ok(Token::MacroDef(link::def_macro!(&label))),
-          Ok(Token::LabelDef(link::global_label!(&label))),
-        ])
-        .chain(
-          value
-            .chars()
-            .map(|c| Ok(Token::AtDD(c as u8)))
-            .collect::<Vec<Result<Token, String>>>(),
-        )
-        .chain([Ok(Token::AtDD(0x00))])
-        // TODO uses debug formatting
-        .chain([Err(format!("# {:?}", value))])
-        .collect()
-    }
+    TypedGlobal::Data(label, value) => codegen::data_global(label, value),
 
     TypedGlobal::Macro(label, statement) => std::iter::empty()
       .chain([Ok(Token::MacroDef(link::global_macro!(&label)))])
@@ -67,6 +51,45 @@ fn global(global: TypedGlobal) -> Vec<Result<Token, String>> {
     // raw assembly that might not be valid is encoded through the `Err` variant
     TypedGlobal::Assembly(assembly) => std::iter::empty().chain([Err(assembly)]).collect(),
   }
+}
+
+fn data_global(label: String, value: Vec<TypedExpression>) -> Vec<Result<Token, String>> {
+  let tokens: Vec<Result<Token, String>> = value
+    .into_iter()
+    .flat_map(|expression| codegen::expression(expression, 0))
+    .collect();
+
+  let bytes: Vec<u8> = tokens
+    .iter()
+    .map(|token| match token {
+      Ok(Token::XXX(value)) => *value,
+      _ => b'\0', // represent unknown value as null byte in comment
+    })
+    .collect();
+
+  // TODO uses debug formatting
+  let comment = [Err(match bytes.last() {
+    Some(0x00) => format!("# {:?}", String::from_utf8_lossy(&bytes[..bytes.len() - 1])),
+    Some(_) => format!("# {:?}...", String::from_utf8_lossy(&bytes)),
+    None => format!(""),
+  })];
+
+  let datas: Vec<Result<Token, String>> = tokens
+    .into_iter()
+    .flat_map(|token| match token {
+      Ok(Token::XXX(value)) => vec![Ok(Token::AtDD(value))], // shorthand
+      token => vec![token, Ok(Token::AtData)],               // longhand
+    })
+    .collect();
+
+  std::iter::empty()
+    .chain([
+      Ok(Token::MacroDef(link::def_macro!(&label))),
+      Ok(Token::LabelDef(link::global_label!(&label))),
+    ])
+    .chain(datas)
+    .chain(comment)
+    .collect()
 }
 
 fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {

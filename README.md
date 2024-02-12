@@ -82,7 +82,7 @@ python3 test.py quine.hex enc emu
 python3 test.py addition.hex enc emu
 python3 test.py checkerboard.hex enc emu
 python3 test.py hello\ world.c libc/stdio.c libc/crt0.c cc asm emu
-python3 test.py misc.c libc/string.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
+python3 test.py misc.c libc/string.c libc/stdlib.c libc/stdio.c libc/display.c libc/crt0.c cc asm emu
 python3 test.py fibonacci.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py printf.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py quine.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu

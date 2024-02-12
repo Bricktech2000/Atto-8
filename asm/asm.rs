@@ -434,6 +434,7 @@ fn assemble(
     let mut location_counter: usize = 0;
     let mut label_definitions: HashMap<Label, u8> = HashMap::new();
     let mut unevaluated_nodes: BTreeMap<u8, (Pos, Node)> = BTreeMap::new();
+    let mut unevaluated_datas: BTreeMap<u8, (Pos, Node)> = BTreeMap::new();
 
     instructions = roots
       .iter()
@@ -520,20 +521,10 @@ fn assemble(
             vec![]
           }
 
-          Root::Data(Some(node)) => match resolve_node_value(&node, &label_definitions) {
-            Ok(value) => vec![(pos.clone(), Err(value))],
-            Err(label) => {
-              bruteforce_errors.extend([(
-                pos.clone(),
-                Error(format!(
-                  "`{}` argument references currently unresolved label `{}`",
-                  Token::AtData,
-                  label
-                )),
-              )]);
-              vec![]
-            }
-          },
+          Root::Data(Some(node)) => {
+            unevaluated_datas.insert(location_counter as u8, (pos.clone(), node.clone()));
+            vec![(pos.clone(), Err(0x00))]
+          }
 
           Root::Data(None) => {
             bruteforce_errors.extend([(
@@ -603,6 +594,22 @@ fn assemble(
         instructions
       })
       .collect();
+
+    // poke into `instructions` and evaluate `@data`s now that all labels have been resolved
+    for (location_counter, (pos, node)) in unevaluated_datas.iter() {
+      let value = match resolve_node_value(&node, &label_definitions) {
+        Ok(value) => value,
+        Err(label) => {
+          bruteforce_errors.extend([(
+            pos.clone(),
+            Error(format!("Reference to undefined label `{}`", label)),
+          )]);
+          0x00
+        }
+      };
+
+      instructions[*location_counter as usize] = (pos.clone(), Err(value));
+    }
 
     // poke into `instructions` and evaluate the nodes that couldn't be evaluated before
     'poke: {
