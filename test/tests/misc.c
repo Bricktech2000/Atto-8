@@ -58,8 +58,7 @@ void main(void) {
   putc(foo(42, "test") + '\000' + '\x00' + 000 + 0b0 + 0B0 + 0x0 + 0X0);
   puts("***ok\r\n" + (unsigned)0b0011);
 
-  asm {
-    !display_buffer sts }
+  asm { !display_buffer sts }
   while (1) {
     bar();
     delay(0x1F);
