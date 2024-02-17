@@ -10,7 +10,7 @@ struct State {
   declarations: HashMap<String, Type>, // map from global declaration to its type
   definitions: HashSet<String>,        // set of currently defined globals
   strings: BTreeMap<String, String>,   // map from string literal to its label
-  stack: Vec<StackEntry>,              // current nesting scope stack
+  stack: Vec<StackEntry>,              // symbol stack, keeps track of current scopes
   uid: usize,                          // unique identifier for temporary identifiers
 }
 

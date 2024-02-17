@@ -724,10 +724,10 @@ fn conditional_expression() -> Parser<Expression> {
   parse::logical_or_expression().and_then(|expression1| {
     let expression = expression1.clone();
     Parser::pure(())
-      .and_then(|_| parse::ws(parse::char('?').info("to begin ternary operator")))
+      .and_then(|_| parse::ws(parse::char('?').info("to begin conditional operator")))
       .and_then(|_| parse::expression())
       .and_then(|expression2| {
-        parse::ws(parse::char(':').info("then expression to end ternary operator"))
+        parse::ws(parse::char(':').info("then expression to end conditional operator"))
           .and_then(|_| parse::conditional_expression())
           .map(|expression3| {
             Expression::Conditional(

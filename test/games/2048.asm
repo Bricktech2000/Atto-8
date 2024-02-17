@@ -101,7 +101,7 @@ main!
           :2048_chars !ofst lda
           # nibble = (2048_char << (byte & 0x06)) & 0x60
           # we use `0x60` as a mask to center the character horizontally.
-          # this is also why `shl @const` is used in `2048_chars` below
+          # this is also why `shr @data` is used in `2048_chars` below
           ld3 x06 and rot x60 and
           # result |= nibble
           # result <<= 4
@@ -123,26 +123,25 @@ main!
   :while !jmp
 
   # characters below are 2x4 pixels in size. the bits of their encoding from MSB to LSB correspond
-  # to the pixels of the font from left to right, top to bottom. the padding for the font is at the
-  # top of the character so that the first bit is always clear so that it fits in an `IMM`
+  # to the pixels of the font from left to right, top to bottom
   2048_chars:
-    x00 shl @data #
-    x0F shl @data # 0
-    x15 shl @data # 1
-    x1E shl @data # 2
-    x37 shl @data # 3
-    x2D shl @data # 4
-    x36 shl @data # 5
-    x1B shl @data # 6
-    x35 shl @data # 7
-    x3F shl @data # 8
-    x3D shl @data # 9
-    x27 shl @data # A
-    x2F shl @data # B
-    x19 shl @data # C
-    x1F shl @data # D
-    x39 shl @data # E
-    x1A shl @data # F
+    x00 shr @data #
+    x3C shr @data # 0
+    x54 shr @data # 1
+    x78 shr @data # 2
+    xDC shr @data # 3
+    xB4 shr @data # 4
+    xD8 shr @data # 5
+    x6C shr @data # 6
+    xD4 shr @data # 7
+    xFC shr @data # 8
+    xF4 shr @data # 9
+    x9C shr @data # A
+    xBC shr @data # B
+    x64 shr @data # C
+    x7C shr @data # D
+    xE4 shr @data # E
+    x68 shr @data # F
 
   # `&board & 0x0F` must be coprime with `0x10` for random number generation.
   # `x` is coprime with `0x10` if and only if `x` is odd. therefore we ensure
