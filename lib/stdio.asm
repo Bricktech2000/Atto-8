@@ -1,7 +1,7 @@
 stdin! x00 @const
 stdout! x00 @const
 
-fgetc! lda # char = fgetc(stream)
+fgetc! !char.lda # char = fgetc(stream)
 getc! !stdin !fgetc # char = getc()
 fgetc.def! fgetc: @error # to be implemented
 getc.def! getc: !getc swp !ret # char = getc()
@@ -9,7 +9,7 @@ fgets! # fgets(stream, *str)
   swp for_c.
     ld1 !fgetc
     !char.check_null
-    ld1 sta
+    ld1 !char.sta
   inc .for_c !bcc pop pop
 gets! !stdin !fgets # gets(*str)
 fgets.def! fgets: sw2 swp !fgets !rt0 # fgets(stream, *str)
@@ -19,18 +19,38 @@ gets.min! # gets.min(*str)
   for_c.
     !getc
     !char.check_null
-    ld1 sta
+    ld1 !char.sta
   inc .for_c !bcc pop
 gets.min.def! gets.min: swp !gets.min !ret # gets.min(*str)
 
+hex_getc! # u8 = hex_getc(char sep)
+  # block until `sep` is sent through `stdin`
+  block. !getc !char.ld1 !eq .block !bcc !char.pop clc
+  # assume input well formed
+  !getc !hex.to_u4 x04 rot
+  !getc !hex.to_u4 orr !u8
+hex_gets! # hex_gets(char sep, *str)
+  swp for_c.
+    ld1 !hex_getc # includes `!char.check_null`
+    ld1 !u8.sta
+  # loop if *str != '\0'
+  inc .for_c !bcc pop pop
+hex_getn! clc # hex_getn(char sep, *str, len)
+  ld2 dec ad2 # str += len - 1
+  sw2 for_i. dec
+    !char.ld2 !hex_getc clc
+    ld2 ld2 sub !u8.sta
+  # loop if i > 0
+  !z .for_i !bcc pop pop pop
 
-fputc! sta # fputc(stream, char)
+
+fputc! !char.sta # fputc(stream, char)
 putc! !stdout !fputc # putc(char)
 fputc.def! fputc: @error # to be implemented
 putc.def! putc: swp !putc !ret # putc(char)
 fputs! # fputs(stream, *str)
   swp for_c.
-    ld0 lda
+    ld0 !char.lda
     !char.check_null
     ld2 !fputc
   inc .for_c !bcc pop pop
@@ -40,12 +60,28 @@ puts.def! puts: swp !puts !ret # puts(*str)
 
 puts.min! # puts.min(*str)
   for_c.
-    ld0 lda
+    ld0 !char.lda
     !char.check_null
     !putc
   inc .for_c !bcc pop
 puts.min.def! puts.min: swp !puts.min !ret # puts.min(*str)
 
+hex_putc! # hex_putc(char sep, u8 char)
+  !char.space !putc !putc
+  !u8.to_hex !putc !putc
+hex_puts! # hex_puts(char sep, *str)
+  swp for_c.
+    ld0 !u8.lda
+    !char.ld2 !hex_putc
+  # loop if *str != '\0'
+  ld0 !u8.lda !u8.is_null inc .for_c !bcc pop pop
+hex_putn! clc # hex_putn(char sep, *str, len)
+  ld2 dec ad2 # str += len - 1
+  sw2 for_i. dec
+    ld1 ld1 sub !u8.lda
+    !char.ld3 !hex_putc
+  # loop if i > 0
+  !z .for_i !bcc pop pop pop
 
 # prints and consumes a null-terminated string from the stack
 stack_puts! # stack_puts(str[])

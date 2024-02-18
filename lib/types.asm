@@ -1724,6 +1724,9 @@ c8f8m8f8.mul! # c8f8m8f8 product = c8f8m8f8.mul(c8f8m8f8 a, c8f8m8f8 b)
 c4f4m4f4.norm! !i4f4.ld1 !i4f4.ld0 !i4f4.mul !i4f4.st1 !i4f4.ld0 !i4f4.mul !i4f4.add # i4f4 norm = c4f4m4f4.norm(c4f4m4f4 c)
 c8f8m8f8.norm! !i8f8.ld1 !i8f8.ld0 !i8f8.mul !i8f8.st1 !i8f8.ld0 !i8f8.mul !i4f4.add # i8f8 norm = c8f8m8f8.norm(c8f8m8f8 c)
 
+u8.check_null! !z
+u8.is_null! !zr
+
 # converts `0x0..=0xF` to `'0'..='9', 'A'..='F'`. undefined for other values
 u4.to_hex!
   !char.digit_count sub @dyn
