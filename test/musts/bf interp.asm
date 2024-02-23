@@ -1,7 +1,5 @@
 @ lib/core.asm
 @ lib/types.asm
-@ lib/string.asm
-@ lib/stdlib.asm
 @ lib/stdio.asm
 
 # brainfuck interpreter. most programs from `/bf/test/` can be pasted into this interpreter
@@ -15,15 +13,9 @@
 main!
   pop pop :source_buffer sts
 
-  while:
-    :source_buffer !gets.min
-    :source_buffer !puts.min
-  :source_buffer lda !zr :while !bcs
-  !char.space !putc
-  !char.latin_capital_letter_o !putc
-  !char.latin_capital_letter_k !putc
-  !char.carriage_return !putc
-  !char.line_feed !putc
+  # :source_buffer :source_buffer :getline !call
+  :source_buffer :getline.min !call
+  !char.carriage_return !putc !char.line_feed !putc
 
   xFF # head
   :source_buffer loop:
@@ -68,5 +60,8 @@ main!
     # loop if current source char is not null
     got_neither:
   inc !here !bcs :loop !jmp
+
+  # !getline.def
+  !getline.min.def
 
   x06 !pad source_buffer:

@@ -163,21 +163,19 @@ printf.def!
 getline.def!
     got_other.
       # increment by `2` because `.got_backspace` will decrement by `1`
-      # *end = char; end += 2
+      # *end = other; end += 2
       ld2 x02 ad4
-      !char.ld1 swp !char.sta # bleed `char`
+      !char.ld1 swp !char.sta # bleed `other`
     got_backspace.
       # `char` is either `'\b'` or `other` from above
       # putc(dst == end ? 0 : char)
-      # end -= dst == end ? o : 1
+      # end -= dst == end ? 0 : 1
       ld3 ld3 !e iff !putc xFF ad2 @dyn
       # putc(' ')
       !char.space !putc !char.backspace # bleed `'\b'`
     got_null.
-      # `char` is either `'\0'` or `'\b'` from above
-      # putc(char)
       !putc
-  getline: # getline(*dst, *end)
+  getline: # getline(*end, *dst)
       !getc
     .got_other
       !char.line_feed xo2 .got_line_feed iff !char.line_feed xo2
@@ -196,7 +194,7 @@ getline.def!
 getpass.def!
     got_other.
       # increment by `2` because `.got_backspace` will decrement by `1`
-      # *end = char; end += 2
+      # *end = other; end += 2
       ld2 !char.sta
       x02 ad2 !char.null # bleed `'\0'`
     got_backspace.
@@ -205,7 +203,7 @@ getpass.def!
     got_null.
       # pop `char`
       !char.pop
-  getpass: # getpass(*dst, *end)
+  getpass: # getpass(*end, *dst)
       !getc
     .got_other
       !char.line_feed xo2 .got_line_feed iff !char.line_feed xo2
@@ -219,3 +217,46 @@ getpass.def!
       st1 !char.null swp sta
   # return*
   !ret
+
+# reads into `dst` and echoes to `stdout` characters from `stdin` until `'\n'` is
+# encountered. does not support `'\b'`. assumes `dst` to be initialized to `{0}`
+getline.min.def!
+    got_other.
+      # *dst = other; end += 1
+      ld2 x01 ad4
+      !char.ld1 swp !char.sta # bleed `other`
+    got_null.
+      # `char` is either `'\0'` or `other` from above
+      # putc(char)
+      !putc
+  getline.min: # getline.min(*dst)
+      !getc
+    .got_other
+      !char.line_feed xo2 .got_line_feed iff !char.line_feed xo2
+      !char.null xo2 .got_null iff !char.null xo2
+    !jmp
+    got_line_feed.
+      # pop `char`, which is a `'\n'`
+      !char.pop
+  # return*
+  !rt1
+
+# identical to `getline.min`, but does not echo to `stdout`
+getpass.min.def!
+    got_other.
+      ld2 !char.sta
+      x01 ad2 !char.null # bleed `'\0'`
+    got_null.
+      # pop `char`
+      !char.pop
+  getpass.min: # getpass.min(*dst)
+      !getc
+    .got_other
+      !char.line_feed xo2 .got_line_feed iff !char.line_feed xo2
+      !char.null xo2 .got_null iff !char.null xo2
+    !jmp
+    got_line_feed.
+      # pop `char`, which is a `'\n'`
+      !char.pop
+  # return*
+  !rt1

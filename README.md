@@ -31,8 +31,8 @@ This project is a work in progress. Try it out by running any of the following c
 ```bash
 # musts
 python3 test.py bad\ apple.asm asm emu
-python3 test.py bf\ interp.asm asm emu
 python3 test.py bf\ comp.asm asm emu
+python3 test.py bf\ interp.asm asm emu
 python3 test.py life.asm asm emu
 python3 test.py mandelbrot.asm asm emu
 python3 test.py fibonacci.asm asm emu

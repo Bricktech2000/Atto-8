@@ -1,7 +1,5 @@
 @ lib/core.asm
 @ lib/types.asm
-@ lib/string.asm
-@ lib/stdlib.asm
 @ lib/stdio.asm
 
 # brainfuck just-in-time compiler; compiles brainfuck to machine code into an internal
@@ -14,49 +12,63 @@
 # - unbalanced brackets in the source code will result in undefined behavior
 
 main!
-  :main !jmp
-  code_buffer: x40 !pad !hlt
+  !stdout # for call into `:code_buffer` way later
+  code_buffer: # beginning of internal memory buffer
+  :code_buffer :getline !jmp
 
-  main:
-    !stdout # for call into `:code_buffer` way later
-    :code_buffer # current end of the `dst` string
-    # wait for input
-    !block_getc
-    loop:
-      # echo back character
-      !char.ld0 !putc
+  # reserve `!code_buffer.len` bytes for `code_buffer`. moreover, assert that the entire
+  # code buffer is located before address `0x80`, ensuring
+  :code_buffer !code_buffer.len add x80 not and @org !hlt
 
-      :_ # default: an empty string
-        !char.greater_than_sign xo2 :> iff !char.greater_than_sign xo2
-        !char.less_than_sign xo2 :< iff !char.less_than_sign xo2
-        !char.plus_sign xo2 :+ iff !char.plus_sign xo2
-        !char.hyphen_minus xo2 :- iff !char.hyphen_minus xo2
-        !char.full_stop xo2 :. iff !char.full_stop xo2
-        !char.comma xo2 :, iff !char.comma xo2
-        !char.left_square_bracket xo2 :[ iff !char.left_square_bracket xo2
-        !char.right_square_bracket xo2 :] iff !char.right_square_bracket xo2
+    got_other:
+      :_ neg @const # default: an empty string
+        !char.greater_than_sign xo2 :> neg @const iff !char.greater_than_sign xo2
+        !char.less_than_sign xo2 :< neg @const iff !char.less_than_sign xo2
+        !char.plus_sign xo2 :+ neg @const iff !char.plus_sign xo2
+        !char.hyphen_minus xo2 :- neg @const iff !char.hyphen_minus xo2
+        !char.full_stop xo2 :. neg @const iff !char.full_stop xo2
+        !char.comma xo2 :, neg @const iff !char.comma xo2
+        !char.left_square_bracket xo2 :[ neg @const iff !char.left_square_bracket xo2
+        !char.right_square_bracket xo2 :] neg @const iff !char.right_square_bracket xo2
+      neg
 
-      # `strcpy`, but keeps track of the end of the `dst` string
+      # `strcpy`, but keeps track of the end of the `dst` string.
       # both more performant and smaller in size than `strcat`
       ld2 for_c:
-        # loop if *dst != '\xFF'
-        ld1 lda !z
-        ld1 sta
+        # loop if *dst != '\0'
+        ld1 !char.lda !char.check_null
+        ld1 !char.sta
       inc swp inc swp @dyn :for_c !bcc dec st2 pop
-    # loop while `stdin` is not empty
-    !char.pop !getc !char.check_null :loop !bcc !char.pop
+
+      # structure similar to `getline.min`, but compiles brainfuck user input into `dst`
+      # directly, instead of writing user input to `dst` as-is
+    got_null:
+      # `char` is either `'\0'` or `other` from above
+      # putc(char)
+      !putc
+  getline: # getline(*dst)
+      !getc
+    :got_other
+      !char.line_feed xo2 :got_line_feed iff !char.line_feed xo2
+      !char.null xo2 :got_null iff !char.null xo2
+    !jmp
+    got_line_feed:
+      # bleed `head`
+      # bleed `char`, which is a `'\n'`
+      !char.carriage_return !putc
 
     # compute and substitute sentinel values
     :code_buffer for_b: inc
-      ld0 lda :for_b
-        ![_sentinel xo2 :[_sentinel iff ![_sentinel xo2
-        !]_sentinel xo2 :]_sentinel iff !]_sentinel xo2
-        !null_sentinel xo2 :break iff !null_sentinel xo2
-      st0 !jmp
+      ld0 lda :for_b neg @const
+        ![_sentinel xo2 :[_sentinel neg @const iff ![_sentinel xo2
+        !]_sentinel xo2 :]_sentinel neg @const iff !]_sentinel xo2
+        !null_sentinel xo2 :break neg @const iff !null_sentinel xo2
+      st0 neg !jmp
     break: pop
 
-    !char.carriage_return !putc
-    !char.line_feed !putc
+    # print the line feed now and not earlier, to get visual feedback on when
+    # the brainfuck program begins execution
+    !putc
 
     # execute compiled brainfuck program.
     # `head` and `!stdout` are already on the stack
@@ -93,3 +105,5 @@ main!
 ]_sentinel! @FE
 pad_sentinel! @FD
 null_sentinel! @00
+
+code_buffer.len! x54
