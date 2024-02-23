@@ -4,8 +4,8 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 
-# most programs from `/bf/test/` can be pasted into this interpreter directly.
-# note the following:
+# brainfuck interpreter. most programs from `/bf/test/` can be pasted into this interpreter
+# directly. note the following:
 # - `,` is non-blocking; if no input is currently available, `'\0'` is returned
 # - `CRLF` is used for printing newlines. sending `LF` will not return the carriage
 # - cells are 8-bit unsigned integers, wrapping on overflow and underflow

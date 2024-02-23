@@ -4,8 +4,9 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 
-# most programs from `/bf/test/` can be pasted into this compiler directly.
-# note the following:
+# brainfuck just-in-time compiler; compiles brainfuck to machine code into an internal
+# memory buffer then transfers control over to the compiled program. most programs from
+# `/bf/test/` can be pasted into this compiler directly. note the following:
 # - `,` is non-blocking; if no input is currently available, `'\0'` is returned
 # - `CRLF` is used for printing newlines. sending `LF` will not return the carriage
 # - cells are 8-bit unsigned integers, wrapping on overflow and underflow

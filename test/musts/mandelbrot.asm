@@ -20,7 +20,7 @@ main!
 
   !i2f6.mul.def
 
-  tones: @20 @2E @2C @2B @2A @6F @25 @40 tones.end: # " .,+*o%@"
+  tones: @20 @2E @2C @2B @2A @6F @25 @40 tones.end: # " .,+*o%@"...
 
 tones.len! :tones.end :tones sub @const
 
@@ -35,7 +35,7 @@ mandelbrot! # u8 i = mandelbrot(i2f6 c_re, i2f6 c_im)
     ld2 ld0 :i2f6.mul !call
     # radius of `0xC0` aka `1.5` yields neater output than `0x100` aka `2.0`.
     # radius of `2.0` would be mathematically correct but suffers from integer
-    # overflow leading to a granier output
+    # overflow leading to a grainier output
     :default
       # break if `z_re2 + z_im2` overflows `u8`
       ld2 ld2 add @dyn :break if2

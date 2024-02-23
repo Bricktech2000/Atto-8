@@ -101,25 +101,25 @@ sort.def!
 # -  `HEAP_START` -- start of heap memory
 # - `*HEAP_START` -- length of heap memory but with the most significant bit set
 #
-# struct header ??<
+# struct header {
 #   u7 size; // excludes header
 #   bool is_free; // most significant bit
-# ??>
+# }
 #
-# struct block ??<
+# struct block {
 #   header header;
 #   u8 data[header.size];
-# ??>
+# }
 #
-# struct heap ??<
+# struct heap {
 #   block blocks[];
-# ??>
+# }
 
 heap_unlimited! xFF # header for free block of size 0x7F
 is_free_mask! x80 @const
 
 malloc.def!
-  malloc: # void* p = malloc(size)
+  malloc: # void *p = malloc(size)
     !heap_start for_block. # loop as `curr_block`
       # offset `size` so allocated blocks are considered too small
       ld2 !is_free_mask orr

@@ -23,7 +23,7 @@ main!
   !display_buffer.len :playfield !display_buffer :memcpy !call
   # wait for input then `memcpy` "if only" text into display buffer
   x7F !delay !block_any
-  x12 :if_only !display_buffer x04 add @const :memcpy !call !hlt
+  x14 :if_only !display_buffer x04 add @const :memcpy !call !hlt
 
   !memcpy.def
   !delay_shift_rows.def
@@ -68,6 +68,7 @@ indicator_pixels.len! :indicator_pixels.end :indicator_pixels sub @const
 if_only! @00 @00
   @0E @E0 @04 @C0 @0E @80 @00 @01 #  if
   @EC @95 @AA @88 @EA @E9 @00 @00 # only!
+  @00 @00
 
 playfield_black!
   @00 @00 @00 @00 @80 @01 @E0 @07

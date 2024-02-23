@@ -869,10 +869,10 @@ pub fn mnemonic_to_token(mnemonic: Mnemonic) -> Option<Token> {
     "sti" => Some(Token::Sti),
     "lds" => Some(Token::Lds),
     "sts" => Some(Token::Sts),
-    "nop" => Some(Token::Nop),
     "clc" => Some(Token::Clc),
     "sec" => Some(Token::Sec),
     "flc" => Some(Token::Flc),
+    "nop" => Some(Token::Nop),
     "pop" => Some(Token::Pop),
     _ if mnemonic.len() == 3 => match mnemonic.split_at(2) {
       ("ad", hex) => parse_hex(&hex).and_then(Size::new).map(Token::AdS),

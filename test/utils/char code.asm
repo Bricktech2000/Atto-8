@@ -5,9 +5,8 @@
 
 main! !nop
   loop:
-    !block_getc
-    # !char.null swp !u8.to_dec !stack_puts !char.space !putc
-    !char.commercial_at !hex_putc
-    # !char.to_lower !putc
-    # !char.to_upper !putc
+    # !char.null !block_getc !u8.to_dec !char.space !stack_puts
+    !block_getc !char.commercial_at !hex_putc
+    # !getc !char.to_lower clc !putc
+    # !getc !char.to_upper clc !putc
   :loop !jmp
