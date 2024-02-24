@@ -31,8 +31,6 @@ This project is a work in progress. Try it out by running any of the following c
 ```bash
 # musts
 python3 test.py bad\ apple.asm asm emu
-python3 test.py bf\ comp.asm asm emu
-python3 test.py bf\ interp.asm asm emu
 python3 test.py life.asm asm emu
 python3 test.py mandelbrot.asm asm emu
 python3 test.py fibonacci.asm asm emu
@@ -50,6 +48,9 @@ python3 test.py quine.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py greeting.asm asm emu
 python3 test.py hello\ world.asm asm emu
 python3 test.py hello\ world.c libc/stdio.c libc/crt0.c cc asm emu
+python3 test.py bf\ comp.asm asm emu
+python3 test.py bf\ interp.asm asm emu
+python3 test.py bf\ transp.asm asm emu
 
 # utils
 python3 test.py attomon.asm asm emu

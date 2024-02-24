@@ -7,7 +7,6 @@
 @ lib/controller.asm
 
 # controls:
-#
 # - Primary Up -- move circle up
 # - Primary Down -- move circle down
 # - Primary Left -- move circle left

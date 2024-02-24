@@ -90,20 +90,20 @@ main!
 
   # expects `*head` on top of the stack, followed by `head`, followed by `!stdout`
   # top of stack is written to `*head` only when `'<'` or `'>'` are encountered
-  >: ld1 sta inc ld0 lda !null_sentinel
-  <: ld1 sta dec ld0 lda !null_sentinel
-  +: inc !null_sentinel
-  -: dec !null_sentinel
+  >: ld1 sta inc ld0 lda !null_sentinel @data
+  <: ld1 sta dec ld0 lda !null_sentinel @data
+  +: inc !null_sentinel @data
+  -: dec !null_sentinel @data
   # `!stdin` and `!stdout` are `'\0'` which is also `!null_sentinel`. to avoid null bytes
   # within the string, we load `'\0'` from the stack using `ldo` instead
-  .: ld0 ld3 !fputc !null_sentinel
-  ,: ld2 !fgetc st0 !null_sentinel
-  [: !z !pad_sentinel ![_sentinel iff !jmp !null_sentinel
-  ]: !]_sentinel !jmp _: !null_sentinel
+  .: ld0 ld3 !fputc !null_sentinel @data
+  ,: ld2 !fgetc st0 !null_sentinel @data
+  [: !z !pad_sentinel @data ![_sentinel @data iff !jmp !null_sentinel @data
+  ]: !]_sentinel @data !jmp _: !null_sentinel @data
 
-[_sentinel! @FF
-]_sentinel! @FE
-pad_sentinel! @FD
-null_sentinel! @00
+[_sentinel! xFF
+]_sentinel! xFE
+pad_sentinel! xFD
+null_sentinel! x00
 
-code_buffer.len! x54
+code_buffer.len! x5A
