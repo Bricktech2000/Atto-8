@@ -234,8 +234,27 @@ fn function_definition_global(
   state: &mut State,
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedGlobal {
-  // TODO optimize: only do so if function does not end with return
-  let body = Statement::Compound(vec![body, Statement::Return(None)]);
+  fn control_always_excapes(statement: &Statement) -> bool {
+    match statement {
+      Statement::Expression(_) => false,
+      Statement::Compound(statements) => statements.iter().any(control_always_excapes),
+      Statement::If(_, if_body, else_body) => {
+        else_body
+          .as_deref()
+          .map(control_always_excapes)
+          .unwrap_or(false)
+          && control_always_excapes(if_body)
+      }
+      Statement::While(_, body) => control_always_excapes(body), // TODO or condition always true
+      Statement::Return(_) => true,
+      Statement::Assembly(_) => false,
+    }
+  }
+
+  let body = match control_always_excapes(&body) {
+    false => Statement::Compound(vec![body, Statement::Return(None)]),
+    true => body,
+  };
 
   let () = typecheck::function_declaration_global(
     is_inline,
