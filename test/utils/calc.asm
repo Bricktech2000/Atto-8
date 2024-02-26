@@ -25,8 +25,7 @@ main!
   !char.null # dummy character for `got_line_feed`
 
   got_line_feed:
-    # print carriage return then print and reset status
-    !char.carriage_return !putc
+    # print and reset status
     !status_success sw2 !putc
 
     :stack for_item:

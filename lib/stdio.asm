@@ -169,12 +169,11 @@ getline.def!
     got_backspace.
       # `char` is either `'\b'` or `other` from above
       # putc(dst == end ? 0 : char)
-      # end -= dst == end ? 0 : 1
-      ld3 ld3 !e iff !putc xFF ad2 @dyn
-      # putc(' ')
-      !char.space !putc !char.backspace # bleed `'\b'`
+      ld3 ld3 !e iff # bleed `char`
     got_null.
       !putc
+      # end -= dst == end ? 0 : 1
+      xFF ad2 @dyn
   getline: # getline(*end, *dst)
       !getc
     .got_other
@@ -198,11 +197,12 @@ getpass.def!
       ld2 !char.sta
       x02 ad2 !char.null # bleed `'\0'`
     got_backspace.
-      # end -= dst == end ? 0 : 1
-      ld3 ld3 !e xFF ad4 @dyn pop # bleed `char`
+      ld3 ld3 !e pop # bleed `char`
     got_null.
       # pop `char`
       !char.pop
+      # end -= dst == end ? 0 : 1
+      xFF ad2 @dyn
   getpass: # getpass(*end, *dst)
       !getc
     .got_other

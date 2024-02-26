@@ -9,7 +9,7 @@
 main! !nop
   loop:
     !block_getc !char.digit_zero !char.sub :fib !call !u8.pop
-    !char.carriage_return !putc !char.line_feed !putc
+    !char.line_feed !putc
   :loop !jmp
 
 fib: clc # u8 f = fib(u8 n)

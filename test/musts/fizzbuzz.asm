@@ -9,7 +9,7 @@
 main! !nop
   loop:
     !block_getc !char.digit_zero !char.sub :fizzbuzz !call
-    !char.carriage_return !putc !char.line_feed !putc
+    !char.line_feed !putc
   :loop !jmp
 
   str_num: @00 @00 @00 @00 # enough for null-terminated `"255"`
@@ -42,7 +42,7 @@ main! !nop
       # load string pointer from `ptrs` and print it
       :ptrs add lda !puts
 
-      !char.carriage_return !putc !char.line_feed !putc
+      !char.line_feed !putc
 
     # increment `i` and loop until `i == n`
     inc ld0 ld3 !eq :for_i !bcc pop

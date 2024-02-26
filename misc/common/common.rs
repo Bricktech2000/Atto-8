@@ -183,6 +183,22 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
     if next_stdout_clocks <= current_clocks || debug_mode {
       next_stdout_clocks += if debug_mode { 0 } else { clock_speed / 60 };
 
+      stdout = stdout
+        .into_iter()
+        .filter(|c| *c <= 0x7F) // outside ASCII
+        .filter(|c| *c != 0x00) // NUL
+        .collect::<VecDeque<_>>();
+      let stdout_string = stdout
+        .iter()
+        .map(|c| *c as char)
+        .collect::<String>()
+        .replace("\n", "\r\n")
+        .replace("\x08", "\x08 \x08");
+      stdout = stdout
+        .into_iter()
+        .filter(|c| *c != 0x07) // BEL
+        .collect::<VecDeque<_>>();
+
       let term = console::Term::stdout();
       term.clear_screen().unwrap();
       term.move_cursor_to(0, 0).unwrap();
@@ -194,23 +210,11 @@ pub fn execute<MC: std::fmt::Display + Tickable>(mut mc: MC, clock_speed: u128) 
         print!("{}", mc);
       } else {
         print!("\r\n");
-        print!(
-          "{}\r\n{}",
-          render_display(&display),
-          render_controller(&controller)
-        );
+        print!("{}", render_display(&display));
+        print!("{}", render_controller(&controller));
       }
       print!("\r\n");
-      stdout = stdout
-        .into_iter()
-        .filter(|c| *c <= 0x7F) // outside ASCII
-        .filter(|c| *c != 0x00) // NUL
-        .collect::<VecDeque<_>>();
-      print!("{}", stdout.iter().map(|c| *c as char).collect::<String>());
-      stdout = stdout
-        .into_iter()
-        .filter(|c| *c != 0x07) // BEL
-        .collect::<VecDeque<_>>();
+      print!("{}", stdout_string);
       use std::io::Write;
       std::io::stdout().flush().unwrap();
     }

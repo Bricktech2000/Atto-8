@@ -1,4 +1,5 @@
 @ lib/core.asm
+@ lib/types.asm
 @ lib/string.asm
 @ lib/stdlib.asm
 @ lib/stdio.asm

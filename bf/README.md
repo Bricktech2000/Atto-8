@@ -58,6 +58,6 @@ Writing beyond the start of the tape will corrupt the frontend's state, resultin
 
 Address `0x00` is assumed to be a memory-mapped standard input/output device. That is, `.` outputs by writing a byte to address `0x00` and `,` inputs by reading a byte from address `0x00`.
 
-When used as part of the Atto-8 microcomputer, the frontend implements non-blocking input which will return `0x00` if no input is currently available. This is different from an `EOF` condition, as input may become available at a later time. To send a newline to the Atto-8 microcomputer, the full `CRLF` sequence is required.
+When used as part of the Atto-8 microcomputer, the frontend implements non-blocking input which will return `0x00` if no input is currently available. This is different from an `EOF` condition, as input may become available at a later time.
 
 Cells are 8-bit unsigned integers and wrap on overflow and underflow.

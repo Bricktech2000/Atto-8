@@ -5,7 +5,6 @@
 # brainfuck interpreter. most programs from `/bf/test/` can be pasted into this interpreter
 # directly. note the following:
 # - `,` is non-blocking; if no input is currently available, `'\0'` is returned
-# - `CRLF` is used for printing newlines. sending `LF` will not return the carriage
 # - cells are 8-bit unsigned integers, wrapping on overflow and underflow
 # - writing beyond the start of the tape will result in undefined behavior
 # - unbalanced brackets in the source code will result in undefined behavior
@@ -15,7 +14,7 @@ main!
 
   # :source_buffer :source_buffer :getline !call
   :source_buffer :getline.min !call
-  !char.carriage_return !putc !char.line_feed !putc
+  !char.line_feed !putc
 
   xFF # head
   :source_buffer loop:

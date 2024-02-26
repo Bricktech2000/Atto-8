@@ -39,7 +39,7 @@ main!
 
     # copy back buffer to display buffer and print newline
     !display_buffer.len !back_buffer !display_buffer :memcpy !call clc
-    !char.carriage_return !putc !char.line_feed !putc
+    !char.line_feed !putc
   :loop !jmp
 
   !memcpy.def

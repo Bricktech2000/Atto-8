@@ -10,7 +10,7 @@ main! !nop
   loop:
     !char.null !block_getc !char.digit_zero !char.sub :collatz !call
     !char.left_parenthesis !putc !u8.to_dec !stack_puts !char.right_parenthesis !putc
-    !char.carriage_return !putc !char.line_feed !putc
+    !char.line_feed !putc
   :loop !jmp
 
   collatz: clc # u8 steps = collatz(u8 n)

@@ -90,11 +90,12 @@ impl Tickable for Microcomputer {
         let value = $value;
         if address == 0x00 {
           stdout.push_back(value);
+        } else {
+          self.mem[address] = value;
         }
         if address & common::DISPLAY_BUFFER == common::DISPLAY_BUFFER {
           display[address & !common::DISPLAY_BUFFER] = value
         }
-        self.mem[address] = value;
       }};
     }
 

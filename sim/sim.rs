@@ -275,12 +275,13 @@ impl Tickable for Microcomputer {
         // stdout
         if self.addr == 0x00 {
           stdout.push_back(self.data);
+        } else {
+          self.mem[self.addr as usize] = self.data;
         }
         // display
         if self.addr as usize & common::DISPLAY_BUFFER == common::DISPLAY_BUFFER {
           display[self.addr as usize & !common::DISPLAY_BUFFER] = self.data
         }
-        self.mem[self.addr as usize] = self.data;
       }
     }
     if let Signal::Active = self.read {

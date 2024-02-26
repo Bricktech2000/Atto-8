@@ -13,7 +13,7 @@
 # - typing `';'` decrements `head` then prints the byte at `head`
 # - typing `'?'` prints the byte at `head` then increments `head`
 # - typing `'\b'` swaps the nibbles in `buffer`
-# - typing `'\n'` prints `"\r\n"` then prints `head`
+# - typing `'\n'` prints `"\n"` then prints `head`
 # - typing `'!'` jumps program execution to `buffer`
 # - typing any other character prints `'\b'`
 #
@@ -55,7 +55,6 @@ main!
 
   # prepare stack and fall through to `buffer_print`
   got_line_feed:
-    !char.carriage_return !putc # `'\n'` was just printed, print `'\r'`
     !char.dollar_sign !putc
   got_dollar_sign:
     ld1 st2 # copy `head` to `buffer` for `buffer_print`
@@ -104,6 +103,6 @@ main!
     :str_attomon :puts.min !call
     :got_line_feed !jmp
     !user_buffer x10 add @org !puts.min.def
-    !user_buffer x20 add @org str_attomon: @0D @0A @0A @3D @41 @74 @74 @6F @4D @6F @6E @3D @0D @0A @00 # "\r\n\n=AttoMon=\r\n"
+    !user_buffer x20 add @org str_attomon: @0A @0A @3D @41 @74 @74 @6F @4D @6F @6E @3D @0A @00 # "\n\n=AttoMon=\n"
 
 user_buffer! xB0

@@ -39,7 +39,7 @@ main!
 
   store:
     !display_buffer.len !display_buffer !char.commercial_at !hex_putn
-    !char.carriage_return !putc !char.line_feed !putc
+    !char.line_feed !putc
 
   loop:
     !char.pop !getc

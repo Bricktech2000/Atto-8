@@ -24,4 +24,4 @@ main! !nop
     inc sw2 sw4 ld2 sw2 st2 # stack is now `ret, n, dst, via, src`
   ret: !ret
 
-  str_move: @23 n: @58 @20 @7C @20 src: @58 @20 @2D @3E @20 dst: @58 @0D @0A @00 # "#X | X -> X\r\n"
+  str_move: @23 n: @58 @20 @7C @20 src: @58 @20 @2D @3E @20 dst: @58 @0A @00 # "#X | X -> X\n"

@@ -11,7 +11,7 @@ const unsigned n = 13;
 
 void main(void) {
   // for (unsigned i = 0; i <= n; i++)
-  //   printf("fib(%u) = %u\r\n", i, fib(i));
+  //   printf("fib(%u) = %u\n", i, fib(i));
 
-  printf("fib(%u) = %u\r\n", n, fib(n));
+  printf("fib(%u) = %u\n", n, fib(n));
 }

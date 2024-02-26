@@ -17,7 +17,7 @@ main! !nop
   !getline.def
   !puts.def
 
-  str_literal_post: @22 @0D @0A @0A @00 # "\"\r\n\n"
-  str_newline_label: @0D @0A @73 @74 @72 @3A @00 # "\r\nstr:"
+  str_literal_post: @22 @0A @0A @00 # "\"\n\n"
+  str_newline_label: @0A @73 @74 @72 @3A @00 # "\nstr:"
   str_literal_pre: @20 @23 @20 @22 # " # \"" + line_buffer
   line_buffer: x20 !pad
