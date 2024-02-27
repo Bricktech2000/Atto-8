@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 #[path = "../misc/common/common.rs"]
 mod common;
@@ -851,27 +851,33 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
     });
 
     // for patterns such as `:label1 !bcs :label2 !jmp`
-    let mut label_aliases: HashMap<Label, Vec<Label>> = HashMap::new();
+    let labels = roots.iter().flat_map(|(_, root)| match root {
+      Root::LabelDefs(labels) => labels.clone(),
+      _ => vec![],
+    });
+    let mut label_aliases: BTreeMap<Label, BTreeSet<Label>> =
+      labels.map(|label| (label, BTreeSet::new())).collect();
     roots = match_replace(&roots, |window| match window {
       [Root::LabelDefs(diff_labels), Root::Node(Node::LabelRef(diff_label)), Root::Instruction(Instruction::Sti)]
         if !diff_labels.contains(&diff_label) =>
       {
         label_aliases
           .entry(diff_label.clone())
-          .or_insert_with(|| vec![])
+          .or_default()
           .extend(diff_labels.clone());
         Some(vec![])
       }
+
       _ => None,
     });
+    // if A has alias B and B has alias C then ensure A has alias C,
+    // for all A, B, C. ensure A has alias A, for all A.
+    common::reflexive_transitive_closure(&mut label_aliases);
     roots = match_replace(&roots, |window| match window {
       [Root::LabelDefs(labels)] => Some(vec![Root::LabelDefs(
         labels
           .iter()
-          .flat_map(|label| {
-            std::iter::once(label.clone())
-              .chain(label_aliases.get(label).cloned().unwrap_or(vec![]))
-          })
+          .flat_map(|label| label_aliases.get(&label).cloned().unwrap_or_default())
           .collect(),
       )]),
 

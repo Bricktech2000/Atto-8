@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 pub const MEM_SIZE: usize = 0x100;
 pub const MIC_SIZE: usize = 0x80 * 0x02 * 0x20; // 0x2000
@@ -450,7 +450,7 @@ impl std::fmt::Display for Signal {
 #[derive(Clone, Eq, PartialEq)]
 pub struct File(pub String);
 
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum Label {
   Local(String, Option<usize>),
   Global(String),
@@ -992,5 +992,27 @@ impl std::fmt::Display for Mnemonic {
 impl std::fmt::Display for Token {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     write!(f, "{}", token_to_mnemonic(self.clone()))
+  }
+}
+
+pub fn reflexive_transitive_closure<T: Clone + Ord>(graph: &mut BTreeMap<T, BTreeSet<T>>) {
+  // brute-force reflexive transitive closure
+  let original_graph = graph.clone();
+  for parent in original_graph.keys() {
+    let mut stack: Vec<T> = vec![parent.clone()];
+    let mut visited: BTreeSet<T> = BTreeSet::new();
+
+    let children = graph.get_mut(parent).unwrap_or_else(|| unreachable!());
+    children.insert(parent.clone()); // reflexive closure
+
+    while let Some(parent) = stack.pop() {
+      for child in original_graph.get(&parent).unwrap_or(&BTreeSet::new()) {
+        if !visited.contains(child) {
+          stack.push(child.clone());
+          visited.insert(child.clone());
+          children.insert(child.clone()); // transitive closure
+        }
+      }
+    }
   }
 }

@@ -674,7 +674,7 @@ fn while_statement() -> Parser<Statement> {
     .and_then(|_| parse::expression())
     .and_then(|expression| {
       parse::ws(parse::char(')').info("to end condition"))
-        .and_then(|_| parse::compound_statement())
+        .and_then(|_| parse::statement())
         .map(|statements| Statement::While(expression, Box::new(statements)))
     })
 }

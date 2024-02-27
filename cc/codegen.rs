@@ -588,6 +588,12 @@ fn n8_expression(
       .collect(),
 
     TypedExpression::N8Addition(expression1, expression2) => match (*expression1, *expression2) {
+      (expression, TypedExpression::N8Constant(0x02))
+      | (TypedExpression::N8Constant(0x02), expression) => std::iter::empty()
+        .chain(codegen::n8_expression(expression, temporaries_size))
+        .chain([Ok(Token::Inc)])
+        .chain([Ok(Token::Inc)])
+        .collect(),
       (expression, TypedExpression::N8Constant(0x01))
       | (TypedExpression::N8Constant(0x01), expression) => std::iter::empty()
         .chain(codegen::n8_expression(expression, temporaries_size))
@@ -602,6 +608,12 @@ fn n8_expression(
         .chain(codegen::n8_expression(expression, temporaries_size))
         .chain([Ok(Token::Dec)])
         .collect(),
+      (expression, TypedExpression::N8Constant(0xFE))
+      | (TypedExpression::N8Constant(0xFE), expression) => std::iter::empty()
+        .chain(codegen::n8_expression(expression, temporaries_size))
+        .chain([Ok(Token::Dec)])
+        .chain([Ok(Token::Dec)])
+        .collect(),
       (expression1, expression2) => std::iter::empty()
         .chain(codegen::n8_expression(expression1, temporaries_size))
         .chain(codegen::n8_expression(expression2, temporaries_size + 1))
@@ -611,6 +623,11 @@ fn n8_expression(
 
     TypedExpression::N8Subtraction(expression1, expression2) => {
       match (*expression1, *expression2) {
+        (expression, TypedExpression::N8Constant(0x02)) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
+          .chain([Ok(Token::Dec)])
+          .chain([Ok(Token::Dec)])
+          .collect(),
         (expression, TypedExpression::N8Constant(0x01)) => std::iter::empty()
           .chain(codegen::n8_expression(expression, temporaries_size))
           .chain([Ok(Token::Dec)])
@@ -620,6 +637,11 @@ fn n8_expression(
           .collect(),
         (expression, TypedExpression::N8Constant(0xFF)) => std::iter::empty()
           .chain(codegen::n8_expression(expression, temporaries_size))
+          .chain([Ok(Token::Inc)])
+          .collect(),
+        (expression, TypedExpression::N8Constant(0xFE)) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
+          .chain([Ok(Token::Inc)])
           .chain([Ok(Token::Inc)])
           .collect(),
         (TypedExpression::N8Constant(0x01), expression) => std::iter::empty()
@@ -646,6 +668,23 @@ fn n8_expression(
 
     TypedExpression::U8Multiplication(expression1, expression2) => {
       match (*expression1, *expression2) {
+        (expression, TypedExpression::N8Constant(0x04))
+        | (TypedExpression::N8Constant(0x04), expression) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
+          .chain([Ok(Token::Clc), Ok(Token::Shl), Ok(Token::Shl)])
+          .collect(),
+        // TODO implement universal multiplication by constant
+        (expression, TypedExpression::N8Constant(0x03))
+        | (TypedExpression::N8Constant(0x03), expression) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
+          .chain([
+            Ok(Token::LdO(Ofst(0x00))),
+            Ok(Token::Clc),
+            Ok(Token::Shl),
+            Ok(Token::Clc),
+            Ok(Token::Add),
+          ])
+          .collect(),
         (expression, TypedExpression::N8Constant(0x02))
         | (TypedExpression::N8Constant(0x02), expression) => std::iter::empty()
           .chain(codegen::n8_expression(expression, temporaries_size))
@@ -669,6 +708,15 @@ fn n8_expression(
 
     TypedExpression::U8Division(expression1, expression2) => {
       match (*expression1, *expression2) {
+        (expression1, TypedExpression::N8Constant(0x04)) => std::iter::empty()
+          .chain(codegen::n8_expression(expression1, temporaries_size))
+          .chain([
+            Ok(Token::Clc),
+            Ok(Token::Shr),
+            Ok(Token::Clc),
+            Ok(Token::Shr),
+          ])
+          .collect(),
         (expression1, TypedExpression::N8Constant(0x02)) => std::iter::empty()
           .chain(codegen::n8_expression(expression1, temporaries_size))
           .chain([Ok(Token::Clc), Ok(Token::Shr)])
@@ -690,6 +738,10 @@ fn n8_expression(
 
     TypedExpression::U8Modulo(expression1, expression2) => {
       match (*expression1, *expression2) {
+        (expression1, TypedExpression::N8Constant(0x04)) => std::iter::empty()
+          .chain(codegen::n8_expression(expression1, temporaries_size))
+          .chain([Ok(Token::XXX(0x03)), Ok(Token::And)])
+          .collect(),
         (expression1, TypedExpression::N8Constant(0x02)) => std::iter::empty()
           .chain(codegen::n8_expression(expression1, temporaries_size))
           .chain([Ok(Token::XXX(0x01)), Ok(Token::And)])

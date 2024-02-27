@@ -1,5 +1,5 @@
 use crate::*;
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 #[rustfmt::skip] macro_rules! global_label { ($name:expr) => { Label::Global(format!("{}", $name)) }; }
 #[rustfmt::skip] macro_rules! global_macro { ($name:expr) => { Macro(format!("{}", $name)) }; }
@@ -36,61 +36,32 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 #[rustfmt::skip] pub(crate) use mod_macro;
 
 pub fn link(program: &TypedProgram, _errors: &mut Vec<(Pos, Error)>) -> Vec<Result<Token, String>> {
-  let mut dependencies: BTreeMap<String, BTreeSet<(bool, String)>> = match program {
+  let mut dependencies: BTreeMap<(bool, String), BTreeSet<(bool, String)>> = match program {
     TypedProgram(globals) => globals
       .into_iter()
       .filter_map(|global| match global {
         TypedGlobal::Data(label, value) => Some((
-          label.clone(),
+          (true, label.clone()),
           value.iter().flat_map(link::expression).collect(),
         )),
-        TypedGlobal::Macro(label, statement) => Some((label.clone(), link::statement(statement))),
+        TypedGlobal::Macro(label, statement) => {
+          Some(((false, label.clone()), link::statement(statement)))
+        }
         TypedGlobal::Function(label, statement) => {
-          Some((label.clone(), link::statement(statement)))
+          Some(((true, label.clone()), link::statement(statement)))
         }
         TypedGlobal::Assembly(_assembly) => None,
       })
       .collect(),
   };
 
-  let labeled_globals: BTreeSet<String> = match program {
-    TypedProgram(globals) => globals
-      .into_iter()
-      .filter_map(|global| match global {
-        TypedGlobal::Data(label, _value) => Some(label.clone()),
-        TypedGlobal::Macro(_label, _statement) => None,
-        TypedGlobal::Function(label, _statement) => Some(label.clone()),
-        TypedGlobal::Assembly(_assembly) => None,
-      })
-      .collect(),
-  };
-
-  // brute-force reflexive transitive closure of dependencies.
   // if A depends on B and B depends on C then ensure A depends on C,
   // for all A, B, C. ensure A depends on A, for all A.
-  let original_dependencies = dependencies.clone();
-  for name in original_dependencies.keys() {
-    let mut stack: Vec<String> = vec![name.clone()];
-    let mut visited: HashSet<String> = HashSet::new();
-
-    let deps = dependencies.get_mut(name).unwrap_or_else(|| unreachable!());
-    deps.insert((labeled_globals.contains(name), name.clone())); // reflexive closure
-
-    // depth-first iteration because recursion would be inconvenient
-    while let Some(node) = stack.pop() {
-      for (is_labeled, dep) in original_dependencies.get(&node).unwrap_or(&BTreeSet::new()) {
-        if !visited.contains(dep) {
-          stack.push(dep.clone());
-          visited.insert(dep.clone());
-          deps.insert((*is_labeled, dep.clone())); // transitive closure
-        }
-      }
-    }
-  }
+  common::reflexive_transitive_closure(&mut dependencies);
 
   dependencies
     .iter()
-    .flat_map(|(name, deps)| {
+    .flat_map(|((_, name), deps)| {
       std::iter::empty()
         .chain([Ok(Token::MacroDef(link::deps_macro!(&name)))])
         .chain(deps.iter().filter_map(|(is_labeled, dep)| {
