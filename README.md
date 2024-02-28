@@ -33,11 +33,12 @@ This project is a work in progress. Try it out by running any of the following c
 python3 test.py bad\ apple.asm asm emu
 python3 test.py life.asm asm emu
 python3 test.py mandelbrot.asm asm emu
-python3 test.py fibonacci.asm asm emu
-python3 test.py fibonacci.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
+python3 test.py fib.asm asm emu
+python3 test.py fib.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py fizzbuzz.asm asm emu
 python3 test.py rule\ 110.asm asm emu
 python3 test.py collatz.asm asm emu
+python3 test.py collatz.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py reverse.asm asm emu
 python3 test.py hanoi.asm asm emu
 python3 test.py hanoi.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu

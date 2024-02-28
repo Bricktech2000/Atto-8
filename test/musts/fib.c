@@ -7,11 +7,16 @@ unsigned fib(unsigned n) {
   return fib(n - 1) + fib(n - 2);
 }
 
+void print_fib(unsigned n) {
+  if (n != 0)
+    print_fib(n - 1);
+
+  printf("%u ", fib(n));
+}
+
 const unsigned n = 13;
 
 void main(void) {
-  // for (unsigned i = 0; i <= n; i++)
-  //   printf("fib(%u) = %u\n", i, fib(i));
-
-  printf("fib(%u) = %u\n", n, fib(n));
+  print_fib(n);
+  putchar('\n');
 }

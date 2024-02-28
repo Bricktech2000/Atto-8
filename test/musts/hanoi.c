@@ -8,4 +8,6 @@ void hanoi(unsigned n, char dst, char via, char src) {
   }
 }
 
-void main(void) { hanoi(7, 'C', 'B', 'A'); }
+const unsigned n = 5;
+
+void main(void) { hanoi(n, 'C', 'B', 'A'); }
