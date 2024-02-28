@@ -38,7 +38,7 @@ python3 test.py fibonacci.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py fizzbuzz.asm asm emu
 python3 test.py rule\ 110.asm asm emu
 python3 test.py collatz.asm asm emu
-python3 test.py reverse.asm asm emu # TODO
+python3 test.py reverse.asm asm emu
 python3 test.py hanoi.asm asm emu
 python3 test.py hanoi.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py rot13.asm asm emu
@@ -48,9 +48,10 @@ python3 test.py quine.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py greeting.asm asm emu
 python3 test.py hello\ world.asm asm emu
 python3 test.py hello\ world.c libc/stdio.c libc/crt0.c cc asm emu
-python3 test.py bf\ comp.asm asm emu
 python3 test.py bf\ interp.asm asm emu
 python3 test.py bf\ transp.asm asm emu
+python3 test.py bf\ jit.asm asm emu
+python3 test.py bf\ vm.asm asm emu
 
 # utils
 python3 test.py attomon.asm asm emu

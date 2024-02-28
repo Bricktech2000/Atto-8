@@ -2,8 +2,11 @@
 @ lib/types.asm
 @ lib/stdio.asm
 
-# brainfuck interpreter. most programs from `/bf/test/` can be pasted into this interpreter
-# directly. note the following:
+# brainfuck interpreter; interprets brainfuck straight from source without preprocessing.
+# only has to store one byte per source character, allowing for running larger brainfuck
+# programs, at the expense of performance
+#
+# most programs from `/bf/test/` can be pasted in directly. note the following:
 # - `,` is non-blocking; if no input is currently available, `'\0'` is returned
 # - cells are 8-bit unsigned integers, wrapping on overflow and underflow
 # - writing beyond the start of the tape will result in undefined behavior
@@ -50,8 +53,8 @@ main!
           !char.right_square_bracket xor x00 ad2 @dyn # !char.right_square_bracket xor
         pop
         # increment or decrement head depending on sign of nesting level
-        shl ld1 dec ld2 inc iff st1 shr
-        # loop if nesting level is non-zero
+        shl @dyn ld1 dec ld2 inc iff st1 shr @dyn
+      # loop if nesting level is non-zero
       !z :for_c !bcc # bleed `0x00`
       # we're at a right bracket if and only if we're coming from a left bracket.
       # if we're at a right bracket, increment head to skip over the right bracket

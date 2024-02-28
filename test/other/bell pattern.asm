@@ -10,7 +10,7 @@ main!
     # decrement the delay argument by `1` to account for the clocks required to execute
     # the rest of the loop. this was determined experimentally using `!tuning_pattern`
     :pattern ld1 add lda dec !delay
-    # if we're at the begining of the pattern then loop back to the end of the pattern
+    # if we're at the beginning of the pattern then loop back to the end of the pattern
     !z !pattern.len iff clc
   :for_byte !jmp
 
