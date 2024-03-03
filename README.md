@@ -43,12 +43,15 @@ python3 test.py reverse.asm asm emu
 python3 test.py hanoi.asm asm emu
 python3 test.py hanoi.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py rot13.asm asm emu
-python3 test.py quine.asm asm emu
 python3 test.py quine.hex enc emu
+python3 test.py quine.asm asm emu
 python3 test.py quine.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py greeting.asm asm emu
 python3 test.py hello\ world.asm asm emu
 python3 test.py hello\ world.c libc/stdio.c libc/crt0.c cc asm emu
+python3 test.py cat.hex enc emu
+python3 test.py cat.asm asm emu
+python3 test.py cat.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py bf\ interp.asm asm emu
 python3 test.py bf\ transp.asm asm emu
 python3 test.py bf\ jit.asm asm emu
