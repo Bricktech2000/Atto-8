@@ -83,14 +83,13 @@ hex_putn! clc # hex_putn(char sep, *str, len)
   # loop if i > 0
   !z .for_i !bcc pop pop pop
 
-# prints and consumes a null-terminated string from the stack
-stack_puts! # stack_puts(str[])
-  for_c. !char.check_null !putc .for_c !bcc
-
 # inputs and pushes in reverse order a null-terminated string onto the stack
 stack_gets! # str[] = stack_gets()
   !char.null for_c. !getc !char.check_null .for_c !bcc !char.pop
 
+# prints and consumes a null-terminated string from the stack
+stack_puts! # stack_puts(str[])
+  for_c. !char.check_null !putc .for_c !bcc
 
 # a `printf` immitation that supports a few conversion specifiers. in `format`,
 # - `%d` prints a signed integer as decimal with precision `1`

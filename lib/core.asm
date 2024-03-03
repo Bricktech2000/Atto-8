@@ -37,10 +37,10 @@ rt2! st1 pop !ret
 rt3! st2 pop pop !ret
 
 dbg! @BB # unofficial `0xBB` treated as debug request
-here! lbl. .lbl
+here! here. .here
 nop! nop @dyn
 hlt! !here !jmp
-pad! .lbl add lbl. @org
+pad! .here add here. @org
 stall! shl shl shl @const rot @dyn # argument at most 0x1F
 ofst! neg @const sub # add large constant by subtraction
 

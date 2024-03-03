@@ -52,6 +52,8 @@ python3 test.py hello\ world.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py cat.hex enc emu
 python3 test.py cat.asm asm emu
 python3 test.py cat.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
+python3 test.py truth-machine.asm asm emu
+python3 test.py truth-machine.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py bf\ interp.asm asm emu
 python3 test.py bf\ transp.asm asm emu
 python3 test.py bf\ jit.asm asm emu
