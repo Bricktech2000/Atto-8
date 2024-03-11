@@ -377,7 +377,7 @@ pub fn parse(input: String, errors: &mut impl Extend<(Pos, Error)>) -> Program {
     .and_then(|_| parse::translation_unit())
     .parse(&input)
     .unwrap_or_else(|error| {
-      errors.extend([(Pos(File("[parse]".to_string()), 0, 0), Error(error))]);
+      errors.extend([(Pos(File("[parse]".into()), 0, 0), Error(error))]);
       Program(vec![])
     })
 }

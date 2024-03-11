@@ -31,13 +31,13 @@ pub fn preprocess(
   defines.insert("__STDC_NO_VLA__".to_string(), vec![Ok(1.to_string())]);
 
   let last_file = defines.get(DUNDER_FILE).unwrap_or(&vec![]).clone();
-  let current_file = vec![Err('"'), Ok(file.0.clone()), Err('"')];
+  let current_file = vec![Err('"'), Ok(file.0.to_string_lossy().to_string()), Err('"')];
   defines.insert(DUNDER_FILE.to_string(), current_file); // TODO escape quotes in filename
   defines.insert(DUNDER_LINE.to_string(), vec![Ok(0.to_string())]);
 
   let source = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {
     errors.extend([(
-      pos.unwrap_or(Pos(File("[bootstrap]".to_string()), 0, 0)),
+      pos.unwrap_or(Pos(File("[bootstrap]".into()), 0, 0)),
       Error(format!("Unable to read file `{}`", file)),
     )]);
     format!("")
@@ -65,7 +65,7 @@ pub fn preprocess(
             filename,
             defines,
             errors,
-            Pos(File("[preprocess]".to_string()), 0, 0),
+            Pos(File("[preprocess]".into()), 0, 0),
           ),
         input,
       ),
@@ -86,7 +86,7 @@ pub fn preprocess(
             arguments,
             defines,
             errors,
-            Pos(File("[preprocess]".to_string()), 0, 0),
+            Pos(File("[preprocess]".into()), 0, 0),
           )
           + "\n",
         input,
@@ -98,7 +98,7 @@ pub fn preprocess(
             message,
             defines,
             errors,
-            Pos(File("[preprocess]".to_string()), 0, 0),
+            Pos(File("[preprocess]".into()), 0, 0),
           )
           + "\n",
         input,
@@ -120,7 +120,7 @@ pub fn preprocess(
 
       Err(expecteds) => {
         errors.extend([(
-          Pos(File("[preprocess]".to_string()), 0, 0),
+          Pos(File("[preprocess]".into()), 0, 0),
           Error(parse::format_expecteds(expecteds)),
         )]);
         (preprocessed, "".to_string())
@@ -200,16 +200,13 @@ fn preprocess_include_directive(
       let incl = File(
         Path::new(&file.0)
           .parent()
-          .unwrap()
-          .join(filename)
-          .to_str()
-          .unwrap()
-          .to_string(),
+          .expect("File has no parent directory")
+          .join(filename),
       );
       preprocess(incl, defines, errors, Some(pos))
     }
     Err(error) => {
-      errors.extend([(Pos(File("[preprocess]".to_string()), 0, 0), Error(error))]);
+      errors.extend([(Pos(File("[preprocess]".into()), 0, 0), Error(error))]);
       format!("")
     }
   }

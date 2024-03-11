@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::path::PathBuf;
 
 pub const MEM_SIZE: usize = 0x100;
 pub const MIC_SIZE: usize = 0x80 * 0x02 * 0x20; // 0x2000
@@ -448,7 +449,7 @@ impl std::fmt::Display for Signal {
 }
 
 #[derive(Clone, Eq, PartialEq)]
-pub struct File(pub String);
+pub struct File(pub PathBuf);
 
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum Label {
@@ -949,13 +950,7 @@ pub fn instruction_to_token(instruction: Result<Instruction, u8>) -> Token {
 
 impl std::fmt::Display for File {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    use path_clean::PathClean;
-    use std::path::Path;
-    write!(
-      f,
-      "@{}",
-      Path::new(&self.0).clean().to_str().unwrap().to_string()
-    )
+    write!(f, "@{}", self.0.display())
   }
 }
 

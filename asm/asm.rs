@@ -13,7 +13,7 @@ fn main() {
 
   let mut errors: Vec<(Pos, Error)> = vec![];
   let memory_image_file = &args[2];
-  let assembly_source_file: File = File(args[1].clone());
+  let assembly_source_file: File = File(args[1].clone().into());
 
   let preprocessed: Vec<(Pos, String)> = preprocess(assembly_source_file, &mut errors, None);
   let mnemonics: Vec<(Pos, Mnemonic)> = mnemonize(preprocessed, &mut errors);
@@ -88,7 +88,7 @@ fn preprocess(
   use std::path::Path;
   let assembly = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {
     errors.extend([(
-      pos.unwrap_or(Pos(File("[bootstrap]".to_string()), 0, 0)),
+      pos.unwrap_or(Pos(File("[bootstrap]".into()), 0, 0)),
       Error(format!("Unable to read file `{}`", file)),
     )]);
     format!("")
@@ -104,11 +104,8 @@ fn preprocess(
         let incl = File(
           Path::new(&file.0)
             .parent()
-            .unwrap()
-            .join(&line[col..]["@ ".len()..])
-            .to_str()
-            .unwrap()
-            .to_string(),
+            .expect("File has no parent directory")
+            .join(&line[col..]["@ ".len()..]),
         );
         std::iter::once((Pos(file.clone(), row, 0), line[..col].to_string()))
           .chain(preprocess(incl, errors, Some(Pos(file.clone(), row, col))))
@@ -214,7 +211,7 @@ fn assemble(
 
   let tokens = expand_macros(
     &vec![(
-      Pos(File("[bootstrap]".to_string()), 0, 0),
+      Pos(File("[bootstrap]".into()), 0, 0),
       Token::MacroRef(Macro(entry_point.to_string())),
     )],
     &mut 0,
@@ -668,10 +665,7 @@ fn codegen(
   let mut opcodes = opcodes;
 
   match common::MEM_SIZE.checked_sub(opcodes.len()) {
-    Some(padding) => opcodes.extend(vec![
-      (Pos(File("[codegen]".to_string()), 0, 0), 0x00);
-      padding
-    ]),
+    Some(padding) => opcodes.extend(vec![(Pos(File("[codegen]".into()), 0, 0), 0x00); padding]),
     None => {
       errors.extend([(
         opcodes[common::MEM_SIZE].0.clone(),

@@ -22,7 +22,7 @@ fn main() {
 
   let preprocessed: Vec<String> = c_source_files
     .into_iter()
-    .map(|c_source_file| File(c_source_file))
+    .map(|c_source_file| File(c_source_file.into()))
     .map(|c_source_file| {
       [
         format!("\nasm {{ # translation {} }}\n", c_source_file.clone()),
