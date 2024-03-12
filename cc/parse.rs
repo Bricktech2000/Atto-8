@@ -276,9 +276,9 @@ pub fn digit(radix: u32) -> Parser<char> {
   parse::satisfy(move |c| c.is_digit(radix)).name(match radix {
     0b10 => format!("binary digit"),
     0o10 => format!("octal digit"),
-    10 => format!("decimal digit"),
+    0_10 => format!("decimal digit"),
     0x10 => format!("hexadecimal digit"),
-    _ => format!("base-{} digit", radix),
+    o_10 => format!("base-{} digit", o_10),
   })
 }
 
