@@ -25,14 +25,17 @@
 # - `0xC0..0x100` is unused and available for user programs
 #
 # compound commands to try:
-# - `99!` warm restarts AttoMon
-# - `00:45.` prints `E` to `stdout`
-# - `99:00.99!` moves the stack to the display buffer
+# - `00!` warm restarts AttoMon
+# - `00:45.` prints a single `'E'` to `stdout`
+# - `99:00.00!` moves the stack to the display buffer
+# - `B4:4F.00!` restarts AttoMon but prints _OttoMon_ instead
 # - `F0:F0.E3.F0!` halts the processor at `0xF0`
 # - `00:,,,,,,,,,,,,,,,,` prints the first 16 bytes of memory
-# - `B4:4F.99!` restarts AttoMon but prints `OttoMon` instead
+# - `F0:00.E5.40.D0.F2.E3.F0!` prints `'@'` to `stdout` in a loop
+# - `F0:00.E5.40.D0.B7.00.F2.90.E3.F0!` prints `'@'` in a loop until a key is pressed
 # - `E0:CC....33....CC....33....CC....33....CC....33....` displays a checkerboard pattern
 # - `C0:3A.B2.27.5D.B2.E3.0A.41.74.74.6F.2D.38.0A.00.C0!` prints _Atto-8_ and returns to AttoMon
+# - `B1:1B.5B.32.4A.1B.5B.48.00.00!` makes warm restarts clear the terminal screen
 
 main!
   pop pop !attomon_init !jmp # begin execution in `attomon_init` to save memory
@@ -113,11 +116,13 @@ main!
     !user_buffer # allocate `buffer`
     !user_buffer # allocate `head`
     !char.null # push dummy character
-    :str_attomon :puts.min !call :got_line_feed !jmp
+    :str_attomon_init :puts.min !call :got_line_feed !jmp
     !puts.min.def
-    str_attomon: @0A @0A @3D @41 @74 @74 @6F @4D @6F @6E @3D @0A @00 # "\n\n=AttoMon=\n"
+    str_attomon_init: @0A @0A @3D @41 @74 @74 @6F @4D @6F @6E @3D @0A @00 # "\n\n=AttoMon=\n"
+    # str_attomon_init: @1B @5B @32 @4A @1B @5B @48 @00 # "\x1B[2J\x1B[H"
   !user_buffer @org # memory writable by user
-    # :str_atto-8 :puts.min !call :got_line_feed !jmp str_atto-8: @0A @41 @74 @74 @6F @2D @38 @0A @00 # "\nAtto-8\n"
+    # :str_atto-8 :puts.min !call :got_line_feed !jmp
+    # str_atto-8: @0A @41 @74 @74 @6F @2D @38 @0A @00 # "\nAtto-8\n"
     @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00
     @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00
   !display_buffer @org # memory writable by user
