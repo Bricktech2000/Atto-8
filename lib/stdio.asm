@@ -23,25 +23,29 @@ gets.min! # gets.min(*str)
   inc .for_c !bcc pop
 gets.min.def! gets.min: swp !gets.min !ret # gets.min(*str)
 
-hex_getc! # u8 = hex_getc(char sep)
+hex_getc! # u8 = hex_getc(sep)
   # block until `sep` is sent through `stdin`
   block. !getc !char.ld1 !eq .block !bcc !char.pop clc
   # assume input well formed
   !getc !hex.to_u4 x04 rot
   !getc !hex.to_u4 orr !u8
-hex_gets! # hex_gets(char sep, *str)
+hex_gets! # hex_gets(sep, *str)
   swp for_c.
     ld1 !hex_getc # includes `!char.check_null`
     ld1 !u8.sta
   # loop if *str != '\0'
   inc .for_c !bcc pop pop
-hex_getn! clc # hex_getn(char sep, *str, len)
+hex_getn! clc # hex_getn(sep, *str, len)
   ld2 dec ad2 # str += len - 1
   sw2 for_i. dec
     !char.ld2 !hex_getc clc
     ld2 ld2 sub !u8.sta
   # loop if i > 0
   !z .for_i !bcc pop pop pop
+
+# inputs and pushes in reverse order a null-terminated string onto the stack
+stack_gets! # str[] = stack_gets()
+  !char.null for_c. !getc !char.check_null .for_c !bcc !char.pop
 
 
 fputc! !char.sta # fputc(stream, char)
@@ -66,16 +70,16 @@ puts.min! # puts.min(*str)
   inc .for_c !bcc pop
 puts.min.def! puts.min: swp !puts.min !ret # puts.min(*str)
 
-hex_putc! # hex_putc(char sep, u8 char)
+hex_putc! # hex_putc(sep, u8 char)
   !char.space !putc !putc
   !u8.to_hex !putc !putc
-hex_puts! # hex_puts(char sep, *str)
+hex_puts! # hex_puts(sep, *str)
   swp for_c.
     ld0 !u8.lda
     !char.ld2 !hex_putc
   # loop if *str != '\0'
   ld0 !u8.lda !u8.is_null inc .for_c !bcc pop pop
-hex_putn! clc # hex_putn(char sep, *str, len)
+hex_putn! clc # hex_putn(sep, *str, len)
   ld2 dec ad2 # str += len - 1
   sw2 for_i. dec
     ld1 ld1 sub !u8.lda
@@ -83,13 +87,10 @@ hex_putn! clc # hex_putn(char sep, *str, len)
   # loop if i > 0
   !z .for_i !bcc pop pop pop
 
-# inputs and pushes in reverse order a null-terminated string onto the stack
-stack_gets! # str[] = stack_gets()
-  !char.null for_c. !getc !char.check_null .for_c !bcc !char.pop
-
 # prints and consumes a null-terminated string from the stack
 stack_puts! # stack_puts(str[])
   for_c. !char.check_null !putc .for_c !bcc
+
 
 # a `printf` immitation that supports a few conversion specifiers. in `format`,
 # - `%d` prints a signed integer as decimal with precision `1`

@@ -66,6 +66,7 @@ python3 test.py pixedit.asm asm emu
 python3 test.py stopwatch.asm asm emu
 python3 test.py char\ code.asm asm emu
 python3 test.py stringify.asm asm emu
+python3 test.py min-asm.asm asm emu
 
 # games
 python3 test.py flappy.asm asm emu

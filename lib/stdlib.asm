@@ -27,16 +27,45 @@ block_null! block. !getc !char.is_null .block !bcc
 # block until a key is pressed then return it
 block_getc! !char.null block. !char.pop !getc !char.check_null .block !bcs
 
-
-popcnt! # count = popcnt(n, init)
-  # count = init
+# count population of zeros
+cpz! # count = cpz(n, init)
   while.
-    # shift out lowest bit and add to count
-    shr @dyn x00 ad2 @dyn
-  # loop while n != 0
+    shr @dyn flc x00 ad2 @dyn
   !z .while !bcc # bleed `0x00`
   # set carry flag if count == 0x00
   orr @dyn
+
+# count population of ones (popcount)
+cpo! # count = cpo(n, init)
+  while.
+    shr @dyn x00 ad2 @dyn
+  !z .while !bcc # bleed `0x00`
+  # set carry flag if count == 0x00
+  orr @dyn
+
+# count leading zeros
+clz! # count = clz(n, init)
+  while.
+    x00 ad2 @dyn shl @dyn flc
+  .while !bcs pop
+
+# count leading ones
+clo! # count = clo(n, init)
+  while.
+    x00 ad2 @dyn shl @dyn
+  .while !bcs pop
+
+# count trailing zeros
+ctz! # count = ctz(n, init)
+  while.
+    x00 ad2 @dyn shr @dyn flc
+  .while !bcs pop
+
+# count trailing ones
+cto! # count = cto(n, init)
+  while.
+    x00 ad2 @dyn shr @dyn
+  .while !bcs pop
 
 
 mul_10! # product = mul_10(n)
