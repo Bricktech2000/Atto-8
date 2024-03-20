@@ -97,6 +97,7 @@ python3 test.py printf.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 # tests
 python3 test.py sorting.asm asm emu
 python3 test.py strings.asm asm emu
+python3 test.py memmove.asm asm emu
 python3 test.py allocation.asm asm emu
 python3 test.py multiplication.asm asm emu
 python3 test.py addition.hex enc emu

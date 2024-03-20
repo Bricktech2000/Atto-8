@@ -1732,13 +1732,13 @@ u4.to_hex!
   !char.digit_count sub @dyn
     !char.latin_capital_letter_a @const
     !char.digit_count !char.digit_zero add dec @const
-  iff add
+  iff add @dyn
 # converts `'0'..='9', 'A'..='F'` to `0x0..=0xF`. undefined for other values
 hex.to_u4!
   !char.latin_capital_letter_a sub @dyn
     !char.digit_count @const
     !char.latin_capital_letter_a !char.digit_zero sub dec @const
-  iff add
+  iff add @dyn
 # converts `0x00..=0xFF` to `'00'..='FF'`
 u8.to_hex!
   ld0 !u4u4.snd clc !u4.to_hex
