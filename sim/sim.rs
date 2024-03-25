@@ -273,7 +273,7 @@ impl Tickable for Microcomputer {
       }
       if let Signal::Active = self.wrt {
         // stdout
-        if self.addr == 0x00 {
+        if self.addr as usize == common::STDIO_BUFFER {
           stdout.push_back(self.data);
         } else {
           self.mem[self.addr as usize] = self.data;
@@ -286,7 +286,7 @@ impl Tickable for Microcomputer {
     }
     if let Signal::Active = self.read {
       // stdin and controller
-      if self.addr == 0x00 {
+      if self.addr as usize == common::STDIO_BUFFER {
         self.data = *stdin.front().unwrap_or(controller);
         if let Clock::Rising = self.clk {
           stdin.pop_front();
@@ -297,7 +297,7 @@ impl Tickable for Microcomputer {
     }
     if let Reset::Asserted = self.rst {
       mp.al = 0x00;
-      stdin.push_back(self.mem[0x00]);
+      stdin.push_back(self.mem[common::STDIO_BUFFER]);
       display.copy_from_slice(
         &self.mem[common::DISPLAY_BUFFER..common::DISPLAY_BUFFER + common::DISPLAY_BUFFER_LEN],
       );

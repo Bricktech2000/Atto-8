@@ -286,9 +286,9 @@ pub fn render_memory(memory: &[u8; MEM_SIZE], ip: u8, sp: u8, cf: bool) -> Strin
   let mut fmt = "".to_string();
 
   fmt += "MEM\r\n";
-  for y in 0..0x10 {
-    for x in 0..0x10 {
-      let address: u8 = (y << 0x04 | x) as u8;
+  for y in 0x00..0x10 {
+    for x in 0x00..0x10 {
+      let address: u8 = (y << 4 | x) as u8;
       fmt += &format!(
         "{:02X}{}",
         memory[address as usize],
@@ -641,16 +641,16 @@ pub fn opcode_to_instruction(opcode: u8) -> Result<Instruction, u8> {
             0x9 => Ok(Instruction::And(decode_size(opcode))),
             0xA => Ok(Instruction::Xor(decode_size(opcode))),
             0xB => Ok(Instruction::Xnd(decode_size(opcode))),
-            _ => match opcode & 0b00111111 {
-              // size used as part of opcode
-              0b110000 => Ok(Instruction::Inc),
-              0b110001 => Ok(Instruction::Dec),
-              0b110010 => Ok(Instruction::Neg),
-              0b110100 => Ok(Instruction::Shl),
-              0b110101 => Ok(Instruction::Shr),
-              0b110110 => Ok(Instruction::Not),
-              0b110111 => Ok(Instruction::Buf),
-              0b111011 => Ok(Instruction::Dbg),
+            _ => match opcode & 0b00001111 {
+              // size as part of opcode
+              0x0 => Ok(Instruction::Inc),
+              0x1 => Ok(Instruction::Dec),
+              0x2 => Ok(Instruction::Neg),
+              0x4 => Ok(Instruction::Shl),
+              0x5 => Ok(Instruction::Shr),
+              0x6 => Ok(Instruction::Not),
+              0x7 => Ok(Instruction::Buf),
+              0xB => Ok(Instruction::Dbg),
               _ => Err(opcode),
             },
           }
@@ -668,7 +668,7 @@ pub fn opcode_to_instruction(opcode: u8) -> Result<Instruction, u8> {
             0b1 => {
               match (opcode & 0b00010000) >> 4 {
                 0b0 => {
-                  // carry and flags and stack
+                  // carry flag and stack
                   match opcode & 0b00001111 {
                     0x0 => Ok(Instruction::Lda),
                     0x1 => Ok(Instruction::Sta),

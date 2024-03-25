@@ -54,11 +54,16 @@ impl Tickable for Microcomputer {
   fn reset(
     &mut self,
     stdin: &mut VecDeque<u8>,
-    _stdout: &mut VecDeque<u8>,
+    stdout: &mut VecDeque<u8>,
     display: &mut [u8; common::DISPLAY_BUFFER_LEN],
     _controller: &mut u8,
   ) {
-    stdin.push_back(self.mem[0x00]);
+    self.mp.ip = 0x00;
+    self.mp.sp = 0x00;
+    self.mp.cf = false;
+    stdin.clear();
+    stdout.clear();
+    stdin.push_back(self.mem[common::STDIO_BUFFER]);
     display.copy_from_slice(
       &self.mem[common::DISPLAY_BUFFER..common::DISPLAY_BUFFER + common::DISPLAY_BUFFER_LEN],
     );
@@ -76,7 +81,7 @@ impl Tickable for Microcomputer {
     macro_rules! mem_read {
       ($address:expr) => {{
         let address = $address as usize;
-        if address == 0x00 {
+        if address == common::STDIO_BUFFER {
           stdin.pop_front().unwrap_or(*controller)
         } else {
           self.mem[address]
@@ -88,7 +93,7 @@ impl Tickable for Microcomputer {
       ($address:expr, $value:expr) => {{
         let address = $address as usize;
         let value = $value;
-        if address == 0x00 {
+        if address == common::STDIO_BUFFER {
           stdout.push_back(value);
         } else {
           self.mem[address] = value;
@@ -99,7 +104,7 @@ impl Tickable for Microcomputer {
       }};
     }
 
-    macro_rules! push {
+    macro_rules! sp_push {
       ($value:expr) => {{
         let value = $value;
         mp.sp = mp.sp.wrapping_sub(1);
@@ -107,7 +112,7 @@ impl Tickable for Microcomputer {
       }};
     }
 
-    macro_rules! pop {
+    macro_rules! sp_pop {
       () => {{
         let value = mem_read!(mp.sp);
         mp.sp = mp.sp.wrapping_add(1);
@@ -122,123 +127,123 @@ impl Tickable for Microcomputer {
 
     match instruction {
       Instruction::Psh(Imm(imm)) => {
-        push!(imm);
+        sp_push!(imm);
         Ok(10)
       }
 
       Instruction::Add(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
-        let result = mem_read!(addr) as u16 + pop!() as u16 + mp.cf as u16;
-        mem_write!(addr, result as u8);
-        mp.cf = result > 0xFF;
+        let res = mem_read!(addr) as u16 + sp_pop!() as u16 + mp.cf as u16;
+        mem_write!(addr, res as u8);
+        mp.cf = res > 0xFF;
         Ok(14 + size as u128)
       }
 
       Instruction::Sub(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
-        let result = mem_read!(addr) as i16 - pop!() as i16 - mp.cf as i16;
-        mem_write!(addr, result as u8);
-        mp.cf = result < 0x00;
+        let res = mem_read!(addr) as u16 - sp_pop!() as u16 - mp.cf as u16;
+        mem_write!(addr, res as u8);
+        mp.cf = res > 0xFF;
         Ok(14 + size as u128)
       }
 
       Instruction::Iff(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
-        let first = pop!();
-        mem_write!(addr, if mp.cf { first } else { mem_read!(addr) });
+        let top = sp_pop!();
+        mem_write!(addr, if mp.cf { top } else { mem_read!(addr) });
         Ok(13 + size as u128)
       }
 
       Instruction::Swp(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
-        let first = pop!();
-        push!(mem_read!(addr));
-        mem_write!(addr, first);
+        let top = sp_pop!();
+        sp_push!(mem_read!(addr));
+        mem_write!(addr, top);
         Ok(13 + size as u128)
       }
 
       Instruction::Rot(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
-        let first = pop!();
-        let temp = (mem_read!(addr) as u16) << first % 8;
-        let result = (temp & 0xFF) as u8 | (temp >> 8) as u8;
-        mem_write!(addr, result);
+        let top = sp_pop!();
+        let temp = (mem_read!(addr) as u16) << top % 8;
+        let res = (temp & 0xFF) as u8 | (temp >> 8) as u8;
+        mem_write!(addr, res);
         mp.cf = false;
-        Ok((18 + size as u128) * (first as u128 + 1))
+        Ok((18 + size as u128) * (top as u128 + 1))
       }
 
       Instruction::Orr(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
-        let result = pop!() | mem_read!(addr);
-        mem_write!(addr, result);
-        mp.cf = result == 0x00;
+        let res = sp_pop!() | mem_read!(addr);
+        mem_write!(addr, res);
+        mp.cf = res == 0x00;
         Ok(14 + size as u128)
       }
 
       Instruction::And(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
-        let result = pop!() & mem_read!(addr);
-        mem_write!(addr, result);
-        mp.cf = result == 0x00;
+        let res = sp_pop!() & mem_read!(addr);
+        mem_write!(addr, res);
+        mp.cf = res == 0x00;
         Ok(11 + size as u128)
       }
 
       Instruction::Xor(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
-        let result = pop!() ^ mem_read!(addr);
-        mem_write!(addr, result);
-        mp.cf = result == 0x00;
+        let res = sp_pop!() ^ mem_read!(addr);
+        mem_write!(addr, res);
+        mp.cf = res == 0x00;
         Ok(22 + size as u128)
       }
 
       Instruction::Xnd(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
-        let result = pop!() & 0x00;
-        mem_write!(addr, result);
-        mp.cf = result == 0x00;
+        let res = sp_pop!() & 0x00;
+        mem_write!(addr, res);
+        mp.cf = res == 0x00;
         Ok(8 + size as u128)
       }
 
       Instruction::Inc => {
-        push!(pop!().wrapping_add(1));
+        sp_push!(sp_pop!().wrapping_add(1));
         Ok(6)
       }
 
       Instruction::Dec => {
-        push!(pop!().wrapping_sub(1));
+        sp_push!(sp_pop!().wrapping_sub(1));
         Ok(8)
       }
 
       Instruction::Neg => {
-        push!(pop!().wrapping_neg());
+        sp_push!(sp_pop!().wrapping_neg());
         Ok(11)
       }
 
       Instruction::Shl => {
-        let first = pop!();
-        push!(first.wrapping_shl(1) | (mp.cf as u8));
-        mp.cf = first & 0b10000000 != 0x00;
+        let top = sp_pop!();
+        sp_push!(top.wrapping_shl(1) | (mp.cf as u8));
+        mp.cf = top & 0b10000000 != 0x00;
         Ok(9)
       }
 
       Instruction::Shr => {
-        let first = pop!();
-        push!(first.wrapping_shr(1) | (mp.cf as u8) << 7);
-        mp.cf = first & 0b00000001 != 0x00;
+        let top = sp_pop!();
+        sp_push!(top.wrapping_shr(1) | (mp.cf as u8) << 7);
+        mp.cf = top & 0b00000001 != 0x00;
         Ok(16)
       }
 
       Instruction::Not => {
-        let result = !pop!();
-        push!(result);
-        mp.cf = result == 0x00;
+        let res = !sp_pop!();
+        sp_push!(res);
+        mp.cf = res == 0x00;
         Ok(8)
       }
 
       Instruction::Buf => {
-        let result = pop!();
-        push!(result);
-        mp.cf = result == 0x00;
+        let res = sp_pop!();
+        sp_push!(res);
+        mp.cf = res == 0x00;
         Ok(9)
       }
 
@@ -246,44 +251,44 @@ impl Tickable for Microcomputer {
 
       Instruction::Ldo(Ofst(ofst)) => {
         let addr = mp.sp.wrapping_add(ofst);
-        push!(mem_read!(addr));
+        sp_push!(mem_read!(addr));
         Ok(12 + ofst as u128)
       }
 
       Instruction::Sto(Ofst(ofst)) => {
-        let first = pop!();
+        let top = sp_pop!();
         let addr = mp.sp.wrapping_add(ofst);
-        mem_write!(addr, first);
+        mem_write!(addr, top);
         Ok(11 + ofst as u128)
       }
 
       Instruction::Lda => {
-        push!(mem_read!(pop!()));
+        sp_push!(mem_read!(sp_pop!()));
         Ok(9)
       }
 
       Instruction::Sta => {
-        mem_write!(pop!(), pop!());
+        mem_write!(sp_pop!(), sp_pop!());
         Ok(15)
       }
 
       Instruction::Ldi => {
-        push!(mp.ip);
+        sp_push!(mp.ip);
         Ok(9)
       }
 
       Instruction::Sti => {
-        mp.ip = pop!();
+        mp.ip = sp_pop!();
         Ok(6)
       }
 
       Instruction::Lds => {
-        push!(mp.sp);
+        sp_push!(mp.sp);
         Ok(10)
       }
 
       Instruction::Sts => {
-        mp.sp = pop!();
+        mp.sp = sp_pop!();
         Ok(5)
       }
 
@@ -305,12 +310,12 @@ impl Tickable for Microcomputer {
       Instruction::Nop => Ok(3),
 
       Instruction::Pop => {
-        let _ = pop!();
+        mp.sp = mp.sp.wrapping_add(1);
         Ok(5)
       }
 
       Instruction::Phn(Nimm(nimm)) => {
-        push!(nimm);
+        sp_push!(nimm);
         Ok(10)
       }
     }
