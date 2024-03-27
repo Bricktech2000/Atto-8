@@ -97,6 +97,11 @@ while input:
       case 'emu':
         memory_image_file = filenames.pop()
         operations.append((operation, functools.partial(run_cargo, f'{operation}', memory_image_file)))
+      case 'cemu':
+        memory_image_file = filenames.pop()
+        operations.append((operation, functools.partial(run, 'make', '--directory',
+                          f'../{operation}', '--silent' if not debug_mode else '')))
+        operations.append((operation, functools.partial(run, f'../{operation}/{operation}', memory_image_file)))
       case 'mic':
         microcode_image_file = rel_path(target, 'microcode.mic')
         filenames.append(microcode_image_file)

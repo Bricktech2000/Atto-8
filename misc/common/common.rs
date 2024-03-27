@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::PathBuf;
 
 pub const MEM_SIZE: usize = 0x100;
-pub const MIC_SIZE: usize = 0x80 * 0x02 * 0x20; // 0x2000
+pub const MIC_SIZE: usize = 0x2000; // 0x80 * 0x02 * 0x20
 pub const DISPLAY_BUFFER: usize = 0xE0;
 pub const DISPLAY_BUFFER_LEN: usize = 0x20;
 pub const STDIO_BUFFER: usize = 0x00;

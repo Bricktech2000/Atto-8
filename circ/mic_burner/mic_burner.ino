@@ -14,6 +14,8 @@
  * N_WE_PIN -> ##############################################AT28C64B###############################################
  */
 
+#include "common.h"
+
 #define SER_PIN 2   // 74HC595 shift register data pin
 #define SRCLK_PIN 3 // 74HC595 shift register clock pin
 #define RCLK_PIN 4  // 74HC595 shift register latch clock pin
@@ -65,5 +67,5 @@ void loop() {
                        : lsb ^ 0b11111111;       // rightmost EEPROM
 
   eeprom_write(addr++ ^ 0b1110000000000, data);
-  addr &= 0x2000 - 1; // 13-bit address space
+  addr &= MIC_SIZE - 1; // 13-bit address space
 }

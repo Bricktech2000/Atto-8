@@ -14,6 +14,7 @@ Available operations are as follows:
 - `asm` &mdash; See [/asm/](../asm/)
 - `dasm` &mdash; See [/dasm/](../dasm/)
 - `emu` &mdash; See [/emu/](../emu/)
+- `cemu` &mdash; See [/cemu/](../cemu/)
 - `mic` &mdash; See [/mic/](../mic/)
 - `sim` &mdash; See [/sim/](../sim/)
 - `circ` &mdash; See [/circ/](../circ/)
@@ -35,7 +36,7 @@ python3 test.py flappy.asm asm dasm pop
 python3 test.py hanoi.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 
 # assemble source code, emulate binary. assemble source code, build microcode, launch block-level circuit with binary and microcode
-python3 test.py ctf.asm asm emu ctf.asm asm mic block.circ circ
+python3 test.py ctf.asm asm cemu ctf.asm asm mic block.circ circ
 
 # encode from hex, disassemble binary, assemble disassembly, build microcode, simulate resulting binary with microcode
 python3 test.py checkerboard.hex enc dasm asm mic sim

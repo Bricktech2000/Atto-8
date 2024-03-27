@@ -2,7 +2,7 @@ run the following to compile and upload the sketch to the Arduino Nano and burn 
 
 ```bash
 arduino-cli core install arduino:avr # only required once
-arduino-cli compile --fqbn arduino:avr:nano
+arduino-cli compile --fqbn arduino:avr:nano --library ../../misc/common/
 arduino-cli upload --fqbn arduino:avr:nano --port /dev/ttyUSB0
 python3 test.py mic pop; pv target/microcode.mic --rate-limit 75 > /dev/ttyUSB0
 ```

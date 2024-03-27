@@ -17,6 +17,7 @@ The Atto-8 is a small ecosystem of hardware and software living in symbiosis. Th
 - [/asm/](asm/) &mdash; Optimizing assembler for Atto-8 microarchitecture
 - [/dasm/](dasm/) &mdash; Elementary disassembler for Atto-8 microarchitecture
 - [/emu/](emu/) &mdash; Instruction-level emulator for Atto-8 microcomputer
+- [/cemu/](cemu/) &mdash; Minimal C99 emulator for Atto-8 microcomputer
 - [/mic/](mic/) &mdash; Microcode builder for Atto-8 microprocessor
 - [/sim/](sim/) &mdash; Cycle-accurate component-level simulator for Atto-8 microcomputer
 - [/circ/](circ/) &mdash; Block-level and chip-level circuit designs for Atto-8 microcomputer
