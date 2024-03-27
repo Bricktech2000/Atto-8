@@ -418,7 +418,7 @@
       <a name="label" val="PULL"/>
     </comp>
     <comp lib="0" loc="(1710,1010)" name="Tunnel">
-      <a name="label" val="SET_CIN"/>
+      <a name="label" val="SP_DATA"/>
     </comp>
     <comp lib="0" loc="(1710,1040)" name="Tunnel">
       <a name="label" val="SUM_DATA"/>
@@ -461,13 +461,13 @@
       <a name="label" val="DATA_MEM"/>
     </comp>
     <comp lib="0" loc="(1710,920)" name="Tunnel">
-      <a name="label" val="IP_DATA"/>
+      <a name="label" val="CLR_SC"/>
     </comp>
     <comp lib="0" loc="(1710,950)" name="Tunnel">
-      <a name="label" val="SP_DATA"/>
+      <a name="label" val="SET_CIN"/>
     </comp>
     <comp lib="0" loc="(1710,980)" name="Tunnel">
-      <a name="label" val="CLR_SC"/>
+      <a name="label" val="IP_DATA"/>
     </comp>
     <comp lib="0" loc="(1750,2130)" name="Splitter">
       <a name="appear" val="right"/>

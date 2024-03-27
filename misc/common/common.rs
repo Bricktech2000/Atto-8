@@ -22,10 +22,10 @@ pub struct ControlWord {
 
   pub mem_data: Signal,  // data bus to memory
   pub data_mem: Signal,  // memory to data bus
-  pub ip_data: Signal,   // instruction pointer to data bus
-  pub sp_data: Signal,   // stack pointer to data bus
   pub clr_sc: Signal,    // clear to step counter
   pub set_cin: Signal,   // set to carry in
+  pub ip_data: Signal,   // instruction pointer to data bus
+  pub sp_data: Signal,   // stack pointer to data bus
   pub sum_data: Signal,  // sum to data bus
   pub nand_data: Signal, // not-and to data bus
 }
