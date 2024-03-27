@@ -8,9 +8,9 @@ main! !nop
     !getc ld0
       # make lowercase. if outside of alphabet, will become
       # corrupted but will stay outside of alphabet
-      !char.space orr
+      !'\s' orr
       # map `'a'..='z'` to `0..=25`
-      !char.latin_small_letter_a sub
+      !'a' sub
       x00 # default offset: `0x00`
         # if character in `'a'..='m'` then offset is `13`
         !offset su2 !offset iff

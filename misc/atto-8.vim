@@ -16,8 +16,8 @@ syntax match atto8XXX "\<x[0-9A-F]\{2\}\>"
 syntax match atto8Directive "@\<\(error\|const\|data\|dyn\|org\|[0-9A-F]\{2\}\)\>"
 syntax match atto8MacroRef "!\<[^! ]\+\>"
 syntax match atto8MacroDef "\<[^! ]\+\>!"
-syntax match atto8LabelRef ":\<[^: ]\+\>\|\.\<[^\. ]\+\>"
-syntax match atto8LabelDef "\<[^: ]\+\>:\|\<[^\. ]\+\>\."
+syntax match atto8LabelRef ":\<[^: ]\+\>\|\.\<[^. ]\+\>"
+syntax match atto8LabelDef "\<[^: ]\+\>:\|\<[^. ]\+\>\."
 syntax match atto8Include "@ .*$"
 syntax match atto8Comment "# .*$\|#$" contains=atto8Todo
 syntax keyword atto8Todo TODO FIXME XXX NOTE contained

@@ -6,7 +6,7 @@
 main!
   pop pop !display_buffer sts
 
-  !u64.0 loop:
+  !0u64 loop:
     x00 ld8 :display_byte.min !call
     x01 ld7 :display_byte.min !call
     x08 ld6 :display_byte.min !call
@@ -16,6 +16,6 @@ main!
     x18 ld2 :display_byte.min !call
     x19 ld1 :display_byte.min !call
   # :display_byte.min sets the carry flag
-  !u64.0 !u64.add :loop !jmp
+  !0u64 !u64.add :loop !jmp
 
   !display_byte.min.def

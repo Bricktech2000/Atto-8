@@ -23,16 +23,16 @@ main!
   # a single instruction
   :code_buffer !code_buffer.len add x80 not and @org
 
-    got_other:
+    other:
       :_ neg @const # default: an empty string
-        !char.greater_than_sign xo2 :> neg @const iff !char.greater_than_sign xo2
-        !char.less_than_sign xo2 :< neg @const iff !char.less_than_sign xo2
-        !char.plus_sign xo2 :+ neg @const iff !char.plus_sign xo2
-        !char.hyphen_minus xo2 :- neg @const iff !char.hyphen_minus xo2
-        !char.full_stop xo2 :. neg @const iff !char.full_stop xo2
-        !char.comma xo2 :, neg @const iff !char.comma xo2
-        !char.left_square_bracket xo2 :[ neg @const iff !char.left_square_bracket xo2
-        !char.right_square_bracket xo2 :] neg @const iff !char.right_square_bracket xo2
+        !'>' xo2 :'>' neg @const iff !'>' xo2
+        !'<' xo2 :'<' neg @const iff !'<' xo2
+        !'+' xo2 :'+' neg @const iff !'+' xo2
+        !'-' xo2 :'-' neg @const iff !'-' xo2
+        !'.' xo2 :'.' neg @const iff !'.' xo2
+        !',' xo2 :',' neg @const iff !',' xo2
+        !'[' xo2 :'[' neg @const iff !'[' xo2
+        !']' xo2 :']' neg @const iff !']' xo2
       neg
 
       # `strcpy`, but keeps track of the end of the `dst` string.
@@ -44,11 +44,11 @@ main!
       inc swp inc swp @dyn :for_c !bcc dec st2 pop
 
       # if `char == ']'`, resolve jump targets to and from corresponding `']'`
-      !char.ld0 !char.right_square_bracket !eq :got_null !bcc
-      # find address of corresponding `![_sentinel`. since we resolve jump targets as
-      # we go along, the "corresponding `![_sentinel`" is simply the latest `![_sentinel`
+      !char.ld0 !']' !eq :'\0' !bcc
+      # find address of corresponding `!loop_sentinel`. since we resolve jump targets as
+      # we go along, the "corresponding `!loop_sentinel`" is simply the latest `!loop_sentinel`
       ld1 for_b: dec
-        ld0 lda not @dyn pop # equivalent to `ld0 lda ![_sentinel !eq`
+        ld0 lda not @dyn pop # equivalent to `ld0 lda !loop_sentinel !eq`
       :for_b !bcc # sets carry
       # poke addresses into `code_buffer` at reserved locations
       ld0 dec ld3 dec dec sta # for unconditional jump from `]` to `[`
@@ -57,17 +57,17 @@ main!
 
       # structure similar to `getline.min`, but compiles to machine code brainfuck user input
       # into `dst` directly, instead of writing user input to `dst` as-is
-    got_null:
+    '\0':
       # `char` is either `'\0'` or `other` from above
       # putc(char)
       !putc
   getline: # getline(*dst)
       !getc
-    :got_other
-      !char.line_feed xo2 :got_line_feed iff !char.line_feed xo2
-      !char.null xo2 :got_null iff !char.null xo2
+    :other
+      !'\n' xo2 :'\n' iff !'\n' xo2
+      !'\0' xo2 :'\0' iff !'\0' xo2
     !jmp
-    got_line_feed:
+    '\n':
       # print `char`, which is a `'\n'`
       !putc # bleed `dst`
 
@@ -81,18 +81,18 @@ main!
 
   # expects `*head` on top of the stack, followed by `head`, followed by `!stdout`.
   # top of stack is written to `*head` only when `'<'` and `'>'` are encountered
-  >: ld1 sta inc ld0 lda @00
-  <: ld1 sta dec ld0 lda @00
-  +: inc @00
-  -: dec @00
+  '>': ld1 sta inc ld0 lda @00
+  '<': ld1 sta dec ld0 lda @00
+  '+': inc @00
+  '-': dec @00
   # `!stdin` and `!stdout` are `'\0'` which is also `@00`. to avoid null bytes
   # within the string, we load `'\0'` from the stack using `ldo` instead
-  .: ld0 ld3 !fputc @00
-  ,: ld2 !fgetc st0 @00
+  '.': ld0 ld3 !fputc @00
+  ',': ld2 !fgetc st0 @00
   # we use `!dbg` as jump targets to trigger a trap if not properly overwritten
-  [: !z ![_sentinel !dbg iff halt: !jmp @00
-  ]: !dbg !jmp _: @00
+  '[': !z !loop_sentinel !dbg iff halt: !jmp @00
+  ']': !dbg !jmp _: @00
 
-[_sentinel! @FF # `0xFF` because it's easily recognizable through a `not` instruction
+loop_sentinel! @FF # `0xFF` because it's easily recognizable through a `not` instruction
 
 code_buffer.len! x60 # largest possible length

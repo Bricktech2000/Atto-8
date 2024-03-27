@@ -22,7 +22,7 @@ main! !nop
     ld0 xD0 !cl :for_c !bcc
 
     # refer to C implementation for parser logic below
-    !char.null # chr
+    !'\0' # chr
     :parsers # parser
     x00 # hex
     next: st1
@@ -38,7 +38,7 @@ main! !nop
       :next # jump
       ld3 lda # *parser
           # compute `[ctz] = ctz(*chr > `@` ? 0x01 : *chr)`
-          ld2 !char.commercial_at !gt x00 x01 ld4 iff clc !ctz
+          ld2 !'@' !gt x00 x01 ld4 iff clc !ctz
         # if (*parser == SIZE) hex = [ctz], jump = CONSUME
         !size xo2 if4 :consume if2
           # compute `[hex] = (b << 4) | hex.to_u4(*chr)`
@@ -61,42 +61,42 @@ main! !nop
     # output assembled byte as hexadecimal
     !u8.to_hex !putc !putc
     ld2 !putc # outputs same whitespace as input
-    # !char.space !putc # outputs a space as whitespace
-    # !char.full_stop !putc # outputs `.` for AttoMon
+    # !'\s' !putc # outputs a space as whitespace
+    # !'.' !putc # outputs `.` for AttoMon
   :loop !jmp
 
   parsers:
     !done @data
-    !char.latin_small_letter_i !lit @data !char.latin_small_letter_f !lit @data !size x90 !set @data # iff, ifS
-    !char.latin_small_letter_i !lit @data xB0 !set @data # inc
-    !char.latin_small_letter_d !lit @data xB1 !set @data # dec
-    !char.latin_small_letter_n !lit @data !char.latin_small_letter_e !lit @data xB2 !set @data # neg
-    !char.latin_small_letter_s !lit @data !char.latin_small_letter_h !lit @data !char.latin_small_letter_l !lit @data xB4 !set @data # shl
-    !char.latin_small_letter_s !lit @data !char.latin_small_letter_h !lit @data xB5 !set @data # shr
-    !char.latin_small_letter_n !lit @data !char.latin_small_letter_o !lit @data !char.latin_small_letter_t !lit @data xB6 !set @data # not
-    !char.latin_small_letter_b !lit @data xB7 !set @data # buf
-    !char.latin_small_letter_l !lit @data !char.latin_small_letter_d !lit @data !char.latin_small_letter_a !lit @data xE0 !set @data # lda
-    !char.latin_small_letter_s !lit @data !char.latin_small_letter_t !lit @data !char.latin_small_letter_a !lit @data xE1 !set @data # sta
-    !char.latin_small_letter_l !lit @data !char.latin_small_letter_d !lit @data !char.latin_small_letter_i !lit @data xE2 !set @data # ldi
-    !char.latin_small_letter_s !lit @data !char.latin_small_letter_t !lit @data !char.latin_small_letter_i !lit @data xE3 !set @data # sti
-    !char.latin_small_letter_l !lit @data !char.latin_small_letter_d !lit @data !char.latin_small_letter_s !lit @data xE4 !set @data # lds
-    !char.latin_small_letter_s !lit @data !char.latin_small_letter_t !lit @data !char.latin_small_letter_s !lit @data xE5 !set @data # sts
-    !char.latin_small_letter_a !lit @data !char.latin_small_letter_d !lit @data !size @data x80 !set @data # add, adS
-    !char.latin_small_letter_s !lit @data !char.latin_small_letter_u !lit @data !size @data x84 !set @data # sub, suS
-    !char.latin_small_letter_s !lit @data !char.latin_small_letter_w !lit @data !size @data x94 !set @data # swp, swS
-    !char.latin_small_letter_r !lit @data !char.latin_small_letter_o !lit @data !size @data x98 !set @data # rot, roS
-    !char.latin_small_letter_o !lit @data !char.latin_small_letter_r !lit @data !size @data xA0 !set @data # orr, orS
-    !char.latin_small_letter_a !lit @data !char.latin_small_letter_n !lit @data !size @data xA4 !set @data # and, anS
-    !char.latin_small_letter_x !lit @data !char.latin_small_letter_o !lit @data !size @data xA8 !set @data # xor, xoS
-    !char.latin_small_letter_x !lit @data !char.latin_small_letter_n !lit @data !size @data xAC !set @data # xnd, xnS
-    !char.latin_small_letter_l !lit @data !char.latin_small_letter_d !lit @data !hex @data xC0 !set @data # ldO
-    !char.latin_small_letter_s !lit @data !char.latin_small_letter_t !lit @data !hex @data xD0 !set @data # stO
-    !char.latin_small_letter_c !lit @data xE8 !set @data # clc
-    !char.latin_small_letter_s !lit @data xE9 !set @data # sec
-    !char.latin_small_letter_f !lit @data xEA !set @data # flc
-    !char.latin_small_letter_n !lit @data xEE !set @data # nop
-    !char.latin_small_letter_p !lit @data xEF !set @data # pop
-    !char.latin_small_letter_x !lit @data !hex @data !hex @data !done @data # xXX
+    !'i' !lit @data !'f' !lit @data !size x90 !set @data # iff, ifS
+    !'i' !lit @data xB0 !set @data # inc
+    !'d' !lit @data xB1 !set @data # dec
+    !'n' !lit @data !'e' !lit @data xB2 !set @data # neg
+    !'s' !lit @data !'h' !lit @data !'l' !lit @data xB4 !set @data # shl
+    !'s' !lit @data !'h' !lit @data xB5 !set @data # shr
+    !'n' !lit @data !'o' !lit @data !'t' !lit @data xB6 !set @data # not
+    !'b' !lit @data xB7 !set @data # buf
+    !'l' !lit @data !'d' !lit @data !'a' !lit @data xE0 !set @data # lda
+    !'s' !lit @data !'t' !lit @data !'a' !lit @data xE1 !set @data # sta
+    !'l' !lit @data !'d' !lit @data !'i' !lit @data xE2 !set @data # ldi
+    !'s' !lit @data !'t' !lit @data !'i' !lit @data xE3 !set @data # sti
+    !'l' !lit @data !'d' !lit @data !'s' !lit @data xE4 !set @data # lds
+    !'s' !lit @data !'t' !lit @data !'s' !lit @data xE5 !set @data # sts
+    !'a' !lit @data !'d' !lit @data !size @data x80 !set @data # add, adS
+    !'s' !lit @data !'u' !lit @data !size @data x84 !set @data # sub, suS
+    !'s' !lit @data !'w' !lit @data !size @data x94 !set @data # swp, swS
+    !'r' !lit @data !'o' !lit @data !size @data x98 !set @data # rot, roS
+    !'o' !lit @data !'r' !lit @data !size @data xA0 !set @data # orr, orS
+    !'a' !lit @data !'n' !lit @data !size @data xA4 !set @data # and, anS
+    !'x' !lit @data !'o' !lit @data !size @data xA8 !set @data # xor, xoS
+    !'x' !lit @data !'n' !lit @data !size @data xAC !set @data # xnd, xnS
+    !'l' !lit @data !'d' !lit @data !hex @data xC0 !set @data # ldO
+    !'s' !lit @data !'t' !lit @data !hex @data xD0 !set @data # stO
+    !'c' !lit @data xE8 !set @data # clc
+    !'s' !lit @data xE9 !set @data # sec
+    !'f' !lit @data xEA !set @data # flc
+    !'n' !lit @data xEE !set @data # nop
+    !'p' !lit @data xEF !set @data # pop
+    !'x' !lit @data !hex @data !hex @data !done @data # xXX
     xBB !set @data # `!dbg` as fallback
 
 lit! x7F and # match literal char then advance

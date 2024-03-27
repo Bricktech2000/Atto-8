@@ -15,7 +15,7 @@ main!
   x03 !delay_long x01 !delay x00 !stall
 
   frame_loop:
-    !display_buffer.len !display_buffer !char.space !hex_getn
+    !display_buffer.len !display_buffer !'\s' !hex_getn
 
     # stall until next frame.
     # delay determined through trial and error

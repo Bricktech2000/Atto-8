@@ -72,7 +72,7 @@ python3 test.py min-asm.asm asm emu
 # games
 python3 test.py flappy.asm asm emu
 python3 test.py snake.asm asm emu
-python3 test.py dino.asm asm emu
+python3 test.py dino.asm asm emu # TODO
 python3 test.py 2048.asm asm emu
 python3 test.py pong.asm asm emu
 python3 test.py color\ maze.asm asm emu

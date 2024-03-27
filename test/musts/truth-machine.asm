@@ -25,5 +25,5 @@ main!
 #   !block_getc
 #   loop:
 #     ld0 !putc
-#     shr @dyn !char.null swp iff shl @dyn
+#     shr @dyn !'\0' swp iff shl @dyn
 #   :loop !jmp

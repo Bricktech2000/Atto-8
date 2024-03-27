@@ -9,7 +9,7 @@ main! !nop
   loop:
     :line_buffer :line_buffer :getline !call
     :str_newline_label :puts !call
-    :line_buffer !char.commercial_at !hex_puts
+    :line_buffer !'@' !hex_puts
     :str_literal_pre :puts !call # not escaped
     :str_literal_post :puts !call
   :loop !jmp

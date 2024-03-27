@@ -20,16 +20,16 @@ main!
   :code_buffer # for call into virtual machine later
   :code_buffer :getline !jmp
 
-    got_other:
+    other:
       :_ neg @const # default: no-op
-        !char.greater_than_sign xo2 :> neg @const iff !char.greater_than_sign xo2
-        !char.less_than_sign xo2 :< neg @const iff !char.less_than_sign xo2
-        !char.plus_sign xo2 :+ neg @const iff !char.plus_sign xo2
-        !char.hyphen_minus xo2 :- neg @const iff !char.hyphen_minus xo2
-        !char.full_stop xo2 :. neg @const iff !char.full_stop xo2
-        !char.comma xo2 :, neg @const iff !char.comma xo2
-        !char.left_square_bracket xo2 :[ neg @const iff !char.left_square_bracket xo2
-        !char.right_square_bracket xo2 :] neg @const iff !char.right_square_bracket xo2
+        !'>' xo2 :'>' neg @const iff !'>' xo2
+        !'<' xo2 :'<' neg @const iff !'<' xo2
+        !'+' xo2 :'+' neg @const iff !'+' xo2
+        !'-' xo2 :'-' neg @const iff !'-' xo2
+        !'.' xo2 :'.' neg @const iff !'.' xo2
+        !',' xo2 :',' neg @const iff !',' xo2
+        !'[' xo2 :'[' neg @const iff !'[' xo2
+        !']' xo2 :']' neg @const iff !']' xo2
       neg
       # append function pointer to `code_buffer` and increment `dst` pointer
       ld2 sta x01 ad2
@@ -37,11 +37,11 @@ main!
       # append `![_sentinel` to `code_buffer`. if `char == '['`, increment `dst` pointer.
       # this way, `code_buffer` will always ends with `![_sentinel`, which is a pointer to
       # the `halt` function, halting the virtual machine at the end of the bytecode
-      !char.ld0 !char.left_square_bracket !eq
+      !char.ld0 !'[' !eq
       ![_sentinel ld2 sta x00 ad2 @dyn
 
       # if `char == ']'`, resolve jump targets to and from corresponding `']'`
-      !char.ld0 !char.right_square_bracket !eq :got_null !bcc
+      !char.ld0 !']' !eq :'\0' !bcc
       # find address of corresponding `![_sentinel`. since we resolve jump targets as
       # we go along, the "corresponding `![_sentinel`" is simply the latest `![_sentinel`
       ld1 for_b: dec
@@ -56,17 +56,17 @@ main!
 
       # structure similar to `getline.min`, but compiles to bytecode brainfuck user input
       # into `dst` directly, instead of writing user input to `dst` as-is
-    got_null:
+    '\0':
       # `char` is either `'\0'` or `other` from above
       # putc(char)
       !putc
   getline: # getline(*dst)
       !getc
-    :got_other
-      !char.line_feed xo2 :got_line_feed iff !char.line_feed xo2
-      !char.null xo2 :got_null iff !char.null xo2
+    :other
+      !'\n' xo2 :'\n' iff !'\n' xo2
+      !'\0' xo2 :'\0' iff !'\0' xo2
     !jmp
-    got_line_feed:
+    '\n':
       # print `char`, which is a `'\n'`
       !putc # bleed `dst`
 
@@ -82,16 +82,16 @@ main!
   !vm_core @org
     # expects `*head` on top of the stack, followed by `head`, followed by VM `ip`.
     # top of stack is written to `*head` only when `'<'` and `'>'` are encountered
-    >: ld1 sta inc :<_post !jmp
-    <: ld1 sta dec <_post: ld0 lda :next !jmp
-    +: inc :next !jmp
-    -: dec :next !jmp
-    .: ld0 !putc :next !jmp
-    ,: !getc st0 :next !jmp
+    '>': ld1 sta inc :<_post !jmp
+    '<': ld1 sta dec <_post: ld0 lda :next !jmp
+    '+': inc :next !jmp
+    '-': dec :next !jmp
+    '.': ld0 !putc :next !jmp
+    ',': !getc st0 :next !jmp
     # bytecode instructions `:[` and `:]` are followed by a one-byte operand pointing
     # to the corresponding bracket
-    [: !z ld2 inc ld3 lda iff :]_post !jmp
-    ]: ld2 lda ]_post: st2 _: :next !jmp
+    '[': !z ld2 inc ld3 lda iff :]_post !jmp
+    ']': ld2 lda ]_post: st2 _: :next !jmp
 
     next: ld2 lda ld3 inc st3 !jmp
     halt: !hlt

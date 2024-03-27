@@ -30,7 +30,7 @@ main!
       # `x` increments by `1` on every iteration instead of by `3`
       inc rot x02 su2 x01 and ld1
       # print `@@` or `  ` depending on carry and store bit in back buffer
-      !char.commercial_at !char.space !char.iff !char.ld0 !putc !putc
+      !'@' !'\s' !char.iff !char.ld0 !putc !putc
       !back_buffer !bit_addr !store_bit
     # loop until `x == BUFFER_LEN << 3`, which is the number of bits aka
     # pixels in a buffer of length `BUFFER_LEN`
@@ -39,7 +39,7 @@ main!
 
     # copy back buffer to display buffer and print newline
     !display_buffer.len !back_buffer !display_buffer :memcpy !call clc
-    !char.line_feed !putc
+    !'\n' !putc
   :loop !jmp
 
   !memcpy.def

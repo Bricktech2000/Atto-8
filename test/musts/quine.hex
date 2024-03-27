@@ -6,10 +6,10 @@
 #
 # main!
 #   x01
-#     !char.digit_zero st1 # `!putc`
-#     !char.digit_one st1 # `!putc`
+#     !'0' st1 # `!putc`
+#     !'1' st1 # `!putc`
 #   for_b:
-#     !char.space st1 # `!putc`
+#     !'\s' st1 # `!putc`
 #     ld0 lda !u8.to_hex st2 st1 # `!putc !putc`
 #   inc ld0 :end !eq !here !bcs :for_b !jmp end:
 

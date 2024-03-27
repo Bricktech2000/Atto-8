@@ -8,8 +8,8 @@
 
 main! !nop
   loop:
-    !block_getc !char.digit_zero !char.sub :fizzbuzz !call
-    !char.line_feed !putc
+    !block_getc !'0' !char.sub :fizzbuzz !call
+    !'\n' !putc
   :loop !jmp
 
   str_num: @00 @00 @00 @00 # enough for null-terminated `"255"`
@@ -28,7 +28,7 @@ main! !nop
   fizzbuzz: # fizzbuzz(u8 n)
     x00 for_i:
       # convert `n` to decimal string onto the stack
-      !char.null !u8.ld1 !u8.to_dec
+      !'\0' !u8.ld1 !u8.to_dec
       # move string from the stack to `str_num`
       :str_num for_c:
         swp !z ld1 !u8.sta inc
@@ -42,7 +42,7 @@ main! !nop
       # load string pointer from `ptrs` and print it
       :ptrs add lda !puts
 
-      !char.line_feed !putc
+      !'\n' !putc
 
     # increment `i` and loop until `i == n`
     inc ld0 ld3 !eq :for_i !bcc pop

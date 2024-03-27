@@ -6,7 +6,7 @@
 main!
   !pattern.len for_byte: dec
     # emit sound by sending `'\a'` to `stdout`
-    !char.bell !putc
+    !'\a' !putc
     # decrement the delay argument by `1` to account for the clocks required to execute
     # the rest of the loop. this was determined experimentally using `!tuning_pattern`
     :pattern ld1 add lda dec !delay

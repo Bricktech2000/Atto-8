@@ -8,9 +8,9 @@
 
 main! !nop
   loop:
-    !char.null !block_getc !char.digit_zero !char.sub :collatz !call
-    !char.left_parenthesis !putc !u8.to_dec !stack_puts !char.right_parenthesis !putc
-    !char.line_feed !putc
+    !'\0' !block_getc !'0' !char.sub :collatz !call
+    !'(' !putc !u8.to_dec !stack_puts !')' !putc
+    !'\n' !putc
   :loop !jmp
 
   collatz: clc # u8 steps = collatz(u8 n)
@@ -19,7 +19,7 @@ main! !nop
       ld2 shl # 2 * n
       ld3 shr @dyn neg # -n / 2
       ld1 iff ad4 @dyn clc # `n += CF ? 2*n+CF : -n/2`
-      !char.null ld4 !u8.to_dec !stack_puts !char.space !putc
+      !'\0' ld4 !u8.to_dec !stack_puts !'\s' !putc
       x04 !eq # if `3 * n + 1 == 4` then `n == 1`
     inc :for_s !bcc
   # return* steps

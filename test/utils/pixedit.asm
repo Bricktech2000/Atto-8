@@ -30,16 +30,16 @@ main!
 
   x00 !u4u4 # xy_pos
 
-  !char.null # dummy character
+  !'\0' # dummy character
   :store !jmp # do not `load` yet
 
   load:
-    !display_buffer.len !display_buffer !char.commercial_at !hex_getn
+    !display_buffer.len !display_buffer !'@' !hex_getn
     !block_null
 
   store:
-    !display_buffer.len !display_buffer !char.commercial_at !hex_putn
-    !char.line_feed !putc
+    !display_buffer.len !display_buffer !'@' !hex_putn
+    !'\n' !putc
 
   loop:
     !char.pop !getc
@@ -52,9 +52,9 @@ main!
     !primary_to_delta clc ad2
 
     :default
-      !char.full_stop xo2 :store iff !char.full_stop xo2
-      !char.comma xo2 :load iff !char.comma xo2
-      !char.space xo2 # set carry if space was pressed
+      !'.' xo2 :store iff !'.' xo2
+      !',' xo2 :load iff !',' xo2
+      !'\s' xo2 # set carry if space was pressed
     !jmp default:
     # if carry clear, blink pixel under cursor
     # if carry set, toggle pixel under cursor

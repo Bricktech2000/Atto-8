@@ -23,7 +23,7 @@ main!
   str_body: @2D @28 @5F @29 @2D @00 # "-(_)-"
   str_right: @2D @2D @2D @27 @20 @00 # "---' "
 
-  propeller: !char.latin_small_letter_x @data !char.plus_sign @data
+  propeller: !'x' @data !'+' @data
 
 # does not consume its argument. assumes `sec`
 print_propeller! :propeller dec @const ld1 add lda !putc

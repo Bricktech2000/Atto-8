@@ -6,7 +6,7 @@
 main!
   x00 # non-empty stack required for `printf` with conversion specifier `%`
   x21 x32 sub x32 x21 :str_format_0 :printf !call
-  !char.latin_capital_letter_a :str_format_1 :printf !call
+  !'A' :str_format_1 :printf !call
   :str_format_2 :str_format_2 :printf !call
   :str_format_3 :str_format_3 :printf !call
   !hlt

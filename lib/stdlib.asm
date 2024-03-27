@@ -25,7 +25,7 @@ block_any! block. !getc !char.is_null .block !bcs
 # block until no key is pressed
 block_null! block. !getc !char.is_null .block !bcc
 # block until a key is pressed then return it
-block_getc! !char.null block. !char.pop !getc !char.check_null .block !bcs
+block_getc! !'\0' block. !char.pop !getc !char.check_null .block !bcs
 
 # count population of zeros
 cpz! # count = cpz(n, init)

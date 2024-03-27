@@ -18,155 +18,155 @@ c4f4m4f4! !i16 # c4f4m4f4 n = c4f4m4f4(i4f4 im, i4f8 re)
 c8f8m8f8! !i32 # c8f8m8f8 n = c8f8m8f8(i8f8 im, i8f8 re)
 char! # char n = char(u8 n)
 
-u8.0! x00 @const
-u16.0! x00 x00 @const
-u32.0! x00 x00 x00 x00 @const
-u64.0! x00 x00 x00 x00 x00 x00 x00 x00 @const
-i8.0! !u8.0
-i16.0! !u16.0
-i32.0! !u32.0
-i64.0! !u64.0
-u4u4.0! !u8.0
-u8u8.0! !u16.0
-i4i4.0! !i8.0
-i8i8.0! !i16.0
-u4f4.0! !u8.0
-u8f8.0! !u16.0
-i4f4.0! !i8.0
-i8f8.0! !i16.0
-c4f4m4f4.0! !i16.0
-c8f8m8f8.0! !i32.0
-char.null! x00 @const
-char.start_of_heading! x01 @const
-char.start_of_text! x02 @const
-char.end_of_text! x03 @const
-char.end_of_transmission! x04 @const
-char.enquiry! x05 @const
-char.acknowledge! x06 @const
-char.bell! x07 @const
-char.backspace! x08 @const
-char.horizontal_tab! x09 @const
-char.line_feed! x0A @const
-char.vertical_tab! x0B @const
-char.form_feed! x0C @const
-char.carriage_return! x0D @const
-char.shift_out! x0E @const
-char.shift_in! x0F @const
-char.data_link_escape! x10 @const
-char.device_control_1! x11 @const
-char.device_control_2! x12 @const
-char.device_control_3! x13 @const
-char.device_control_4! x14 @const
-char.negative_acknowledge! x15 @const
-char.synchronous_idle! x16 @const
-char.end_of_transmission_block! x17 @const
-char.cancel! x18 @const
-char.end_of_medium! x19 @const
-char.substitute! x1A @const
-char.escape! x1B @const
-char.file_separator! x1C @const
-char.group_separator! x1D @const
-char.record_separator! x1E @const
-char.unit_separator! x1F @const
-char.space! x20 @const
-char.exclamation_mark! x21 @const
-char.quotation_mark! x22 @const
-char.number_sign! x23 @const
-char.dollar_sign! x24 @const
-char.percent_sign! x25 @const
-char.ampersand! x26 @const
-char.apostrophe! x27 @const
-char.left_parenthesis! x28 @const
-char.right_parenthesis! x29 @const
-char.asterisk! x2A @const
-char.plus_sign! x2B @const
-char.comma! x2C @const
-char.hyphen_minus! x2D @const
-char.full_stop! x2E @const
-char.solidus! x2F @const
-char.digit_zero! x30 @const
-char.digit_one! x31 @const
-char.digit_two! x32 @const
-char.digit_three! x33 @const
-char.digit_four! x34 @const
-char.digit_five! x35 @const
-char.digit_six! x36 @const
-char.digit_seven! x37 @const
-char.digit_eight! x38 @const
-char.digit_nine! x39 @const
-char.colon! x3A @const
-char.semicolon! x3B @const
-char.less_than_sign! x3C @const
-char.equals_sign! x3D @const
-char.greater_than_sign! x3E @const
-char.question_mark! x3F @const
-char.commercial_at! x40 @const
-char.latin_capital_letter_a! x41 @const
-char.latin_capital_letter_b! x42 @const
-char.latin_capital_letter_c! x43 @const
-char.latin_capital_letter_d! x44 @const
-char.latin_capital_letter_e! x45 @const
-char.latin_capital_letter_f! x46 @const
-char.latin_capital_letter_g! x47 @const
-char.latin_capital_letter_h! x48 @const
-char.latin_capital_letter_i! x49 @const
-char.latin_capital_letter_j! x4A @const
-char.latin_capital_letter_k! x4B @const
-char.latin_capital_letter_l! x4C @const
-char.latin_capital_letter_m! x4D @const
-char.latin_capital_letter_n! x4E @const
-char.latin_capital_letter_o! x4F @const
-char.latin_capital_letter_p! x50 @const
-char.latin_capital_letter_q! x51 @const
-char.latin_capital_letter_r! x52 @const
-char.latin_capital_letter_s! x53 @const
-char.latin_capital_letter_t! x54 @const
-char.latin_capital_letter_u! x55 @const
-char.latin_capital_letter_v! x56 @const
-char.latin_capital_letter_w! x57 @const
-char.latin_capital_letter_x! x58 @const
-char.latin_capital_letter_y! x59 @const
-char.latin_capital_letter_z! x5A @const
-char.left_square_bracket! x5B @const
-char.reverse_solidus! x5C @const
-char.right_square_bracket! x5D @const
-char.circumflex_accent! x5E @const
-char.low_line! x5F @const
-char.grave_accent! x60 @const
-char.latin_small_letter_a! x61 @const
-char.latin_small_letter_b! x62 @const
-char.latin_small_letter_c! x63 @const
-char.latin_small_letter_d! x64 @const
-char.latin_small_letter_e! x65 @const
-char.latin_small_letter_f! x66 @const
-char.latin_small_letter_g! x67 @const
-char.latin_small_letter_h! x68 @const
-char.latin_small_letter_i! x69 @const
-char.latin_small_letter_j! x6A @const
-char.latin_small_letter_k! x6B @const
-char.latin_small_letter_l! x6C @const
-char.latin_small_letter_m! x6D @const
-char.latin_small_letter_n! x6E @const
-char.latin_small_letter_o! x6F @const
-char.latin_small_letter_p! x70 @const
-char.latin_small_letter_q! x71 @const
-char.latin_small_letter_r! x72 @const
-char.latin_small_letter_s! x73 @const
-char.latin_small_letter_t! x74 @const
-char.latin_small_letter_u! x75 @const
-char.latin_small_letter_v! x76 @const
-char.latin_small_letter_w! x77 @const
-char.latin_small_letter_x! x78 @const
-char.latin_small_letter_y! x79 @const
-char.latin_small_letter_z! x7A @const
-char.left_curly_bracket! x7B @const
-char.vertical_line! x7C @const
-char.right_curly_bracket! x7D @const
-char.tilde! x7E @const
-char.delete! x7F @const
-char.digit_count! !char.digit_nine !char.digit_zero sub inc @const
-char.small_letter_count! !char.latin_small_letter_z !char.latin_small_letter_a sub inc @const
-char.capital_letter_count! !char.latin_capital_letter_z !char.latin_capital_letter_a sub inc @const
+0u8! x00 !u8 @const
+0u16! x00 x00 !u16 @const
+0u32! x00 x00 x00 x00 !u32 @const
+0u64! x00 x00 x00 x00 x00 x00 x00 x00 !u64 @const
+0i8! !0u8 !i8
+0i16! !0u16 !i16
+0i32! !0u32 !i32
+0i64! !0u64 !i64
+0u4u4! !0u8 !u4u4
+0u8u8! !0u16 !u8u8
+0i4i4! !0i8 !i4i4
+0i8i8! !0i16 !i8i8
+0u4f4! !0u8 !u4f4
+0u8f8! !0u16 !u8f8
+0i4f4! !0i8 !i4f4
+0i8f8! !0i16 !i8f8
+0c4f4m4f4! !0i16 !c4f4m4f4
+0c8f8m8f8! !0i32 !c8f8m8f8
+nul! x00 !char @const '\0'! !nul
+soh! x01 !char @const
+stx! x02 !char @const
+etx! x03 !char @const
+eot! x04 !char @const
+enq! x05 !char @const
+ack! x06 !char @const
+bel! x07 !char @const '\a'! !bel
+bs! x08 !char @const '\b'! !bs
+ht! x09 !char @const '\t'! !ht
+lf! x0A !char @const '\n'! !lf
+vt! x0B !char @const '\v'! !vt
+ff! x0C !char @const '\f'! !ff
+cr! x0D !char @const '\r'! !cr
+so! x0E !char @const
+si! x0F !char @const
+dle! x10 !char @const
+dc1! x11 !char @const
+dc2! x12 !char @const
+dc3! x13 !char @const
+dc4! x14 !char @const
+nak! x15 !char @const
+syn! x16 !char @const
+etb! x17 !char @const
+can! x18 !char @const
+em! x19 !char @const
+sub! x1A !char @const
+esc! x1B !char @const '\e'! !esc
+fs! x1C !char @const
+gs! x1D !char @const
+rs! x1E !char @const
+us! x1F !char @const
+sp! x20 !char @const '\s'! !sp
+'!'! x21 !char @const
+'"'! x22 !char @const
+'#'! x23 !char @const
+'$'! x24 !char @const
+'%'! x25 !char @const
+'&'! x26 !char @const
+'\''! x27 !char @const
+'('! x28 !char @const
+')'! x29 !char @const
+'*'! x2A !char @const
+'+'! x2B !char @const
+','! x2C !char @const
+'-'! x2D !char @const
+'.'! x2E !char @const
+'/'! x2F !char @const
+'0'! x30 !char @const
+'1'! x31 !char @const
+'2'! x32 !char @const
+'3'! x33 !char @const
+'4'! x34 !char @const
+'5'! x35 !char @const
+'6'! x36 !char @const
+'7'! x37 !char @const
+'8'! x38 !char @const
+'9'! x39 !char @const
+':'! x3A !char @const
+';'! x3B !char @const
+'<'! x3C !char @const
+'='! x3D !char @const
+'>'! x3E !char @const
+'?'! x3F !char @const
+'@'! x40 !char @const
+'A'! x41 !char @const
+'B'! x42 !char @const
+'C'! x43 !char @const
+'D'! x44 !char @const
+'E'! x45 !char @const
+'F'! x46 !char @const
+'G'! x47 !char @const
+'H'! x48 !char @const
+'I'! x49 !char @const
+'J'! x4A !char @const
+'K'! x4B !char @const
+'L'! x4C !char @const
+'M'! x4D !char @const
+'N'! x4E !char @const
+'O'! x4F !char @const
+'P'! x50 !char @const
+'Q'! x51 !char @const
+'R'! x52 !char @const
+'S'! x53 !char @const
+'T'! x54 !char @const
+'U'! x55 !char @const
+'V'! x56 !char @const
+'W'! x57 !char @const
+'X'! x58 !char @const
+'Y'! x59 !char @const
+'Z'! x5A !char @const
+'['! x5B !char @const
+'\\'! x5C !char @const
+']'! x5D !char @const
+'^'! x5E !char @const
+'_'! x5F !char @const
+'`'! x60 !char @const
+'a'! x61 !char @const
+'b'! x62 !char @const
+'c'! x63 !char @const
+'d'! x64 !char @const
+'e'! x65 !char @const
+'f'! x66 !char @const
+'g'! x67 !char @const
+'h'! x68 !char @const
+'i'! x69 !char @const
+'j'! x6A !char @const
+'k'! x6B !char @const
+'l'! x6C !char @const
+'m'! x6D !char @const
+'n'! x6E !char @const
+'o'! x6F !char @const
+'p'! x70 !char @const
+'q'! x71 !char @const
+'r'! x72 !char @const
+'s'! x73 !char @const
+'t'! x74 !char @const
+'u'! x75 !char @const
+'v'! x76 !char @const
+'w'! x77 !char @const
+'x'! x78 !char @const
+'y'! x79 !char @const
+'z'! x7A !char @const
+'{'! x7B !char @const
+'|'! x7C !char @const
+'}'! x7D !char @const
+'~'! x7E !char @const
+del! x7F !char @const
+char.digit_count! !'9' !'0' sub inc @const
+char.small_letter_count! !'z' !'a' sub inc @const
+char.capital_letter_count! !'Z' !'A' sub inc @const
 
 u8.add! add @dyn
 u16.add! ad2 @dyn ad2 @dyn
@@ -1730,14 +1730,14 @@ u8.is_null! !zr
 # converts `0x0..=0xF` to `'0'..='9', 'A'..='F'`. undefined for other values
 u4.to_hex!
   !char.digit_count sub @dyn
-    !char.latin_capital_letter_a @const
-    !char.digit_count !char.digit_zero add dec @const
+    !'A' @const
+    !char.digit_count !'0' add dec @const
   iff add @dyn
 # converts `'0'..='9', 'A'..='F'` to `0x0..=0xF`. undefined for other values
 hex.to_u4!
-  !char.latin_capital_letter_a sub @dyn
+  !'A' sub @dyn
     !char.digit_count @const
-    !char.latin_capital_letter_a !char.digit_zero sub dec @const
+    !'A' !'0' sub dec @const
   iff add @dyn
 # converts `0x00..=0xFF` to `'00'..='FF'`
 u8.to_hex!
@@ -1752,7 +1752,7 @@ u8.to_dec!
     # (div_10, mod_10) = (value / 10, value % 10)
     !divmod_10
     # char = '0' + mod_10
-    !char.digit_zero ad2 # bleeds `char`
+    !'0' ad2 # bleeds `char`
   # loop while `div_10 != 0`
   !z .while_value !bcc !u8.pop
 # converts an unspecified number of digits `'0'..='9'` to `0x00..=0xFF`
@@ -1764,27 +1764,27 @@ char.is_null! !zr
 
 # converts `'A'..='Z'` to `'a'..='z'`. leaves other values unchanged
 char.to_lower!
-  !char.latin_capital_letter_a sub clc
+  !'A' sub clc
   !char.capital_letter_count sub @dyn
-    !char.capital_letter_count !char.latin_capital_letter_a add @const
-    !char.capital_letter_count !char.latin_small_letter_a add dec @const
+    !char.capital_letter_count !'A' add @const
+    !char.capital_letter_count !'a' add dec @const
   iff add
 # converts `'a'..='z'` to `'A'..='Z'`. leaves other values unchanged
 char.to_upper!
-  !char.latin_small_letter_a sub clc
+  !'a' sub clc
   !char.small_letter_count sub @dyn
-    !char.small_letter_count !char.latin_small_letter_a add @const
-    !char.small_letter_count !char.latin_capital_letter_a add dec @const
+    !char.small_letter_count !'a' add @const
+    !char.small_letter_count !'A' add dec @const
   iff add
 
 u8.mul.def!
   u8.mul: clc # u16 product = u8.mul(u8 a, u8 b)
-    !u16.0 # product
+    !0u16 # product
     x08 for_bit. dec
       # b >>= 1
       !u8.ld3+2 !u8.shr !u8.st3+2
       # product += CF ? a : 0
-      !u8.ld1+1 !u8.0 !u8.ld4+2 !u8.iff clc !u8.add
+      !u8.ld1+1 !0u8 !u8.ld4+2 !u8.iff clc !u8.add
       # product >>= 1 (stairstep shift)
       !u8.ld1+1 !u16.shr !u16.st0+1
     !z .for_bit !bcc pop
@@ -1795,19 +1795,19 @@ i8.mul.def!
     # u16 product = (u8)a * (u8)b
     !u16.ld0+1 !u8.mul
     # product -= (a & 0x80 ? b << 0x08 : 0x00)
-    ld3 !ng !u16.0 !u8.ld5+1 !u8.0 !u16.iff clc !u16.sub
+    ld3 !ng !0u16 !u8.ld5+1 !0u8 !u16.iff clc !u16.sub
     # product -= (b & 0x80 ? a << 0x08 : 0x00)
-    ld4 !ng !u16.0 !u8.ld4+1 !u8.0 !u16.iff clc !u16.sub
+    ld4 !ng !0u16 !u8.ld4+1 !0u8 !u16.iff clc !u16.sub
   # return* product
   !u16.st0+1 !rt0
 u16.mul.def!
   u16.mul: clc # u32 product = u16.mul(u16 a, u16 b)
-    !u32.0 # product
+    !0u32 # product
     x10 for_bit. dec
       # b >>= 1
       !u16.ld3+2 !u16.shr !u16.st3+2
       # product += CF ? a : 0
-      !u16.ld1+1 !u16.0 !u16.ld4+2 !u16.iff clc !u16.add
+      !u16.ld1+1 !0u16 !u16.ld4+2 !u16.iff clc !u16.add
       # product >>= 1 (stairstep shift)
       !u16.ld1+1 !u32.shr !u32.st0+1
     !z .for_bit !bcc pop
@@ -1818,9 +1818,9 @@ i16.mul.def!
     # u32 product = (u16)a * (u16)b
     !u32.ld0+1 !u16.mul
     # product -= (a & 0x8000 ? b << 0x10 : 0x00)
-    ld6 !ng !u32.0 !u16.ld5+1 !u16.0 !u32.iff clc !u32.sub
+    ld6 !ng !0u32 !u16.ld5+1 !0u16 !u32.iff clc !u32.sub
     # product -= (b & 0x8000 ? a << 0x10 : 0x00)
-    ld8 !ng !u32.0 !u16.ld4+1 !u16.0 !u32.iff clc !u32.sub
+    ld8 !ng !0u32 !u16.ld4+1 !0u16 !u32.iff clc !u32.sub
   # return* product
   !u32.st0+1 !rt0
 u4f4.mul.def!

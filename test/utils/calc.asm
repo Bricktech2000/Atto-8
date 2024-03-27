@@ -22,15 +22,15 @@ main!
   :stack # `top` of software stack
   !status_success # `status_success as initial `status`
 
-  !char.null # dummy character for `got_line_feed`
+  !'\0' # dummy character for `:'\n'`
 
-  got_line_feed:
+  '\n':
     # print and reset status
     !status_success sw2 !putc
 
     :stack for_item:
       # print `stack[item]` as decimal, ignoring `0x00` values
-      ld0 !u8.lda !z :zero !bcs !char.null swp !u8.to_dec zero: !char.space !stack_puts
+      ld0 !u8.lda !z :zero !bcs !'\0' swp !u8.to_dec zero: !'\s' !stack_puts
     # loop while no greater than `top`
     ld0 ld4 !eq inc :for_item !bcc pop
 
@@ -43,11 +43,11 @@ main!
     !char.ld0 !putc
 
     :default
-      !char.line_feed xo2 :got_line_feed iff !char.line_feed xo2
-      !char.space xo2 :got_space iff !char.space xo2
+      !'\n' xo2 :'\n' iff !'\n' xo2
+      !'\s' xo2 :'\s' iff !'\s' xo2
     !jmp default:
     x3A !char.sub clc # map '0'..='9' to 0xF6..=0xFF
-    x0A !char.add @dyn :got_digit !bcs # branch if adding 0x0A wrapped around
+    x0A !char.add @dyn :digit !bcs # branch if adding 0x0A wrapped around
 
     :continue
       # if (top < stack + 2) { status = status_syntax; break; }
@@ -61,21 +61,21 @@ main!
     ld2 lda # `*top`
     ld3 inc lda # `*(top + 1)`
 
-    :got_other
-      !char.plus_sign x30 sub @const xo4 :got_plus_sign iff !char.plus_sign x30 sub @const xo4
-      !char.hyphen_minus x30 sub @const xo4 :got_hyphen_minus iff !char.hyphen_minus x30 sub @const xo4
-      !char.asterisk x30 sub @const xo4 :got_asterisk iff !char.asterisk x30 sub @const xo4
-      !char.solidus x30 sub @const xo4 :got_solidus iff !char.solidus x30 sub @const xo4
-      !char.percent_sign x30 sub @const xo4 :got_percent_sign iff # !char.percent_sign x30 sub @const xo4
+    :other
+      !'+' x30 sub @const xo4 :'+' iff !'+' x30 sub @const xo4
+      !'-' x30 sub @const xo4 :'-' iff !'-' x30 sub @const xo4
+      !'*' x30 sub @const xo4 :'*' iff !'*' x30 sub @const xo4
+      !'/' x30 sub @const xo4 :'/' iff !'/' x30 sub @const xo4
+      !'%' x30 sub @const xo4 :'%' iff # !'%' x30 sub @const xo4
     !jmp
 
-    got_plus_sign: !u8.add :ret !jmp
-    got_hyphen_minus: !u8.sub :ret !jmp
-    got_asterisk: !mul clc :ret !jmp
-    got_solidus: !div clc :ret !jmp
-    got_percent_sign: !mod clc :ret !jmp
+    '+': !u8.add :ret !jmp
+    '-': !u8.sub :ret !jmp
+    '*': !mul clc :ret !jmp
+    '/': !div clc :ret !jmp
+    '%': !mod clc :ret !jmp
 
-  got_digit:
+  digit:
     # push `*top * 10 + digit` for `:ret`
     ld2 !u8.lda !mul_10 !u8.ld1 !u8.add
     # fall through
@@ -83,16 +83,16 @@ main!
     # store result at `top`. if carry flag is set, report overflow condition
     ld3 !status_overflow if4 !u8.sta
     # clear second argument remaining on software stack
-    !u8.0 ld3 inc !u8.sta
+    !0u8 ld3 inc !u8.sta
   :loop !jmp
 
-  got_other:
+  other:
     # no match; report syntax error
     pop x02 ad4 pop
     !status_syntax st1
   :loop !jmp
 
-  got_space:
+  '\s':
     # increment `top` to make room for new item
     ld2 inc st2 # assumes `top` never overflows
   :loop !jmp
@@ -100,6 +100,6 @@ main!
   # software stack
   stack: @00 !u8
 
-status_overflow! !char.exclamation_mark
-status_syntax! !char.question_mark
-status_success! !char.space
+status_overflow! !'!'
+status_syntax! !'?'
+status_success! !'\s'

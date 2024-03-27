@@ -13,7 +13,7 @@ main!
       !mandelbrot !iter_shift !rneg rot x0F and clc :tones add lda !putc
     # loop while `x += step_count != 0`
     !step_count add @dyn :for_x !bcc pop
-    !char.line_feed !putc
+    !'\n' !putc
   # we `y += step_count * 2` because characters have an aspect ratio of 2:1
   # loop while `y += step_count * 2 != 0`
   !step_count shl dec @const add @dyn !here !bcs :for_y !jmp

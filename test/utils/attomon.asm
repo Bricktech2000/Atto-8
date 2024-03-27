@@ -41,34 +41,34 @@
 main!
   pop pop !attomon_init !jmp # begin execution in `attomon_init` to save memory
 
-  got_colon:
+  ':':
     ld2 st1 # copy `buffer` to `head`
   :space_print !jmp
 
-  got_full_stop:
+  '.':
     ld2 ld2 sta x01 ad2 # write `buffer` to `*head` and increment `head`
   :space_print !jmp
 
-  got_semicolon:
+  ';':
     xFF ad2 # decrement `head`, and set carry so it is not incremented below
-  got_comma:
+  ',':
     ld1 lda st2 xFF su2 # copy `*head` to `buffer` for `buffer_print` and increment `head`
   :buffer_print !jmp
 
-  got_hex:
+  hex:
     !char.pop # pop extraneous `'\b'` character
     x0F and # maps 0xFA..0xFF to 0x0A..0x0F
     x04 x0F an4 rot or2 # copy into most significant nibble of `buffer`
-    !char.null # previous character was consumed, push dummy character
-  got_backspace:
+    !'\0' # previous character was consumed, push dummy character
+  '\b':
     !char.pop # pop previous character
     x04 ro2 # swap `buffer` nibbles
   :loop !jmp # do not pop previous character again
 
   # prepare stack and fall through to `buffer_print`
-  got_line_feed:
-    !char.dollar_sign !putc
-  got_dollar_sign:
+  '\n':
+    !'$' !putc
+  '$':
     ld1 st2 # copy `head` to `buffer` for `buffer_print`
 
   # print `buffer` followed by a space and fall through
@@ -77,7 +77,7 @@ main!
 
   # print a space and fall through
   space_print:
-    !char.space
+    !'\s'
 
   # print the character at the top of the stack and fall through
   stall_print:
@@ -95,34 +95,34 @@ main!
     !char.ld0 !putc
 
     :default
-      !char.colon xo2 :got_colon iff !char.colon xo2
-      !char.full_stop xo2 :got_full_stop iff !char.full_stop xo2
-      !char.semicolon xo2 :got_semicolon iff !char.semicolon xo2
-      !char.comma xo2 :got_comma iff !char.comma xo2
-      !char.backspace xo2 :got_backspace iff !char.backspace xo2
-      !char.line_feed xo2 :got_line_feed iff !char.line_feed xo2
-      !char.dollar_sign xo2 :got_dollar_sign iff !char.dollar_sign xo2
-      !char.exclamation_mark xo2 ld3 iff !char.exclamation_mark xo2
-      !char.null xo2 :pop_loop iff !char.null xo2
+      !':' xo2 :':' iff !':' xo2
+      !'.' xo2 :'.' iff !'.' xo2
+      !';' xo2 :';' iff !';' xo2
+      !',' xo2 :',' iff !',' xo2
+      !'\b' xo2 :'\b' iff !'\b' xo2
+      !'\n' xo2 :'\n' iff !'\n' xo2
+      !'$' xo2 :'$' iff !'$' xo2
+      !'!' xo2 ld3 iff !'!' xo2
+      !'\0' xo2 :pop_loop iff !'\0' xo2
     !jmp default:
-    !char.backspace
+    !'\b'
       xC6 ad2 # map '0'..='9' to 0xF6..=0xFF
-      x0A ad2 @dyn :got_hex !bcs # branch if adding 0x0A wrapped around
+      x0A ad2 @dyn :hex !bcs # branch if adding 0x0A wrapped around
       x12 su2 # map 'A'..='F' to 0x00..=0x05
-      x06 su2 @dyn :got_hex !bcs # branch if subtracting 0x06 wrapped around
+      x06 su2 @dyn :hex !bcs # branch if subtracting 0x06 wrapped around
     :stall_print !jmp # invalid character, print `'\b'`
 
   !attomon_init @org # initialization code
     !attomon_init sts # put stack right above initialization code
     !user_buffer # allocate `buffer`
     !user_buffer # allocate `head`
-    !char.null # push dummy character
-    :str_attomon_init :puts.min !call :got_line_feed !jmp
+    !'\0' # push dummy character
+    :str_attomon_init :puts.min !call :'\n' !jmp
     !puts.min.def
     str_attomon_init: @0A @0A @3D @41 @74 @74 @6F @4D @6F @6E @3D @0A @00 # "\n\n=AttoMon=\n"
     # str_attomon_init: @1B @5B @32 @4A @1B @5B @48 @00 # "\x1B[2J\x1B[H"
   !user_buffer @org # memory writable by user
-    # :str_atto-8 :puts.min !call :got_line_feed !jmp
+    # :str_atto-8 :puts.min !call :'\n' !jmp
     # str_atto-8: @0A @41 @74 @74 @6F @2D @38 @0A @00 # "\nAtto-8\n"
     @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00
     @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00 @00

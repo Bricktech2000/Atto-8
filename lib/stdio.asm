@@ -45,7 +45,7 @@ hex_getn! clc # hex_getn(sep, *str, len)
 
 # inputs and pushes in reverse order a null-terminated string onto the stack
 stack_gets! # str[] = stack_gets()
-  !char.null for_c. !getc !char.check_null .for_c !bcc !char.pop
+  !'\0' for_c. !getc !char.check_null .for_c !bcc !char.pop
 
 
 fputc! !char.sta # fputc(stream, char)
@@ -71,7 +71,7 @@ puts.min! # puts.min(*str)
 puts.min.def! puts.min: swp !puts.min !ret # puts.min(*str)
 
 hex_putc! # hex_putc(sep, u8 char)
-  !char.space !putc !putc
+  !'\s' !putc !putc
   !u8.to_hex !putc !putc
 hex_puts! # hex_puts(sep, *str)
   swp for_c.
@@ -108,50 +108,50 @@ stack_puts! # stack_puts(str[])
 # - passing insufficient arguments for the format results in undefined behavior
 # - passing excess arguments for the format results in undefined behavior (nonstandard)
 printf.def!
-    got_latin_small_letter_p:
+    'p'.
       # print `"0x"` then fall through to conversion specifier `x`
-      !char.digit_zero str_empty: !putc !char.latin_small_letter_x !putc
-    got_latin_small_letter_x:
+      !'0' str_empty. !putc !'x' !putc
+    'x'.
       # print first character then fall through to conversion specifier `c` with second character
       !u8.to_hex !putc
-    got_latin_small_letter_c:
-    got_other:
+    'c'.
+    other.
       # print char on stack and fall through to conversion specifier `s` with empty string
-      !putc :str_empty
-    got_latin_small_letter_s:
+      !putc .str_empty
+    's'.
       # print as string and fall through to `:printf`
       !puts.min
   printf: # printf(*format, ...)
     # load `char` from `format`
     ld1 lda
-    :got_other
-      !char.percent_sign xo2 :got_percent_sign iff !char.percent_sign xo2
-      !char.null xo2 :got_null iff !char.null xo2
+    .other
+      !'%' xo2 .'%' iff !'%' xo2
+      !'\0' xo2 .'\0' iff !'\0' xo2
     x01 ad4 # increment `format` here because carry is cleared
-    !jmp # keep `char` on stack for `:got_other`
-    got_percent_sign:
+    !jmp # keep `char` on stack for `.other`
+    '%'.
       pop # pops `char` from stack
       swp sw2 # loads one argument from `va_list`
       ld2 lda # loads `conversion_specifier` from `format`
       x01 ad4 # increments `format`
-    :got_unknown_conversion_specifier
-      !char.latin_small_letter_p xo2 :got_latin_small_letter_p iff !char.latin_small_letter_p xo2
-      !char.latin_small_letter_x xo2 :got_latin_small_letter_x iff !char.latin_small_letter_x xo2
-      !char.latin_small_letter_d xo2 :got_latin_small_letter_d iff !char.latin_small_letter_d xo2
-      !char.latin_small_letter_u xo2 :got_latin_small_letter_u iff !char.latin_small_letter_u xo2
-      !char.latin_small_letter_c xo2 :got_latin_small_letter_c iff !char.latin_small_letter_c xo2
-      !char.latin_small_letter_s xo2 :got_latin_small_letter_s iff # !char.latin_small_letter_s xo2
+    .unknown
+      !'p' xo2 .'p' iff !'p' xo2
+      !'x' xo2 .'x' iff !'x' xo2
+      !'d' xo2 .'d' iff !'d' xo2
+      !'u' xo2 .'u' iff !'u' xo2
+      !'c' xo2 .'c' iff !'c' xo2
+      !'s' xo2 .'s' iff # !'s' xo2
     st0 !jmp # pops `conversion_specifier` off stack
-    got_latin_small_letter_d:
+    'd'.
       # compute absolute value, print `-` if was negative and fall through to conversion specifier `u`
-      !abs.dyn !char.null !char.hyphen_minus iff !putc clc
-    got_latin_small_letter_u:
+      !abs.dyn !'\0' !'-' iff !putc clc
+    'u'.
       # print as decimal and jump back to `:printf`
-      !char.null swp !u8.to_dec !stack_puts :printf !jmp
-    got_unknown_conversion_specifier: # includes conversion specifier `%`
+      !'\0' swp !u8.to_dec !stack_puts :printf !jmp
+    unknown. # unknown conversion specifier, including `%`
       # store back argument from `va_list` and jump to conversion specifier `c` with `'%'`
-      sw2 swp !char.percent_sign :got_latin_small_letter_c !jmp
-    got_null: # null terminator
+      sw2 swp !'%' .'c' !jmp
+    '\0'. # null terminator
   # pop `char` from stack then return*
   pop !rt1
 
@@ -161,81 +161,81 @@ printf.def!
 # - `:buf :buf :getline !call` (where `dst == end`) does not use placeholder text
 # - `:buf !puts :buf :buf !strend :getline !call` uses `:buf` as placeholder text
 getline.def!
-    got_other.
-      # increment by `2` because `.got_backspace` will decrement by `1`
+    other.
+      # increment by `2` because `.'\b'` will decrement by `1`
       # *end = other; end += 2
       ld2 x02 ad4
       !char.ld1 swp !char.sta # bleed `other`
-    got_backspace.
+    '\b'.
       # `char` is either `'\b'` or `other` from above
       # putc(dst == end ? 0 : char)
       ld3 ld3 !e iff # bleed `char`
-    got_null.
+    '\0'.
       !putc
       # end -= dst == end ? 0 : 1
       xFF ad2 @dyn
   getline: # getline(*end, *dst)
       !getc
-    .got_other
-      !char.line_feed xo2 .got_line_feed iff !char.line_feed xo2
-      !char.backspace xo2 .got_backspace iff !char.backspace xo2
-      !char.null xo2 .got_null iff !char.null xo2
+    .other
+      !'\n' xo2 .'\n' iff !'\n' xo2
+      !'\b' xo2 .'\b' iff !'\b' xo2
+      !'\0' xo2 .'\0' iff !'\0' xo2
     !jmp
-    got_line_feed.
+    '\n'.
       # pop `char`, which is a `'\n'`
       !char.pop
       # *end = '\0'
-      st1 !char.null swp sta
+      st1 !'\0' swp sta
   # return*
   !ret
 
 # identical to `getline`, but does not echo to `stdout`
 getpass.def!
-    got_other.
-      # increment by `2` because `.got_backspace` will decrement by `1`
+    other.
+      # increment by `2` because `.'\b'` will decrement by `1`
       # *end = other; end += 2
       ld2 !char.sta
-      x02 ad2 !char.null # bleed `'\0'`
-    got_backspace.
+      x02 ad2 !'\0' # bleed `'\0'`
+    '\b'.
       ld3 ld3 !e pop # bleed `char`
-    got_null.
+    '\0'.
       # pop `char`
       !char.pop
       # end -= dst == end ? 0 : 1
       xFF ad2 @dyn
   getpass: # getpass(*end, *dst)
       !getc
-    .got_other
-      !char.line_feed xo2 .got_line_feed iff !char.line_feed xo2
-      !char.backspace xo2 .got_backspace iff !char.backspace xo2
-      !char.null xo2 .got_null iff !char.null xo2
+    .other
+      !'\n' xo2 .'\n' iff !'\n' xo2
+      !'\b' xo2 .'\b' iff !'\b' xo2
+      !'\0' xo2 .'\0' iff !'\0' xo2
     !jmp
-    got_line_feed.
+    '\n'.
       # pop `char`, which is a `'\n'`
       !char.pop
       # *end = '\0'
-      st1 !char.null swp sta
+      st1 !'\0' swp sta
   # return*
   !ret
 
 # reads into `dst` and echoes to `stdout` characters from `stdin` until `'\n'` is
 # encountered. does not support `'\b'`. assumes `dst` to be initialized to `{0}`
 getline.min.def!
-    got_other.
+    other.
       # *dst = other; end += 1
       ld2 x01 ad4
       !char.ld1 swp !char.sta # bleed `other`
-    got_null.
+    '\0'.
       # `char` is either `'\0'` or `other` from above
       # putc(char)
       !putc
   getline.min: # getline.min(*dst)
       !getc
-    .got_other
-      !char.line_feed xo2 .got_line_feed iff !char.line_feed xo2
-      !char.null xo2 .got_null iff !char.null xo2
+    .other
+      !'\n' xo2 .'\n' iff !'\n' xo2
+      !'\0' xo2 .'\0' iff !'\0' xo2
     !jmp
-    got_line_feed.
+    '\n'.
       # pop `char`, which is a `'\n'`
       !char.pop
   # return*
@@ -243,19 +243,19 @@ getline.min.def!
 
 # identical to `getline.min`, but does not echo to `stdout`
 getpass.min.def!
-    got_other.
+    other.
       ld2 !char.sta
-      x01 ad2 !char.null # bleed `'\0'`
-    got_null.
+      x01 ad2 !'\0' # bleed `'\0'`
+    '\0'.
       # pop `char`
       !char.pop
   getpass.min: # getpass.min(*dst)
       !getc
-    .got_other
-      !char.line_feed xo2 .got_line_feed iff !char.line_feed xo2
-      !char.null xo2 .got_null iff !char.null xo2
+    .other
+      !'\n' xo2 .'\n' iff !'\n' xo2
+      !'\0' xo2 .'\0' iff !'\0' xo2
     !jmp
-    got_line_feed.
+    '\n'.
       # pop `char`, which is a `'\n'`
       !char.pop
   # return*

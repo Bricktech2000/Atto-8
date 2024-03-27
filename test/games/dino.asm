@@ -10,7 +10,7 @@ main!
 
   !rand_seed.min # rand_seed
 
-  !u8u8.0 # cactus_top, cactus_bot
+  !0u8u8 # cactus_top, cactus_bot
 
   x00 !u4f4 # x_pos
   x10 !i4f4 # x_vel
