@@ -21,8 +21,8 @@ main!
     ld1
       # increment score
       x00 ad8 @dyn # clears carry
-      # `!rand.min`, but with hand-tuned `rand_seed` and `!rand_bits` that
-      # maximizes cycle length while ensuring food never spawns on a wall
+      # `!rand`, but with no `inc` and hand-tuned `!rand_seed` and `!rand_bits`
+      # that maximize cycle length while ensuring food never spawns on a wall
       shl x01 x00 iff xor
     st1
 

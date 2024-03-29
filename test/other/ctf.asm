@@ -18,14 +18,14 @@
 main!
   pop pop !display_buffer sts
 
-  !rand_seed.min # rand_seed
+  !rand_seed # rand_seed
 
   # loop through payload
   !payload.len for_i: dec
     # load byte
     :payload ld1 add lda
     # generate random number
-    ld2 !rand.min st2 ld2
+    ld2 !rand st2 ld2
     # xor byte with random number
     xor clc
     # store byte
@@ -61,4 +61,4 @@ source!
   exit:
 
 payload!
-  @4B @EA @F3 @3A @97 @45 @6B @6E @D6 @25 @E2 @52 @A1 @75 @A4 @48 @9D @AF @BE @B6 @8D @36 @FA @BB @8C @A8 @3F @4D @E8 @EB @24 @CD @E5 @82 @36 @E8 @E6 @8A @11 @4B @EB @39 @FE @64 @CB @1C @54 @9A @03 @C7 @20 @42 @7C @EA @25 @01 @EA @20 @89 @A9 @08 @DD @7C @46 @72 @F7 @A9 @47 @39 @DE @B1 @CC @17 @4B @E3 @A2 @8C @8A @0F @1E @6B @E9 @A7 @14 @9D @A0 @1A @5B @7D @7F @E9 @29 @02 @78 @F5 @63 @D8 @B6 @90 @1A @DF @35 @C4 @FF @80 @8D @5F @D8 @B8 @1F @DE @BD @83 @98 @94 @56 @36 @1E
+  @E4 @3E @94 @8A @C2 @EC @BE @8F @2D @D9 @99 @E4 @F5 @5A @38 @03 @25 @F6 @11 @6C @E5 @0F @65 @75 @EE @9C @2E @CE @28 @8E @9D @12 @17 @FE @05 @4C @B1 @22 @4A @ED @BD @1D @E9 @E4 @8E @B5 @8B @76 @78 @79 @72 @66 @63 @66 @68 @AC @3D @C0 @FC @12 @DE @B3 @46 @56 @77 @76 @68 @AC @C7 @A4 @89 @D5 @90 @83 @82 @11 @54 @E3 @B0 @CA @0C @5F @F9 @38 @8E @2A @52 @6C @ED @3A @4E @F1 @61 @C2 @AD @42 @4B @7E @F1 @A1 @01 @51 @F3 @65 @C8 @AC @C4 @14 @DB @A5 @86 @94 @14 @5E @F2 @68 @24 @1A

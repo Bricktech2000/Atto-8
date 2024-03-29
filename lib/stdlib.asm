@@ -1,16 +1,10 @@
-rand_bits! x1D
+rand_bits_0! x19
+rand_bits_1! x16
 
-# outputs every number in 0x00..=0xFF then repeats
-rand! clc # seed = rand(seed)
-  shl @dyn x00 !rand_bits iff swp
-  buf @dyn x00 !rand_bits iff
-  xor xor
-
-# outputs every number in 0x01..=0xFF then repeats
-# will never output 0x00 (if and only if seed is not 0x00)
-# seed must never be 0x00 (otherwise will only output 0x00)
-rand.min! clc # seed = rand.min(seed)
-  shl x00 !rand_bits iff xor
+# outputs every number in 0x00..=0xFF then repeats.
+# `inc` happens to allow for cycle length of 0x100
+rand! # seed = rand(seed)
+  shl !rand_bits_0 !rand_bits_1 iff xor inc
 
 
 delay! # delay(iterations)

@@ -9,7 +9,7 @@
 main!
   pop pop !display_buffer sts
 
-  # !rand_seed.min # rand_seed
+  # !rand_seed # rand_seed
 
   x77 !u4u4 # xy_pos
   x00 !u8 # xy_vel
@@ -18,7 +18,7 @@ main!
     # input = getc()
     !getc
     # input = (1 << rand()) & 0x0F
-    # ld2 !rand.min st2 ld2 x01 swp rot x0F and
+    # ld2 !rand st2 ld2 x01 swp rot x0F and
 
     # default: `xy_vel`
     !primary_to_delta

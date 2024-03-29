@@ -1,5 +1,4 @@
 rand_seed! x00
-rand_seed.min! x0F
 
 back_buffer! !display_buffer !display_buffer.len sub @const
 

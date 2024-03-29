@@ -9,7 +9,7 @@ main!
   !rand_seed # rand_seed
 
   loop:
-    !notched
+    !notched clc
     # !continuous
     !rand ld0 !display_buffer !bit_addr !flip_bit
   :loop !jmp
