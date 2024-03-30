@@ -1,4 +1,4 @@
-#define size_t int // TODO should be `typedef`
+#define size_t unsigned // TODO should be `typedef`
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
 
@@ -6,6 +6,7 @@
 
 void *malloc(size_t size);
 void free(void *ptr);
+void *realloc(void *ptr, size_t new_size);
 
 inline void exit(int status);
 inline void abort(void);

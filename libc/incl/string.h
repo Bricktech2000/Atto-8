@@ -1,5 +1,5 @@
-#define ptrdiff_t int // TODO should be `typedef`
-#define size_t int    // TODO should be `typedef`
+#define ptrdiff_t unsigned // TODO should be `typedef`
+#define size_t unsigned    // TODO should be `typedef`
 
 #define NULL 0
 

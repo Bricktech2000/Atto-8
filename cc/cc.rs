@@ -145,6 +145,8 @@ pub enum Global {
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Expression {
+  AddressOf(Box<Expression>),
+  Dereference(Box<Expression>),
   Positive(Box<Expression>),
   Negation(Box<Expression>),
   LogicalNegation(Box<Expression>),
@@ -187,6 +189,7 @@ pub enum Statement {
   If(Expression, Box<Statement>, Option<Box<Statement>>),
   While(Expression, Box<Statement>),
   Return(Option<Expression>),
+  Declaration(Object, Option<Expression>),
   Assembly(String),
 }
 
@@ -205,6 +208,9 @@ pub enum TypedGlobal {
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum TypedExpression {
+  N0Dereference(Box<TypedExpression>),
+  N1Dereference(Box<TypedExpression>),
+  N8Dereference(Box<TypedExpression>),
   N1BitwiseComplement(Box<TypedExpression>),
   N8BitwiseComplement(Box<TypedExpression>),
 
@@ -255,5 +261,8 @@ pub enum TypedStatement {
   InitLocalN0(Option<TypedExpression>),
   InitLocalN1(Option<TypedExpression>),
   InitLocalN8(Option<TypedExpression>),
+  UninitLocalN0,
+  UninitLocalN1,
+  UninitLocalN8,
   Assembly(String),
 }

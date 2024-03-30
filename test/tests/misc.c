@@ -53,10 +53,17 @@ void main(void) {
   // sort(strlen("Atto-8"), "Atto-8");
   // puts("Atto-8");
 
-  if (true)
-    free(malloc(10));
+  // char *str = malloc(5);
+  // strcpy(str, "Atto");
+  // // malloc(1);
+  // char *new_str = realloc(str, 7);
+  // strcat(new_str, "-8");
+  // puts(new_str);
+
+  unsigned offset = 0b0011;
   putchar(foo(42, "test") + '\000' + '\x00' + 000 + 0b0 + 0B0 + 0x0 + 0X0);
-  puts("***ok\n" + (unsigned)0b0011);
+  if (offset)
+    puts("***ok\n" + offset);
 
   asm { !display_buffer sts }
   while (1) {

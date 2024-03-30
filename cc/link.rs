@@ -105,13 +105,19 @@ fn statement(statement: &TypedStatement) -> BTreeSet<(bool, String)> {
       Some(expression) => link::expression(expression),
       None => BTreeSet::new(),
     },
-    TypedStatement::Assembly(_assembly) => BTreeSet::new(),
+    TypedStatement::UninitLocalN0
+    | TypedStatement::UninitLocalN1
+    | TypedStatement::UninitLocalN8
+    | TypedStatement::Assembly(_) => BTreeSet::new(),
   }
 }
 
 fn expression(expression: &TypedExpression) -> BTreeSet<(bool, String)> {
   match expression {
-    TypedExpression::N1BitwiseComplement(expression)
+    TypedExpression::N0Dereference(expression)
+    | TypedExpression::N1Dereference(expression)
+    | TypedExpression::N8Dereference(expression)
+    | TypedExpression::N1BitwiseComplement(expression)
     | TypedExpression::N8BitwiseComplement(expression) => link::expression(expression),
 
     TypedExpression::N8Addition(expression1, expression2)

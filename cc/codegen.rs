@@ -247,11 +247,32 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
       }
     }
 
-    TypedStatement::InitLocalN0(_expression) => todo!(),
+    TypedStatement::InitLocalN0(expression) => match expression {
+      Some(expression) => std::iter::empty()
+        .chain(codegen::n0_expression(expression, 0))
+        .collect(),
+      None => std::iter::empty().collect(),
+    },
 
-    TypedStatement::InitLocalN1(_expression) => todo!(),
+    TypedStatement::InitLocalN1(expression) => match expression {
+      Some(expression) => std::iter::empty()
+        .chain(codegen::n1_expression(expression, 0))
+        .collect(),
+      None => std::iter::empty().chain([Ok(Token::XXX(0x00))]).collect(),
+    },
 
-    TypedStatement::InitLocalN8(_expression) => todo!(),
+    TypedStatement::InitLocalN8(expression) => match expression {
+      Some(expression) => std::iter::empty()
+        .chain(codegen::n8_expression(expression, 0))
+        .collect(),
+      None => std::iter::empty().chain([Ok(Token::XXX(0x00))]).collect(),
+    },
+
+    TypedStatement::UninitLocalN0 => std::iter::empty().collect(),
+
+    TypedStatement::UninitLocalN1 => std::iter::empty().chain([Ok(Token::Pop)]).collect(),
+
+    TypedStatement::UninitLocalN8 => std::iter::empty().chain([Ok(Token::Pop)]).collect(),
 
     TypedStatement::Assembly(assembly) => std::iter::empty().chain([Err(assembly)]).collect(),
   }
@@ -450,6 +471,9 @@ fn while_n1_statement(
 
 fn expression(expression: TypedExpression, temporaries_size: usize) -> Vec<Result<Token, String>> {
   match expression {
+    TypedExpression::N0Dereference(_) => codegen::n0_expression(expression, temporaries_size),
+    TypedExpression::N1Dereference(_) => codegen::n1_expression(expression, temporaries_size),
+    TypedExpression::N8Dereference(_) => codegen::n8_expression(expression, temporaries_size),
     TypedExpression::N1BitwiseComplement(_) => codegen::n1_expression(expression, temporaries_size),
     TypedExpression::N8BitwiseComplement(_) => codegen::n8_expression(expression, temporaries_size),
 
@@ -486,6 +510,11 @@ fn n0_expression(
   temporaries_size: usize,
 ) -> Vec<Result<Token, String>> {
   match expression {
+    TypedExpression::N0Dereference(expression) => std::iter::empty()
+      .chain(codegen::n8_expression(*expression, temporaries_size))
+      .chain([Ok(Token::Lda), Ok(Token::Pop)])
+      .collect(),
+
     TypedExpression::N0CastN1(expression) => std::iter::empty()
       .chain(codegen::n1_expression(*expression, temporaries_size))
       .chain([Ok(Token::Pop)])
@@ -532,6 +561,11 @@ fn n1_expression(
   temporaries_size: usize,
 ) -> Vec<Result<Token, String>> {
   match expression {
+    TypedExpression::N1Dereference(expression) => std::iter::empty()
+      .chain(codegen::n8_expression(*expression, temporaries_size))
+      .chain([Ok(Token::Lda)])
+      .collect(),
+
     TypedExpression::N1BitwiseComplement(expression) => std::iter::empty()
       .chain(codegen::n1_expression(*expression, temporaries_size))
       .chain([Ok(Token::XXX(0x01)), Ok(Token::Xor)])
@@ -582,6 +616,11 @@ fn n8_expression(
   temporaries_size: usize,
 ) -> Vec<Result<Token, String>> {
   match expression {
+    TypedExpression::N8Dereference(expression) => std::iter::empty()
+      .chain(codegen::n8_expression(*expression, temporaries_size))
+      .chain([Ok(Token::Lda)])
+      .collect(),
+
     TypedExpression::N8BitwiseComplement(expression) => std::iter::empty()
       .chain(codegen::n8_expression(*expression, temporaries_size))
       .chain([Ok(Token::Not)])

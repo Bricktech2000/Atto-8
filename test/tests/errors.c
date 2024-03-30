@@ -49,3 +49,7 @@
 // char *main(void) { return "\xyz"; }
 
 // void main(void) { return 1/**/2; }
+
+// void main(void) { int a; int a; }
+
+// void main(void) { **(void *)0; }

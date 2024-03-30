@@ -600,6 +600,7 @@ fn statement() -> Parser<Statement> {
     .or_else(|_| parse::compound_statement())
     .or_else(|_| parse::selection_statement())
     .or_else(|_| parse::expression_statement())
+    .or_else(|_| parse::declaration_statement())
     .or_else(|_| parse::assembly_statement()) // TODO nonstandard
     .name(format!("statement"))
 }
@@ -697,6 +698,24 @@ fn expression_statement() -> Parser<Statement> {
       parse::ws(parse::char(';').info("to end statement"))
         .map(|_| Statement::Expression(expression))
     })
+}
+
+fn declaration_statement() -> Parser<Statement> {
+  // TODO does not obey grammar
+  parse::type_name()
+    .and_then(move |type_name| {
+      parse::identifier().and_then(move |identifier| {
+        parse::maybe(
+          parse::ws(parse::char('=').info("to begin initializer"))
+            .and_then(|_| parse::expression()),
+        )
+        .and_then(move |expression| {
+          parse::ws(parse::char(';').info("to end declaration"))
+            .map(move |_| Statement::Declaration(Object(type_name, identifier), expression))
+        })
+      })
+    })
+    .name(format!("global definition"))
 }
 
 fn assembly_statement() -> Parser<Statement> {
@@ -840,28 +859,41 @@ fn cast_expression() -> Parser<Expression> {
 }
 
 fn unary_expression() -> Parser<Expression> {
+  // TODO cases missing
   Parser::expected(vec![])
     .or_else(|_| {
       parse::unop(
-        parse::unary_expression(),
+        parse::cast_expression(),
+        parse::ws(parse::char('&')).map(|_| b(Box::new, Expression::AddressOf)),
+      )
+    })
+    .or_else(|_| {
+      parse::unop(
+        parse::cast_expression(),
+        parse::ws(parse::char('*')).map(|_| b(Box::new, Expression::Dereference)),
+      )
+    })
+    .or_else(|_| {
+      parse::unop(
+        parse::cast_expression(),
         parse::ws(parse::char('-')).map(|_| b(Box::new, Expression::Negation)),
       )
     })
     .or_else(|_| {
       parse::unop(
-        parse::unary_expression(),
+        parse::cast_expression(),
         parse::ws(parse::char('+')).map(|_| b(Box::new, Expression::Positive)),
       )
     })
     .or_else(|_| {
       parse::unop(
-        parse::unary_expression(),
+        parse::cast_expression(),
         parse::ws(parse::char('~')).map(|_| b(Box::new, Expression::BitwiseComplement)),
       )
     })
     .or_else(|_| {
       parse::unop(
-        parse::unary_expression(),
+        parse::cast_expression(),
         parse::ws(parse::char('!')).map(|_| b(Box::new, Expression::LogicalNegation)),
       )
     })
