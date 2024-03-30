@@ -206,17 +206,23 @@ fn function_declaration_global(
   state
     .declarations
     .entry(name.clone())
-    .and_modify(|r#type| match (is_inline, r#type) {
+    .and_modify(|r#type| match (is_inline, r#type.clone()) {
       (false, Type::Function(return_type_, parameter_types_, is_variadic_))
       | (true, Type::Macro(return_type_, _, parameter_types_, is_variadic_))
-        if return_type == **return_type_
+        if return_type == *return_type_
           && parameter_types == *parameter_types_
-          && is_variadic == *is_variadic_ => {}
+          && is_variadic == is_variadic_ => {}
       _ => errors.extend([(
         Pos(File("[pos]".into()), 0, 0),
         Error(format!(
-          "Function `{}` previously declared with different prototype",
-          name.clone()
+          "Function `{}` of type `{}` previously declared with type `{}`",
+          name,
+          Type::Function(
+            Box::new(return_type.clone()),
+            parameter_types.clone(),
+            is_variadic
+          ),
+          r#type
         )),
       )]),
     })
@@ -277,10 +283,7 @@ fn function_definition_global(
   state.definitions.get(&name).is_some().then(|| {
     errors.extend([(
       Pos(File("[pos]".into()), 0, 0),
-      Error(format!(
-        "Function `{}` has already been defined",
-        name.clone()
-      )),
+      Error(format!("Redefinition of function `{}`", name.clone())),
     )])
   });
   state.definitions.insert(name.clone());
@@ -316,8 +319,8 @@ fn global_declaration_global(
         errors.extend([(
           Pos(File("[pos]".into()), 0, 0),
           Error(format!(
-            "Global `{}` previously declared with different type",
-            name.clone()
+            "Global `{}` of type `{}` previously declared with type `{}`",
+            name, global_type, r#type
           )),
         )])
       }
@@ -347,10 +350,7 @@ fn global_definition_global(
   state.definitions.get(&name).is_some().then(|| {
     errors.extend([(
       Pos(File("[pos]".into()), 0, 0),
-      Error(format!(
-        "Global `{}` has already been defined",
-        name.clone()
-      )),
+      Error(format!("Redefinition of global `{}`", name)),
     )])
   });
   state.definitions.insert(name.clone());
@@ -365,8 +365,8 @@ fn global_definition_global(
       errors.extend([(
         Pos(File("[todo]".into()), 0, 0),
         Error(format!(
-          "Global initializer umimplemented for expression `{:?}`",
-          value
+          "Global initializer umimplemented for type `{}`",
+          global_type
         )),
       )]);
       TypedGlobal::Data(name, vec![])
@@ -560,7 +560,7 @@ fn declaration_statement(
   if locals.iter().any(|Object(_, name)| *name == object_name) {
     errors.extend([(
       Pos(File("[pos]".into()), 0, 0),
-      Error(format!("Redeclaration of variable `{}`", object_name)),
+      Error(format!("Redefinition of local variable `{}`", object_name)),
     )]);
   }
 
@@ -645,7 +645,7 @@ fn return_statement(
     _ => {
       errors.extend([(
         Pos(File("[todo]".into()), 0, 0),
-        Error(format!("Return unimplemented for type `{:?}`", return_type)),
+        Error(format!("Return unimplemented for type `{}`", return_type)),
       )]);
       TypedStatement::Assembly("".to_string())
     }
@@ -685,9 +685,8 @@ fn expression(
         ),
         _ => {
           errors.extend([(
-            // TODO uses debug formatting
             Pos(File("[pos]".into()), 0, 0),
-            Error(format!("Dereference of type `{:?}`", r#type)),
+            Error(format!("Dereference of value of type `{}`", r#type)),
           )]);
           (Type::Void, TypedExpression::N0Constant(()))
         }
@@ -733,9 +732,8 @@ fn expression(
         match r#type.range() {
           Range::U0 | Range::I0 => {
             errors.extend([(
-              // TODO uses debug formatting
               Pos(File("[pos]".into()), 0, 0),
-              Error(format!("Logical negation of type `{:?}`", r#type)),
+              Error(format!("Logical negation of value of type `{}`", r#type)),
             )]);
             TypedExpression::N1Constant(false)
           }
@@ -758,9 +756,8 @@ fn expression(
         match r#type.range() {
           Range::U0 | Range::I0 => {
             errors.extend([(
-              // TODO uses debug formatting
               Pos(File("[pos]".into()), 0, 0),
-              Error(format!("Bitwise complement of type `{:?}`", r#type)),
+              Error(format!("Bitwise complement of value of type `{}`", r#type)),
             )]);
             TypedExpression::N0Constant(())
           }
@@ -1066,7 +1063,7 @@ fn expression(
 //         // TODO implement
 //         errors.extend([(
 //           Pos(File("[todo]".into()), 0, 0),
-//           Error(format!("Bitwise AND unimplemented for type `{:?}`", r#type)),
+//           Error(format!("Bitwise AND unimplemented for type `{}`", r#type)),
 //         )]);
 //         vec![]
 //       }
@@ -1096,7 +1093,7 @@ fn expression(
 //         errors.extend([(
 //           Pos(File("[todo]".into()), 0, 0),
 //           Error(format!(
-//             "Bitwise Inclusive OR unimplemented for type `{:?}`",
+//             "Bitwise Inclusive OR unimplemented for type `{}`",
 //             r#type
 //           )),
 //         )]);
@@ -1128,7 +1125,7 @@ fn expression(
 //         errors.extend([(
 //           Pos(File("[todo]".into()), 0, 0),
 //           Error(format!(
-//             "Bitwise Exclusive OR unimplemented for type `{:?}`",
+//             "Bitwise Exclusive OR unimplemented for type `{}`",
 //             r#type
 //           )),
 //         )]);
@@ -1196,7 +1193,7 @@ fn expression(
 //         // TODO implement
 //         errors.extend([(
 //           Pos(File("[todo]".into()), 0, 0),
-//           Error(format!("Less Than unimplemented for type `{:?}`", r#type)),
+//           Error(format!("Less Than unimplemented for type `{}`", r#type)),
 //         )]);
 //         vec![]
 //       }
@@ -1234,7 +1231,7 @@ fn expression(
 //         errors.extend([(
 //           Pos(File("[todo]".into()), 0, 0),
 //           Error(format!(
-//             "Less Than Or Equal To unimplemented for type `{:?}`",
+//             "Less Than Or Equal To unimplemented for type `{}`",
 //             r#type
 //           )),
 //         )]);
@@ -1273,7 +1270,7 @@ fn expression(
 //         errors.extend([(
 //           Pos(File("[todo]".into()), 0, 0),
 //           Error(format!(
-//             "Greater Than unimplemented for type `{:?}`",
+//             "Greater Than unimplemented for type `{}`",
 //             r#type
 //           )),
 //         )]);
@@ -1313,7 +1310,7 @@ fn expression(
 //         errors.extend([(
 //           Pos(File("[todo]".into()), 0, 0),
 //           Error(format!(
-//             "Greater Than Or Equal To unimplemented for type `{:?}`",
+//             "Greater Than Or Equal To unimplemented for type `{}`",
 //             r#type
 //           )),
 //         )]);
@@ -1353,7 +1350,7 @@ fn expression(
 //         errors.extend([(
 //           Pos(File("[todo]".into()), 0, 0),
 //           Error(format!(
-//             "Conditional unimplemented for types `{:?}, {:?}`",
+//             "Conditional unimplemented for types `{}, {}`",
 //             type1, type2
 //           )),
 //         )]);
@@ -1402,7 +1399,7 @@ fn cast_expression(
         errors.extend([(
           Pos(File("[todo]".into()), 0, 0),
           Error(format!(
-            "Type Cast unimplemented from `{:?}` to `{:?}`",
+            "Type Cast unimplemented from `{}` to `{}`",
             type1, r#type
           )),
         )]);
@@ -1498,7 +1495,7 @@ fn identifier_expression(
               _ => {
                 errors.extend([(
                   Pos(File("[todo]".into()), 0, 0),
-                  Error(format!("Identifier unimplemented for type `{:?}`", r#type)),
+                  Error(format!("Identifier unimplemented for type `{}`", r#type)),
                 )]);
                 TypedExpression::N0Constant(())
               }
@@ -1531,7 +1528,7 @@ fn function_call_expression(
     r#type => r#type,
   };
 
-  let (inline_name, return_type, parameter_types, is_variadic) = match designator_type {
+  let (inline_name, return_type, parameter_types, is_variadic) = match designator_type.clone() {
     Type::Function(return_type, parameter_types, is_variadic) => {
       (None, return_type, parameter_types, is_variadic)
     }
@@ -1539,10 +1536,9 @@ fn function_call_expression(
       (Some(name), return_type, parameter_types, is_variadic)
     }
     _ => {
-      // TODO uses debug formatting
       errors.extend([(
         Pos(File("[pos]".into()), 0, 0),
-        Error(format!("`{:?}` is not a function", designator)),
+        Error(format!("Type `{}` is not a function", designator_type)),
       )]);
       return (Type::Void, TypedExpression::N0Constant(()));
     }
@@ -1551,11 +1547,10 @@ fn function_call_expression(
   if is_variadic && arguments.len() < parameter_types.len() {
     errors.extend([(
       Pos(File("[pos]".into()), 0, 0),
-      // TODO uses debug formatting
       Error(format!(
-        "Expected at least {} arguments to variadic function `{:?}`, got {}",
+        "Expected at least {} arguments to function of type `{}`, got {}",
         parameter_types.len(),
-        designator,
+        designator_type,
         arguments.len()
       )),
     )]);
@@ -1564,11 +1559,10 @@ fn function_call_expression(
   if !is_variadic && arguments.len() != parameter_types.len() {
     errors.extend([(
       Pos(File("[pos]".into()), 0, 0),
-      // TODO uses debug formatting
       Error(format!(
-        "Expected {} arguments to function `{:?}`, got {}",
+        "Expected {} arguments to function of type `{}`, got {}",
         parameter_types.len(),
-        designator,
+        designator_type,
         arguments.len()
       )),
     )]);
@@ -1619,7 +1613,7 @@ fn function_call_expression(
         errors.extend([(
           Pos(File("[todo]".into()), 0, 0),
           Error(format!(
-            "Function call unimplemented for type `{:?}`",
+            "Function call unimplemented for return type `{}`",
             return_type
           )),
         )]);
@@ -1632,9 +1626,9 @@ fn function_call_expression(
 fn integer_promotions(
   expression: Expression,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  _errors: &mut impl Extend<(Pos, Error)>,
 ) -> Expression {
-  let (r#type, _) = typecheck::expression(expression.clone(), state, errors);
+  let (r#type, _) = typecheck::expression(expression.clone(), state, &mut vec![]);
 
   match r#type {
     Type::Bool | Type::Char | Type::SignedChar | Type::Short | Type::Int | Type::Enumeration(_) => {
@@ -1664,8 +1658,8 @@ fn usual_arithmetic_conversions(
 ) -> (Expression, Expression) {
   // TODO nonstandard, completely ad-hoc
 
-  let (type1, _) = typecheck::expression(expression1.clone(), state, errors);
-  let (type2, _) = typecheck::expression(expression2.clone(), state, errors);
+  let (type1, _) = typecheck::expression(expression1.clone(), state, &mut vec![]);
+  let (type2, _) = typecheck::expression(expression2.clone(), state, &mut vec![]);
 
   let r#type = match (type1.clone(), type2.clone()) {
     (
@@ -1690,10 +1684,7 @@ fn usual_arithmetic_conversions(
     ) => {
       errors.extend([(
         Pos(File("[pos]".into()), 0, 0),
-        Error(format!(
-          "Invalid operand types `{:?}` and `{:?}`",
-          type1, type2
-        )),
+        Error(format!("Invalid operand types `{}` and `{}`", type1, type2)),
       )]);
 
       Type::Int
@@ -1708,8 +1699,7 @@ fn usual_arithmetic_conversions(
       errors.extend([(
         Pos(File("[todo]".into()), 0, 0),
         Error(format!(
-          // TODO uses debug formatting
-          "Usual Arithmetic Conversions unimplemented between `{:?}` and `{:?}`",
+          "Usual Arithmetic Conversions unimplemented between `{}` and `{}`",
           type1, type2
         )),
       )]);
@@ -1749,8 +1739,8 @@ fn pointer_arithmetic_conversions(
 ) -> (Expression, Expression) {
   // TODO nonstandard, completely ad-hoc
 
-  let (type1, _) = typecheck::expression(expression1.clone(), state, errors);
-  let (type2, _) = typecheck::expression(expression2.clone(), state, errors);
+  let (type1, _) = typecheck::expression(expression1.clone(), state, &mut vec![]);
+  let (type2, _) = typecheck::expression(expression2.clone(), state, &mut vec![]);
 
   match (&type1, &type2) {
     (Type::Pointer(_), Type::Pointer(_)) => (

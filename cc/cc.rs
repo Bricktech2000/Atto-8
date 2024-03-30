@@ -266,3 +266,68 @@ pub enum TypedStatement {
   UninitLocalN8,
   Assembly(String),
 }
+
+impl std::fmt::Display for Type {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn format_object_list(objects: &Vec<Object>) -> String {
+      objects
+        .iter()
+        .map(|Object(r#type, name)| format!("{} {}", r#type, name))
+        .collect::<Vec<String>>()
+        .join(", ")
+    }
+
+    fn format_type_list(types: &Vec<Type>) -> String {
+      types
+        .iter()
+        .map(|r#type| format!("{}", r#type))
+        .collect::<Vec<String>>()
+        .join(", ")
+    }
+
+    fn format_param_type_list(params: &Vec<Type>, is_variadic: bool) -> String {
+      format!(
+        "{}{}",
+        match params[..] {
+          [] => format!("void"),
+          _ => format_type_list(params),
+        },
+        if is_variadic { ", ..." } else { "" }
+      )
+    }
+
+    match self {
+      Type::Void => write!(f, "void"),
+      Type::Bool => write!(f, "_Bool"),
+      Type::Char => write!(f, "char"),
+      Type::SignedChar => write!(f, "signed char"),
+      Type::UnsignedChar => write!(f, "unsigned char"),
+      Type::Short => write!(f, "short"),
+      Type::UnsignedShort => write!(f, "unsigned short"),
+      Type::Int => write!(f, "int"),
+      Type::UnsignedInt => write!(f, "unsigned int"),
+      Type::Long => write!(f, "long"),
+      Type::UnsignedLong => write!(f, "unsigned long"),
+      Type::LongLong => write!(f, "long long"),
+      Type::UnsignedLongLong => write!(f, "unsigned long long"),
+      Type::Array(r#type) => write!(f, "{} []", r#type),
+      Type::Structure(objects) => write!(f, "struct {{ {} }}", format_object_list(objects)),
+      Type::Union(objects) => write!(f, "union {{ {} }}", format_object_list(objects)),
+      Type::Enumeration(strings) => write!(f, "enum {{ {} }}", strings.join(", ")),
+      Type::Macro(return_type, name, parameter_types, is_variadic) => write!(
+        f,
+        "{} {}({})",
+        return_type,
+        name,
+        format_param_type_list(parameter_types, *is_variadic),
+      ),
+      Type::Function(return_type, parameter_types, is_variadic) => write!(
+        f,
+        "{}({})",
+        return_type,
+        format_param_type_list(parameter_types, *is_variadic),
+      ),
+      Type::Pointer(r#type) => write!(f, "{} *", r#type),
+    }
+  }
+}
