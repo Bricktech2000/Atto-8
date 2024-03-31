@@ -337,15 +337,7 @@ fn global_definition_global(
   let () =
     typecheck::global_declaration_global(Object(global_type.clone(), name.clone()), state, errors);
 
-  let (r#type, value) = typecheck::expression(
-    Expression::Cast(global_type.clone(), Box::new(value)),
-    state,
-    errors,
-  );
-
-  if global_type != r#type {
-    panic!("Expected global type to match initializer type");
-  }
+  let value = typecheck_expression_cast(global_type.clone(), value, state, errors);
 
   state.definitions.get(&name).is_some().then(|| {
     errors.extend([(
@@ -413,15 +405,7 @@ fn expression_statement(
   state: &mut State,
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
-  let (r#type, statement) = typecheck::expression(
-    Expression::Cast(Type::Void, Box::new(expression)),
-    state,
-    errors,
-  );
-
-  if r#type != Type::Void {
-    panic!("Expected expression statement to have type `void`");
-  }
+  let statement = typecheck_expression_cast(Type::Void, expression, state, errors);
 
   TypedStatement::ExpressionN0(statement)
 }
@@ -468,15 +452,7 @@ fn while_statement(
   state: &mut State,
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
-  let (r#type, condition) = typecheck::expression(
-    Expression::Cast(Type::Bool, Box::new(condition)),
-    state,
-    errors,
-  );
-
-  if r#type != Type::Bool {
-    panic!("Expected while condition to have type `bool`");
-  }
+  let condition = typecheck_expression_cast(Type::Bool, condition, state, errors);
 
   state.stack.push(StackEntry::LoopBoundary);
 
@@ -499,15 +475,7 @@ fn if_statement(
   state: &mut State,
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
-  let (r#type, condition) = typecheck::expression(
-    Expression::Cast(Type::Bool, Box::new(condition)),
-    state,
-    errors,
-  );
-
-  if r#type != Type::Bool {
-    panic!("Expected if condition to have type `bool`");
-  }
+  let condition = typecheck_expression_cast(Type::Bool, condition, state, errors);
 
   let if_body = typecheck::statement(if_body, state, errors);
   let else_body = else_body.map(|else_body| typecheck::statement(else_body, state, errors));
@@ -530,33 +498,15 @@ fn declaration_statement(
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
   let Object(object_type, object_name) = object.clone();
-  let value = value.map(|value| {
-    let (r#type, value) = typecheck::expression(
-      Expression::Cast(object_type.clone(), Box::new(value)),
-      state,
-      errors,
-    );
+  let value =
+    value.map(|value| typecheck_expression_cast(object_type.clone(), value, state, errors));
 
-    if r#type != object_type {
-      panic!("Expected declaration type to match initializer type");
-    }
+  let locals = match state.stack.last_mut().unwrap() {
+    StackEntry::BlockBoundary(locals) => locals,
+    _ => panic!("Expected block boundary to be on the stack"),
+  };
 
-    value
-  });
-
-  let locals = state
-    .stack
-    .iter_mut()
-    .rev()
-    .find_map(|stack_entry| match stack_entry {
-      StackEntry::BlockBoundary(locals) => Some(locals),
-      _ => None,
-    })
-    .unwrap_or_else(|| {
-      panic!("Expected block boundary to be on the stack");
-    });
-
-  // removing this check enables shadowing
+  // remove this check to enable shadowing within a block
   if locals.iter().any(|Object(_, name)| *name == object_name) {
     errors.extend([(
       Pos(File("[pos]".into()), 0, 0),
@@ -609,19 +559,8 @@ fn return_statement(
       (false, Type::Void, 0)
     });
 
-  let expression = expression.map(|expression| {
-    let (r#type, expression) = typecheck::expression(
-      Expression::Cast(return_type.clone(), Box::new(expression)),
-      state,
-      errors,
-    );
-
-    if r#type != return_type {
-      panic!("Expected return type to match function return type");
-    }
-
-    expression
-  });
+  let expression = expression
+    .map(|expression| typecheck_expression_cast(return_type.clone(), expression, state, errors));
 
   match (is_inline, return_type.range()) {
     (true, Range::U0 | Range::I0) => {
@@ -675,9 +614,9 @@ fn expression(
         Type::Pointer(r#type) => (
           *r#type.clone(),
           match r#type.range() {
-            Range::U0 | Range::I0 => TypedExpression::N0DereferenceN8(Box::new(expression)),
-            Range::U1 | Range::I1 => TypedExpression::N1DereferenceN8(Box::new(expression)),
-            Range::U8 | Range::I8 => TypedExpression::N8DereferenceN8(Box::new(expression)),
+            Range::U0 | Range::I0 => TypedExpression::N0GetDerefN8(Box::new(expression)),
+            Range::U1 | Range::I1 => TypedExpression::N1GetDerefN8(Box::new(expression)),
+            Range::U8 | Range::I8 => TypedExpression::N8GetDerefN8(Box::new(expression)),
             _ => todo!(),
           },
         ),
@@ -953,16 +892,8 @@ fn expression(
     Expression::Conditional(_, _, _) => todo!(),
 
     Expression::Comma(expression1, expression2) => {
-      let (type1, expression1) = typecheck::expression(
-        Expression::Cast(Type::Void, Box::new(*expression1)),
-        state,
-        errors,
-      );
+      let expression1 = typecheck_expression_cast(Type::Void, *expression1, state, errors);
       let (type2, expression2) = typecheck::expression(*expression2, state, errors);
-
-      if type1 != Type::Void {
-        panic!("Expected comma expression 1 to have type `void`");
-      }
 
       (
         type2.clone(),
@@ -1481,7 +1412,7 @@ fn identifier_expression(
               TypedExpression::N8AddrLocal(offset),
             ),
 
-            Type::Macro(_, _, _, _) => panic!("Macro in local scope"),
+            Type::Macro(_, _, _, _) => panic!("Local variable has macro type"),
 
             _ => (
               r#type.clone(),
@@ -1512,13 +1443,7 @@ fn identifier_expression(
             r#type.clone(),
             match r#type.range() {
               Range::U8 | Range::I8 => TypedExpression::N8GetGlobal(identifier.clone()),
-              _ => {
-                errors.extend([(
-                  Pos(File("[todo]".into()), 0, 0),
-                  Error(format!("Identifier unimplemented for type `{}`", r#type)),
-                )]);
-                TypedExpression::N0Constant(())
-              }
+              _ => todo!(),
             },
           ),
         })
@@ -1648,7 +1573,7 @@ fn integer_promotions(
   state: &mut State,
   _errors: &mut impl Extend<(Pos, Error)>,
 ) -> Expression {
-  let (r#type, _) = typecheck::expression(expression.clone(), state, &mut vec![]);
+  let (r#type, _) = typecheck::expression(expression.clone(), &mut state.clone(), &mut vec![]);
 
   match r#type {
     Type::Bool | Type::Char | Type::SignedChar | Type::Short | Type::Int | Type::Enumeration(_) => {
@@ -1678,8 +1603,8 @@ fn usual_arithmetic_conversions(
 ) -> (Expression, Expression) {
   // TODO nonstandard, completely ad-hoc
 
-  let (type1, _) = typecheck::expression(expression1.clone(), state, &mut vec![]);
-  let (type2, _) = typecheck::expression(expression2.clone(), state, &mut vec![]);
+  let (type1, _) = typecheck::expression(expression1.clone(), &mut state.clone(), &mut vec![]);
+  let (type2, _) = typecheck::expression(expression2.clone(), &mut state.clone(), &mut vec![]);
 
   let r#type = match (type1.clone(), type2.clone()) {
     (
@@ -1759,8 +1684,8 @@ fn pointer_arithmetic_conversions(
 ) -> (Expression, Expression) {
   // TODO nonstandard, completely ad-hoc
 
-  let (type1, _) = typecheck::expression(expression1.clone(), state, &mut vec![]);
-  let (type2, _) = typecheck::expression(expression2.clone(), state, &mut vec![]);
+  let (type1, _) = typecheck::expression(expression1.clone(), &mut state.clone(), &mut vec![]);
+  let (type2, _) = typecheck::expression(expression2.clone(), &mut state.clone(), &mut vec![]);
 
   match (&type1, &type2) {
     (Type::Pointer(_), Type::Pointer(_)) => (
@@ -1810,4 +1735,23 @@ fn typecheck_pointer_arithmetic_conversions(
   }
 
   (type1.clone(), expression1, expression2)
+}
+
+fn typecheck_expression_cast(
+  r#type: Type,
+  expression: Expression,
+  state: &mut State,
+  errors: &mut impl Extend<(Pos, Error)>,
+) -> TypedExpression {
+  let (r#type, expression) = typecheck::expression(
+    Expression::Cast(r#type, Box::new(expression)),
+    state,
+    errors,
+  );
+
+  if r#type != r#type {
+    panic!("Expected expression to have type `{}`", r#type);
+  }
+
+  expression
 }

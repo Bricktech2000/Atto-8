@@ -31,8 +31,7 @@ pub fn preprocess(
   defines.insert("__STDC_NO_VLA__".to_string(), vec![Ok(1.to_string())]);
 
   let last_file = defines.get(DUNDER_FILE).unwrap_or(&vec![]).clone();
-  let current_file = vec![Err('"'), Ok(file.0.to_string_lossy().to_string()), Err('"')];
-  defines.insert(DUNDER_FILE.to_string(), current_file); // TODO escape quotes in filename
+  defines.insert(DUNDER_FILE.to_string(), vec![Ok(format!("{:?}", file.0))]); // TODO uses debug formatting
   defines.insert(DUNDER_LINE.to_string(), vec![Ok(0.to_string())]);
 
   let source = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {

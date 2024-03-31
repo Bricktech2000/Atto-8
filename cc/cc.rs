@@ -210,9 +210,9 @@ pub enum TypedGlobal {
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum TypedExpression {
-  N0DereferenceN8(Box<TypedExpression>),
-  N1DereferenceN8(Box<TypedExpression>),
-  N8DereferenceN8(Box<TypedExpression>),
+  N0GetDerefN8(Box<TypedExpression>),
+  N1GetDerefN8(Box<TypedExpression>),
+  N8GetDerefN8(Box<TypedExpression>),
   N1BitwiseComplement(Box<TypedExpression>),
   N8BitwiseComplement(Box<TypedExpression>),
 

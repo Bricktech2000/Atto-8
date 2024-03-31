@@ -517,9 +517,9 @@ fn while_n1_statement(
 
 fn expression(expression: TypedExpression, temporaries_size: usize) -> Vec<Result<Token, String>> {
   match expression {
-    TypedExpression::N0DereferenceN8(_) => codegen::n0_expression(expression, temporaries_size),
-    TypedExpression::N1DereferenceN8(_) => codegen::n1_expression(expression, temporaries_size),
-    TypedExpression::N8DereferenceN8(_) => codegen::n8_expression(expression, temporaries_size),
+    TypedExpression::N0GetDerefN8(_) => codegen::n0_expression(expression, temporaries_size),
+    TypedExpression::N1GetDerefN8(_) => codegen::n1_expression(expression, temporaries_size),
+    TypedExpression::N8GetDerefN8(_) => codegen::n8_expression(expression, temporaries_size),
     TypedExpression::N1BitwiseComplement(_) => codegen::n1_expression(expression, temporaries_size),
     TypedExpression::N8BitwiseComplement(_) => codegen::n8_expression(expression, temporaries_size),
 
@@ -560,7 +560,7 @@ fn n0_expression(
   temporaries_size: usize,
 ) -> Vec<Result<Token, String>> {
   match expression {
-    TypedExpression::N0DereferenceN8(expression) => std::iter::empty()
+    TypedExpression::N0GetDerefN8(expression) => std::iter::empty()
       .chain(codegen::n8_expression(*expression, temporaries_size))
       .chain([Ok(Token::Lda), Ok(Token::Pop)])
       .collect(),
@@ -616,7 +616,7 @@ fn n1_expression(
   temporaries_size: usize,
 ) -> Vec<Result<Token, String>> {
   match expression {
-    TypedExpression::N1DereferenceN8(expression) => std::iter::empty()
+    TypedExpression::N1GetDerefN8(expression) => std::iter::empty()
       .chain(codegen::n8_expression(*expression, temporaries_size))
       .chain([Ok(Token::Lda)])
       .collect(),
@@ -693,7 +693,7 @@ fn n8_expression(
   temporaries_size: usize,
 ) -> Vec<Result<Token, String>> {
   match expression {
-    TypedExpression::N8DereferenceN8(expression) => std::iter::empty()
+    TypedExpression::N8GetDerefN8(expression) => std::iter::empty()
       .chain(codegen::n8_expression(*expression, temporaries_size))
       .chain([Ok(Token::Lda)])
       .collect(),

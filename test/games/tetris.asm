@@ -109,7 +109,7 @@ main!
       shr @dyn x00 shl @dyn
         # `index_ = pos + pos_delta`. by `index_` I mean "pixel index", not "tetromino index"
         !u4u4.ld6 !u4u4.ld3 add
-        # `index_ += ofst[index & ROT_MASK >> 3] + 1`. `+1` beecause `ofst` sets the carry flag
+        # `index_ += ofst[index & ROT_MASK >> 3] + 1`. `+1` because `ofst` sets the carry flag
         ld8 !rot_mask and clc :ofst !ofst !u4u4.lda add
         # `(rot_, addr) = bit_addr(display_buffer, index_)`. by `rot_` I mean "bit rotation",
         # not "tetromino rotation"

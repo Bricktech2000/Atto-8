@@ -571,12 +571,20 @@ fn type_name() -> Parser<Type> {
 }
 
 fn assembly_global() -> Parser<Global> {
-  parse::assembly_statement()
-    .map(|statement| match statement {
-      Statement::Assembly(global_assembly) => Global::GlobalAssembly(global_assembly),
-      _ => panic!("`assembly_statement` did not return `Statement::Assembly`"),
-    })
+  parse::assembly_literal()
+    .map(|assembly| Global::GlobalAssembly(assembly))
     .name(format!("assembly global"))
+}
+
+fn assembly_literal() -> Parser<String> {
+  Parser::pure(())
+    .and_then(|_| parse::ws(parse::string("asm")))
+    .and_then(|_| parse::ws(parse::char('{').info("to begin assembly statement")))
+    .and_then(|_| parse::many(parse::char_not('}').info("to continue assembly statement")))
+    .map(|chars| chars.iter().collect::<String>().trim().to_string())
+    .and_then(|assembly| {
+      parse::ws(parse::char('}').info("to end assembly statement")).map(move |_| assembly)
+    })
 }
 
 fn compound_statement() -> Parser<Statement> {
@@ -584,12 +592,30 @@ fn compound_statement() -> Parser<Statement> {
   Parser::pure(())
     .and_then(|_| parse::ws(parse::char('{').info("to begin block")))
     .and_then(|_| {
-      parse::many(parse::statement()).and_then(|statements| {
+      parse::many(parse::statement().or_else(|_| parse::declaration())).and_then(|statements| {
         parse::ws(parse::char('}').info("to end block")).map(move |_| statements)
       })
     })
     .map(|statements| Statement::Compound(statements))
     .name(format!("compound statement"))
+}
+
+fn declaration() -> Parser<Statement> {
+  // TODO does not obey grammar
+  parse::type_name()
+    .and_then(move |type_name| {
+      parse::identifier().and_then(move |identifier| {
+        parse::maybe(
+          parse::ws(parse::char('=').info("to begin initializer"))
+            .and_then(|_| parse::expression()),
+        )
+        .and_then(move |expression| {
+          parse::ws(parse::char(';').info("to end declaration"))
+            .map(move |_| Statement::Declaration(Object(type_name, identifier), expression))
+        })
+      })
+    })
+    .name(format!("declaration"))
 }
 
 fn statement() -> Parser<Statement> {
@@ -600,7 +626,6 @@ fn statement() -> Parser<Statement> {
     .or_else(|_| parse::compound_statement())
     .or_else(|_| parse::selection_statement())
     .or_else(|_| parse::expression_statement())
-    .or_else(|_| parse::declaration_statement())
     .or_else(|_| parse::assembly_statement()) // TODO nonstandard
     .name(format!("statement"))
 }
@@ -699,34 +724,10 @@ fn expression_statement() -> Parser<Statement> {
     })
 }
 
-fn declaration_statement() -> Parser<Statement> {
-  // TODO does not obey grammar
-  parse::type_name()
-    .and_then(move |type_name| {
-      parse::identifier().and_then(move |identifier| {
-        parse::maybe(
-          parse::ws(parse::char('=').info("to begin initializer"))
-            .and_then(|_| parse::expression()),
-        )
-        .and_then(move |expression| {
-          parse::ws(parse::char(';').info("to end declaration"))
-            .map(move |_| Statement::Declaration(Object(type_name, identifier), expression))
-        })
-      })
-    })
-    .name(format!("global definition"))
-}
-
 fn assembly_statement() -> Parser<Statement> {
-  Parser::pure(())
-    .and_then(|_| parse::ws(parse::string("asm")))
-    .and_then(|_| parse::ws(parse::char('{').info("to begin assembly statement")))
-    .and_then(|_| parse::many(parse::char_not('}').info("to continue assembly statement")))
-    .map(|chars| chars.iter().collect::<String>().trim().to_string())
-    .and_then(|assembly| {
-      parse::ws(parse::char('}').info("to end assembly statement"))
-        .map(move |_| Statement::Assembly(assembly))
-    })
+  parse::assembly_literal()
+    .map(|assembly| Statement::Assembly(assembly))
+    .name(format!("assembly statement"))
 }
 
 fn expression() -> Parser<Expression> {
