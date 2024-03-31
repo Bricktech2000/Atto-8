@@ -52,7 +52,7 @@ main! !nop
         x00 ld3 lda shl @dyn iff
           :return if2
         shr
-          ld0 not @dyn iff
+          ld0 !o iff
         or2
       # goto jump
       !jmp

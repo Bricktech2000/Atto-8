@@ -48,7 +48,7 @@ main!
       # find address of corresponding `!loop_sentinel`. since we resolve jump targets as
       # we go along, the "corresponding `!loop_sentinel`" is simply the latest `!loop_sentinel`
       ld1 for_b: dec
-        ld0 lda not @dyn pop # equivalent to `ld0 lda !loop_sentinel !eq`
+        ld0 lda !on # equivalent to `ld0 lda !loop_sentinel !eq`
       :for_b !bcc # sets carry
       # poke addresses into `code_buffer` at reserved locations
       ld0 dec ld3 dec dec sta # for unconditional jump from `]` to `[`
@@ -93,6 +93,6 @@ main!
   '[': !z !loop_sentinel !dbg iff halt: !jmp @00
   ']': !dbg !jmp _: @00
 
-loop_sentinel! @FF # `0xFF` because it's easily recognizable through a `not` instruction
+loop_sentinel! @FF # `0xFF` because it's easily recognizable through a `not` instruction with `!on`
 
 code_buffer.len! x60 # largest possible length

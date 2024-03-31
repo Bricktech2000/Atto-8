@@ -10,6 +10,7 @@ max.dyn! ld1 ld1 !gt iff
 asr.dyn! ld0 !ng shr @dyn
 
 z! buf @dyn               # check zero
+o! not @dyn               # check ones
 e! xor @dyn               # check equal
 gt! sub @dyn pop          # greater than
 ngt! sub @dyn pop flc     # non-greater than
@@ -17,6 +18,8 @@ lt! swp sub @dyn pop      # less than
 nlt! swp sub @dyn pop flc # non-less than
 zr! buf @dyn pop          # zero
 nzr! buf @dyn pop flc     # non-zero
+on! not @dyn pop          # ones
+non! not @dyn pop flc     # non-ones
 eq! xor @dyn pop          # equal to
 neq! xor @dyn pop flc     # non-equal to
 ng! shl @dyn pop          # negative

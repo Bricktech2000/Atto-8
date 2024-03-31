@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 #[rustfmt::skip] macro_rules! bcc_macro { () => { Macro(format!("bcc")) }; }
 #[rustfmt::skip] macro_rules! bcs_macro { () => { Macro(format!("bcs")) }; }
 #[rustfmt::skip] macro_rules! zr_macro { () => { Macro(format!("zr")) }; }
+#[rustfmt::skip] macro_rules! on_macro { () => { Macro(format!("on")) }; }
 #[rustfmt::skip] macro_rules! lt_macro { () => { Macro(format!("lt")) }; }
 #[rustfmt::skip] macro_rules! cl_macro { () => { Macro(format!("cl")) }; }
 #[rustfmt::skip] macro_rules! eq_macro { () => { Macro(format!("eq")) }; }
@@ -27,6 +28,7 @@ use std::collections::{BTreeMap, BTreeSet};
 #[rustfmt::skip] pub(crate) use bcc_macro;
 #[rustfmt::skip] pub(crate) use bcs_macro;
 #[rustfmt::skip] pub(crate) use zr_macro;
+#[rustfmt::skip] pub(crate) use on_macro;
 #[rustfmt::skip] pub(crate) use lt_macro;
 #[rustfmt::skip] pub(crate) use cl_macro;
 #[rustfmt::skip] pub(crate) use eq_macro;
@@ -122,18 +124,16 @@ fn expression(expression: &TypedExpression) -> BTreeSet<(bool, String)> {
 
     TypedExpression::N8Addition(expression1, expression2)
     | TypedExpression::N8Subtraction(expression1, expression2)
-    | TypedExpression::U8Multiplication(expression1, expression2)
+    | TypedExpression::N8Multiplication(expression1, expression2)
     | TypedExpression::U8Division(expression1, expression2)
     | TypedExpression::U8Modulo(expression1, expression2) => std::iter::empty()
       .chain(link::expression(expression1))
       .chain(link::expression(expression2))
       .collect(),
 
-    TypedExpression::N1EqualToN8(expression1, expression2) => std::iter::empty()
-      .chain(link::expression(expression1))
-      .chain(link::expression(expression2))
-      .collect(),
-    TypedExpression::N1LessThanU8(expression1, expression2) => std::iter::empty()
+    TypedExpression::N1EqualToN8(expression1, expression2)
+    | TypedExpression::N1LessThanU8(expression1, expression2)
+    | TypedExpression::N1LessThanI8(expression1, expression2) => std::iter::empty()
       .chain(link::expression(expression1))
       .chain(link::expression(expression2))
       .collect(),

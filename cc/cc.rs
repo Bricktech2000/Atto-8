@@ -216,12 +216,13 @@ pub enum TypedExpression {
 
   N8Addition(Box<TypedExpression>, Box<TypedExpression>),
   N8Subtraction(Box<TypedExpression>, Box<TypedExpression>),
-  U8Multiplication(Box<TypedExpression>, Box<TypedExpression>),
+  N8Multiplication(Box<TypedExpression>, Box<TypedExpression>),
   U8Division(Box<TypedExpression>, Box<TypedExpression>),
   U8Modulo(Box<TypedExpression>, Box<TypedExpression>),
 
   N1EqualToN8(Box<TypedExpression>, Box<TypedExpression>),
   N1LessThanU8(Box<TypedExpression>, Box<TypedExpression>),
+  N1LessThanI8(Box<TypedExpression>, Box<TypedExpression>),
 
   N0CastN1(Box<TypedExpression>),
   N0CastN8(Box<TypedExpression>),

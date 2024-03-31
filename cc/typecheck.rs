@@ -814,15 +814,8 @@ fn expression(
         r#type.clone(),
         match r#type.range() {
           Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
-          Range::U8 => {
-            TypedExpression::U8Multiplication(Box::new(expression1), Box::new(expression2))
-          }
-          Range::I8 => {
-            errors.extend([(
-              Pos(File("[todo]".into()), 0, 0),
-              Error(format!("Signed multiplication unimplemented",)),
-            )]);
-            TypedExpression::U8Multiplication(Box::new(expression1), Box::new(expression2))
+          Range::U8 | Range::I8 => {
+            TypedExpression::N8Multiplication(Box::new(expression1), Box::new(expression2))
           }
           _ => todo!(),
         },
@@ -938,13 +931,7 @@ fn expression(
         match r#type.range() {
           Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
           Range::U8 => TypedExpression::N1LessThanU8(Box::new(expression1), Box::new(expression2)),
-          Range::I8 => {
-            errors.extend([(
-              Pos(File("[todo]".into()), 0, 0),
-              Error(format!("Signed less than unimplemented",)),
-            )]);
-            TypedExpression::N1LessThanU8(Box::new(expression1), Box::new(expression2))
-          }
+          Range::I8 => TypedExpression::N1LessThanI8(Box::new(expression1), Box::new(expression2)),
           _ => todo!(),
         },
       )
@@ -967,13 +954,7 @@ fn expression(
         match r#type.range() {
           Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
           Range::U8 => TypedExpression::N1LessThanU8(Box::new(expression2), Box::new(expression1)),
-          Range::I8 => {
-            errors.extend([(
-              Pos(File("[todo]".into()), 0, 0),
-              Error(format!("Signed greater than unimplemented",)),
-            )]);
-            TypedExpression::N1LessThanU8(Box::new(expression2), Box::new(expression1))
-          }
+          Range::I8 => TypedExpression::N1LessThanI8(Box::new(expression2), Box::new(expression1)),
           _ => todo!(),
         },
       )

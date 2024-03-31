@@ -5,7 +5,7 @@ asm { @ lib/stdlib.asm }
 
 void *realloc(void *ptr, size_t new_size) {
   // `malloc` stores block header immediately before block data
-  size_t size = *((size_t *)ptr - (unsigned)1);
+  size_t size = *((size_t *)ptr - 1);
 
   free(ptr);
   void *new_ptr = malloc(new_size);
