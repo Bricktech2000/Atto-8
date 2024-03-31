@@ -139,8 +139,8 @@ fn global(
     Global::FunctionDeclaration(is_inline, Object(return_type, name), parameters, is_variadic) => {
       let () = typecheck::function_declaration_global(
         is_inline,
-        Object(return_type.clone(), name.clone()),
-        parameters.clone(),
+        Object(return_type, name),
+        parameters,
         is_variadic,
         state,
         errors,
@@ -157,8 +157,8 @@ fn global(
     ) => {
       let global = typecheck::function_definition_global(
         is_inline,
-        Object(return_type.clone(), name.clone()),
-        parameters.clone(),
+        Object(return_type, name),
+        parameters,
         is_variadic,
         body,
         state,
@@ -168,18 +168,12 @@ fn global(
     }
 
     Global::GlobalDeclaration(Object(r#type, name)) => {
-      let () =
-        typecheck::global_declaration_global(Object(r#type.clone(), name.clone()), state, errors);
+      let () = typecheck::global_declaration_global(Object(r#type, name), state, errors);
       None
     }
 
     Global::GlobalDefinition(Object(r#type, name), value) => {
-      let global = typecheck::global_definition_global(
-        Object(r#type.clone(), name.clone()),
-        value,
-        state,
-        errors,
-      );
+      let global = typecheck::global_definition_global(Object(r#type, name), value, state, errors);
       Some(global)
     }
 
@@ -283,7 +277,7 @@ fn function_definition_global(
   state.definitions.get(&name).is_some().then(|| {
     errors.extend([(
       Pos(File("[pos]".into()), 0, 0),
-      Error(format!("Redefinition of function `{}`", name.clone())),
+      Error(format!("Redefinition of function `{}`", name)),
     )])
   });
   state.definitions.insert(name.clone());
@@ -292,8 +286,8 @@ fn function_definition_global(
   rev_parameters.reverse();
 
   state.stack.push(match is_inline {
-    true => StackEntry::MacroBoundary(return_type.clone(), rev_parameters),
-    false => StackEntry::FunctionBoundary(return_type.clone(), rev_parameters),
+    true => StackEntry::MacroBoundary(return_type, rev_parameters),
+    false => StackEntry::FunctionBoundary(return_type, rev_parameters),
   });
 
   let statement = match is_inline {
@@ -497,7 +491,7 @@ fn declaration_statement(
   state: &mut State,
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
-  let Object(object_type, object_name) = object.clone();
+  let Object(ref object_type, ref object_name) = object;
   let value =
     value.map(|value| typecheck_expression_cast(object_type.clone(), value, state, errors));
 
@@ -507,7 +501,7 @@ fn declaration_statement(
   };
 
   // remove this check to enable shadowing within a block
-  if locals.iter().any(|Object(_, name)| *name == object_name) {
+  if locals.iter().any(|Object(_, name)| *name == *object_name) {
     errors.extend([(
       Pos(File("[pos]".into()), 0, 0),
       Error(format!("Redefinition of local variable `{}`", object_name)),
@@ -604,28 +598,28 @@ fn expression(
   state: &mut State,
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression) {
-  match expression.clone() {
-    Expression::AddressOf(_) => todo!(),
+  match expression {
+    Expression::AddressOf(expression) => typecheck::address_of(*expression, state, errors),
 
     Expression::Dereference(expression) => {
       let (r#type, expression) = typecheck::expression(*expression, state, errors);
 
       match r#type {
-        Type::Pointer(r#type) => (
-          *r#type.clone(),
-          match r#type.range() {
+        Type::Pointer(r#type) => {
+          let expression = match r#type.range() {
             Range::U0 | Range::I0 => TypedExpression::N0GetDerefN8(Box::new(expression)),
             Range::U1 | Range::I1 => TypedExpression::N1GetDerefN8(Box::new(expression)),
             Range::U8 | Range::I8 => TypedExpression::N8GetDerefN8(Box::new(expression)),
             _ => todo!(),
-          },
-        ),
+          };
+          (*r#type, expression)
+        }
         _ => {
           errors.extend([(
             Pos(File("[pos]".into()), 0, 0),
             Error(format!("Dereference of value of type `{}`", r#type)),
           )]);
-          (Type::Void, TypedExpression::N0Constant(()))
+          (r#type, expression)
         }
       }
     }
@@ -634,75 +628,67 @@ fn expression(
       let promoted = integer_promotions(*expression, state, errors);
       let (r#type, expression) = typecheck::expression(promoted, state, errors);
 
-      (
-        r#type.clone(),
-        match r#type.range() {
-          Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
-          Range::U8 | Range::I8 => expression,
-          _ => todo!(),
-        },
-      )
+      let expression = match r#type.range() {
+        Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+        Range::U8 | Range::I8 => expression,
+        _ => todo!(),
+      };
+      (r#type, expression)
     }
 
     Expression::Negation(expression) => {
       let promoted = integer_promotions(*expression, state, errors);
       let (r#type, expression) = typecheck::expression(promoted, state, errors);
 
-      (
-        r#type.clone(),
-        match r#type.range() {
-          Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
-          Range::U8 | Range::I8 => TypedExpression::N8Subtraction(
-            Box::new(TypedExpression::N8Constant(0x00)),
-            Box::new(expression),
-          ),
-          _ => todo!(),
-        },
-      )
+      let expression = match r#type.range() {
+        Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+        Range::U8 | Range::I8 => TypedExpression::N8Subtraction(
+          Box::new(TypedExpression::N8Constant(0x00)),
+          Box::new(expression),
+        ),
+        _ => todo!(),
+      };
+      (r#type, expression)
     }
 
     Expression::LogicalNegation(expression) => {
       let (r#type, expression) = typecheck::expression(*expression, state, errors);
 
-      (
-        Type::Bool, // TODO logical negation returns `int` in C
-        match r#type.range() {
-          Range::U0 | Range::I0 => {
-            errors.extend([(
-              Pos(File("[pos]".into()), 0, 0),
-              Error(format!("Logical negation of value of type `{}`", r#type)),
-            )]);
-            TypedExpression::N1Constant(false)
-          }
-          Range::U1 | Range::I1 => TypedExpression::N1BitwiseComplement(Box::new(expression)),
-          Range::U8 | Range::I8 => TypedExpression::N1EqualToN8(
-            Box::new(expression),
-            Box::new(TypedExpression::N8Constant(0x00)),
-          ),
-          _ => todo!(),
-        },
-      )
+      let expression = match r#type.range() {
+        Range::U0 | Range::I0 => {
+          errors.extend([(
+            Pos(File("[pos]".into()), 0, 0),
+            Error(format!("Logical negation of value of type `{}`", r#type)),
+          )]);
+          TypedExpression::N1Constant(false)
+        }
+        Range::U1 | Range::I1 => TypedExpression::N1BitwiseComplement(Box::new(expression)),
+        Range::U8 | Range::I8 => TypedExpression::N1EqualToN8(
+          Box::new(expression),
+          Box::new(TypedExpression::N8Constant(0x00)),
+        ),
+        _ => todo!(),
+      };
+      (Type::Bool, expression) // TODO logical negation returns `int` in C
     }
 
     Expression::BitwiseComplement(expression) => {
       let promoted = integer_promotions(*expression, state, errors);
       let (r#type, expression) = typecheck::expression(promoted, state, errors);
 
-      (
-        r#type.clone(),
-        match r#type.range() {
-          Range::U0 | Range::I0 => {
-            errors.extend([(
-              Pos(File("[pos]".into()), 0, 0),
-              Error(format!("Bitwise complement of value of type `{}`", r#type)),
-            )]);
-            TypedExpression::N0Constant(())
-          }
-          Range::U1 | Range::I1 => TypedExpression::N1BitwiseComplement(Box::new(expression)),
-          Range::U8 | Range::I8 => TypedExpression::N8BitwiseComplement(Box::new(expression)),
-          _ => todo!(),
-        },
-      )
+      let expression = match r#type.range() {
+        Range::U0 | Range::I0 => {
+          errors.extend([(
+            Pos(File("[pos]".into()), 0, 0),
+            Error(format!("Bitwise complement of value of type `{}`", r#type)),
+          )]);
+          TypedExpression::N0Constant(())
+        }
+        Range::U1 | Range::I1 => TypedExpression::N1BitwiseComplement(Box::new(expression)),
+        Range::U8 | Range::I8 => TypedExpression::N8BitwiseComplement(Box::new(expression)),
+        _ => todo!(),
+      };
+      (r#type, expression)
     }
 
     Expression::Addition(expression1, expression2) => {
@@ -711,16 +697,14 @@ fn expression(
       let (r#type, expression1, expression2) =
         typecheck_pointer_arithmetic_conversions((promoted1, promoted2), state, errors);
 
-      (
-        r#type.clone(),
-        match r#type.range() {
-          Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
-          Range::U8 | Range::I8 => {
-            TypedExpression::N8Addition(Box::new(expression1), Box::new(expression2))
-          }
-          _ => todo!(),
-        },
-      )
+      let expression = match r#type.range() {
+        Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+        Range::U8 | Range::I8 => {
+          TypedExpression::N8Addition(Box::new(expression1), Box::new(expression2))
+        }
+        _ => todo!(),
+      };
+      (r#type, expression)
     }
 
     Expression::Subtraction(expression1, expression2) => {
@@ -729,16 +713,14 @@ fn expression(
       let (r#type, expression1, expression2) =
         typecheck_pointer_arithmetic_conversions((promoted1, promoted2), state, errors);
 
-      (
-        r#type.clone(),
-        match r#type.range() {
-          Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
-          Range::U8 | Range::I8 => {
-            TypedExpression::N8Subtraction(Box::new(expression1), Box::new(expression2))
-          }
-          _ => todo!(),
-        },
-      )
+      let expression = match r#type.range() {
+        Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+        Range::U8 | Range::I8 => {
+          TypedExpression::N8Subtraction(Box::new(expression1), Box::new(expression2))
+        }
+        _ => todo!(),
+      };
+      (r#type, expression)
     }
 
     Expression::Multiplication(expression1, expression2) => {
@@ -747,16 +729,14 @@ fn expression(
       let (r#type, expression1, expression2) =
         typecheck_usual_arithmetic_conversions((promoted1, promoted2), state, errors);
 
-      (
-        r#type.clone(),
-        match r#type.range() {
-          Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
-          Range::U8 | Range::I8 => {
-            TypedExpression::N8Multiplication(Box::new(expression1), Box::new(expression2))
-          }
-          _ => todo!(),
-        },
-      )
+      let expression = match r#type.range() {
+        Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+        Range::U8 | Range::I8 => {
+          TypedExpression::N8Multiplication(Box::new(expression1), Box::new(expression2))
+        }
+        _ => todo!(),
+      };
+      (r#type, expression)
     }
 
     Expression::Division(expression1, expression2) => {
@@ -765,21 +745,19 @@ fn expression(
       let (r#type, expression1, expression2) =
         typecheck_usual_arithmetic_conversions((promoted1, promoted2), state, errors);
 
-      (
-        r#type.clone(),
-        match r#type.range() {
-          Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
-          Range::U8 => TypedExpression::U8Division(Box::new(expression1), Box::new(expression2)),
-          Range::I8 => {
-            errors.extend([(
-              Pos(File("[todo]".into()), 0, 0),
-              Error(format!("Signed division unimplemented",)),
-            )]);
-            TypedExpression::U8Division(Box::new(expression1), Box::new(expression2))
-          }
-          _ => todo!(),
-        },
-      )
+      let expression = match r#type.range() {
+        Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+        Range::U8 => TypedExpression::U8Division(Box::new(expression1), Box::new(expression2)),
+        Range::I8 => {
+          errors.extend([(
+            Pos(File("[todo]".into()), 0, 0),
+            Error(format!("Signed division unimplemented",)),
+          )]);
+          TypedExpression::U8Division(Box::new(expression1), Box::new(expression2))
+        }
+        _ => todo!(),
+      };
+      (r#type, expression)
     }
 
     Expression::Modulo(expression1, expression2) => {
@@ -788,21 +766,19 @@ fn expression(
       let (r#type, expression1, expression2) =
         typecheck_usual_arithmetic_conversions((promoted1, promoted2), state, errors);
 
-      (
-        r#type.clone(),
-        match r#type.range() {
-          Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
-          Range::U8 => TypedExpression::U8Modulo(Box::new(expression1), Box::new(expression2)),
-          Range::I8 => {
-            errors.extend([(
-              Pos(File("[todo]".into()), 0, 0),
-              Error(format!("Signed modulo unimplemented",)),
-            )]);
-            TypedExpression::U8Modulo(Box::new(expression1), Box::new(expression2))
-          }
-          _ => todo!(),
-        },
-      )
+      let expression = match r#type.range() {
+        Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+        Range::U8 => TypedExpression::U8Modulo(Box::new(expression1), Box::new(expression2)),
+        Range::I8 => {
+          errors.extend([(
+            Pos(File("[todo]".into()), 0, 0),
+            Error(format!("Signed modulo unimplemented",)),
+          )]);
+          TypedExpression::U8Modulo(Box::new(expression1), Box::new(expression2))
+        }
+        _ => todo!(),
+      };
+      (r#type, expression)
     }
 
     Expression::LogicalAnd(_, _) => todo!(),
@@ -893,23 +869,21 @@ fn expression(
 
     Expression::Comma(expression1, expression2) => {
       let expression1 = typecheck_expression_cast(Type::Void, *expression1, state, errors);
-      let (type2, expression2) = typecheck::expression(*expression2, state, errors);
+      let (r#type, expression2) = typecheck::expression(*expression2, state, errors);
 
-      (
-        type2.clone(),
-        match type2.range() {
-          Range::U0 | Range::I0 => {
-            TypedExpression::N0SecondN0N0(Box::new(expression1), Box::new(expression2))
-          }
-          Range::U1 | Range::I1 => {
-            TypedExpression::N1SecondN0N1(Box::new(expression1), Box::new(expression2))
-          }
-          Range::U8 | Range::I8 => {
-            TypedExpression::N8SecondN0N8(Box::new(expression1), Box::new(expression2))
-          }
-          _ => todo!(),
-        },
-      )
+      let expression = match r#type.range() {
+        Range::U0 | Range::I0 => {
+          TypedExpression::N0SecondN0N0(Box::new(expression1), Box::new(expression2))
+        }
+        Range::U1 | Range::I1 => {
+          TypedExpression::N1SecondN0N1(Box::new(expression1), Box::new(expression2))
+        }
+        Range::U8 | Range::I8 => {
+          TypedExpression::N8SecondN0N8(Box::new(expression1), Box::new(expression2))
+        }
+        _ => todo!(),
+      };
+      (r#type, expression)
     }
 
     Expression::Cast(r#type, expression) => {
@@ -927,14 +901,28 @@ fn expression(
       typecheck::identifier_expression(identifier, state, errors)
     }
 
-    Expression::Subscript(expression1, expression2) => typecheck::expression(
-      Expression::Dereference(Box::new(Expression::Addition(
-        Box::new(*expression1),
-        Box::new(*expression2),
-      ))),
-      state,
-      errors,
-    ),
+    Expression::Subscript(expression1, expression2) => {
+      let (r#type, expression) = typecheck::expression(
+        Expression::Addition(expression1.clone(), expression2.clone()),
+        state,
+        &mut vec![],
+      );
+
+      match r#type {
+        Type::Pointer(_) => typecheck::expression(
+          Expression::Dereference(Box::new(Expression::Addition(expression1, expression2))),
+          state,
+          errors,
+        ),
+        _ => {
+          errors.extend([(
+            Pos(File("[pos]".into()), 0, 0),
+            Error(format!("Subscript of value of type `{}`", r#type)),
+          )]);
+          (r#type, expression)
+        }
+      }
+    }
 
     Expression::FunctionCall(designator, arguments) => {
       typecheck::function_call_expression(*designator, arguments, state, errors)
@@ -942,353 +930,135 @@ fn expression(
   }
 }
 
-// fn logical_and_expression(
-//   _expression1: Expression,
-//   _expression2: Expression,
-//   _state: &mut State,
-//   errors: &mut impl Extend<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   // TODO implement
-//   errors.extend([(
-//     Pos(File("[todo]".into()), 0, 0),
-//     Error(format!("Logical AND unimplemented")),
-//   )]);
-//
-//   (Type::Bool, vec![])
-// }
-//
-// fn logical_or_expression(
-//   _expression1: Expression,
-//   _expression2: Expression,
-//   _state: &mut State,
-//   errors: &mut impl Extend<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   // TODO implement
-//   errors.extend([(
-//     Pos(File("[todo]".into()), 0, 0),
-//     Error(format!("Logical OR unimplemented")),
-//   )]);
-//
-//   (Type::Bool, vec![])
-// }
-//
-// fn bitwise_and_expression(
-//   expression1: Expression,
-//   expression2: Expression,
-//   state: &mut State,
-//   errors: &mut impl Extend<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens1, tokens2) =
-//     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
-//
-//   (
-//     r#type.clone(),
-//     match r#type {
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain([Ok(Token::And)])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.extend([(
-//           Pos(File("[todo]".into()), 0, 0),
-//           Error(format!("Bitwise AND unimplemented for type `{}`", r#type)),
-//         )]);
-//         vec![]
-//       }
-//     },
-//   )
-// }
-//
-// fn bitwise_inclusive_or_expression(
-//   expression1: Expression,
-//   expression2: Expression,
-//   state: &mut State,
-//   errors: &mut impl Extend<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens1, tokens2) =
-//     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
-//
-//   (
-//     r#type.clone(),
-//     match r#type {
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain([Ok(Token::Orr)])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.extend([(
-//           Pos(File("[todo]".into()), 0, 0),
-//           Error(format!(
-//             "Bitwise Inclusive OR unimplemented for type `{}`",
-//             r#type
-//           )),
-//         )]);
-//         vec![]
-//       }
-//     },
-//   )
-// }
-//
-// fn bitwise_exclusive_or_expression(
-//   expression1: Expression,
-//   expression2: Expression,
-//   state: &mut State,
-//   errors: &mut impl Extend<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens1, tokens2) =
-//     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
-//
-//   (
-//     r#type.clone(),
-//     match r#type {
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain([Ok(Token::Xor)])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.extend([(
-//           Pos(File("[todo]".into()), 0, 0),
-//           Error(format!(
-//             "Bitwise Exclusive OR unimplemented for type `{}`",
-//             r#type
-//           )),
-//         )]);
-//         vec![]
-//       }
-//     },
-//   )
-// }
-//
-// fn left_shift_expression(
-//   _expression1: Expression,
-//   _expression2: Expression,
-//   _state: &mut State,
-//   errors: &mut impl Extend<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   // TODO implement
-//   errors.extend([(
-//     Pos(File("[todo]".into()), 0, 0),
-//     Error(format!("Left Shift unimplemented")),
-//   )]);
-//
-//   (Type::Int, vec![])
-// }
-//
-// fn right_shift_expression(
-//   _expression1: Expression,
-//   _expression2: Expression,
-//   _state: &mut State,
-//   errors: &mut impl Extend<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   // TODO implement
-//   errors.extend([(
-//     Pos(File("[todo]".into()), 0, 0),
-//     Error(format!("Right Shift unimplemented")),
-//   )]);
-//
-//   (Type::Int, vec![])
-// }
-//
-// fn less_than_expression(
-//   expression1: Expression,
-//   expression2: Expression,
-//   state: &mut State,
-//   errors: &mut impl Extend<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens1, tokens2) =
-//     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
-//
-//   (
-//     Type::Bool,
-//     match r#type {
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain([
-//           Ok(Token::Sub),
-//           Ok(Token::AtDyn),
-//           Ok(Token::Pop),
-//           Ok(Token::XXX(0x00)),
-//           Ok(Token::Shl),
-//           Ok(Token::AtDyn),
-//         ])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.extend([(
-//           Pos(File("[todo]".into()), 0, 0),
-//           Error(format!("Less Than unimplemented for type `{}`", r#type)),
-//         )]);
-//         vec![]
-//       }
-//     },
-//   )
-// }
-//
-// fn less_than_or_equal_to_expression(
-//   expression1: Expression,
-//   expression2: Expression,
-//   state: &mut State,
-//   errors: &mut impl Extend<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens1, tokens2) =
-//     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
-//
-//   (
-//     Type::Bool,
-//     match r#type {
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain([
-//           Ok(Token::Sub),
-//           Ok(Token::AtDyn),
-//           Ok(Token::Pop),
-//           Ok(Token::Flc),
-//           Ok(Token::XXX(0x00)),
-//           Ok(Token::Shl),
-//           Ok(Token::AtDyn),
-//         ])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.extend([(
-//           Pos(File("[todo]".into()), 0, 0),
-//           Error(format!(
-//             "Less Than Or Equal To unimplemented for type `{}`",
-//             r#type
-//           )),
-//         )]);
-//         vec![]
-//       }
-//     },
-//   )
-// }
-//
-// fn greater_than_expression(
-//   expression1: Expression,
-//   expression2: Expression,
-//   state: &mut State,
-//   errors: &mut impl Extend<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens1, tokens2) =
-//     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
-//
-//   (
-//     Type::Bool,
-//     match r#type {
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain([
-//           Ok(Token::Sub),
-//           Ok(Token::AtDyn),
-//           Ok(Token::Pop),
-//           Ok(Token::XXX(0x00)),
-//           Ok(Token::Shl),
-//           Ok(Token::AtDyn),
-//         ])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.extend([(
-//           Pos(File("[todo]".into()), 0, 0),
-//           Error(format!(
-//             "Greater Than unimplemented for type `{}`",
-//             r#type
-//           )),
-//         )]);
-//         vec![]
-//       }
-//     },
-//   )
-// }
-//
-// fn greater_than_or_equal_to_expression(
-//   expression1: Expression,
-//   expression2: Expression,
-//   state: &mut State,
-//   errors: &mut impl Extend<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (r#type, tokens1, tokens2) =
-//     typecheck::usual_arithmetic_conversion(expression1, expression2, state, errors);
-//
-//   (
-//     Type::Bool,
-//     match r#type {
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain([
-//           Ok(Token::Sub),
-//           Ok(Token::AtDyn),
-//           Ok(Token::Pop),
-//           Ok(Token::Flc),
-//           Ok(Token::XXX(0x00)),
-//           Ok(Token::Shl),
-//           Ok(Token::AtDyn),
-//         ])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.extend([(
-//           Pos(File("[todo]".into()), 0, 0),
-//           Error(format!(
-//             "Greater Than Or Equal To unimplemented for type `{}`",
-//             r#type
-//           )),
-//         )]);
-//         vec![]
-//       }
-//     },
-//   )
-// }
-//
-// fn conditional_expression(
-//   expression1: Expression,
-//   expression2: Expression,
-//   expression3: Expression,
-//   state: &mut State,
-//   errors: &mut impl Extend<(Pos, Error)>,
-// ) -> (Type, Vec<Result<Token, String>>) {
-//   let (type1, tokens1) = typecheck::expression(expression1, state, errors);
-//   let (type2, tokens2, tokens3) =
-//     typecheck::usual_arithmetic_conversion(expression2, expression3, state, errors);
-//
-//   (
-//     type2.clone(),
-//     match type1 {
-//       Type::Int | Type::Char => std::iter::empty()
-//         .chain(tokens3)
-//         .chain(tokens1)
-//         .chain(tokens2)
-//         .chain([
-//           Ok(Token::Buf),
-//           Ok(Token::AtDyn),
-//           Ok(Token::Pop),
-//           Ok(Token::Iff),
-//         ])
-//         .collect(),
-//       _ => {
-//         // TODO implement
-//         errors.extend([(
-//           Pos(File("[todo]".into()), 0, 0),
-//           Error(format!(
-//             "Conditional unimplemented for types `{}, {}`",
-//             type1, type2
-//           )),
-//         )]);
-//         vec![]
-//       }
-//     },
-//   )
-// }
+fn address_of(
+  expression: Expression,
+  state: &mut State,
+  errors: &mut impl Extend<(Pos, Error)>,
+) -> (Type, TypedExpression) {
+  match expression {
+    Expression::Dereference(expression) => {
+      let (r#type, expression) = typecheck::expression(*expression, state, errors);
+
+      match r#type {
+        Type::Pointer(r#type) => (Type::Pointer(r#type), expression),
+        _ => {
+          errors.extend([(
+            Pos(File("[pos]".into()), 0, 0),
+            Error(format!("Dereference of value of type `{}`", r#type)),
+          )]);
+          (r#type, expression)
+        }
+      }
+    }
+
+    Expression::Subscript(expression1, expression2) => {
+      let (r#type, expression) = typecheck::expression(
+        Expression::Addition(expression1, expression2),
+        state,
+        errors,
+      );
+
+      match r#type {
+        Type::Pointer(r#type) => (Type::Pointer(r#type), expression),
+        _ => {
+          errors.extend([(
+            Pos(File("[pos]".into()), 0, 0),
+            Error(format!("Subscript of value of type `{}`", r#type)),
+          )]);
+          (r#type, expression)
+        }
+      }
+    }
+
+    // TODO code duplication with `identifier_expression`
+    Expression::Identifier(identifier) => {
+      let mut offset = 0;
+
+      state
+        .stack
+        .iter()
+        .rev()
+        .find_map(|stack_entry| match stack_entry {
+          StackEntry::MacroBoundary(_, params_locals)
+          | StackEntry::FunctionBoundary(_, params_locals)
+          | StackEntry::BlockBoundary(params_locals) => {
+            if let StackEntry::FunctionBoundary(_, _) = stack_entry {
+              offset += 1; // return address
+            }
+            params_locals.iter().rev().find_map(|Object(r#type, name)| {
+              if *name != identifier {
+                offset += r#type.size();
+                return None;
+              }
+
+              Some(match r#type {
+                Type::Function(_, _, _) => (
+                  Type::Pointer(Box::new(r#type.clone())),
+                  TypedExpression::N8AddrLocal(offset),
+                ),
+
+                Type::Macro(_, _, _, _) => panic!("Local variable has macro type"),
+
+                _ => (
+                  r#type.clone(),
+                  match r#type.range() {
+                    Range::U8 | Range::I8 => TypedExpression::N8AddrLocal(offset),
+                    _ => todo!(),
+                  },
+                ),
+              })
+            })
+          }
+
+          StackEntry::LoopBoundary => None,
+        })
+        .or_else(|| {
+          state
+            .declarations
+            .get(&identifier)
+            .map(|r#type| match r#type {
+              Type::Function(_, _, _) => (
+                Type::Pointer(Box::new(r#type.clone())),
+                TypedExpression::N8AddrGlobal(identifier.clone()),
+              ),
+
+              Type::Macro(_, _, _, _) => {
+                errors.extend([(
+                  Pos(File("[pos]".into()), 0, 0),
+                  Error(format!("Address of macro `{}`", identifier)),
+                )]);
+                (Type::Void, TypedExpression::N0Constant(()))
+              }
+
+              _ => (
+                r#type.clone(),
+                match r#type.range() {
+                  Range::U8 | Range::I8 => TypedExpression::N8AddrGlobal(identifier.clone()),
+                  _ => todo!(),
+                },
+              ),
+            })
+        })
+        .unwrap_or_else(|| {
+          errors.extend([(
+            Pos(File("[pos]".into()), 0, 0),
+            Error(format!("Address of undeclared identifier `{}`", identifier)),
+          )]);
+          (Type::Void, TypedExpression::N0Constant(()))
+        })
+    }
+
+    _ => {
+      let (r#type, expression) = typecheck::expression(expression, state, errors);
+
+      errors.extend([(
+        Pos(File("[pos]".into()), 0, 0),
+        Error(format!("Address of value of type `{}`", r#type)),
+      )]);
+      (r#type, expression)
+    }
+  }
+}
 
 fn cast_expression(
   r#type: Type,
@@ -1298,71 +1068,70 @@ fn cast_expression(
 ) -> (Type, TypedExpression) {
   let (type1, expression1) = typecheck::expression(expression, state, errors);
 
-  (
-    r#type.clone(),
-    match (type1.clone(), r#type.clone()) {
-      (Type::Macro(_, _, _, _), _) => {
-        errors.extend([(
-          Pos(File("[pos]".into()), 0, 0),
-          Error(format!("Cast from macro type `{}`, to `{}`", type1, r#type)),
-        )]);
-        match r#type.range() {
-          Range::U0 | Range::I0 => TypedExpression::N0Constant(()),
-          Range::U1 | Range::I1 => TypedExpression::N1Constant(false),
-          Range::U8 | Range::I8 => TypedExpression::N8Constant(0x00),
-          _ => todo!(),
-        }
+  let expression = match (type1, &r#type) {
+    (type1 @ Type::Macro(_, _, _, _), r#type) => {
+      errors.extend([(
+        Pos(File("[pos]".into()), 0, 0),
+        Error(format!("Cast from macro type `{}`, to `{}`", type1, r#type)),
+      )]);
+      match r#type.range() {
+        Range::U0 | Range::I0 => TypedExpression::N0Constant(()),
+        Range::U1 | Range::I1 => TypedExpression::N1Constant(false),
+        Range::U8 | Range::I8 => TypedExpression::N8Constant(0x00),
+        _ => todo!(),
       }
+    }
 
-      (_, Type::Macro(_, _, _, _)) => {
-        errors.extend([(
-          Pos(File("[pos]".into()), 0, 0),
-          Error(format!("Cast to macro type `{}`, from `{}`", r#type, type1)),
-        )]);
-        TypedExpression::N0Constant(())
+    (type1, r#type @ Type::Macro(_, _, _, _)) => {
+      errors.extend([(
+        Pos(File("[pos]".into()), 0, 0),
+        Error(format!("Cast to macro type `{}`, from `{}`", r#type, type1)),
+      )]);
+      TypedExpression::N0Constant(())
+    }
+
+    (type1, r#type) if type1 == *r#type => expression1,
+    (type1, r#type) if type1.width() == r#type.width() => expression1,
+
+    (Type::Int, Type::Bool)
+    | (Type::UnsignedInt, Type::Bool)
+    | (Type::Char, Type::Bool)
+    | (Type::SignedChar, Type::Bool)
+    | (Type::UnsignedChar, Type::Bool)
+    | (Type::Pointer(_), Type::Bool) => {
+      TypedExpression::N1BitwiseComplement(Box::new(TypedExpression::N1EqualToN8(
+        Box::new(expression1),
+        Box::new(TypedExpression::N8Constant(0x00)),
+      )))
+    }
+
+    (Type::Int, Type::Void)
+    | (Type::UnsignedInt, Type::Void)
+    | (Type::Char, Type::Void)
+    | (Type::SignedChar, Type::Void)
+    | (Type::UnsignedChar, Type::Void)
+    | (Type::Pointer(_), Type::Void) => TypedExpression::N0CastN8(Box::new(expression1)),
+
+    (Type::Bool, Type::Void) => TypedExpression::N0CastN1(Box::new(expression1)),
+
+    (type1, r#type) => {
+      errors.extend([(
+        Pos(File("[todo]".into()), 0, 0),
+        Error(format!(
+          "Type Cast unimplemented from `{}` to `{}`",
+          type1, r#type
+        )),
+      )]);
+      match r#type.range() {
+        Range::U0 | Range::I0 => TypedExpression::N0Constant(()),
+        Range::U1 | Range::I1 => TypedExpression::N1Constant(false),
+        Range::U8 | Range::I8 => TypedExpression::N8Constant(0x00),
+        _ => todo!(),
       }
+    }
+  };
 
-      (type1, type2) if type1 == type2 => expression1,
-      (type1, type2) if type1.width() == type2.width() => expression1,
-
-      (Type::Int, Type::Bool)
-      | (Type::UnsignedInt, Type::Bool)
-      | (Type::Char, Type::Bool)
-      | (Type::SignedChar, Type::Bool)
-      | (Type::UnsignedChar, Type::Bool)
-      | (Type::Pointer(_), Type::Bool) => {
-        TypedExpression::N1BitwiseComplement(Box::new(TypedExpression::N1EqualToN8(
-          Box::new(expression1),
-          Box::new(TypedExpression::N8Constant(0x00)),
-        )))
-      }
-
-      (Type::Int, Type::Void)
-      | (Type::UnsignedInt, Type::Void)
-      | (Type::Char, Type::Void)
-      | (Type::SignedChar, Type::Void)
-      | (Type::UnsignedChar, Type::Void)
-      | (Type::Pointer(_), Type::Void) => TypedExpression::N0CastN8(Box::new(expression1)),
-
-      (Type::Bool, Type::Void) => TypedExpression::N0CastN1(Box::new(expression1)),
-
-      _ => {
-        errors.extend([(
-          Pos(File("[todo]".into()), 0, 0),
-          Error(format!(
-            "Type Cast unimplemented from `{}` to `{}`",
-            type1, r#type
-          )),
-        )]);
-        match r#type.range() {
-          Range::U0 | Range::I0 => TypedExpression::N0Constant(()),
-          Range::U1 | Range::I1 => TypedExpression::N1Constant(false),
-          Range::U8 | Range::I8 => TypedExpression::N8Constant(0x00),
-          _ => todo!(),
-        }
-      }
-    },
-  )
+  (r#type, expression)
 }
 
 fn string_literal_expression(
@@ -1372,7 +1141,7 @@ fn string_literal_expression(
 ) -> (Type, TypedExpression) {
   let name = state
     .strings
-    .entry(value.clone())
+    .entry(value)
     .or_insert(format!("str.{}", state.uid));
   state.uid += 1;
 
@@ -1452,7 +1221,7 @@ fn identifier_expression(
       errors.extend([(
         Pos(File("[pos]".into()), 0, 0),
         Error(format!(
-          "Reference to undefined identifier `{}`",
+          "Reference to undeclared identifier `{}`",
           identifier
         )),
       )]);
@@ -1473,11 +1242,11 @@ fn function_call_expression(
     r#type => r#type,
   };
 
-  let (inline_name, return_type, parameter_types, is_variadic) = match designator_type.clone() {
-    Type::Function(return_type, parameter_types, is_variadic) => {
+  let (inline_name, return_type, parameter_types, is_variadic) = match designator_type {
+    Type::Function(ref return_type, ref parameter_types, ref is_variadic) => {
       (None, return_type, parameter_types, is_variadic)
     }
-    Type::Macro(return_type, name, parameter_types, is_variadic) => {
+    Type::Macro(ref return_type, ref name, ref parameter_types, ref is_variadic) => {
       (Some(name), return_type, parameter_types, is_variadic)
     }
     _ => {
@@ -1485,11 +1254,11 @@ fn function_call_expression(
         Pos(File("[pos]".into()), 0, 0),
         Error(format!("Type `{}` is not a function", designator_type)),
       )]);
-      return (Type::Void, TypedExpression::N0Constant(()));
+      return (designator_type, designator);
     }
   };
 
-  if is_variadic && arguments.len() < parameter_types.len() {
+  if *is_variadic && arguments.len() < parameter_types.len() {
     errors.extend([(
       Pos(File("[pos]".into()), 0, 0),
       Error(format!(
@@ -1539,33 +1308,31 @@ fn function_call_expression(
       ))
       .collect();
 
-  (
-    *return_type.clone(),
-    match (inline_name, return_type.range()) {
-      (Some(name), Range::U0 | Range::I0) => TypedExpression::N0MacroCall(name, arguments),
-      (Some(name), Range::U1 | Range::I1) => TypedExpression::N1MacroCall(name, arguments),
-      (Some(name), Range::U8 | Range::I8) => TypedExpression::N8MacroCall(name, arguments),
-      (None, Range::U0 | Range::I0) => {
-        TypedExpression::N0FunctionCall(Box::new(designator), arguments)
-      }
-      (None, Range::U1 | Range::I1) => {
-        TypedExpression::N1FunctionCall(Box::new(designator), arguments)
-      }
-      (None, Range::U8 | Range::I8) => {
-        TypedExpression::N8FunctionCall(Box::new(designator), arguments)
-      }
-      _ => {
-        errors.extend([(
-          Pos(File("[todo]".into()), 0, 0),
-          Error(format!(
-            "Function call unimplemented for return type `{}`",
-            return_type
-          )),
-        )]);
-        TypedExpression::N0Constant(())
-      }
-    },
-  )
+  let expression = match (inline_name, return_type.range()) {
+    (Some(name), Range::U0 | Range::I0) => TypedExpression::N0MacroCall(name.clone(), arguments),
+    (Some(name), Range::U1 | Range::I1) => TypedExpression::N1MacroCall(name.clone(), arguments),
+    (Some(name), Range::U8 | Range::I8) => TypedExpression::N8MacroCall(name.clone(), arguments),
+    (None, Range::U0 | Range::I0) => {
+      TypedExpression::N0FunctionCall(Box::new(designator), arguments)
+    }
+    (None, Range::U1 | Range::I1) => {
+      TypedExpression::N1FunctionCall(Box::new(designator), arguments)
+    }
+    (None, Range::U8 | Range::I8) => {
+      TypedExpression::N8FunctionCall(Box::new(designator), arguments)
+    }
+    _ => {
+      errors.extend([(
+        Pos(File("[todo]".into()), 0, 0),
+        Error(format!(
+          "Function call unimplemented for return type `{}`",
+          return_type
+        )),
+      )]);
+      TypedExpression::N0Constant(())
+    }
+  };
+  (*return_type.clone(), expression)
 }
 
 fn integer_promotions(
@@ -1573,7 +1340,7 @@ fn integer_promotions(
   state: &mut State,
   _errors: &mut impl Extend<(Pos, Error)>,
 ) -> Expression {
-  let (r#type, _) = typecheck::expression(expression.clone(), &mut state.clone(), &mut vec![]);
+  let (r#type, _) = typecheck::expression(expression.clone(), state, &mut vec![]);
 
   match r#type {
     Type::Bool | Type::Char | Type::SignedChar | Type::Short | Type::Int | Type::Enumeration(_) => {
@@ -1603,29 +1370,29 @@ fn usual_arithmetic_conversions(
 ) -> (Expression, Expression) {
   // TODO nonstandard, completely ad-hoc
 
-  let (type1, _) = typecheck::expression(expression1.clone(), &mut state.clone(), &mut vec![]);
-  let (type2, _) = typecheck::expression(expression2.clone(), &mut state.clone(), &mut vec![]);
+  let (type1, _) = typecheck::expression(expression1.clone(), state, &mut vec![]);
+  let (type2, _) = typecheck::expression(expression2.clone(), state, &mut vec![]);
 
-  let r#type = match (type1.clone(), type2.clone()) {
+  let r#type = match (type1, type2) {
     (
-      Type::Void
-      | Type::Array(_)
-      | Type::Structure(_)
-      | Type::Union(_)
-      | Type::Macro(_, _, _, _)
-      | Type::Function(_, _, _)
-      | Type::Pointer(_),
-      _,
+      type1 @ Type::Void
+      | type1 @ Type::Array(_)
+      | type1 @ Type::Structure(_)
+      | type1 @ Type::Union(_)
+      | type1 @ Type::Macro(_, _, _, _)
+      | type1 @ Type::Function(_, _, _)
+      | type1 @ Type::Pointer(_),
+      type2,
     )
     | (
-      _,
-      Type::Void
-      | Type::Array(_)
-      | Type::Structure(_)
-      | Type::Union(_)
-      | Type::Macro(_, _, _, _)
-      | Type::Function(_, _, _)
-      | Type::Pointer(_),
+      type1,
+      type2 @ Type::Void
+      | type2 @ Type::Array(_)
+      | type2 @ Type::Structure(_)
+      | type2 @ Type::Union(_)
+      | type2 @ Type::Macro(_, _, _, _)
+      | type2 @ Type::Function(_, _, _)
+      | type2 @ Type::Pointer(_),
     ) => {
       errors.extend([(
         Pos(File("[pos]".into()), 0, 0),
@@ -1640,7 +1407,7 @@ fn usual_arithmetic_conversions(
     (Type::Char, Type::Int) | (Type::Int, Type::Char) => Type::Int,
     (Type::UnsignedInt, Type::Int) | (Type::Int, Type::UnsignedInt) => Type::UnsignedInt,
 
-    _ => {
+    (type1, type2) => {
       errors.extend([(
         Pos(File("[todo]".into()), 0, 0),
         Error(format!(
@@ -1655,7 +1422,7 @@ fn usual_arithmetic_conversions(
 
   (
     Expression::Cast(r#type.clone(), Box::new(expression1)),
-    Expression::Cast(r#type.clone(), Box::new(expression2)),
+    Expression::Cast(r#type, Box::new(expression2)),
   )
 }
 
@@ -1674,7 +1441,7 @@ fn typecheck_usual_arithmetic_conversions(
     panic!("Expected expressions to have identical type`");
   }
 
-  (type1.clone(), expression1, expression2)
+  (type1, expression1, expression2)
 }
 
 fn pointer_arithmetic_conversions(
@@ -1684,36 +1451,42 @@ fn pointer_arithmetic_conversions(
 ) -> (Expression, Expression) {
   // TODO nonstandard, completely ad-hoc
 
-  let (type1, _) = typecheck::expression(expression1.clone(), &mut state.clone(), &mut vec![]);
-  let (type2, _) = typecheck::expression(expression2.clone(), &mut state.clone(), &mut vec![]);
+  let (type1, _) = typecheck::expression(expression1.clone(), state, &mut vec![]);
+  let (type2, _) = typecheck::expression(expression2.clone(), state, &mut vec![]);
 
-  match (&type1, &type2) {
+  match (type1, type2) {
     (Type::Pointer(_), Type::Pointer(_)) => (
       Expression::Cast(Type::UnsignedInt, Box::new(expression1)),
       Expression::Cast(Type::UnsignedInt, Box::new(expression2)),
     ),
 
-    (Type::Pointer(type1), _) => (
-      expression1,
-      Expression::Cast(
-        Type::Pointer(type1.clone()),
-        Box::new(Expression::Multiplication(
-          Box::new(expression2),
-          Box::new(Expression::IntegerConstant(type1.size() as u8)),
-        )),
-      ),
-    ),
+    (Type::Pointer(type1), _) => {
+      let size = type1.size() as u8;
+      (
+        expression1,
+        Expression::Cast(
+          Type::Pointer(type1),
+          Box::new(Expression::Multiplication(
+            Box::new(expression2),
+            Box::new(Expression::IntegerConstant(size)),
+          )),
+        ),
+      )
+    }
 
-    (_, Type::Pointer(type2)) => (
-      expression2,
-      Expression::Cast(
-        Type::Pointer(type2.clone()),
-        Box::new(Expression::Multiplication(
-          Box::new(expression1),
-          Box::new(Expression::IntegerConstant(type2.size() as u8)),
-        )),
-      ),
-    ),
+    (_, Type::Pointer(type2)) => {
+      let size = type2.size() as u8;
+      (
+        expression2,
+        Expression::Cast(
+          Type::Pointer(type2),
+          Box::new(Expression::Multiplication(
+            Box::new(expression1),
+            Box::new(Expression::IntegerConstant(size)),
+          )),
+        ),
+      )
+    }
 
     (_, _) => usual_arithmetic_conversions((expression1, expression2), state, errors),
   }
@@ -1734,7 +1507,7 @@ fn typecheck_pointer_arithmetic_conversions(
     panic!("Expected expressions to have identical type`");
   }
 
-  (type1.clone(), expression1, expression2)
+  (type1, expression1, expression2)
 }
 
 fn typecheck_expression_cast(

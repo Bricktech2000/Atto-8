@@ -33,8 +33,9 @@ def rel_path(*args):
   return os.path.relpath(os.path.join(os.path.dirname(__file__), *args), os.getcwd())
 
 
-run_cargo = functools.partial(run, 'cargo', '--quiet', 'run', '--release', '--bin')
 run_python = functools.partial(run, 'python3')
+run_cargo = functools.partial(run, 'cargo', *(['--quiet'] if not debug_mode else []),
+                              'run', *(['--release'] if not debug_mode else []), '--bin')
 
 
 if len(sys.argv) <= 1:

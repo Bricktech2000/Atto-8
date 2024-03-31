@@ -35,3 +35,11 @@
 // void op_on_void(void) { !~op_on_void() + 5; }
 // void inv_fn_call(void) { inv_fn_call(1, 2, 3); }
 // int diff_redecl(void); void diff_redecl(int);
+// int non_ptr_deref(void) { int a; return *a; }
+// int inv_subscr(void) { return 5[6]; }
+// int addrof_non_ptr_deref(void) { return &*2; }
+// int addrof_non_lval(void) { return &5; }
+// int addrof_inv_subscr(void) { return &5[6]; }
+// inline void macro(void); void addrof_macro(void) { &macro; }
+// void addr_of_undef(void) { &undefined; }
+// int inv_paren(void) { return 2 (- 3); }

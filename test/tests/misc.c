@@ -59,7 +59,7 @@ void main(void) {
   puts("in file " __FILE__ "\n");
 
   unsigned offset = 0b0011;
-  putchar(foo(1, "/-\\|") + '\000' + '\x00' + 000 + 0b0 + 0B0 + 0x0 + 0X0);
+  putchar((&*foo)(1, "/-\\|") + '\000' + '\x00' + 000 + 0b0 + 0B0 + 0x0 + 0X0);
   if (offset)
     puts("***ok\n" + offset);
 
