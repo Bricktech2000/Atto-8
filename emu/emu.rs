@@ -133,7 +133,9 @@ impl Tickable for Microcomputer {
 
       Instruction::Add(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
-        let res = mem_read!(addr) as u16 + sp_pop!() as u16 + mp.cf as u16;
+        let res = (mem_read!(addr) as u16)
+          .wrapping_add(sp_pop!() as u16)
+          .wrapping_add(mp.cf as u16);
         mem_write!(addr, res as u8);
         mp.cf = res > 0xFF;
         Ok(14 + size as u128)
@@ -141,7 +143,9 @@ impl Tickable for Microcomputer {
 
       Instruction::Sub(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
-        let res = mem_read!(addr) as u16 - sp_pop!() as u16 - mp.cf as u16;
+        let res = (mem_read!(addr) as u16)
+          .wrapping_sub(sp_pop!() as u16)
+          .wrapping_sub(mp.cf as u16);
         mem_write!(addr, res as u8);
         mp.cf = res > 0xFF;
         Ok(14 + size as u128)
