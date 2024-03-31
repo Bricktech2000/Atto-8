@@ -116,9 +116,9 @@ fn statement(statement: &TypedStatement) -> BTreeSet<(bool, String)> {
 
 fn expression(expression: &TypedExpression) -> BTreeSet<(bool, String)> {
   match expression {
-    TypedExpression::N0Dereference(expression)
-    | TypedExpression::N1Dereference(expression)
-    | TypedExpression::N8Dereference(expression)
+    TypedExpression::N0DereferenceN8(expression)
+    | TypedExpression::N1DereferenceN8(expression)
+    | TypedExpression::N8DereferenceN8(expression)
     | TypedExpression::N1BitwiseComplement(expression)
     | TypedExpression::N8BitwiseComplement(expression) => link::expression(expression),
 
@@ -138,6 +138,12 @@ fn expression(expression: &TypedExpression) -> BTreeSet<(bool, String)> {
       .chain(link::expression(expression2))
       .collect(),
 
+    TypedExpression::N0SecondN0N0(expression1, expression2)
+    | TypedExpression::N1SecondN0N1(expression1, expression2)
+    | TypedExpression::N8SecondN0N8(expression1, expression2) => std::iter::empty()
+      .chain(link::expression(expression1))
+      .chain(link::expression(expression2))
+      .collect(),
     TypedExpression::N0CastN1(expression)
     | TypedExpression::N0CastN8(expression)
     | TypedExpression::N1CastN8(expression) => link::expression(expression),

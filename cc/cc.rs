@@ -174,11 +174,13 @@ pub enum Expression {
 
   Conditional(Box<Expression>, Box<Expression>, Box<Expression>),
 
+  Comma(Box<Expression>, Box<Expression>),
   Cast(Type, Box<Expression>),
   IntegerConstant(u8),
   CharacterConstant(char),
   StringLiteral(String),
   Identifier(String),
+  Subscript(Box<Expression>, Box<Expression>),
   FunctionCall(Box<Expression>, Vec<Expression>),
 }
 
@@ -208,9 +210,9 @@ pub enum TypedGlobal {
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum TypedExpression {
-  N0Dereference(Box<TypedExpression>),
-  N1Dereference(Box<TypedExpression>),
-  N8Dereference(Box<TypedExpression>),
+  N0DereferenceN8(Box<TypedExpression>),
+  N1DereferenceN8(Box<TypedExpression>),
+  N8DereferenceN8(Box<TypedExpression>),
   N1BitwiseComplement(Box<TypedExpression>),
   N8BitwiseComplement(Box<TypedExpression>),
 
@@ -224,6 +226,9 @@ pub enum TypedExpression {
   N1LessThanU8(Box<TypedExpression>, Box<TypedExpression>),
   N1LessThanI8(Box<TypedExpression>, Box<TypedExpression>),
 
+  N0SecondN0N0(Box<TypedExpression>, Box<TypedExpression>),
+  N1SecondN0N1(Box<TypedExpression>, Box<TypedExpression>),
+  N8SecondN0N8(Box<TypedExpression>, Box<TypedExpression>),
   N0CastN1(Box<TypedExpression>),
   N0CastN8(Box<TypedExpression>),
   N1CastN8(Box<TypedExpression>),

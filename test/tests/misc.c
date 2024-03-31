@@ -35,7 +35,6 @@ inline void bar(void) memset(DISPLAY_BUFFER, 0xff, DISPLAY_BUFFER_LEN);
 inline void baz(void) { memset(DISPLAY_BUFFER, 0x00, DISPLAY_BUFFER_LEN); }
 
 inline void delay(int iterations);
-void sort(size_t len, void *arr);
 int foo(int n, char *test);
 
 void main(void) {
@@ -50,9 +49,6 @@ void main(void) {
   // return 6 * 10 + 4;
   // ADDITION == 3;
 
-  // sort(strlen("Atto-8"), "Atto-8");
-  // puts("Atto-8");
-
   // char *str = malloc(5);
   // strcpy(str, "Atto");
   // // malloc(1);
@@ -61,20 +57,18 @@ void main(void) {
   // puts(new_str);
 
   unsigned offset = 0b0011;
-  putchar(foo(42, "test") + '\000' + '\x00' + 000 + 0b0 + 0B0 + 0x0 + 0X0);
+  putchar(foo(1, "/-\\|") + '\000' + '\x00' + 000 + 0b0 + 0B0 + 0x0 + 0X0);
   if (offset)
     puts("***ok\n" + offset);
 
   asm { !display_buffer sts }
-  while (1) {
-    bar();
+  while (bar(), 1) {
     delay(0x1F);
-    baz();
-    delay(0x1F);
+    baz(), delay(0x1F);
   }
 }
 
 int foo(int n, char *test) {
-  { return n; }
+  { return n[test]; }
   foo(n + 1, test);
 }

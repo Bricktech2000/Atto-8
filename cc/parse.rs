@@ -691,7 +691,6 @@ fn for_statement() -> Parser<Statement> {
 }
 
 fn expression_statement() -> Parser<Statement> {
-  // TODO cases missing
   Parser::pure(())
     .and_then(|_| parse::expression())
     .and_then(|expression| {
@@ -731,10 +730,18 @@ fn assembly_statement() -> Parser<Statement> {
 }
 
 fn expression() -> Parser<Expression> {
-  parse::constant_expression() // TODO does not obey grammar
-    .name(format!("expression"))
+  parse::binop(
+    parse::assignment_expression(),
+    parse::ws(parse::char(',')).map(|_| psi(Box::new, Expression::Comma)),
+  )
 }
 
+fn assignment_expression() -> Parser<Expression> {
+  // TODO cases missing
+  parse::conditional_expression()
+}
+
+#[allow(dead_code)]
 fn constant_expression() -> Parser<Expression> {
   parse::conditional_expression()
 }
@@ -861,6 +868,7 @@ fn cast_expression() -> Parser<Expression> {
 fn unary_expression() -> Parser<Expression> {
   // TODO cases missing
   Parser::expected(vec![])
+    .or_else(|_| parse::postfix_expression())
     .or_else(|_| {
       parse::unop(
         parse::cast_expression(),
@@ -897,41 +905,57 @@ fn unary_expression() -> Parser<Expression> {
         parse::ws(parse::char('!')).map(|_| b(Box::new, Expression::LogicalNegation)),
       )
     })
+}
+
+fn postfix_expression() -> Parser<Expression> {
+  fn postfix(expression: Expression) -> Parser<Expression> {
+    let expression1 = expression.clone();
+    let expression2 = expression.clone();
+    // TODO cases missing
+    Parser::expected(vec![])
+      .or_else(move |_| {
+        parse::ws(parse::char('[').info("to begin subscript"))
+          .and_then(|_| parse::expression())
+          .and_then(|subscript| {
+            parse::ws(parse::char(']').info("to end subscript"))
+              .map(|_| Expression::Subscript(Box::new(expression), Box::new(subscript)))
+          })
+      })
+      .or_else(move |_| {
+        Parser::pure(())
+          .and_then(|_| parse::ws(parse::char('(').info("to begin argument list")))
+          .and_then(|_| {
+            parse::sepby(
+              parse::assignment_expression(),
+              parse::ws(parse::char(',').info("to continue argument list")),
+            )
+          })
+          .and_then(|arguments| {
+            parse::ws(parse::char(')').info("to end argument list"))
+              .map(|_| Expression::FunctionCall(Box::new(expression1), arguments))
+          })
+      })
+      .and_then(|expression| postfix(expression))
+      .or_else(move |_| Parser::pure(expression2.clone()))
+  }
+
+  parse::primary_expression().and_then(|expression| postfix(expression))
+}
+
+fn primary_expression() -> Parser<Expression> {
+  // TODO cases missing <floating-constant> and <enumeration-constant>
+  Parser::expected(vec![])
+    .or_else(|_| parse::identifier().map(|identifier| Expression::Identifier(identifier)))
+    .or_else(|_| parse::integer_constant())
+    .or_else(|_| parse::character_constant())
+    .or_else(|_| parse::string_literal())
     .or_else(|_| {
       Parser::pure(())
         .and_then(|_| parse::ws(parse::char('(').info("to begin expression")))
-        .and_then(|_| parse::expression()) // TODO does not obey grammar
+        .and_then(|_| parse::expression())
         .and_then(|expression| {
           parse::ws(parse::char(')').info("to end expression")).map(|_| expression)
         })
-    })
-    // TODO does not obey grammar
-    .or_else(|_| parse::integer_constant())
-    // TODO does not obey grammar
-    .or_else(|_| parse::character_constant())
-    // TODO does not obey grammar
-    .or_else(|_| parse::string_literal())
-    // TODO does not obey grammar
-    .or_else(|_| parse::identifier().map(|identifier| Expression::Identifier(identifier)))
-    // TODO does not obey grammar
-    .and_then(|expression| {
-      let expression1 = expression.clone();
-      Parser::expected(vec![])
-        .or_else(|_| {
-          Parser::pure(())
-            .and_then(|_| parse::ws(parse::char('(').info("to begin argument list")))
-            .and_then(|_| {
-              parse::sepby(
-                parse::expression(),
-                parse::ws(parse::char(',').info("to continue argument list")),
-              )
-            })
-            .and_then(|arguments| {
-              parse::ws(parse::char(')').info("to end argument list"))
-                .map(|_| Expression::FunctionCall(Box::new(expression1), arguments))
-            })
-        })
-        .or_else(|_| Parser::pure(expression))
     })
 }
 

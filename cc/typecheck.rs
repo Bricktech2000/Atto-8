@@ -666,10 +666,8 @@ fn expression(
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression) {
   match expression.clone() {
-    // Expression::AddressOf(expression) => match expression.clone() {
-    //   typecheck::address_of_expression(*expression, state, errors)
-    // },
-    //
+    Expression::AddressOf(_) => todo!(),
+
     Expression::Dereference(expression) => {
       let (r#type, expression) = typecheck::expression(*expression, state, errors);
 
@@ -677,9 +675,9 @@ fn expression(
         Type::Pointer(r#type) => (
           *r#type.clone(),
           match r#type.range() {
-            Range::U0 | Range::I0 => TypedExpression::N0Dereference(Box::new(expression)),
-            Range::U1 | Range::I1 => TypedExpression::N1Dereference(Box::new(expression)),
-            Range::U8 | Range::I8 => TypedExpression::N8Dereference(Box::new(expression)),
+            Range::U0 | Range::I0 => TypedExpression::N0DereferenceN8(Box::new(expression)),
+            Range::U1 | Range::I1 => TypedExpression::N1DereferenceN8(Box::new(expression)),
+            Range::U8 | Range::I8 => TypedExpression::N8DereferenceN8(Box::new(expression)),
             _ => todo!(),
           },
         ),
@@ -868,34 +866,20 @@ fn expression(
       )
     }
 
-    //   Expression::LogicalAnd(expression1, expression2) => {
-    //     typecheck::logical_and_expression(*expression1, *expression2, state, errors)
-    //   }
-    //
-    //   Expression::LogicalOr(expression1, expression2) => {
-    //     typecheck::logical_or_expression(*expression1, *expression2, state, errors)
-    //   }
-    //
-    //   Expression::BitwiseAnd(expression1, expression2) => {
-    //     typecheck::bitwise_and_expression(*expression1, *expression2, state, errors)
-    //   }
-    //
-    //   Expression::BitwiseInclusiveOr(expression1, expression2) => {
-    //     typecheck::bitwise_inclusive_or_expression(*expression1, *expression2, state, errors)
-    //   }
-    //
-    //   Expression::BitwiseExclusiveOr(expression1, expression2) => {
-    //     typecheck::bitwise_exclusive_or_expression(*expression1, *expression2, state, errors)
-    //   }
-    //
-    //   Expression::LeftShift(expression1, expression2) => {
-    //     typecheck::left_shift_expression(*expression1, *expression2, state, errors)
-    //   }
-    //
-    //   Expression::RightShift(expression1, expression2) => {
-    //     typecheck::right_shift_expression(*expression1, *expression2, state, errors)
-    //   }
-    //
+    Expression::LogicalAnd(_, _) => todo!(),
+
+    Expression::LogicalOr(_, _) => todo!(),
+
+    Expression::BitwiseAnd(_, _) => todo!(),
+
+    Expression::BitwiseInclusiveOr(_, _) => todo!(),
+
+    Expression::BitwiseExclusiveOr(_, _) => todo!(),
+
+    Expression::LeftShift(_, _) => todo!(),
+
+    Expression::RightShift(_, _) => todo!(),
+
     Expression::EqualTo(expression1, expression2) => {
       let promoted1 = integer_promotions(*expression1, state, errors);
       let promoted2 = integer_promotions(*expression2, state, errors);
@@ -966,10 +950,37 @@ fn expression(
       errors,
     ),
 
-    //   Expression::Conditional(expression1, expression2, expression3) => {
-    //     typecheck::conditional_expression(*expression1, *expression2, *expression3, state, errors)
-    //   }
-    //
+    Expression::Conditional(_, _, _) => todo!(),
+
+    Expression::Comma(expression1, expression2) => {
+      let (type1, expression1) = typecheck::expression(
+        Expression::Cast(Type::Void, Box::new(*expression1)),
+        state,
+        errors,
+      );
+      let (type2, expression2) = typecheck::expression(*expression2, state, errors);
+
+      if type1 != Type::Void {
+        panic!("Expected comma expression 1 to have type `void`");
+      }
+
+      (
+        type2.clone(),
+        match type2.range() {
+          Range::U0 | Range::I0 => {
+            TypedExpression::N0SecondN0N0(Box::new(expression1), Box::new(expression2))
+          }
+          Range::U1 | Range::I1 => {
+            TypedExpression::N1SecondN0N1(Box::new(expression1), Box::new(expression2))
+          }
+          Range::U8 | Range::I8 => {
+            TypedExpression::N8SecondN0N8(Box::new(expression1), Box::new(expression2))
+          }
+          _ => todo!(),
+        },
+      )
+    }
+
     Expression::Cast(r#type, expression) => {
       typecheck::cast_expression(r#type, *expression, state, errors)
     }
@@ -985,11 +996,18 @@ fn expression(
       typecheck::identifier_expression(identifier, state, errors)
     }
 
+    Expression::Subscript(expression1, expression2) => typecheck::expression(
+      Expression::Dereference(Box::new(Expression::Addition(
+        Box::new(*expression1),
+        Box::new(*expression2),
+      ))),
+      state,
+      errors,
+    ),
+
     Expression::FunctionCall(designator, arguments) => {
       typecheck::function_call_expression(*designator, arguments, state, errors)
     }
-
-    _ => todo!(), // TODO
   }
 }
 
@@ -1352,6 +1370,27 @@ fn cast_expression(
   (
     r#type.clone(),
     match (type1.clone(), r#type.clone()) {
+      (Type::Macro(_, _, _, _), _) => {
+        errors.extend([(
+          Pos(File("[pos]".into()), 0, 0),
+          Error(format!("Cast from macro type `{}`, to `{}`", type1, r#type)),
+        )]);
+        match r#type.range() {
+          Range::U0 | Range::I0 => TypedExpression::N0Constant(()),
+          Range::U1 | Range::I1 => TypedExpression::N1Constant(false),
+          Range::U8 | Range::I8 => TypedExpression::N8Constant(0x00),
+          _ => todo!(),
+        }
+      }
+
+      (_, Type::Macro(_, _, _, _)) => {
+        errors.extend([(
+          Pos(File("[pos]".into()), 0, 0),
+          Error(format!("Cast to macro type `{}`, from `{}`", r#type, type1)),
+        )]);
+        TypedExpression::N0Constant(())
+      }
+
       (type1, type2) if type1 == type2 => expression1,
       (type1, type2) if type1.width() == type2.width() => expression1,
 

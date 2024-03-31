@@ -1,6 +1,6 @@
 // clang-format off
 
-// syntax errors
+// syntactic errors
 
 // #error test error in file __FILE__ on line __LINE__
 // #foobar
