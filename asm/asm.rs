@@ -27,8 +27,8 @@ fn main() {
       std::fs::write::<&String, [u8; common::MEM_SIZE]>(
         memory_image_file,
         memory_image
-          .iter()
-          .map(|(_, b)| *b)
+          .into_iter()
+          .map(|(_, b)| b)
           .collect::<Vec<u8>>()
           .try_into()
           .unwrap(),
@@ -129,14 +129,14 @@ fn mnemonize(
       let mut mnemonics = vec![];
       for (col, char) in line.chars().enumerate() {
         if char.is_whitespace() {
-          mnemonics.push((pos.clone(), mnemonic.clone()));
+          mnemonics.push((pos.clone(), mnemonic));
           mnemonic = "".to_string();
-          pos = Pos(pos.0.clone(), pos.1, col + 1);
+          pos = Pos(pos.0, pos.1, col + 1);
         } else {
           mnemonic.push(char);
         }
       }
-      mnemonics.push((pos.clone(), mnemonic.clone()));
+      mnemonics.push((pos, mnemonic));
       mnemonics
     })
     .filter(|(_, mnemonic)| mnemonic.len() > 0)
@@ -160,10 +160,7 @@ fn tokenize(
         match common::mnemonic_to_token(mnemonic.clone()) {
           Some(token) => token,
           None => {
-            errors.extend([(
-              pos.clone(),
-              Error(format!("Invalid mnemonic `{}`", mnemonic)),
-            )]);
+            errors.extend([(pos, Error(format!("Invalid mnemonic `{}`", mnemonic)))]);
             Token::Nop
           }
         },
@@ -192,7 +189,7 @@ fn assemble(
           .entry(r#macro.clone())
           .and_modify(|_| {
             errors.extend([(
-              pos.clone(),
+              pos,
               Error(format!("Duplicate macro definition `{}`", r#macro)),
             )]);
           })
@@ -315,11 +312,9 @@ fn assemble(
     })
     .collect();
 
-  errors.extend(label_definitions.iter().filter_map(|(label, pos)| {
-    (!label_references.contains(label)).then_some((
-      pos.clone(),
-      Error(format!("Unused label definition `{}`", label)),
-    ))
+  errors.extend(label_definitions.into_iter().filter_map(|(label, pos)| {
+    (!label_references.contains(&label))
+      .then_some((pos, Error(format!("Unused label definition `{}`", label))))
   }));
 
   // turn assembly tokens into roots, an intermediate representation for optimization. roots correspond to valid instructions
@@ -474,7 +469,7 @@ fn assemble(
             unevaluated_nodes.insert(location_counter as u8, (pos.clone(), node1.clone()));
             unevaluated_nodes.insert(
               (location_counter + allocation_size!(&node1)) as u8,
-              (pos.clone(), node2.clone()),
+              (pos.clone(), node2),
             );
             instructions
           }
@@ -593,47 +588,39 @@ fn assemble(
       .collect();
 
     // poke into `instructions` and evaluate `@data`s now that all labels have been resolved
-    for (location_counter, (pos, node)) in unevaluated_datas.iter() {
-      let value = match resolve_node_value(&node, &label_definitions) {
-        Ok(value) => value,
-        Err(label) => {
-          bruteforce_errors.extend([(
-            pos.clone(),
-            Error(format!("Reference to undefined label `{}`", label)),
-          )]);
-          0x00
-        }
+    for (location_counter, (pos, node)) in unevaluated_datas.into_iter() {
+      match resolve_node_value(&node, &label_definitions) {
+        Ok(value) => instructions[location_counter as usize] = (pos, Err(value)),
+        Err(label) => bruteforce_errors.extend([(
+          pos,
+          Error(format!("Reference to undefined label `{}`", label)),
+        )]),
       };
-
-      instructions[*location_counter as usize] = (pos.clone(), Err(value));
     }
 
     // poke into `instructions` and evaluate the nodes that couldn't be evaluated before
     'poke: {
-      for (location_counter, (pos, node)) in unevaluated_nodes.iter() {
-        let value = match resolve_node_value(&node, &label_definitions) {
-          Ok(value) => value,
-          Err(label) => {
-            bruteforce_errors.extend([(
-              pos.clone(),
-              Error(format!("Reference to undefined label `{}`", label)),
-            )]);
-            0x00
+      for (location_counter, (pos, node)) in unevaluated_nodes.into_iter() {
+        match resolve_node_value(&node, &label_definitions) {
+          Ok(value) => {
+            // if the evaluated node doesn't fit in the allocated memory, note down the right amount of
+            // memory to allocate on the next iteration of `'bruteforce` and try again
+
+            let push_instructions = build_push_instruction(value, &pos);
+            if push_instructions.len() > allocation_size!(&node) {
+              allocation_sizes.insert(node, push_instructions.len());
+              break 'poke;
+            }
+
+            for (index, (pos, instruction)) in push_instructions.into_iter().enumerate() {
+              instructions[location_counter as usize + index] = (pos, Ok(instruction));
+            }
           }
+          Err(label) => bruteforce_errors.extend([(
+            pos,
+            Error(format!("Reference to undefined label `{}`", label)),
+          )]),
         };
-
-        // if the evaluated node doesn't fit in the allocated memory, note down the right amount of
-        // memory to allocate on the next iteration of `'bruteforce` and try again
-
-        let push_instructions = build_push_instruction(value, &pos);
-        if push_instructions.len() > allocation_size!(&node) {
-          allocation_sizes.insert(node.clone(), push_instructions.len());
-          break 'poke;
-        }
-
-        for (index, (pos, instruction)) in push_instructions.into_iter().enumerate() {
-          instructions[*location_counter as usize + index] = (pos, Ok(instruction));
-        }
       }
 
       // all unevaluated nodes have been evaluated, break out of the bruteforce loop
@@ -704,7 +691,8 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
         match replacer(
           window
             .iter()
-            .map(|(_, root)| root.clone())
+            .cloned()
+            .map(|(_, root)| root)
             .collect::<Vec<Root>>()
             .as_slice()
             .try_into()
