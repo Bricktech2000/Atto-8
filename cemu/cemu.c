@@ -154,7 +154,7 @@ enum TickTrap mc_tick(void) {
         } break;
 
         case 0x6: { // not
-          uint8_t res = !sp_pop();
+          uint8_t res = ~sp_pop();
           sp_push(res);
           mc.mp.cf = res == 0x00;
         } break;
