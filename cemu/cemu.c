@@ -20,7 +20,7 @@ enum TickTrap {
   DEBUG_REQUEST,
 };
 
-int peekchar() {
+int peekchar(void) {
   int c = getchar();
   ungetc(c, stdin);
   return c;
@@ -42,16 +42,16 @@ void mem_write(uint8_t address, uint8_t value) {
 
 void sp_push(uint8_t value) { mem_write(--mc.mp.sp, value); }
 
-uint8_t sp_pop() { return mem_read(mc.mp.sp++); }
+uint8_t sp_pop(void) { return mem_read(mc.mp.sp++); }
 
-void mc_reset() {
+void mc_reset(void) {
   mc.mp.ip = 0x00;
   mc.mp.sp = 0x00;
   mc.mp.cf = false;
   ungetc(mc.mem[STDIO_BUFFER], stdin);
 }
 
-enum TickTrap mc_tick() {
+enum TickTrap mc_tick(void) {
   uint8_t opcode = mem_read(mc.mp.ip++);
 
   switch ((opcode & B10000000) >> 7) {
@@ -93,8 +93,8 @@ enum TickTrap mc_tick() {
       case 0x6: { // rot
         uint8_t addr = mc.mp.sp + DECODE_SIZE(opcode);
         uint8_t top = sp_pop();
-        uint16_t temp = (uint16_t)mem_read(addr) << top % 8;
-        uint8_t res = (uint8_t)(temp | temp >> 8);
+        uint16_t shifted = (uint16_t)mem_read(addr) << top % 8;
+        uint8_t res = (uint8_t)(shifted | shifted >> 8);
         mem_write(addr, res);
         mc.mp.cf = false;
       } break;

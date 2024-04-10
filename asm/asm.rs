@@ -157,13 +157,10 @@ fn tokenize(
     .map(|(pos, mnemonic)| {
       (
         pos.clone(),
-        match common::mnemonic_to_token(mnemonic.clone()) {
-          Some(token) => token,
-          None => {
-            errors.extend([(pos, Error(format!("Invalid mnemonic `{}`", mnemonic)))]);
-            Token::Nop
-          }
-        },
+        common::mnemonic_to_token(mnemonic.clone()).unwrap_or_else(|| {
+          errors.extend([(pos, Error(format!("Invalid mnemonic `{}`", mnemonic)))]);
+          Token::Nop
+        }),
       )
     })
     .collect();
@@ -244,16 +241,13 @@ fn assemble(
             return vec![];
           }
 
-          let tokens = match macro_definitions.get(&r#macro) {
-            Some(tokens) => tokens.clone(),
-            None => {
-              errors.extend([(
-                pos.clone(),
-                Error(format!("Reference to undefined macro `{}`", r#macro)),
-              )]);
-              vec![]
-            }
-          };
+          let tokens = macro_definitions.get(&r#macro).cloned().unwrap_or_else(|| {
+            errors.extend([(
+              pos.clone(),
+              Error(format!("Reference to undefined macro `{}`", r#macro)),
+            )]);
+            vec![]
+          });
 
           let tokens = tokens
             .into_iter()
@@ -1721,9 +1715,9 @@ fn resolve_node_value(node: &Node, label_definitions: &HashMap<Label, u8>) -> Re
     Node::Sub(node1, node2) => resolve_node_value(node2, label_definitions)?
       .wrapping_sub(resolve_node_value(node1, label_definitions)?),
     Node::Rot(node1, node2) => {
-      let a = resolve_node_value(node1, label_definitions)? as u16;
-      let b = resolve_node_value(node2, label_definitions)? as u16;
-      let shifted = (b as u16) << a % 8;
+      let top = resolve_node_value(node1, label_definitions)? as u16;
+      let other = resolve_node_value(node2, label_definitions)? as u16;
+      let shifted = (other as u16) << top % 8;
       (shifted & 0xFF) as u8 | (shifted >> 8) as u8
     }
     Node::Orr(node1, node2) => {
@@ -1735,7 +1729,7 @@ fn resolve_node_value(node: &Node, label_definitions: &HashMap<Label, u8>) -> Re
     Node::Xor(node1, node2) => {
       resolve_node_value(node2, label_definitions)? ^ resolve_node_value(node1, label_definitions)?
     }
-    Node::Xnd(_node1, _node2) => 0,
+    Node::Xnd(_node1, _node2) => 0x00,
     Node::Shl(node) => resolve_node_value(node, label_definitions)?.wrapping_shl(1),
     Node::Shr(node) => resolve_node_value(node, label_definitions)?.wrapping_shr(1),
     Node::Not(node) => !resolve_node_value(node, label_definitions)?,

@@ -37,7 +37,7 @@ void eeprom_write(uint16_t addr, uint8_t data) {
   delay(12);
 }
 
-void setup() {
+void setup(void) {
   digitalWrite(RCLK_PIN, LOW);
   digitalWrite(N_WE_PIN, HIGH);
 
@@ -54,7 +54,7 @@ void setup() {
 
 uint16_t addr = 0x0000;
 
-void loop() {
+void loop(void) {
   digitalWrite(LED_BUILTIN, addr == 0x0000);
 
   while (Serial.available() < 2)

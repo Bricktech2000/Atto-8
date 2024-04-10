@@ -169,8 +169,8 @@ impl Tickable for Microcomputer {
       Instruction::Rot(Size(size)) => {
         let addr = mp.sp.wrapping_add(size);
         let top = sp_pop!();
-        let temp = (mem_read!(addr) as u16) << top % 8;
-        let res = (temp & 0xFF) as u8 | (temp >> 8) as u8;
+        let shifted = (mem_read!(addr) as u16) << top % 8;
+        let res = (shifted & 0xFF) as u8 | (shifted >> 8) as u8;
         mem_write!(addr, res);
         mp.cf = false;
         Ok((18 + size as u128) * (top as u128 + 1))
