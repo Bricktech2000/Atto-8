@@ -34,7 +34,7 @@ main!
       !back_buffer !bit_addr !store_bit
     # loop until `x == BUFFER_LEN << 3`, which is the number of bits aka
     # pixels in a buffer of length `BUFFER_LEN`
-    ld0 !buffer_len x03 rot @const !eq
+    ld0 !buffer.len x03 rot @const !eq
     :for_x !bcc !u8.pop
 
     # copy back buffer to display buffer and print newline
@@ -46,11 +46,13 @@ main!
 
   !display_buffer @org !configuration
 
-random! @65 @A5 @D3 @3D @46 @DA @7D @06 @D2 @8C @CB @D0 @52 @3A @4B @A6 @42 @0C @3E @FA @CF @A3 @9A @20 @66 @BA @B4 @9A @5F @3A @40 @BE
-center! !buffer_len shr !pad @80
-right! !buffer_len dec !pad @01
+# identical to `rule 110 fast.asm`
+random! !random_noise
+center! !buffer.len shr !pad @80
+right! !buffer.len dec !pad @01
 left! @80
 
+# identical to `rule 110 fast.asm`
 # rule! x1A configuration! !random # rule 26
 # rule! x1E configuration! !center # rule 30
 # rule! x39 configuration! !center # rule 57
@@ -68,6 +70,6 @@ rule! x6E configuration! !right # rule 110
 # rule! xA6 configuration! !random # rule 166
 # rule! xE1 configuration! !random # rule 225
 
-buffer_len! !display_buffer.len shr shr @const # short
-# buffer_len! !display_buffer.len shr @const # medium
-# buffer_len! !display_buffer.len dec @const # long
+buffer.len! !display_buffer.len shr shr @const # short
+# buffer.len! !display_buffer.len shr @const # medium
+# buffer.len! !display_buffer.len dec @const # long

@@ -73,6 +73,12 @@ checkerboard!
   @CC @CC @CC @CC
   @33 @33 @33 @33
 
+random_noise!
+  @65 @A5 @D3 @3D @46 @DA @7D @06
+  @D2 @8C @CB @D0 @52 @3A @4B @A6
+  @42 @0C @3E @FA @CF @A3 @9A @20
+  @66 @BA @B4 @9A @5F @3A @40 @BE
+
 
 planet_earth!
   @00 @00 @07 @E0 @1F @F8 @3F @FC

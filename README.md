@@ -38,6 +38,7 @@ python3 test.py fib.asm asm emu
 python3 test.py fib.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py fizzbuzz.asm asm emu
 python3 test.py rule\ 110.asm asm emu
+python3 test.py rule\ 110\ fast.asm asm emu
 python3 test.py collatz.asm asm emu
 python3 test.py collatz.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py reverse.asm asm emu
