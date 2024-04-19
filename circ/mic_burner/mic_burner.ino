@@ -7,7 +7,7 @@
 // rightmost EEPROM is selected when the switch is down
 
 /* clang-format off
- * CLK_PINs -> ############74HC595############    ############74HC595############    ############74HC595############
+ * CLK_PINs -> ############74HC595############ -- ############74HC595############ -- ############74HC595############
  *  SER_PIN -> Q_A Q_B Q_C Q_D Q_E Q_F Q_G Q_H -> Q_A Q_B Q_C Q_D Q_E Q_F Q_G Q_H -> Q_A Q_B Q_C Q_D Q_E Q_F Q_G Q_H
  *              V   V   V   V   V   V   V   V      V   V   V   V   V   V   V   V      V   V   V   V   V   V   V   V
  *                         A6  A12 A3  A2  A1     A10 A4  A5  A9  A8  A11 A0  A7     IO0 IO1 IO2 IO7 IO6 IO5 IO4 IO3

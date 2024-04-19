@@ -118,7 +118,7 @@ sort.def!
   !rt2
 
 # `free` solely sets the `is_free` bit of the corresponding header
-# `malloc` searches linearly from `HEAP_START` and coalesces free blocks as it goes
+# `malloc` performs first-fit search from `HEAP_START` and coalesces free blocks as it goes
 #
 # the following must be supplied by the user:
 # -  `HEAP_START` -- start of heap memory

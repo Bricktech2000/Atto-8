@@ -8,6 +8,10 @@ The circuit designs are a pair of [Logisim Evolution](https://github.com/logisim
 
 For best results, run with `stty -icanon -echo -nl` to disable terminal input buffering and echoing.
 
+## `MIC` Wiring
+
+To achieve neater wiring, the address and data pin subscripts from the datasheet of the microcode EEPROMs are not respected, and pins corresponding to active-low signals are assumed to be inverted. To bridge the gap between a microcode image and the hardware, [/circ/mic_burner/](mic_burner/) and [/circ/impl/chip.circ](impl/chip.circ) shuffle around and invert bits as necessary.
+
 ## Conventions
 
 Tunnels whose label begins with an `N_` are _negated_ and tunnels whose label begins with a `C_` are _clocked_. Expressed in pseudocode,
