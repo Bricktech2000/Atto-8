@@ -4,6 +4,8 @@
 
 The Atto-8 microprocessor is a minimalist stack-based processor implementing the Atto-8 microarchitecture as specified in [/spec/microarchitecture.md](../spec/microarchitecture.md). It is designed to keep logic IC count to a minimum while still being a complete implementation of the Atto-8 microarchitecture, only consisting of one full adder, one NAND gate and a few latches. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex processors.
 
+<!-- DATA_IP DATA_SP DATA_CF DATA_IL DATA_AL DATA_XL DATA_YL DATA_ZL MEM_DATA DATA_MEM CLR_SC SET_CIN IP_DATA SP_DATA SUM_DATA NAND_DATA -->
+
 ![Atto-8 Microprocessor Diagram](../misc/assets/microprocessor.png)
 
 ## Components
