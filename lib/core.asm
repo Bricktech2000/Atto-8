@@ -39,7 +39,7 @@ rt1! st0 !ret
 rt2! st1 pop !ret
 rt3! st2 pop pop !ret
 
-dbg! @BB # unofficial `0xBB` treated as debug request
+dbg! @BB # unofficial opcode `0xBB` is treated as a debug request
 here! here. .here
 nop! nop @dyn
 hlt! !here !jmp

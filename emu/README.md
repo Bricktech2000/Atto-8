@@ -33,7 +33,7 @@ The Atto-8 microcomputer is equipped with a pair of D-pad controllers. The emula
 
 ## Debug Mode
 
-Unofficial instruction `0xBB` is treated as a debug request. Debug mode can be entered forcefully by hitting `Escape` during emulation.
+Unofficial opcode `0xBB` is treated as a debug request. Debug mode can be entered forcefully by hitting `Escape` during emulation.
 
 In debug mode, the emulator will print the current machine state and wait for a command to be sent to `stdin`. The following commands are supported:
 

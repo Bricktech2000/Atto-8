@@ -200,7 +200,7 @@ impl Tickable for Microcomputer {
     mp.pull = match active_count {
       0 => Ok(Signal::Active),
       1 => Ok(Signal::Inactive),
-      _ => Err(TickTrap::BusFault),
+      _ => Err(TickTrap::BusContention),
     }?;
 
     // ones
@@ -255,7 +255,7 @@ impl Tickable for Microcomputer {
         mp.cf = match (mp.ctrl.sum_data, mp.ctrl.nand_data) {
           (Signal::Active, Signal::Inactive) => Ok(mp.cout),
           (Signal::Inactive, Signal::Active) => Ok(mp.zero),
-          _ => Err(TickTrap::BusFault),
+          _ => Err(TickTrap::BusContention),
         }?;
       }
     }

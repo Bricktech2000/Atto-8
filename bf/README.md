@@ -36,7 +36,7 @@ The architecture assumes memory of the shape `[u8; 0x100]`, from which the `*` o
 | `]`         | Loop End   | `if (*HP != 0x00) matching('[') -> IP;` | `b']'`  |
 | (EOF)       | Halt       | `while (1);`                            | `b'\0'` |
 
-Unofficial opcode `b'#'` is mapped to unofficial control word `0xFFFD` for debug requests.
+Unofficial opcode `b'#'` is mapped to unofficial control word `0xFFFC` for debug requests.
 
 ## Initial State
 

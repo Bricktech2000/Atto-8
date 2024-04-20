@@ -6,7 +6,7 @@ _Minimal C99 emulator for Atto-8 microcomputer_
 
 The minimal emulator loads a memory image file from `argv[1]` which must be exactly `0x100` bytes in size. Emulation is performed at the instruction level; that is, the emulator is built to test binaries, not to mirror the hardware. The minimal emulator partly adheres to the Atto-8 microcomputer specification as defined in [/spec/microcomputer.md](../spec/microcomputer.md).
 
-The minimal emulator dies upon encountering an illegal opcode or the unofficial instruction `0xBB`, reserved for debug requests.
+The minimal emulator dies upon encountering an illegal opcode or a debug request, represented by unofficial opcode `0xBB`.
 
 For best results, run with `stty -icanon -echo -nl` to disable terminal input buffering and echoing.
 
