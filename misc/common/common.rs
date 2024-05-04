@@ -389,14 +389,16 @@ const DEBUG_REQUEST_SENTINEL: u16 = 0xFFFC;
 
 impl From<u16> for ControlWord {
   fn from(control_word: u16) -> Self {
-    let mut slice = [0x00; 16];
-    for i in 0..slice.len() {
-      slice[i] = (control_word >> i) as u8 & 1;
-    }
-    slice.reverse();
-    let control_word = slice;
+    let control_word = {
+      let mut slice = [0x00; 16];
+      for i in 0..slice.len() {
+        slice[i] = (control_word >> i) as u8 & 1;
+      }
+      slice.reverse();
+      slice
+    };
 
-    // // causes a dynamic memory allocation
+    // // dynamic allocation doesn't get optimized out
     // let control_word = (0..16)
     //   .rev()
     //   .map(|i| (control_word >> i) as u8 & 1)

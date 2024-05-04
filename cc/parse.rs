@@ -21,9 +21,9 @@ fn b<T, U, V, F: FnOnce(T) -> U + Clone + 'static, G: FnOnce(U) -> V + Clone + '
 pub struct Parser<T: Clone + 'static>(pub Rc<dyn Fn(&str) -> ParseResult<T>>);
 pub type Expecteds = Vec<String>;
 pub enum ParseResult<T> {
-  Ok((T, String)),                        // parser succeeded without ever failing
-  Err((Expecteds, String)),               // all parsers failed
-  Both((T, String), (Expecteds, String)), // parser succeeded but failed with longer match
+  Ok((T, String)),                        // parser succeeded without ever backtracking
+  Err((Expecteds, String)),               // parser failed
+  Both((T, String), (Expecteds, String)), // parser succeeded after backtracking from failure
 }
 
 fn merge_expecteds(

@@ -40,7 +40,7 @@ main!
       !char.ld0 !'[' !eq
       ![_sentinel ld2 sta x00 ad2 @dyn
 
-      # if `char == ']'`, resolve jump targets to and from corresponding `']'`
+      # if `char == ']'`, resolve jump targets to and from corresponding `'['`
       !char.ld0 !']' !eq :'\0' !bcc
       # find address of corresponding `![_sentinel`. since we resolve jump targets as
       # we go along, the "corresponding `![_sentinel`" is simply the latest `![_sentinel`

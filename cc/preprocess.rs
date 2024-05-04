@@ -43,8 +43,7 @@ pub fn preprocess(
   });
 
   // adjacent string literals are concatenated later by the parser
-  let mut preprocessed = "".to_string();
-  let mut source = source
+  let source = source
     .replace("\\\n", "") // line continuation
     .split("\n")
     .map(|line| line.split("//").next().unwrap_or(line)) // line comments
@@ -55,66 +54,53 @@ pub fn preprocess(
     .map(|item| item.to_owned() + " ")
     .collect::<String>();
 
+  let mut preprocessed = "".to_string();
+  let mut input = source;
+
   let preprocessed = loop {
-    (preprocessed, source) = match preprocessor.0(&source).into_result() {
-      Ok((Directive::Include(filename), input)) => (
-        preprocessed
-          + &preprocess_include_directive(
-            &file,
-            filename,
-            defines,
-            errors,
-            Pos(File("[preprocess]".into()), 0, 0),
-          ),
-        input,
-      ),
+    // `Parser::parse` but without exhaustiveness requirement
+    (preprocessed, input) = match preprocessor.0(&input).into_result() {
+      Ok((r#match, input)) => {
+        let pos = Pos(File("[preprocess]".into()), 0, 0);
+        let rest = match r#match {
+          Directive::Include(filename) => {
+            preprocess_include_directive(&file, filename, defines, errors, pos)
+          }
 
-      Ok((Directive::Define(identifier, replacement_list), input)) => {
-        defines.insert(identifier.clone(), replacement_list.clone());
-        (preprocessed, input)
-      }
+          Directive::Define(identifier, replacement_list) => {
+            defines.insert(identifier, replacement_list);
+            "".to_string()
+          }
 
-      Ok((Directive::Undef(identifier), input)) => {
-        defines.remove(&identifier);
-        (preprocessed, input)
-      }
+          Directive::Undef(identifier) => {
+            defines.remove(&identifier);
+            "".to_string()
+          }
 
-      Ok((Directive::Pragma(arguments), input)) => (
-        preprocessed
-          + &preprocess_pragma_directive(
-            arguments,
-            defines,
-            errors,
-            Pos(File("[preprocess]".into()), 0, 0),
-          )
-          + "\n",
-        input,
-      ),
+          // silently ignore unsupported pragmas as per standard
+          Directive::Pragma(_arguments) => "".to_string(),
 
-      Ok((Directive::Error(message), input)) => (
-        preprocessed
-          + &preprocess_error_directive(
-            message,
-            defines,
-            errors,
-            Pos(File("[preprocess]".into()), 0, 0),
-          )
-          + "\n",
-        input,
-      ),
+          Directive::Error(message) => {
+            let message = preprocess_text_line_directive(message, defines, errors);
+            errors.extend([(pos, Error(format!("#error {}", message)))]);
+            "".to_string()
+          }
 
-      Ok((Directive::Null, input)) => (preprocessed, input),
+          Directive::Null => "".to_string(),
 
-      Ok((Directive::TextLine(text_line), input)) => (
-        preprocessed + &preprocess_text_line_directive(text_line, defines, errors) + "\n",
-        input,
-      ),
+          Directive::TextLine(text_line) => {
+            preprocess_text_line_directive(text_line, defines, errors)
+          }
 
-      Ok((Directive::EOF, input)) => {
-        break match &input[..] {
-          "" => preprocessed,
-          _ => panic!("Input not fully parsed"),
+          Directive::EOF => {
+            match &input[..] {
+              "" => break preprocessed,
+              _ => panic!("Input not fully parsed"),
+            };
+          }
         };
+
+        (preprocessed + &rest + "\n", input)
       }
 
       Err(expecteds) => {
@@ -122,12 +108,12 @@ pub fn preprocess(
           Pos(File("[preprocess]".into()), 0, 0),
           Error(parse::format_expecteds(expecteds)),
         )]);
-        (preprocessed, "".to_string())
+        break preprocessed;
       }
-    }
+    };
   };
 
-  defines.insert(DUNDER_FILE.to_string(), last_file.clone());
+  defines.insert(DUNDER_FILE.to_string(), last_file);
 
   preprocessed
 }
@@ -139,47 +125,23 @@ fn preprocess_text_line_directive(
 ) -> String {
   // resolve defines recursively in text line and return preprocessed text line
 
-  let mut acc = "".to_string();
-
-  for line_item in text_line.iter() {
-    acc += &match line_item {
-      Ok(identifier) => match defines.remove(identifier) {
-        Some(text_line) => {
-          // prevents infinite recursion
-          let preprocessed = preprocess_text_line_directive(text_line.clone(), defines, errors);
-          defines.insert(identifier.clone(), text_line);
-          preprocessed
-        }
-        None => identifier.clone(),
-      },
-      Err(char) => char.to_string(),
-    }
-  }
-
-  acc
-}
-
-fn preprocess_pragma_directive(
-  _arguments: TextLine,
-  _defines: &mut HashMap<String, TextLine>,
-  _errors: &mut impl Extend<(Pos, Error)>,
-  _pos: Pos,
-) -> String {
-  // silently ignore unsupported pragmas as per standard
-  "".to_string()
-}
-
-fn preprocess_error_directive(
-  message: TextLine,
-  defines: &mut HashMap<String, TextLine>,
-  errors: &mut impl Extend<(Pos, Error)>,
-  pos: Pos,
-) -> String {
-  let message = preprocess_text_line_directive(message.clone(), defines, errors);
-
-  errors.extend([(pos.clone(), Error(format!("#error {}", message)))]);
-
-  "".to_string()
+  text_line
+    .into_iter()
+    .map(|line_item| {
+      match line_item {
+        Ok(identifier) => match defines.remove(&identifier) {
+          Some(text_line) => {
+            // prevents infinite recursion
+            let preprocessed = preprocess_text_line_directive(text_line.clone(), defines, errors);
+            defines.insert(identifier, text_line);
+            preprocessed
+          }
+          None => identifier,
+        },
+        Err(char) => char.to_string(),
+      }
+    })
+    .collect()
 }
 
 fn preprocess_include_directive(

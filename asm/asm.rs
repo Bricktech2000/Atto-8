@@ -377,7 +377,7 @@ fn assemble(
 
   // assemble roots into instructions by computing the value of every node and resolving labels
 
-  fn build_push_instruction(value: u8, pos: &Pos) -> Vec<(Pos, Instruction)> {
+  fn codegen_push_immediate(value: u8, pos: &Pos) -> Vec<(Pos, Instruction)> {
     // the `Psh` instruction allows us to push arbitrary 7-bit immediates onto the stack.
     // we then optionally use `Neg` and `Inc` to get the ability to push arbitrary 8-bit
     // values. we also use `Phn` as a shorthand when possible.
@@ -486,7 +486,7 @@ fn assemble(
           }
 
           Root::Node(node) => match resolve_node_value(&node, &label_definitions) {
-            Ok(value) => build_push_instruction(value, &pos)
+            Ok(value) => codegen_push_immediate(value, &pos)
               .into_iter()
               .map(|(pos, instruction)| (pos, Ok(instruction)))
               .collect::<Vec<_>>(),
@@ -600,7 +600,7 @@ fn assemble(
             // if the evaluated node doesn't fit in the allocated memory, note down the right amount of
             // memory to allocate on the next iteration of `'bruteforce` and try again
 
-            let push_instructions = build_push_instruction(value, &pos);
+            let push_instructions = codegen_push_immediate(value, &pos);
             if push_instructions.len() > allocation_size!(&node) {
               allocation_sizes.insert(node, push_instructions.len());
               break 'poke;
