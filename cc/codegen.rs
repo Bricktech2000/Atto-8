@@ -296,105 +296,69 @@ fn if_n1_statement(
     _ => (false, condition),
   };
 
+  let cf_inverted = match condition {
+    TypedExpression::N1CastN8(_) => true,
+    _ => false,
+  };
+
   match condition {
     TypedExpression::N1BitwiseComplement(expression) if negated => {
       codegen::if_n1_statement(label, *expression, if_body, else_body)
     }
 
-    TypedExpression::N1EqualToN8(expression1, expression2) => std::iter::empty()
-      .chain(precheck)
-      .chain(cf_equal_to_n8(*expression1, *expression2, 0))
-      .chain([
-        Ok(Token::LabelRef(codegen::else_label!(&label))),
-        Ok(Token::MacroRef(match negated {
-          true => link::bcs_macro!(),
-          false => link::bcc_macro!(),
-        })),
-      ])
-      .chain(codegen::statement(if_body))
-      .chain([
-        Ok(Token::LabelRef(codegen::end_label!(&label))),
-        Ok(Token::MacroRef(link::jmp_macro!())),
-        Ok(Token::LabelDef(codegen::else_label!(&label))),
-      ])
-      .chain(else_body.map(codegen::statement).unwrap_or_else(Vec::new))
-      .chain([Ok(Token::LabelDef(codegen::end_label!(&label)))])
-      .collect(),
-
-    TypedExpression::N1LessThanU8(expression1, expression2) => std::iter::empty()
-      .chain(precheck)
-      .chain(codegen::cf_less_than_u8(*expression1, *expression2, 0))
-      .chain([
-        Ok(Token::LabelRef(codegen::else_label!(&label))),
-        Ok(Token::MacroRef(match negated {
-          true => link::bcs_macro!(),
-          false => link::bcc_macro!(),
-        })),
-      ])
-      .chain(codegen::statement(if_body))
-      .chain([
-        Ok(Token::LabelRef(codegen::end_label!(&label))),
-        Ok(Token::MacroRef(link::jmp_macro!())),
-        Ok(Token::LabelDef(codegen::else_label!(&label))),
-      ])
-      .chain(else_body.map(codegen::statement).unwrap_or_else(Vec::new))
-      .chain([Ok(Token::LabelDef(codegen::end_label!(&label)))])
-      .collect(),
-
-    TypedExpression::N1LessThanI8(expression1, expression2) => std::iter::empty()
-      .chain(precheck)
-      .chain(codegen::cf_less_than_i8(*expression1, *expression2, 0))
-      .chain([
-        Ok(Token::LabelRef(codegen::else_label!(&label))),
-        Ok(Token::MacroRef(match negated {
-          true => link::bcs_macro!(),
-          false => link::bcc_macro!(),
-        })),
-      ])
-      .chain(codegen::statement(if_body))
-      .chain([
-        Ok(Token::LabelRef(codegen::end_label!(&label))),
-        Ok(Token::MacroRef(link::jmp_macro!())),
-        Ok(Token::LabelDef(codegen::else_label!(&label))),
-      ])
-      .chain(else_body.map(codegen::statement).unwrap_or_else(Vec::new))
-      .chain([Ok(Token::LabelDef(codegen::end_label!(&label)))])
-      .collect(),
-
-    TypedExpression::N1CastN8(expression) => std::iter::empty()
-      .chain(precheck)
-      .chain(codegen::n8_expression(*expression, 0))
-      .chain([
-        Ok(Token::XXX(0x01)),
-        Ok(Token::MacroRef(link::cl_macro!())),
-        Ok(Token::LabelRef(codegen::else_label!(&label))),
-        Ok(Token::MacroRef(match negated {
-          true => link::bcc_macro!(),
-          false => link::bcs_macro!(),
-        })),
-      ])
-      .chain(codegen::statement(if_body))
-      .chain([
-        Ok(Token::LabelRef(codegen::end_label!(&label))),
-        Ok(Token::MacroRef(link::jmp_macro!())),
-        Ok(Token::LabelDef(codegen::else_label!(&label))),
-      ])
-      .chain(else_body.map(codegen::statement).unwrap_or_else(Vec::new))
-      .chain([Ok(Token::LabelDef(codegen::end_label!(&label)))])
-      .collect(),
-
-    TypedExpression::N1Constant(constant) => match constant == negated {
+    TypedExpression::N1Constant(constant) => match constant ^ negated {
       true => std::iter::empty()
-        .chain(precheck)
-        .chain(else_body.map(codegen::statement).unwrap_or_else(Vec::new))
-        .collect(),
-      false => std::iter::empty()
         .chain(precheck)
         .chain(codegen::statement(if_body))
         .collect(),
+      false => std::iter::empty()
+        .chain(precheck)
+        .chain(else_body.map(codegen::statement).unwrap_or_else(Vec::new))
+        .collect(),
     },
 
-    _ => unreachable!(),
+    _ => std::iter::empty()
+      .chain(precheck)
+      .chain(match condition {
+        TypedExpression::N1EqualToN8(expression1, expression2) => {
+          codegen::cf_equal_to_n8(*expression1, *expression2, 0)
+        }
+        TypedExpression::N1LessThanU8(expression1, expression2) => {
+          codegen::cf_less_than_u8(*expression1, *expression2, 0)
+        }
+        TypedExpression::N1LessThanI8(expression1, expression2) => {
+          codegen::cf_less_than_i8(*expression1, *expression2, 0)
+        }
+        TypedExpression::N1CastN8(expression) => std::iter::empty()
+          .chain(codegen::n8_expression(*expression, 0))
+          .chain([Ok(Token::XXX(0x01)), Ok(Token::MacroRef(link::cl_macro!()))])
+          .collect(),
+        _ => unreachable!(),
+      })
+      .chain([
+        Ok(Token::LabelRef(match else_body {
+          Some(_) => codegen::else_label!(&label),
+          None => codegen::end_label!(&label),
+        })),
+        Ok(Token::MacroRef(match negated ^ cf_inverted {
+          true => link::bcs_macro!(),
+          false => link::bcc_macro!(),
+        })),
+      ])
+      .chain(codegen::statement(if_body))
+      .chain(match else_body {
+        Some(else_body) => std::iter::empty()
+          .chain([
+            Ok(Token::LabelRef(codegen::end_label!(&label))),
+            Ok(Token::MacroRef(link::jmp_macro!())),
+            Ok(Token::LabelDef(codegen::else_label!(&label))),
+          ])
+          .chain(codegen::statement(else_body))
+          .collect::<Vec<_>>(),
+        None => std::iter::empty().collect(),
+      })
+      .chain([Ok(Token::LabelDef(codegen::end_label!(&label)))])
+      .collect(),
   }
 }
 
@@ -415,90 +379,17 @@ fn while_n1_statement(
     _ => (false, condition),
   };
 
+  let cf_inverted = match condition {
+    TypedExpression::N1CastN8(_) => true,
+    _ => false,
+  };
+
   match condition {
     TypedExpression::N1BitwiseComplement(expression) if negated => {
       codegen::while_n1_statement(label, *expression, body)
     }
 
-    TypedExpression::N1EqualToN8(expression1, expression2) => std::iter::empty()
-      .chain([
-        Ok(Token::LabelRef(codegen::cond_label!(&label))),
-        Ok(Token::MacroRef(link::jmp_macro!())),
-        Ok(Token::LabelDef(codegen::begin_label!(&label))),
-      ])
-      .chain(codegen::statement(body))
-      .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
-      .chain(precheck)
-      .chain(cf_equal_to_n8(*expression1, *expression2, 0))
-      .chain([
-        Ok(Token::LabelRef(codegen::begin_label!(&label))),
-        Ok(Token::MacroRef(match negated {
-          true => link::bcc_macro!(),
-          false => link::bcs_macro!(),
-        })),
-      ])
-      .collect(),
-
-    TypedExpression::N1LessThanU8(expression1, expression2) => std::iter::empty()
-      .chain([
-        Ok(Token::LabelRef(codegen::cond_label!(&label))),
-        Ok(Token::MacroRef(link::jmp_macro!())),
-        Ok(Token::LabelDef(codegen::begin_label!(&label))),
-      ])
-      .chain(codegen::statement(body))
-      .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
-      .chain(precheck)
-      .chain(codegen::cf_less_than_u8(*expression1, *expression2, 0))
-      .chain([
-        Ok(Token::LabelRef(codegen::begin_label!(&label))),
-        Ok(Token::MacroRef(match negated {
-          true => link::bcc_macro!(),
-          false => link::bcs_macro!(),
-        })),
-      ])
-      .collect(),
-
-    TypedExpression::N1LessThanI8(expression1, expression2) => std::iter::empty()
-      .chain([
-        Ok(Token::LabelRef(codegen::cond_label!(&label))),
-        Ok(Token::MacroRef(link::jmp_macro!())),
-        Ok(Token::LabelDef(codegen::begin_label!(&label))),
-      ])
-      .chain(codegen::statement(body))
-      .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
-      .chain(precheck)
-      .chain(codegen::cf_less_than_i8(*expression1, *expression2, 0))
-      .chain([
-        Ok(Token::LabelRef(codegen::begin_label!(&label))),
-        Ok(Token::MacroRef(match negated {
-          true => link::bcc_macro!(),
-          false => link::bcs_macro!(),
-        })),
-      ])
-      .collect(),
-
-    TypedExpression::N1CastN8(expression) => std::iter::empty()
-      .chain([
-        Ok(Token::LabelRef(codegen::cond_label!(&label))),
-        Ok(Token::MacroRef(link::jmp_macro!())),
-        Ok(Token::LabelDef(codegen::begin_label!(&label))),
-      ])
-      .chain(codegen::statement(body))
-      .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
-      .chain(precheck)
-      .chain(codegen::n8_expression(*expression, 0))
-      .chain([
-        Ok(Token::XXX(0x01)),
-        Ok(Token::MacroRef(link::cl_macro!())),
-        Ok(Token::LabelRef(codegen::begin_label!(&label))),
-        Ok(Token::MacroRef(match negated {
-          true => link::bcs_macro!(),
-          false => link::bcc_macro!(),
-        })),
-      ])
-      .collect(),
-
-    TypedExpression::N1Constant(constant) => match constant == negated {
+    TypedExpression::N1Constant(constant) => match constant ^ negated {
       true => std::iter::empty().chain(precheck).collect(),
       false => std::iter::empty()
         .chain([Ok(Token::LabelDef(codegen::begin_label!(&label)))])
@@ -511,7 +402,39 @@ fn while_n1_statement(
         .collect(),
     },
 
-    _ => unreachable!(),
+    _ => std::iter::empty()
+      .chain([
+        Ok(Token::LabelRef(codegen::cond_label!(&label))),
+        Ok(Token::MacroRef(link::jmp_macro!())),
+        Ok(Token::LabelDef(codegen::begin_label!(&label))),
+      ])
+      .chain(codegen::statement(body))
+      .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
+      .chain(precheck)
+      .chain(match condition {
+        TypedExpression::N1EqualToN8(expression1, expression2) => {
+          codegen::cf_equal_to_n8(*expression1, *expression2, 0)
+        }
+        TypedExpression::N1LessThanU8(expression1, expression2) => {
+          codegen::cf_less_than_u8(*expression1, *expression2, 0)
+        }
+        TypedExpression::N1LessThanI8(expression1, expression2) => {
+          codegen::cf_less_than_i8(*expression1, *expression2, 0)
+        }
+        TypedExpression::N1CastN8(expression) => std::iter::empty()
+          .chain(codegen::n8_expression(*expression, 0))
+          .chain([Ok(Token::XXX(0x01)), Ok(Token::MacroRef(link::cl_macro!()))])
+          .collect(),
+        _ => unreachable!(),
+      })
+      .chain([
+        Ok(Token::LabelRef(codegen::begin_label!(&label))),
+        Ok(Token::MacroRef(match negated ^ cf_inverted {
+          true => link::bcc_macro!(),
+          false => link::bcs_macro!(),
+        })),
+      ])
+      .collect(),
   }
 }
 

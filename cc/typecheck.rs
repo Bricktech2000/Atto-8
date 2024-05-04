@@ -235,25 +235,7 @@ fn function_definition_global(
   state: &mut State,
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedGlobal {
-  fn control_always_excapes(statement: &Statement) -> bool {
-    match statement {
-      Statement::Expression(_) => false,
-      Statement::Compound(statements) => statements.iter().any(control_always_excapes),
-      Statement::If(_, if_body, else_body) => {
-        else_body
-          .as_deref()
-          .map(control_always_excapes)
-          .unwrap_or(false)
-          && control_always_excapes(if_body)
-      }
-      Statement::While(_, body) => control_always_excapes(body), // TODO or condition always true
-      Statement::Return(_) => true,
-      Statement::Declaration(_, _) => false,
-      Statement::Assembly(_) => false,
-    }
-  }
-
-  let body = match control_always_excapes(&body) {
+  let body = match control_always_escapes(&body) {
     false => Statement::Compound(vec![body, Statement::Return(None)]),
     true => body,
   };
@@ -411,6 +393,7 @@ fn compound_statement(
 ) -> TypedStatement {
   state.stack.push(StackEntry::BlockBoundary(vec![]));
 
+  let control_always_escapes = statements.iter().any(control_always_escapes);
   let body_statements: Vec<TypedStatement> = statements
     .into_iter()
     .map(|statement| typecheck::statement(statement, state, errors))
@@ -431,6 +414,10 @@ fn compound_statement(
       _ => todo!(),
     })
     .collect();
+  let uninit_statements = match control_always_escapes {
+    false => uninit_statements,
+    true => vec![],
+  };
 
   let statements = body_statements
     .into_iter()
@@ -450,12 +437,12 @@ fn while_statement(
 
   state.stack.push(StackEntry::LoopBoundary);
 
+  state.uid += 1;
   let statement = TypedStatement::WhileN1(
     format!("while.{}", state.uid),
     condition,
     Box::new(typecheck::statement(body, state, errors)),
   );
-  state.uid += 1;
 
   state.stack.pop().unwrap();
 
@@ -474,13 +461,13 @@ fn if_statement(
   let if_body = typecheck::statement(if_body, state, errors);
   let else_body = else_body.map(|else_body| typecheck::statement(else_body, state, errors));
 
+  state.uid += 1;
   let statement = TypedStatement::IfN1(
     format!("if.{}", state.uid),
     condition,
     Box::new(if_body),
     else_body.map(Box::new),
   );
-  state.uid += 1;
 
   statement
 }
@@ -599,7 +586,9 @@ fn expression(
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression) {
   match expression {
-    Expression::AddressOf(expression) => typecheck::address_of(*expression, state, errors),
+    Expression::AddressOf(expression) => {
+      typecheck::address_of_expression(*expression, state, errors)
+    }
 
     Expression::Dereference(expression) => {
       let (r#type, expression) = typecheck::expression(*expression, state, errors);
@@ -930,7 +919,7 @@ fn expression(
   }
 }
 
-fn address_of(
+fn address_of_expression(
   expression: Expression,
   state: &mut State,
   errors: &mut impl Extend<(Pos, Error)>,
@@ -1139,11 +1128,10 @@ fn string_literal_expression(
   state: &mut State,
   _errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression) {
-  let name = state
-    .strings
-    .entry(value)
-    .or_insert(format!("str.{}", state.uid));
-  state.uid += 1;
+  let name = state.strings.entry(value).or_insert_with(|| {
+    state.uid += 1;
+    format!("str.{}", state.uid)
+  });
 
   (
     Type::Pointer(Box::new(Type::Char)),
@@ -1527,4 +1515,22 @@ fn typecheck_expression_cast(
   }
 
   expression
+}
+
+fn control_always_escapes(statement: &Statement) -> bool {
+  match statement {
+    Statement::Expression(_) => false,
+    Statement::Compound(statements) => statements.iter().any(control_always_escapes),
+    Statement::If(_, if_body, else_body) => {
+      else_body
+          .as_deref()
+          .map(control_always_escapes)
+          .unwrap_or(false) // TODO or condition always true
+          && control_always_escapes(if_body) // TODO or condition always false
+    }
+    Statement::While(_, body) => control_always_escapes(body), // TODO or condition always true
+    Statement::Return(_) => true,
+    Statement::Declaration(_, _) => false,
+    Statement::Assembly(_) => false,
+  }
 }
