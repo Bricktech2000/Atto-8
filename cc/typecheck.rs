@@ -1144,6 +1144,8 @@ fn identifier_expression(
   state: &mut State,
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression) {
+  // TODO code duplication with `address_of_expression`
+
   let mut offset = 0;
 
   state
