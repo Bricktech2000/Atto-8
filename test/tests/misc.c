@@ -31,6 +31,11 @@ char *str_lit_concat(void) {
          "concatenation";
 }
 
+void do_while_empty(void) {
+  do {
+  } while (0);
+}
+
 inline void bar(void) memset(DISPLAY_BUFFER, 0xff, DISPLAY_BUFFER_LEN);
 inline void baz(void) { memset(DISPLAY_BUFFER, 0x00, DISPLAY_BUFFER_LEN); }
 
@@ -56,7 +61,9 @@ void main(void) {
   // strcat(new_str, "-8");
   // puts(new_str);
 
-  puts("in file " __FILE__ "\n");
+  do
+    puts("in file " __FILE__ "\n");
+  while (!main);
 
   unsigned offset = 0b0011;
   putchar((&*foo)(1, "/-\\|") + '\000' + '\x00' + 000 + 0b0 + 0B0 + 0x0 + 0X0);

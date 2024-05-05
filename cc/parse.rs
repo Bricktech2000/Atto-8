@@ -701,13 +701,24 @@ fn while_statement() -> Parser<Statement> {
     .and_then(|expression| {
       parse::ws(parse::char(')').info("to end condition"))
         .and_then(|_| parse::statement())
-        .map(|statements| Statement::While(expression, Box::new(statements)))
+        .map(|statement| Statement::While(expression, Box::new(statement), false))
     })
 }
 
 fn do_while_statement() -> Parser<Statement> {
-  // TODO do while statement
-  Parser::expected(vec![])
+  Parser::pure(())
+    .and_then(|_| parse::ws(parse::string("do")))
+    .and_then(|_| parse::statement())
+    .and_then(|statement| {
+      parse::ws(parse::string("while"))
+        .and_then(|_| parse::ws(parse::char('(').info("to begin condition")))
+        .and_then(|_| parse::expression())
+        .and_then(|expression| {
+          parse::ws(parse::char(')').info("to end condition"))
+            .and_then(|_| parse::ws(parse::char(';').info("to end statement")))
+            .map(move |_| Statement::While(expression, Box::new(statement), true))
+        })
+    })
 }
 
 fn for_statement() -> Parser<Statement> {

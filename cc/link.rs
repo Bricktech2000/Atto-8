@@ -91,7 +91,7 @@ fn statement(statement: &TypedStatement) -> BTreeSet<(bool, String)> {
           .unwrap_or_else(BTreeSet::new),
       )
       .collect(),
-    TypedStatement::WhileN1(_label, condition, body) => std::iter::empty()
+    TypedStatement::WhileN1(_label, condition, body, _is_do_while) => std::iter::empty()
       .chain(link::expression(condition))
       .chain(link::statement(body))
       .collect(),
@@ -116,9 +116,9 @@ fn statement(statement: &TypedStatement) -> BTreeSet<(bool, String)> {
 
 fn expression(expression: &TypedExpression) -> BTreeSet<(bool, String)> {
   match expression {
-    TypedExpression::N0GetDerefN8(expression)
-    | TypedExpression::N1GetDerefN8(expression)
-    | TypedExpression::N8GetDerefN8(expression)
+    TypedExpression::N0DereferenceN8(expression)
+    | TypedExpression::N1DereferenceN8(expression)
+    | TypedExpression::N8DereferenceN8(expression)
     | TypedExpression::N1BitwiseComplement(expression)
     | TypedExpression::N8BitwiseComplement(expression) => link::expression(expression),
 
@@ -150,9 +150,9 @@ fn expression(expression: &TypedExpression) -> BTreeSet<(bool, String)> {
     TypedExpression::N0Constant(_)
     | TypedExpression::N1Constant(_)
     | TypedExpression::N8Constant(_)
-    | TypedExpression::N8GetLocal(_)
+    | TypedExpression::N8LoadLocal(_)
     | TypedExpression::N8AddrLocal(_) => BTreeSet::new(),
-    TypedExpression::N8GetGlobal(label) | TypedExpression::N8AddrGlobal(label) => {
+    TypedExpression::N8LoadGlobal(label) | TypedExpression::N8AddrGlobal(label) => {
       std::iter::once((true, label.clone())).collect()
     }
     TypedExpression::N0MacroCall(label, parameters)

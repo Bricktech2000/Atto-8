@@ -188,8 +188,8 @@ pub enum Expression {
 pub enum Statement {
   Expression(Expression),
   Compound(Vec<Statement>),
-  If(Expression, Box<Statement>, Option<Box<Statement>>),
-  While(Expression, Box<Statement>),
+  If(Expression, Box<Statement>, Option<Box<Statement>>), // condition, if_body, else_body
+  While(Expression, Box<Statement>, bool),                // condition, body, is_do_while
   Return(Option<Expression>),
   Declaration(Object, Option<Expression>),
   Assembly(String),
@@ -210,9 +210,9 @@ pub enum TypedGlobal {
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum TypedExpression {
-  N0GetDerefN8(Box<TypedExpression>),
-  N1GetDerefN8(Box<TypedExpression>),
-  N8GetDerefN8(Box<TypedExpression>),
+  N0DereferenceN8(Box<TypedExpression>),
+  N1DereferenceN8(Box<TypedExpression>),
+  N8DereferenceN8(Box<TypedExpression>),
   N1BitwiseComplement(Box<TypedExpression>),
   N8BitwiseComplement(Box<TypedExpression>),
 
@@ -235,9 +235,9 @@ pub enum TypedExpression {
   N0Constant(()),
   N1Constant(bool),
   N8Constant(u8),
-  N8GetLocal(usize), // TODO document: offset from last local variable
-  N8AddrLocal(usize),
-  N8GetGlobal(String),
+  N8LoadLocal(usize), // offset (from last local)
+  N8AddrLocal(usize), // offset (from last local)
+  N8LoadGlobal(String),
   N8AddrGlobal(String),
   N0MacroCall(String, Vec<TypedExpression>),
   N1MacroCall(String, Vec<TypedExpression>),
@@ -256,14 +256,14 @@ pub enum TypedStatement {
     TypedExpression,
     Box<TypedStatement>,
     Option<Box<TypedStatement>>,
-  ),
-  WhileN1(String, TypedExpression, Box<TypedStatement>),
-  MacroReturnN0(usize, usize, Option<TypedExpression>), // TODO document: param count, local count
-  MacroReturnN1(usize, usize, Option<TypedExpression>), // TODO document: param count, local count
-  MacroReturnN8(usize, usize, Option<TypedExpression>), // TODO document: param count, local count
-  FunctionReturnN0(usize, usize, Option<TypedExpression>), // TODO document: param count, local count
-  FunctionReturnN1(usize, usize, Option<TypedExpression>), // TODO document: param count, local count
-  FunctionReturnN8(usize, usize, Option<TypedExpression>), // TODO document: param count, local count
+  ), // label, condition, if_body, else_body
+  WhileN1(String, TypedExpression, Box<TypedStatement>, bool), // label, condition, body, is_do_while
+  MacroReturnN0(usize, usize, Option<TypedExpression>), // param_count, local_count, return_value
+  MacroReturnN1(usize, usize, Option<TypedExpression>), // param_count, local_count, return_value
+  MacroReturnN8(usize, usize, Option<TypedExpression>), // param_count, local_count, return_value
+  FunctionReturnN0(usize, usize, Option<TypedExpression>), // param_count, local_count, return_value
+  FunctionReturnN1(usize, usize, Option<TypedExpression>), // param_count, local_count, return_value
+  FunctionReturnN8(usize, usize, Option<TypedExpression>), // param_count, local_count, return_value
   InitLocalN0(Option<TypedExpression>),
   InitLocalN1(Option<TypedExpression>),
   InitLocalN8(Option<TypedExpression>),

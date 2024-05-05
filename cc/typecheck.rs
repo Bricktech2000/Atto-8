@@ -365,8 +365,8 @@ fn statement(
       state,
       errors,
     ),
-    Statement::While(condition, body) => {
-      typecheck::while_statement(condition, *body, state, errors)
+    Statement::While(condition, body, is_do_while) => {
+      typecheck::while_statement(condition, *body, is_do_while, state, errors)
     }
     Statement::Declaration(object, value) => {
       typecheck::declaration_statement(object, value, state, errors)
@@ -430,6 +430,7 @@ fn compound_statement(
 fn while_statement(
   condition: Expression,
   body: Statement,
+  is_do_while: bool,
   state: &mut State,
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
@@ -442,6 +443,7 @@ fn while_statement(
     format!("while.{}", state.uid),
     condition,
     Box::new(typecheck::statement(body, state, errors)),
+    is_do_while,
   );
 
   state.stack.pop().unwrap();
@@ -596,9 +598,9 @@ fn expression(
       match r#type {
         Type::Pointer(r#type) => {
           let expression = match r#type.range() {
-            Range::U0 | Range::I0 => TypedExpression::N0GetDerefN8(Box::new(expression)),
-            Range::U1 | Range::I1 => TypedExpression::N1GetDerefN8(Box::new(expression)),
-            Range::U8 | Range::I8 => TypedExpression::N8GetDerefN8(Box::new(expression)),
+            Range::U0 | Range::I0 => TypedExpression::N0DereferenceN8(Box::new(expression)),
+            Range::U1 | Range::I1 => TypedExpression::N1DereferenceN8(Box::new(expression)),
+            Range::U8 | Range::I8 => TypedExpression::N8DereferenceN8(Box::new(expression)),
             _ => todo!(),
           };
           (*r#type, expression)
@@ -1176,7 +1178,7 @@ fn identifier_expression(
             _ => (
               r#type.clone(),
               match r#type.range() {
-                Range::U8 | Range::I8 => TypedExpression::N8GetLocal(offset),
+                Range::U8 | Range::I8 => TypedExpression::N8LoadLocal(offset),
                 _ => todo!(),
               },
             ),
@@ -1201,7 +1203,7 @@ fn identifier_expression(
           _ => (
             r#type.clone(),
             match r#type.range() {
-              Range::U8 | Range::I8 => TypedExpression::N8GetGlobal(identifier.clone()),
+              Range::U8 | Range::I8 => TypedExpression::N8LoadGlobal(identifier.clone()),
               _ => todo!(),
             },
           ),
@@ -1530,7 +1532,7 @@ fn control_always_escapes(statement: &Statement) -> bool {
           .unwrap_or(false) // TODO or condition always true
           && control_always_escapes(if_body) // TODO or condition always false
     }
-    Statement::While(_, body) => control_always_escapes(body), // TODO or condition always true
+    Statement::While(_, body, is_do_while) => *is_do_while && control_always_escapes(body), // TODO or condition always true
     Statement::Return(_) => true,
     Statement::Declaration(_, _) => false,
     Statement::Assembly(_) => false,

@@ -27,6 +27,7 @@
 // char *inv_esc_seq(void) { return "\X1F"; }
 // char *inv_hex_esc(void) { return "\xyz"; }
 // int comment_whitespace(void) { return 1/**/2; }
+int bare_do(void) { do {} }
 
 // semantic errors
 
