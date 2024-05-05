@@ -337,3 +337,27 @@ impl std::fmt::Display for Type {
     }
   }
 }
+
+pub fn c_quote(bytes: &[u8], quote: char) -> String {
+  // quotes and escapes a byte slice into a C-compatible string literal or character constant
+  // the output shall be parsable either by `parse::string_literal` or by `parse::character_constant`
+
+  std::iter::empty()
+    .chain([quote.to_string()])
+    .chain(bytes.iter().map(|&byte| match byte {
+      byte if byte as char == quote => format!("\\{}", byte as char),
+      b'\\' => "\\\\".to_string(),
+      b'\x07' => "\\a".to_string(),
+      b'\x08' => "\\b".to_string(),
+      b'\x0C' => "\\f".to_string(),
+      b'\n' => "\\n".to_string(),
+      b'\r' => "\\r".to_string(),
+      b'\t' => "\\t".to_string(),
+      b'\x0B' => "\\v".to_string(),
+      b' '..=b'~' => format!("{}", byte as char),
+      b'\0' => "\\0".to_string(),
+      byte => format!("\\x{:02x}", byte),
+    }))
+    .chain([quote.to_string()])
+    .collect()
+}

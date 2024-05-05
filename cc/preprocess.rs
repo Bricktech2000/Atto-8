@@ -31,7 +31,8 @@ pub fn preprocess(
   defines.insert("__STDC_NO_VLA__".to_string(), vec![Ok(1.to_string())]);
 
   let last_file = defines.get(DUNDER_FILE).unwrap_or(&vec![]).clone();
-  defines.insert(DUNDER_FILE.to_string(), vec![Ok(format!("{:?}", file.0))]); // TODO uses debug formatting
+  let curr_file = vec![Ok(c_quote(file.0.to_string_lossy().as_bytes(), '"'))];
+  defines.insert(DUNDER_FILE.to_string(), curr_file);
   defines.insert(DUNDER_LINE.to_string(), vec![Ok(0.to_string())]);
 
   let source = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {

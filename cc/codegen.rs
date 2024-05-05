@@ -67,10 +67,9 @@ fn data_global(label: String, value: Vec<TypedExpression>) -> Vec<Result<Token, 
     })
     .collect();
 
-  // TODO uses debug formatting
   let comment = [Err(match bytes.last() {
-    Some(0x00) => format!("# {:?}", String::from_utf8_lossy(&bytes[..bytes.len() - 1])),
-    Some(_) => format!("# {:?}...", String::from_utf8_lossy(&bytes)),
+    Some(0x00) => format!("# {}", c_quote(&bytes[..bytes.len() - 1], '"')),
+    Some(_) => format!("# {}...", c_quote(&bytes, '"')),
     None => format!(""),
   })];
 

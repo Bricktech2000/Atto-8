@@ -134,9 +134,8 @@ pub fn format_expecteds((expecteds, input): (Expecteds, String)) -> String {
 
   let got = match input.len() {
     0 => "end of input".to_string(),
-    // TODO uses debug formatting
-    0..=16 => format!("{:?}", input),
-    _ => format!("{:?}...", &input[0..16]),
+    0..=16 => c_quote(input.as_bytes(), '`'),
+    _ => c_quote(input[0..16].as_bytes(), '`') + "...",
   };
 
   format!("Expected {} (got {})", expecteds, got)
@@ -249,8 +248,7 @@ pub fn satisfy<F: Fn(char) -> bool + Clone + 'static>(predicate: F) -> Parser<ch
 pub fn char(char: char) -> Parser<()> {
   parse::satisfy(move |c| c == char)
     .map(|_| ())
-    // TODO uses debug formatting
-    .name(format!("{:?}", char))
+    .name(c_quote(char.to_string().as_bytes(), '\''))
 }
 
 pub fn string(string: &'static str) -> Parser<()> {
@@ -259,13 +257,14 @@ pub fn string(string: &'static str) -> Parser<()> {
     .map(|char| parse::char(char))
     .reduce(|acc, parser| acc.and_then(|_| parser))
     .unwrap()
-    // TODO uses debug formatting
-    .name(format!("{:?}", string))
+    .name(c_quote(string.as_bytes(), '"'))
 }
 
 pub fn char_not(char: char) -> Parser<char> {
-  // TODO uses debug formatting
-  parse::satisfy(move |c| c != char).name(format!("non-{:?}", char))
+  parse::satisfy(move |c| c != char).name(format!(
+    "non-{}",
+    c_quote(char.to_string().as_bytes(), '\'')
+  ))
 }
 
 pub fn char_none_of(chars: &'static str) -> Parser<char> {
