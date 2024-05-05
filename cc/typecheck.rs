@@ -377,13 +377,16 @@ fn statement(
 }
 
 fn expression_statement(
-  expression: Expression,
+  expression: Option<Expression>,
   state: &mut State,
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
-  let statement = typecheck_expression_cast(Type::Void, expression, state, errors);
+  let expression = match expression {
+    Some(expression) => typecheck_expression_cast(Type::Void, expression, state, errors),
+    None => TypedExpression::N0Constant(()), // null statement
+  };
 
-  TypedStatement::ExpressionN0(statement)
+  TypedStatement::ExpressionN0(expression)
 }
 
 fn compound_statement(

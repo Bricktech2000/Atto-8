@@ -186,7 +186,7 @@ pub enum Expression {
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Statement {
-  Expression(Expression),
+  Expression(Option<Expression>), // expression (`None` for null statement)
   Compound(Vec<Statement>),
   If(Expression, Box<Statement>, Option<Box<Statement>>), // condition, if_body, else_body
   While(Expression, Box<Statement>, bool),                // condition, body, is_do_while

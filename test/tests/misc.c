@@ -31,11 +31,6 @@ char *str_lit_concat(void) {
          "concatenation";
 }
 
-void do_while_empty(void) {
-  do {
-  } while (0);
-}
-
 inline void bar(void) memset(DISPLAY_BUFFER, 0xff, DISPLAY_BUFFER_LEN);
 inline void baz(void) { memset(DISPLAY_BUFFER, 0x00, DISPLAY_BUFFER_LEN); }
 
@@ -60,6 +55,9 @@ void main(void) {
   // char *new_str = realloc(str, 7);
   // strcat(new_str, "-8");
   // puts(new_str);
+
+  if (0)
+    ;
 
   do
     puts("in file " __FILE__ "\n");

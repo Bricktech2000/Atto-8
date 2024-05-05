@@ -728,7 +728,7 @@ fn for_statement() -> Parser<Statement> {
 
 fn expression_statement() -> Parser<Statement> {
   Parser::pure(())
-    .and_then(|_| parse::expression())
+    .and_then(|_| parse::maybe(parse::expression()))
     .and_then(|expression| {
       parse::ws(parse::char(';').info("to end statement"))
         .map(|_| Statement::Expression(expression))
