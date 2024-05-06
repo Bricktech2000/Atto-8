@@ -197,33 +197,31 @@ fn function_declaration_global(
     .map(|Object(r#type, _name)| r#type)
     .collect();
 
+  let func_type = match is_inline {
+    true => Type::Macro(
+      Box::new(return_type),
+      name.clone(),
+      parameter_types,
+      is_variadic,
+    ),
+    false => Type::Function(Box::new(return_type), parameter_types, is_variadic),
+  };
+
   state
     .declarations
     .entry(name.clone())
-    .and_modify(|r#type| match (is_inline, r#type.clone()) {
-      (false, Type::Function(return_type_, parameter_types_, is_variadic_))
-      | (true, Type::Macro(return_type_, _, parameter_types_, is_variadic_))
-        if return_type == *return_type_
-          && parameter_types == *parameter_types_
-          && is_variadic == is_variadic_ => {}
-      _ => errors.extend([(
-        Pos(File("[pos]".into()), 0, 0),
-        Error(format!(
-          "Function `{}` of type `{}` previously declared with type `{}`",
-          name,
-          Type::Function(
-            Box::new(return_type.clone()),
-            parameter_types.clone(),
-            is_variadic
-          ),
-          r#type
-        )),
-      )]),
+    .and_modify(|r#type| {
+      if *r#type != func_type {
+        errors.extend([(
+          Pos(File("[pos]".into()), 0, 0),
+          Error(format!(
+            "Function `{}` of type `{}` previously declared with type `{}`",
+            name, func_type, r#type
+          )),
+        )]);
+      }
     })
-    .or_insert(match is_inline {
-      true => Type::Macro(Box::new(return_type), name, parameter_types, is_variadic),
-      false => Type::Function(Box::new(return_type), parameter_types, is_variadic),
-    });
+    .or_insert(func_type);
 }
 
 fn function_definition_global(
@@ -252,16 +250,16 @@ fn function_definition_global(
   if is_variadic {
     errors.extend([(
       Pos(File("[todo]".into()), 0, 0),
-      Error(format!("Variadic function definitions unimplemented",)),
-    )])
+      Error(format!("Variadic function definitions unimplemented")),
+    )]);
   }
 
-  state.definitions.get(&name).is_some().then(|| {
+  if state.definitions.get(&name).is_some() {
     errors.extend([(
       Pos(File("[pos]".into()), 0, 0),
       Error(format!("Redefinition of function `{}`", name)),
-    )])
-  });
+    )]);
+  }
   state.definitions.insert(name.clone());
 
   let mut rev_parameters = parameters;
@@ -298,10 +296,10 @@ fn global_declaration_global(
             "Global `{}` of type `{}` previously declared with type `{}`",
             name, global_type, r#type
           )),
-        )])
+        )]);
       }
     })
-    .or_insert(global_type.clone());
+    .or_insert(global_type);
 }
 
 fn global_definition_global(
@@ -315,12 +313,12 @@ fn global_definition_global(
 
   let value = typecheck_expression_cast(global_type.clone(), value, state, errors);
 
-  state.definitions.get(&name).is_some().then(|| {
+  if state.definitions.get(&name).is_some() {
     errors.extend([(
       Pos(File("[pos]".into()), 0, 0),
       Error(format!("Redefinition of global `{}`", name)),
-    )])
-  });
+    )]);
+  }
   state.definitions.insert(name.clone());
 
   match value {
@@ -465,17 +463,14 @@ fn if_statement(
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
   let condition = typecheck_expression_cast(Type::Bool, condition, state, errors);
+  let label = format!("if.{}", state.uid);
+  state.uid += 1;
 
   let if_body = typecheck::statement(if_body, state, errors);
   let else_body = else_body.map(|else_body| typecheck::statement(else_body, state, errors));
 
-  state.uid += 1;
-  let statement = TypedStatement::IfN1(
-    format!("if.{}", state.uid),
-    condition,
-    Box::new(if_body),
-    else_body.map(Box::new),
-  );
+  let statement =
+    TypedStatement::IfN1(label, condition, Box::new(if_body), else_body.map(Box::new));
 
   statement
 }
@@ -523,7 +518,7 @@ fn continue_statement(state: &mut State, errors: &mut impl Extend<(Pos, Error)>)
       StackEntry::MacroBoundary(_, _) | StackEntry::FunctionBoundary(_, _) => {
         errors.extend([(
           Pos(File("[pos]".into()), 0, 0),
-          Error(format!("`continue` not within loop")),
+          Error(format!("Use of `continue` not within a loop")),
         )]);
         Some("".to_string())
       }
@@ -548,7 +543,7 @@ fn break_statement(state: &mut State, errors: &mut impl Extend<(Pos, Error)>) ->
       StackEntry::MacroBoundary(_, _) | StackEntry::FunctionBoundary(_, _) => {
         errors.extend([(
           Pos(File("[pos]".into()), 0, 0),
-          Error(format!("`break` not within loop")),
+          Error(format!("Use of `break` not within a loop")),
         )]);
         Some("".to_string())
       }
@@ -792,7 +787,7 @@ fn expression(
         Range::I8 => {
           errors.extend([(
             Pos(File("[todo]".into()), 0, 0),
-            Error(format!("Signed division unimplemented",)),
+            Error(format!("Signed division unimplemented")),
           )]);
           TypedExpression::U8Division(Box::new(expression1), Box::new(expression2))
         }
@@ -813,7 +808,7 @@ fn expression(
         Range::I8 => {
           errors.extend([(
             Pos(File("[todo]".into()), 0, 0),
-            Error(format!("Signed modulo unimplemented",)),
+            Error(format!("Signed modulo unimplemented")),
           )]);
           TypedExpression::U8Modulo(Box::new(expression1), Box::new(expression2))
         }
@@ -1181,8 +1176,9 @@ fn string_literal_expression(
   _errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression) {
   let name = state.strings.entry(value).or_insert_with(|| {
+    let label = format!("str.{}", state.uid);
     state.uid += 1;
-    format!("str.{}", state.uid)
+    label
   });
 
   (
@@ -1294,30 +1290,23 @@ fn function_call_expression(
     _ => {
       errors.extend([(
         Pos(File("[pos]".into()), 0, 0),
-        Error(format!("Type `{}` is not a function", designator_type)),
+        Error(format!(
+          "Function call on value of type `{}`",
+          designator_type
+        )),
       )]);
       return (designator_type, designator);
     }
   };
 
-  if *is_variadic && arguments.len() < parameter_types.len() {
+  if match *is_variadic {
+    true => arguments.len() < parameter_types.len(),
+    false => arguments.len() != parameter_types.len(),
+  } {
     errors.extend([(
       Pos(File("[pos]".into()), 0, 0),
       Error(format!(
-        "Expected at least {} arguments to function of type `{}`, got {}",
-        parameter_types.len(),
-        designator_type,
-        arguments.len()
-      )),
-    )]);
-  }
-
-  if !is_variadic && arguments.len() != parameter_types.len() {
-    errors.extend([(
-      Pos(File("[pos]".into()), 0, 0),
-      Error(format!(
-        "Expected {} arguments to function of type `{}`, got {}",
-        parameter_types.len(),
+        "Function of type `{}` called with {} arguments",
         designator_type,
         arguments.len()
       )),
