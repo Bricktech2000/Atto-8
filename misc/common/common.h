@@ -10,6 +10,27 @@
 #define DECODE_OFST(opcode) (opcode & B00001111)
 #define DECODE_NIMM(opcode) (opcode | B11110000)
 
+void render_memory(char *buf, uint8_t mem[MEM_SIZE], uint8_t ip, uint8_t sp,
+                   bool cf) {
+  buf += sprintf(buf, "MEM\n");
+  for (uint8_t y = 0x00; y < 0x10; y++) {
+    for (uint8_t x = 0x00; x < 0x10; x++) {
+      uint8_t address = (y << 4 | x);
+      char sep;
+      if (address == sp - 1)
+        sep = cf ? '/' : '|';
+      else if (address == ip - 1)
+        sep = '[';
+      else if (address == ip)
+        sep = ']';
+      else
+        sep = ' ';
+      buf += sprintf(buf, "%02X%c", mem[address], sep);
+    }
+    buf += sprintf(buf, "\n");
+  }
+}
+
 // for e in range(1, 9):  # breaks with 0
 //   for n in range(2 ** e):
 //     print(f'#define B{n:0{e}b} 0x{n:02X}')

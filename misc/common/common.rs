@@ -291,22 +291,19 @@ pub fn render_memory(memory: &[u8; MEM_SIZE], ip: u8, sp: u8, cf: bool) -> Strin
   for y in 0x00..0x10 {
     for x in 0x00..0x10 {
       let address: u8 = (y << 4 | x) as u8;
-      fmt += &format!(
-        "{:02X}{}",
-        memory[address as usize],
-        if address == sp.wrapping_sub(1) {
-          match cf {
-            true => "/",
-            false => "|",
-          }
-        } else if address == ip.wrapping_sub(1) {
-          "["
-        } else if address == ip {
-          "]"
-        } else {
-          " "
+      let sep = if address == sp.wrapping_sub(1) {
+        match cf {
+          true => '/',
+          false => '|',
         }
-      );
+      } else if address == ip.wrapping_sub(1) {
+        '['
+      } else if address == ip {
+        ']'
+      } else {
+        ' '
+      };
+      fmt += &format!("{:02X}{}", memory[address as usize], sep);
     }
     fmt += "\r\n";
   }
