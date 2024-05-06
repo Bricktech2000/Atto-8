@@ -95,6 +95,7 @@ fn statement(statement: &TypedStatement) -> BTreeSet<(bool, String)> {
       .chain(link::expression(condition))
       .chain(link::statement(body))
       .collect(),
+    TypedStatement::Continue(_, _) | TypedStatement::Break(_, _) => BTreeSet::new(),
     TypedStatement::MacroReturnN0(_, _, expression)
     | TypedStatement::MacroReturnN1(_, _, expression)
     | TypedStatement::MacroReturnN8(_, _, expression)

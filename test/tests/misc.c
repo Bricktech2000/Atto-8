@@ -72,6 +72,8 @@ void main(void) {
   while (bar(), 1) {
     delay(0x1F);
     baz(), delay(0x1F);
+    continue;
+    break;
   }
 }
 

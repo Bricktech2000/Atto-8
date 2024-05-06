@@ -631,14 +631,29 @@ fn statement() -> Parser<Statement> {
 
 fn jump_statement() -> Parser<Statement> {
   // TODO cases missing
-  Parser::pure(())
-    .and_then(|_| parse::ws(parse::string("return")))
-    .and_then(|_| {
-      parse::maybe(parse::expression()).and_then(|expression| {
-        parse::ws(parse::char(';').info("to end statement")).map(|_| expression)
-      })
-    }) // TODO does not obey grammar
-    .map(|expression| Statement::Return(expression))
+  Parser::expected(vec![])
+    .or_else(|_| {
+      Parser::pure(())
+        .and_then(|_| parse::ws(parse::string("continue")))
+        .and_then(|_| parse::ws(parse::char(';')))
+        .map(|_| Statement::Continue)
+    })
+    .or_else(|_| {
+      Parser::pure(())
+        .and_then(|_| parse::ws(parse::string("break")))
+        .and_then(|_| parse::ws(parse::char(';')))
+        .map(|_| Statement::Break)
+    })
+    .or_else(|_| {
+      Parser::pure(())
+        .and_then(|_| parse::ws(parse::string("return")))
+        .and_then(|_| {
+          parse::maybe(parse::expression()).and_then(|expression| {
+            parse::ws(parse::char(';').info("to end statement")).map(|_| expression)
+          })
+        })
+        .map(|expression| Statement::Return(expression))
+    })
 }
 
 fn selection_statement() -> Parser<Statement> {

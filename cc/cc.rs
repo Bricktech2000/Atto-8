@@ -190,6 +190,8 @@ pub enum Statement {
   Compound(Vec<Statement>),
   If(Expression, Box<Statement>, Option<Box<Statement>>), // condition, if_body, else_body
   While(Expression, Box<Statement>, bool),                // condition, body, is_do_while
+  Continue,
+  Break,
   Return(Option<Expression>),
   Declaration(Object, Option<Expression>),
   Assembly(String),
@@ -258,12 +260,14 @@ pub enum TypedStatement {
     Option<Box<TypedStatement>>,
   ), // label, condition, if_body, else_body
   WhileN1(String, TypedExpression, Box<TypedStatement>, bool), // label, condition, body, is_do_while
-  MacroReturnN0(usize, usize, Option<TypedExpression>), // param_count, local_count, return_value
-  MacroReturnN1(usize, usize, Option<TypedExpression>), // param_count, local_count, return_value
-  MacroReturnN8(usize, usize, Option<TypedExpression>), // param_count, local_count, return_value
-  FunctionReturnN0(usize, usize, Option<TypedExpression>), // param_count, local_count, return_value
-  FunctionReturnN1(usize, usize, Option<TypedExpression>), // param_count, local_count, return_value
-  FunctionReturnN8(usize, usize, Option<TypedExpression>), // param_count, local_count, return_value
+  Continue(String, usize),                                     // label, locals_size
+  Break(String, usize),                                        // label, locals_size
+  MacroReturnN0(usize, usize, Option<TypedExpression>), // parameters_size, locals_size, return_value
+  MacroReturnN1(usize, usize, Option<TypedExpression>), // parameters_size, locals_size, return_value
+  MacroReturnN8(usize, usize, Option<TypedExpression>), // parameters_size, locals_size, return_value
+  FunctionReturnN0(usize, usize, Option<TypedExpression>), // parameters_size, locals_size, return_value
+  FunctionReturnN1(usize, usize, Option<TypedExpression>), // parameters_size, locals_size, return_value
+  FunctionReturnN8(usize, usize, Option<TypedExpression>), // parameters_size, locals_size, return_value
   InitLocalN0(Option<TypedExpression>),
   InitLocalN1(Option<TypedExpression>),
   InitLocalN8(Option<TypedExpression>),

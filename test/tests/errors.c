@@ -27,7 +27,8 @@
 // char *inv_esc_seq(void) { return "\X1F"; }
 // char *inv_hex_esc(void) { return "\xyz"; }
 // int comment_whitespace(void) { return 1/**/2; }
-int bare_do(void) { do {} }
+// void bare_do(void) { do {} }
+// void quote_in_diag(void) { ` ' "; }
 
 // semantic errors
 
@@ -44,3 +45,4 @@ int bare_do(void) { do {} }
 // inline void macro(void); void addrof_macro(void) { &macro; }
 // void addr_of_undef(void) { &undefined; }
 // int inv_paren(void) { return 2 (- 3); }
+// void bare_break_cont(void) { break; continue; }

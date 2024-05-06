@@ -18,7 +18,7 @@ struct State {
 enum StackEntry {
   MacroBoundary(Type, Vec<Object>),
   FunctionBoundary(Type, Vec<Object>), // parameters in "push" order (reverse of declaration)
-  LoopBoundary,
+  LoopBoundary(String),                // label
   BlockBoundary(Vec<Object>),
 }
 
@@ -371,6 +371,8 @@ fn statement(
     Statement::Declaration(object, value) => {
       typecheck::declaration_statement(object, value, state, errors)
     }
+    Statement::Continue => typecheck::continue_statement(state, errors),
+    Statement::Break => typecheck::break_statement(state, errors),
     Statement::Return(expression) => typecheck::return_statement(expression, state, errors),
     Statement::Assembly(assembly) => typecheck::assembly_statement(assembly, state, errors),
   }
@@ -438,12 +440,13 @@ fn while_statement(
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedStatement {
   let condition = typecheck_expression_cast(Type::Bool, condition, state, errors);
-
-  state.stack.push(StackEntry::LoopBoundary);
-
+  let label = format!("while.{}", state.uid);
   state.uid += 1;
+
+  state.stack.push(StackEntry::LoopBoundary(label.clone()));
+
   let statement = TypedStatement::WhileN1(
-    format!("while.{}", state.uid),
+    label,
     condition,
     Box::new(typecheck::statement(body, state, errors)),
     is_do_while,
@@ -510,6 +513,56 @@ fn declaration_statement(
   }
 }
 
+fn continue_statement(state: &mut State, errors: &mut impl Extend<(Pos, Error)>) -> TypedStatement {
+  let mut locals_size = 0;
+  let label = state
+    .stack
+    .iter()
+    .rev()
+    .find_map(|stack_entry| match stack_entry {
+      StackEntry::MacroBoundary(_, _) | StackEntry::FunctionBoundary(_, _) => {
+        errors.extend([(
+          Pos(File("[pos]".into()), 0, 0),
+          Error(format!("`continue` not within loop")),
+        )]);
+        Some("".to_string())
+      }
+      StackEntry::LoopBoundary(label) => Some(label.clone()),
+      StackEntry::BlockBoundary(locals) => {
+        locals_size += locals.iter().map(Object::size).sum::<usize>();
+        None
+      }
+    })
+    .unwrap_or_else(|| panic!("Bare `continue`"));
+
+  TypedStatement::Continue(label, locals_size)
+}
+
+fn break_statement(state: &mut State, errors: &mut impl Extend<(Pos, Error)>) -> TypedStatement {
+  let mut locals_size = 0;
+  let label = state
+    .stack
+    .iter()
+    .rev()
+    .find_map(|stack_entry| match stack_entry {
+      StackEntry::MacroBoundary(_, _) | StackEntry::FunctionBoundary(_, _) => {
+        errors.extend([(
+          Pos(File("[pos]".into()), 0, 0),
+          Error(format!("`break` not within loop")),
+        )]);
+        Some("".to_string())
+      }
+      StackEntry::LoopBoundary(label) => Some(label.clone()),
+      StackEntry::BlockBoundary(locals) => {
+        locals_size += locals.iter().map(Object::size).sum::<usize>();
+        None
+      }
+    })
+    .unwrap_or_else(|| panic!("Bare `break`"));
+
+  TypedStatement::Break(label, locals_size)
+}
+
 fn return_statement(
   expression: Option<Expression>,
   state: &mut State,
@@ -531,19 +584,13 @@ fn return_statement(
         return_type.clone(),
         parameters.iter().map(Object::size).sum(),
       )),
-      StackEntry::LoopBoundary => None,
+      StackEntry::LoopBoundary(_label) => None,
       StackEntry::BlockBoundary(locals) => {
         locals_size += locals.iter().map(Object::size).sum::<usize>();
         None
       }
     })
-    .unwrap_or_else(|| {
-      errors.extend([(
-        Pos(File("[pos]".into()), 0, 0),
-        Error(format!("`return` encountered outside of function")),
-      )]);
-      (false, Type::Void, 0)
-    });
+    .unwrap_or_else(|| panic!("Encountered bare `return`"));
 
   let expression = expression
     .map(|expression| typecheck_expression_cast(return_type.clone(), expression, state, errors));
@@ -1004,7 +1051,7 @@ fn address_of_expression(
             })
           }
 
-          StackEntry::LoopBoundary => None,
+          StackEntry::LoopBoundary(_label) => None,
         })
         .or_else(|| {
           state
@@ -1189,7 +1236,7 @@ fn identifier_expression(
         })
       }
 
-      StackEntry::LoopBoundary => None,
+      StackEntry::LoopBoundary(_label) => None,
     })
     .or_else(|| {
       state
@@ -1536,6 +1583,8 @@ fn control_always_escapes(statement: &Statement) -> bool {
           && control_always_escapes(if_body) // TODO or condition always false
     }
     Statement::While(_, body, is_do_while) => *is_do_while && control_always_escapes(body), // TODO or condition always true
+    Statement::Continue => true,
+    Statement::Break => true,
     Statement::Return(_) => true,
     Statement::Declaration(_, _) => false,
     Statement::Assembly(_) => false,

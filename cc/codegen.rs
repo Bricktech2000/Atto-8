@@ -1,4 +1,5 @@
 use crate::*;
+use std::collections::HashSet;
 
 #[rustfmt::skip] macro_rules! ret_label { () => { Label::Local(format!("ret"), None) }; }
 #[rustfmt::skip] macro_rules! end_label { ($name:expr) => { Label::Local(format!("{}.end", $name), None) }; }
@@ -16,7 +17,25 @@ pub fn codegen(
   program: TypedProgram,
   _errors: &mut Vec<(Pos, Error)>,
 ) -> Vec<Result<Token, String>> {
-  codegen::program(program)
+  let tokens = codegen::program(program);
+
+  // filter out unused local labels to improve readability and avoid assembler warnings
+
+  let local_label_references: HashSet<String> = tokens
+    .iter()
+    .filter_map(|token| match token {
+      Ok(Token::LabelRef(Label::Local(label, None))) => Some(label.clone()),
+      _ => None,
+    })
+    .collect();
+
+  tokens
+    .into_iter()
+    .filter(|token| match token {
+      Ok(Token::LabelDef(Label::Local(label, None))) => local_label_references.contains(label),
+      _ => true,
+    })
+    .collect()
 }
 
 fn program(program: TypedProgram) -> Vec<Result<Token, String>> {
@@ -112,6 +131,22 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
     TypedStatement::WhileN1(label, condition, body, is_do_while) => {
       codegen::while_n1_statement(label, flatten_expression(condition), *body, is_do_while)
     }
+
+    TypedStatement::Continue(label, locals_size) => std::iter::empty()
+      .chain(std::iter::repeat(Ok(Token::Pop)).take(locals_size))
+      .chain([
+        Ok(Token::LabelRef(codegen::cond_label!(&label))),
+        Ok(Token::MacroRef(link::jmp_macro!())),
+      ])
+      .collect(),
+
+    TypedStatement::Break(label, locals_size) => std::iter::empty()
+      .chain(std::iter::repeat(Ok(Token::Pop)).take(locals_size))
+      .chain([
+        Ok(Token::LabelRef(codegen::end_label!(&label))),
+        Ok(Token::MacroRef(link::jmp_macro!())),
+      ])
+      .collect(),
 
     TypedStatement::MacroReturnN0(parameters_size, locals_size, expression) => {
       match (parameters_size, locals_size, expression) {
@@ -395,14 +430,19 @@ fn while_n1_statement(
         .chain(match is_do_while {
           true => std::iter::empty()
             .chain(codegen::statement(body))
-            .chain(precheck),
-          false => std::iter::empty()
+            .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
             .chain(precheck)
-            .chain(codegen::statement(body)),
+            .collect::<Vec<_>>(),
+          false => std::iter::empty()
+            .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
+            .chain(precheck)
+            .chain(codegen::statement(body))
+            .collect(),
         })
         .chain([
           Ok(Token::LabelRef(codegen::begin_label!(&label))),
           Ok(Token::MacroRef(link::jmp_macro!())),
+          Ok(Token::LabelDef(codegen::end_label!(&label))),
         ])
         .collect(),
       false => std::iter::empty()
@@ -410,7 +450,9 @@ fn while_n1_statement(
           true => codegen::statement(body),
           false => std::iter::empty().collect(),
         })
+        .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
         .chain(precheck)
+        .chain([Ok(Token::LabelDef(codegen::end_label!(&label)))])
         .collect(),
     },
 
@@ -426,12 +468,7 @@ fn while_n1_statement(
       })
       .chain([Ok(Token::LabelDef(codegen::begin_label!(&label)))])
       .chain(codegen::statement(body))
-      .chain(match is_do_while {
-        true => std::iter::empty().collect::<Vec<_>>(),
-        false => std::iter::empty()
-          .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
-          .collect(),
-      })
+      .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
       .chain(precheck)
       .chain(match condition {
         TypedExpression::N1EqualToN8(expression1, expression2) => {
@@ -455,6 +492,7 @@ fn while_n1_statement(
           true => link::bcc_macro!(),
           false => link::bcs_macro!(),
         })),
+        Ok(Token::LabelDef(codegen::end_label!(&label))),
       ])
       .collect(),
   }
