@@ -5,6 +5,8 @@ use std::collections::{BTreeMap, BTreeSet};
 #[rustfmt::skip] macro_rules! global_macro { ($name:expr) => { Macro(format!("{}", $name)) }; }
 #[rustfmt::skip] macro_rules! deps_macro { ($name:expr) => { Macro(format!("{}.deps", $name)) }; }
 #[rustfmt::skip] macro_rules! def_macro { ($name:expr) => { Macro(format!("{}.def", $name)) }; }
+#[rustfmt::skip] macro_rules! trap_macro { () => { Macro(format!("trap")) }; }
+#[rustfmt::skip] macro_rules! call_macro { () => { Macro(format!("call")) }; }
 #[rustfmt::skip] macro_rules! jmp_macro { () => { Macro(format!("jmp")) }; }
 #[rustfmt::skip] macro_rules! ret_macro { () => { Macro(format!("ret")) }; }
 #[rustfmt::skip] macro_rules! bcc_macro { () => { Macro(format!("bcc")) }; }
@@ -14,7 +16,6 @@ use std::collections::{BTreeMap, BTreeSet};
 #[rustfmt::skip] macro_rules! lt_macro { () => { Macro(format!("lt")) }; }
 #[rustfmt::skip] macro_rules! cl_macro { () => { Macro(format!("cl")) }; }
 #[rustfmt::skip] macro_rules! eq_macro { () => { Macro(format!("eq")) }; }
-#[rustfmt::skip] macro_rules! call_macro { () => { Macro(format!("call")) }; }
 #[rustfmt::skip] macro_rules! mul_macro { () => { Macro(format!("mul")) }; }
 #[rustfmt::skip] macro_rules! div_macro { () => { Macro(format!("div")) }; }
 #[rustfmt::skip] macro_rules! mod_macro { () => { Macro(format!("mod")) }; }
@@ -23,6 +24,8 @@ use std::collections::{BTreeMap, BTreeSet};
 #[rustfmt::skip] pub(crate) use global_macro;
 #[rustfmt::skip] pub(crate) use deps_macro;
 #[rustfmt::skip] pub(crate) use def_macro;
+#[rustfmt::skip] pub(crate) use trap_macro;
+#[rustfmt::skip] pub(crate) use call_macro;
 #[rustfmt::skip] pub(crate) use jmp_macro;
 #[rustfmt::skip] pub(crate) use ret_macro;
 #[rustfmt::skip] pub(crate) use bcc_macro;
@@ -32,7 +35,6 @@ use std::collections::{BTreeMap, BTreeSet};
 #[rustfmt::skip] pub(crate) use lt_macro;
 #[rustfmt::skip] pub(crate) use cl_macro;
 #[rustfmt::skip] pub(crate) use eq_macro;
-#[rustfmt::skip] pub(crate) use call_macro;
 #[rustfmt::skip] pub(crate) use mul_macro;
 #[rustfmt::skip] pub(crate) use div_macro;
 #[rustfmt::skip] pub(crate) use mod_macro;

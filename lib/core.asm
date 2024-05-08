@@ -40,6 +40,7 @@ rt2! st1 pop !ret
 rt3! st2 pop pop !ret
 
 dbg! @BB # unofficial opcode `0xBB` is treated as a debug request
+trap! @BA # illegal opcode `0xBA` will trigger a trap
 here! here. .here
 nop! nop @dyn
 hlt! !here !jmp

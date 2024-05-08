@@ -843,7 +843,9 @@ fn n8_expression(
         (expression, TypedExpression::N8Constant(0x01)) => std::iter::empty()
           .chain(codegen::n8_expression(expression, temporaries_size))
           .collect(),
-        (_expression, TypedExpression::N8Constant(0x00)) => std::iter::empty().collect(), // behavior is undefined
+        (_expression, TypedExpression::N8Constant(0x00)) => std::iter::empty()
+          .chain([Ok(Token::MacroRef(link::trap_macro!()))]) // division by zero. behavior is undefined
+          .collect(),
         (TypedExpression::N8Constant(0x00), expression) => std::iter::empty()
           .chain(codegen::n8_expression(expression, temporaries_size))
           .chain([Ok(Token::Pop), Ok(Token::XXX(0x00))])
@@ -870,7 +872,9 @@ fn n8_expression(
           .chain(codegen::n8_expression(expression, temporaries_size))
           .chain([Ok(Token::Pop), Ok(Token::XXX(0x00))])
           .collect(),
-        (_expression, TypedExpression::N8Constant(0x00)) => std::iter::empty().collect(), // behavior is undefined
+        (_expression, TypedExpression::N8Constant(0x00)) => std::iter::empty()
+          .chain([Ok(Token::MacroRef(link::trap_macro!()))]) // modulo zero. behavior is undefined
+          .collect(),
         (TypedExpression::N8Constant(0x00), expression) => std::iter::empty()
           .chain(codegen::n8_expression(expression, temporaries_size))
           .chain([Ok(Token::Pop), Ok(Token::XXX(0x00))])
@@ -946,8 +950,8 @@ fn load_from_offset(offset: usize) -> Vec<Result<Token, String>> {
         Ok(Token::Lda),
       ],
     },
-    // throw assembly-time error
-    Err(_) => vec![Ok(Token::AtError), Err(format!("# `Ldo` stack overflow"))],
+    // stack overflow. behavior is undefined
+    Err(_) => vec![Ok(Token::MacroRef(link::trap_macro!()))],
   }
 }
 
@@ -963,8 +967,8 @@ fn store_to_offset(offset: usize) -> Vec<Result<Token, String>> {
         Ok(Token::Sta),
       ],
     },
-    // throw assembly-time error
-    Err(_) => vec![Ok(Token::AtError), Err(format!("# `Sto` stack overflow"))],
+    // stack overflow. behavior is undefined
+    Err(_) => vec![Ok(Token::MacroRef(link::trap_macro!()))],
   }
 }
 
@@ -1243,6 +1247,13 @@ fn flatten_expression(expression: TypedExpression) -> TypedExpression {
         flatten_expression(*expression1),
         flatten_expression(*expression2),
       ) {
+        (expression, TypedExpression::N8Constant(0x00))
+        | (TypedExpression::N8Constant(0x00), expression) => {
+          flatten_expression(TypedExpression::N0SecondN0N0(
+            Box::new(TypedExpression::N0CastN8(Box::new(expression))),
+            Box::new(TypedExpression::N8Constant(0x00)),
+          ))
+        }
         (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
           TypedExpression::N8Constant(constant1.wrapping_mul(constant2))
         }
@@ -1257,8 +1268,14 @@ fn flatten_expression(expression: TypedExpression) -> TypedExpression {
         flatten_expression(*expression1),
         flatten_expression(*expression2),
       ) {
-        (TypedExpression::N8Constant(constant), TypedExpression::N8Constant(0x00)) => {
-          TypedExpression::N8Constant(constant) // behavior is undefined
+        (_expression, TypedExpression::N8Constant(0x00)) => {
+          TypedExpression::N8Constant(0x00) // division by zero. behavior is undefined
+        }
+        (TypedExpression::N8Constant(0x00), expression) => {
+          flatten_expression(TypedExpression::N0SecondN0N0(
+            Box::new(TypedExpression::N0CastN8(Box::new(expression))),
+            Box::new(TypedExpression::N8Constant(0x00)),
+          ))
         }
         (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
           TypedExpression::N8Constant(constant1.wrapping_div(constant2))
@@ -1274,8 +1291,14 @@ fn flatten_expression(expression: TypedExpression) -> TypedExpression {
         flatten_expression(*expression1),
         flatten_expression(*expression2),
       ) {
-        (TypedExpression::N8Constant(constant), TypedExpression::N8Constant(0x00)) => {
-          TypedExpression::N8Constant(constant) // behavior is undefined
+        (_expression, TypedExpression::N8Constant(0x00)) => {
+          TypedExpression::N8Constant(0x00) // modulo zero. behavior is undefined
+        }
+        (TypedExpression::N8Constant(0x00), expression) => {
+          flatten_expression(TypedExpression::N0SecondN0N0(
+            Box::new(TypedExpression::N0CastN8(Box::new(expression))),
+            Box::new(TypedExpression::N8Constant(0x00)),
+          ))
         }
         (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
           TypedExpression::N8Constant(constant1.wrapping_rem(constant2))
