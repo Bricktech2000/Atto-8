@@ -87,16 +87,6 @@ impl Type {
       Type::Pointer(_) => Range::U8,
     }
   }
-
-  fn width(&self) -> usize {
-    match self.range() {
-      Range::U0 | Range::I0 => 0,
-      Range::U1 | Range::I1 => 1,
-      Range::U8 | Range::I8 => 8,
-      Range::U16 | Range::I16 => 16,
-      Range::U32 | Range::I32 => 32,
-    }
-  }
 }
 
 impl Object {
@@ -696,7 +686,7 @@ fn expression(
             Pos(File("[pos]".into()), 0, 0),
             Error(format!("Logical negation of value of type `{}`", r#type)),
           )]);
-          TypedExpression::N1Constant(false)
+          dummy_typed_expression(&Type::Bool)
         }
         Range::U1 | Range::I1 => TypedExpression::N1BitwiseComplement(Box::new(expression)),
         Range::U8 | Range::I8 => TypedExpression::N1EqualToN8(
@@ -718,7 +708,7 @@ fn expression(
             Pos(File("[pos]".into()), 0, 0),
             Error(format!("Bitwise complement of value of type `{}`", r#type)),
           )]);
-          TypedExpression::N0Constant(())
+          dummy_typed_expression(&Type::Bool)
         }
         Range::U1 | Range::I1 => TypedExpression::N1BitwiseComplement(Box::new(expression)),
         Range::U8 | Range::I8 => TypedExpression::N8BitwiseComplement(Box::new(expression)),
@@ -1027,22 +1017,13 @@ fn address_of_expression(
                 return None;
               }
 
-              Some(match r#type {
-                Type::Function(_, _, _) => (
-                  Type::Pointer(Box::new(r#type.clone())),
-                  TypedExpression::N8AddrLocal(offset),
-                ),
-
-                Type::Macro(_, _, _, _) => panic!("Local variable has macro type"),
-
-                _ => (
-                  r#type.clone(),
-                  match r#type.range() {
-                    Range::U8 | Range::I8 => TypedExpression::N8AddrLocal(offset),
-                    _ => todo!(),
-                  },
-                ),
-              })
+              Some((
+                r#type.clone(),
+                match r#type.range() {
+                  Range::U8 | Range::I8 => TypedExpression::N8LoadLocal(offset),
+                  _ => todo!(),
+                },
+              ))
             })
           }
 
@@ -1063,7 +1044,7 @@ fn address_of_expression(
                   Pos(File("[pos]".into()), 0, 0),
                   Error(format!("Address of macro `{}`", identifier)),
                 )]);
-                (Type::Void, TypedExpression::N0Constant(()))
+                (r#type.clone(), dummy_typed_expression(&Type::Void))
               }
 
               _ => (
@@ -1080,7 +1061,7 @@ fn address_of_expression(
             Pos(File("[pos]".into()), 0, 0),
             Error(format!("Address of undeclared identifier `{}`", identifier)),
           )]);
-          (Type::Void, TypedExpression::N0Constant(()))
+          dummy_type_typed_expression(Type::Void)
         })
     }
 
@@ -1102,6 +1083,16 @@ fn cast_expression(
   state: &mut State,
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> (Type, TypedExpression) {
+  fn width(r#type: &Type) -> usize {
+    match r#type.range() {
+      Range::U0 | Range::I0 => 0,
+      Range::U1 | Range::I1 => 1,
+      Range::U8 | Range::I8 => 8,
+      Range::U16 | Range::I16 => 16,
+      Range::U32 | Range::I32 => 32,
+    }
+  }
+
   let (type1, expression1) = typecheck::expression(expression, state, errors);
 
   let expression = match (type1, &r#type) {
@@ -1110,12 +1101,7 @@ fn cast_expression(
         Pos(File("[pos]".into()), 0, 0),
         Error(format!("Cast from macro type `{}`, to `{}`", type1, r#type)),
       )]);
-      match r#type.range() {
-        Range::U0 | Range::I0 => TypedExpression::N0Constant(()),
-        Range::U1 | Range::I1 => TypedExpression::N1Constant(false),
-        Range::U8 | Range::I8 => TypedExpression::N8Constant(0x00),
-        _ => todo!(),
-      }
+      dummy_typed_expression(r#type)
     }
 
     (type1, r#type @ Type::Macro(_, _, _, _)) => {
@@ -1123,11 +1109,11 @@ fn cast_expression(
         Pos(File("[pos]".into()), 0, 0),
         Error(format!("Cast to macro type `{}`, from `{}`", r#type, type1)),
       )]);
-      TypedExpression::N0Constant(())
+      dummy_typed_expression(r#type)
     }
 
     (type1, r#type) if type1 == *r#type => expression1,
-    (type1, r#type) if type1.width() == r#type.width() => expression1,
+    (type1, r#type) if width(&type1) == width(&r#type) => expression1,
 
     (Type::Int, Type::Bool)
     | (Type::UnsignedInt, Type::Bool)
@@ -1158,12 +1144,7 @@ fn cast_expression(
           type1, r#type
         )),
       )]);
-      match r#type.range() {
-        Range::U0 | Range::I0 => TypedExpression::N0Constant(()),
-        Range::U1 | Range::I1 => TypedExpression::N1Constant(false),
-        Range::U8 | Range::I8 => TypedExpression::N8Constant(0x00),
-        _ => todo!(),
-      }
+      dummy_typed_expression(r#type)
     }
   };
 
@@ -1213,22 +1194,13 @@ fn identifier_expression(
             return None;
           }
 
-          Some(match r#type {
-            Type::Function(_, _, _) => (
-              Type::Pointer(Box::new(r#type.clone())),
-              TypedExpression::N8AddrLocal(offset),
-            ),
-
-            Type::Macro(_, _, _, _) => panic!("Local variable has macro type"),
-
-            _ => (
-              r#type.clone(),
-              match r#type.range() {
-                Range::U8 | Range::I8 => TypedExpression::N8LoadLocal(offset),
-                _ => todo!(),
-              },
-            ),
-          })
+          Some((
+            r#type.clone(),
+            match r#type.range() {
+              Range::U8 | Range::I8 => TypedExpression::N8LoadLocal(offset),
+              _ => todo!(),
+            },
+          ))
         })
       }
 
@@ -1244,7 +1216,7 @@ fn identifier_expression(
             TypedExpression::N8AddrGlobal(identifier.clone()),
           ),
 
-          Type::Macro(_, _, _, _) => (r#type.clone(), TypedExpression::N0Constant(())),
+          Type::Macro(_, _, _, _) => (r#type.clone(), dummy_typed_expression(&Type::Void)),
 
           _ => (
             r#type.clone(),
@@ -1263,7 +1235,7 @@ fn identifier_expression(
           identifier
         )),
       )]);
-      (Type::Void, TypedExpression::N0Constant(()))
+      dummy_type_typed_expression(Type::Void)
     })
 }
 
@@ -1360,7 +1332,7 @@ fn function_call_expression(
           return_type
         )),
       )]);
-      TypedExpression::N0Constant(())
+      dummy_typed_expression(return_type)
     }
   };
   (*return_type.clone(), expression)
@@ -1572,4 +1544,18 @@ fn control_always_escapes(statement: &Statement) -> bool {
     Statement::Declaration(_, _) => false,
     Statement::Assembly(_) => false,
   }
+}
+
+fn dummy_typed_expression(r#type: &Type) -> TypedExpression {
+  match r#type.range() {
+    Range::U0 | Range::I0 => TypedExpression::N0Constant(()),
+    Range::U1 | Range::I1 => TypedExpression::N1Constant(false),
+    Range::U8 | Range::I8 => TypedExpression::N8Constant(0x00),
+    _ => todo!(),
+  }
+}
+
+fn dummy_type_typed_expression(r#type: Type) -> (Type, TypedExpression) {
+  let expression = dummy_typed_expression(&r#type);
+  (r#type, expression)
 }
