@@ -31,6 +31,7 @@ char *str_lit_concat(void) {
          "concatenation";
 }
 
+inline void impure(void) asm {}
 inline void bar(void) memset(DISPLAY_BUFFER, 0xff, DISPLAY_BUFFER_LEN);
 inline void baz(void) { memset(DISPLAY_BUFFER, 0x00, DISPLAY_BUFFER_LEN); }
 
@@ -65,11 +66,12 @@ void main(void) {
 
   unsigned offset = 0b0011;
   putchar((&*foo)(1, "/-\\|") + '\000' + '\x00' + 000 + 0b0 + 0B0 + 0x0 + 0X0);
-  if (offset)
+  if (offset + 1)
     puts("***ok\n" + offset);
+  13 * ~offset + (impure(), 5);
 
   asm { !display_buffer sts }
-  while (bar(), 1) {
+  while (impure(), (bar(), 1)) {
     delay(0x1F);
     baz(), delay(0x1F);
     continue;

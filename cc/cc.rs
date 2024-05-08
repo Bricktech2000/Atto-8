@@ -231,9 +231,9 @@ pub enum TypedExpression {
   N0SecondN0N0(Box<TypedExpression>, Box<TypedExpression>),
   N1SecondN0N1(Box<TypedExpression>, Box<TypedExpression>),
   N8SecondN0N8(Box<TypedExpression>, Box<TypedExpression>),
-  N0CastN1(Box<TypedExpression>),
-  N0CastN8(Box<TypedExpression>),
-  N1CastN8(Box<TypedExpression>),
+  N0CastN1(Box<TypedExpression>), // bitwise truncation
+  N0CastN8(Box<TypedExpression>), // bitwise truncation
+  N1CastN8(Box<TypedExpression>), // bitwise truncation
   N0Constant(()),
   N1Constant(bool),
   N8Constant(u8),

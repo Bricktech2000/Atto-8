@@ -1146,6 +1146,9 @@ fn ncf_n1_cast_n8(
 fn flatten_expression(expression: TypedExpression) -> TypedExpression {
   // constant folding
 
+  // moves comma operators outward. that is, moves operations on a comma expression
+  // inside the comma expression. facilitates the extraction of the left-hand side
+  // of comma expressions into statements
   macro_rules! default {
     ($expression:expr, $second_variant:ident, $outer_variant:ident) => {
       match $expression {
@@ -1335,31 +1338,106 @@ fn flatten_expression(expression: TypedExpression) -> TypedExpression {
       }
     }
 
-    TypedExpression::N0SecondN0N0(expression1, expression2) => TypedExpression::N0SecondN0N0(
-      Box::new(flatten_expression(*expression1)),
-      Box::new(flatten_expression(*expression2)),
-    ),
+    TypedExpression::N0SecondN0N0(expression1, expression2) => {
+      match (
+        flatten_expression(*expression1),
+        flatten_expression(*expression2),
+      ) {
+        (TypedExpression::N0Constant(_constant), expression) => expression,
+        (expression1, expression2) => {
+          // `default!` overflows stack when folding `(a, (b, c))`
+          TypedExpression::N0SecondN0N0(Box::new(expression1), Box::new(expression2))
+        }
+      }
+    }
 
-    TypedExpression::N1SecondN0N1(expression1, expression2) => TypedExpression::N1SecondN0N1(
-      Box::new(flatten_expression(*expression1)),
-      Box::new(flatten_expression(*expression2)),
-    ),
+    TypedExpression::N1SecondN0N1(expression1, expression2) => {
+      match (
+        flatten_expression(*expression1),
+        flatten_expression(*expression2),
+      ) {
+        (TypedExpression::N0Constant(_constant), expression) => expression,
+        (expression1, expression2) => {
+          // `default!` overflows stack when folding `(a, (b, c))`
+          TypedExpression::N1SecondN0N1(Box::new(expression1), Box::new(expression2))
+        }
+      }
+    }
 
-    TypedExpression::N8SecondN0N8(expression1, expression2) => TypedExpression::N8SecondN0N8(
-      Box::new(flatten_expression(*expression1)),
-      Box::new(flatten_expression(*expression2)),
-    ),
+    TypedExpression::N8SecondN0N8(expression1, expression2) => {
+      match (
+        flatten_expression(*expression1),
+        flatten_expression(*expression2),
+      ) {
+        (TypedExpression::N0Constant(_constant), expression) => expression,
+        (expression1, expression2) => {
+          // `default!` overflows stack when folding `(a, (b, c))`
+          TypedExpression::N8SecondN0N8(Box::new(expression1), Box::new(expression2))
+        }
+      }
+    }
 
+    // move bitwise truncations inward. that is, turn a truncation of the result of an
+    // operation into a simpler operation on truncated operands. optimizes away null
+    // statements that have no side effects, for example
+    //
     TypedExpression::N0CastN1(expression) => match flatten_expression(*expression) {
+      TypedExpression::N1DereferenceN8(_) => TypedExpression::N0Constant(()),
+      TypedExpression::N1BitwiseComplement(expression) => {
+        flatten_expression(TypedExpression::N0CastN8(expression))
+      }
+      TypedExpression::N1EqualToN8(expression1, expression2)
+      | TypedExpression::N1LessThanU8(expression1, expression2)
+      | TypedExpression::N1LessThanI8(expression1, expression2)
+      | TypedExpression::U8Division(expression1, expression2)
+      | TypedExpression::U8Modulo(expression1, expression2) => {
+        flatten_expression(TypedExpression::N0SecondN0N0(
+          Box::new(TypedExpression::N0CastN8(expression1)),
+          Box::new(TypedExpression::N0CastN8(expression2)),
+        ))
+      }
+      TypedExpression::N1CastN8(expression) => {
+        flatten_expression(TypedExpression::N0CastN8(expression))
+      }
       TypedExpression::N1Constant(_constant) => TypedExpression::N0Constant(()),
       expression => default!(expression, N0SecondN0N0, N0CastN1),
     },
 
     TypedExpression::N0CastN8(expression) => match flatten_expression(*expression) {
+      TypedExpression::N8DereferenceN8(_) => TypedExpression::N0Constant(()),
+      TypedExpression::N8BitwiseComplement(expression) => {
+        flatten_expression(TypedExpression::N0CastN8(expression))
+      }
+      TypedExpression::N8Addition(expression1, expression2)
+      | TypedExpression::N8Subtraction(expression1, expression2)
+      | TypedExpression::N8Multiplication(expression1, expression2)
+      | TypedExpression::U8Division(expression1, expression2)
+      | TypedExpression::U8Modulo(expression1, expression2) => {
+        flatten_expression(TypedExpression::N0SecondN0N0(
+          Box::new(TypedExpression::N0CastN8(expression1)),
+          Box::new(TypedExpression::N0CastN8(expression2)),
+        ))
+      }
+      TypedExpression::N8Constant(_)
+      | TypedExpression::N8LoadLocal(_)
+      | TypedExpression::N8AddrLocal(_)
+      | TypedExpression::N8LoadGlobal(_)
+      | TypedExpression::N8AddrGlobal(_) => TypedExpression::N0Constant(()),
       expression => default!(expression, N0SecondN0N0, N0CastN8),
     },
 
     TypedExpression::N1CastN8(expression) => match flatten_expression(*expression) {
+      TypedExpression::N8BitwiseComplement(expression) => flatten_expression(
+        TypedExpression::N1BitwiseComplement(Box::new(TypedExpression::N1CastN8(expression))),
+      ),
+      TypedExpression::N8Addition(_expression1, _expression2)
+      | TypedExpression::N8Subtraction(_expression1, _expression2)
+      | TypedExpression::N8Multiplication(_expression1, _expression2) => {
+        todo!()
+        // N8Addition => psi N1Addition N1CastN8
+        // N8Subtraction => psi N1Subtraction N1CastN8
+        // N8Multiplication => psi N1Multiplication N1CastN8
+      }
       TypedExpression::N8Constant(constant) => {
         TypedExpression::N1Constant((constant & 0x01) != 0x00)
       }

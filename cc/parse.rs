@@ -3,18 +3,18 @@ use std::rc::Rc;
 
 // utilities
 
-fn psi<T, U, V, F: FnOnce(T) -> U + Clone + 'static, G: FnOnce(U, U) -> V + Clone + 'static>(
+fn psi<T, U, V, F: FnOnce(U, U) -> V + Clone + 'static, G: FnOnce(T) -> U + Clone + 'static>(
   f: F,
   g: G,
 ) -> Rc<dyn Fn(T, T) -> V> {
-  Rc::new(move |x, y| g.clone()(f.clone()(x), f.clone()(y)))
+  Rc::new(move |x, y| f.clone()(g.clone()(x), g.clone()(y)))
 }
 
-fn b<T, U, V, F: FnOnce(T) -> U + Clone + 'static, G: FnOnce(U) -> V + Clone + 'static>(
+fn b<T, U, V, F: FnOnce(U) -> V + Clone + 'static, G: FnOnce(T) -> U + Clone + 'static>(
   f: F,
   g: G,
 ) -> Rc<dyn Fn(T) -> V> {
-  Rc::new(move |x| g.clone()(f.clone()(x)))
+  Rc::new(move |x| f.clone()(g.clone()(x)))
 }
 
 #[derive(Clone)]
@@ -758,7 +758,7 @@ fn assembly_statement() -> Parser<Statement> {
 fn expression() -> Parser<Expression> {
   parse::binop(
     parse::assignment_expression(),
-    parse::ws(parse::char(',')).map(|_| psi(Box::new, Expression::Comma)),
+    parse::ws(parse::char(',')).map(|_| psi(Expression::Comma, Box::new)),
   )
 }
 
@@ -796,35 +796,35 @@ fn conditional_expression() -> Parser<Expression> {
 fn logical_or_expression() -> Parser<Expression> {
   parse::binop(
     parse::logical_and_expression(),
-    parse::ws(parse::string("||")).map(|_| psi(Box::new, Expression::LogicalOr)),
+    parse::ws(parse::string("||")).map(|_| psi(Expression::LogicalOr, Box::new)),
   )
 }
 
 fn logical_and_expression() -> Parser<Expression> {
   parse::binop(
     parse::bitwise_inclusive_or_expression(),
-    parse::ws(parse::string("&&")).map(|_| psi(Box::new, Expression::LogicalAnd)),
+    parse::ws(parse::string("&&")).map(|_| psi(Expression::LogicalAnd, Box::new)),
   )
 }
 
 fn bitwise_inclusive_or_expression() -> Parser<Expression> {
   parse::binop(
     parse::bitwise_exclusive_or_expression(),
-    parse::ws(parse::char('|')).map(|_| psi(Box::new, Expression::BitwiseInclusiveOr)),
+    parse::ws(parse::char('|')).map(|_| psi(Expression::BitwiseInclusiveOr, Box::new)),
   )
 }
 
 fn bitwise_exclusive_or_expression() -> Parser<Expression> {
   parse::binop(
     parse::bitwise_and_expression(),
-    parse::ws(parse::char('^')).map(|_| psi(Box::new, Expression::BitwiseExclusiveOr)),
+    parse::ws(parse::char('^')).map(|_| psi(Expression::BitwiseExclusiveOr, Box::new)),
   )
 }
 
 fn bitwise_and_expression() -> Parser<Expression> {
   parse::binop(
     parse::equality_expression(),
-    parse::ws(parse::char('&')).map(|_| psi(Box::new, Expression::BitwiseAnd)),
+    parse::ws(parse::char('&')).map(|_| psi(Expression::BitwiseAnd, Box::new)),
   )
 }
 
@@ -832,8 +832,8 @@ fn equality_expression() -> Parser<Expression> {
   parse::binop(
     parse::relational_expression(),
     Parser::expected(vec![])
-      .or_else(|_| parse::ws(parse::string("==")).map(|_| psi(Box::new, Expression::EqualTo)))
-      .or_else(|_| parse::ws(parse::string("!=")).map(|_| psi(Box::new, Expression::NotEqualTo))),
+      .or_else(|_| parse::ws(parse::string("==")).map(|_| psi(Expression::EqualTo, Box::new)))
+      .or_else(|_| parse::ws(parse::string("!=")).map(|_| psi(Expression::NotEqualTo, Box::new))),
   )
 }
 
@@ -842,13 +842,13 @@ fn relational_expression() -> Parser<Expression> {
     parse::shift_expression(),
     Parser::expected(vec![])
       .or_else(|_| {
-        parse::ws(parse::string(">=")).map(|_| psi(Box::new, Expression::GreaterThanOrEqualTo))
+        parse::ws(parse::string(">=")).map(|_| psi(Expression::GreaterThanOrEqualTo, Box::new))
       })
-      .or_else(|_| parse::ws(parse::char('>')).map(|_| psi(Box::new, Expression::GreaterThan)))
+      .or_else(|_| parse::ws(parse::char('>')).map(|_| psi(Expression::GreaterThan, Box::new)))
       .or_else(|_| {
-        parse::ws(parse::string("<=")).map(|_| psi(Box::new, Expression::LessThanOrEqualTo))
+        parse::ws(parse::string("<=")).map(|_| psi(Expression::LessThanOrEqualTo, Box::new))
       })
-      .or_else(|_| parse::ws(parse::char('<')).map(|_| psi(Box::new, Expression::LessThan))),
+      .or_else(|_| parse::ws(parse::char('<')).map(|_| psi(Expression::LessThan, Box::new))),
   )
 }
 
@@ -856,8 +856,8 @@ fn shift_expression() -> Parser<Expression> {
   parse::binop(
     parse::additive_expression(),
     Parser::expected(vec![])
-      .or_else(|_| parse::ws(parse::string("<<")).map(|_| psi(Box::new, Expression::LeftShift)))
-      .or_else(|_| parse::ws(parse::string(">>")).map(|_| psi(Box::new, Expression::RightShift))),
+      .or_else(|_| parse::ws(parse::string("<<")).map(|_| psi(Expression::LeftShift, Box::new)))
+      .or_else(|_| parse::ws(parse::string(">>")).map(|_| psi(Expression::RightShift, Box::new))),
   )
 }
 
@@ -865,8 +865,8 @@ fn additive_expression() -> Parser<Expression> {
   parse::binop(
     parse::multiplicative_expression(),
     Parser::expected(vec![])
-      .or_else(|_| parse::ws(parse::char('+')).map(|_| psi(Box::new, Expression::Addition)))
-      .or_else(|_| parse::ws(parse::char('-')).map(|_| psi(Box::new, Expression::Subtraction))),
+      .or_else(|_| parse::ws(parse::char('+')).map(|_| psi(Expression::Addition, Box::new)))
+      .or_else(|_| parse::ws(parse::char('-')).map(|_| psi(Expression::Subtraction, Box::new))),
   )
 }
 
@@ -874,9 +874,9 @@ fn multiplicative_expression() -> Parser<Expression> {
   parse::binop(
     parse::cast_expression(),
     Parser::expected(vec![])
-      .or_else(|_| parse::ws(parse::char('*')).map(|_| psi(Box::new, Expression::Multiplication)))
-      .or_else(|_| parse::ws(parse::char('/')).map(|_| psi(Box::new, Expression::Division)))
-      .or_else(|_| parse::ws(parse::char('%')).map(|_| psi(Box::new, Expression::Modulo))),
+      .or_else(|_| parse::ws(parse::char('*')).map(|_| psi(Expression::Multiplication, Box::new)))
+      .or_else(|_| parse::ws(parse::char('/')).map(|_| psi(Expression::Division, Box::new)))
+      .or_else(|_| parse::ws(parse::char('%')).map(|_| psi(Expression::Modulo, Box::new))),
   )
 }
 
@@ -898,37 +898,37 @@ fn unary_expression() -> Parser<Expression> {
     .or_else(|_| {
       parse::unop(
         parse::cast_expression(),
-        parse::ws(parse::char('&')).map(|_| b(Box::new, Expression::AddressOf)),
+        parse::ws(parse::char('&')).map(|_| b(Expression::AddressOf, Box::new)),
       )
     })
     .or_else(|_| {
       parse::unop(
         parse::cast_expression(),
-        parse::ws(parse::char('*')).map(|_| b(Box::new, Expression::Dereference)),
+        parse::ws(parse::char('*')).map(|_| b(Expression::Dereference, Box::new)),
       )
     })
     .or_else(|_| {
       parse::unop(
         parse::cast_expression(),
-        parse::ws(parse::char('-')).map(|_| b(Box::new, Expression::Negation)),
+        parse::ws(parse::char('-')).map(|_| b(Expression::Negation, Box::new)),
       )
     })
     .or_else(|_| {
       parse::unop(
         parse::cast_expression(),
-        parse::ws(parse::char('+')).map(|_| b(Box::new, Expression::Positive)),
+        parse::ws(parse::char('+')).map(|_| b(Expression::Positive, Box::new)),
       )
     })
     .or_else(|_| {
       parse::unop(
         parse::cast_expression(),
-        parse::ws(parse::char('~')).map(|_| b(Box::new, Expression::BitwiseComplement)),
+        parse::ws(parse::char('~')).map(|_| b(Expression::BitwiseComplement, Box::new)),
       )
     })
     .or_else(|_| {
       parse::unop(
         parse::cast_expression(),
-        parse::ws(parse::char('!')).map(|_| b(Box::new, Expression::LogicalNegation)),
+        parse::ws(parse::char('!')).map(|_| b(Expression::LogicalNegation, Box::new)),
       )
     })
 }
