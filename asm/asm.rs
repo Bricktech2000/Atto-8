@@ -470,9 +470,7 @@ fn assemble(
 
           Root::LabelDefs(labels) => {
             labels.iter().for_each(|label| {
-              if matches!(label, Label::Local(_, None)) {
-                panic!("Local label has no scope specified")
-              }
+              assert!(!matches!(label, Label::Local(_, None)));
 
               if label_definitions.contains_key(&label) {
                 bruteforce_errors.extend([(

@@ -585,7 +585,7 @@ fn return_statement(
         None
       }
     })
-    .unwrap_or_else(|| panic!("Encountered bare `return`"));
+    .unwrap_or_else(|| panic!("Bare `return`"));
 
   let expression = expression
     .map(|expression| typecheck_expression_cast(return_type.clone(), expression, state, errors));
@@ -1468,9 +1468,7 @@ fn typecheck_usual_arithmetic_conversions(
   let (type1, expression1) = typecheck::expression(expression1, state, errors);
   let (type2, expression2) = typecheck::expression(expression2, state, errors);
 
-  if type1 != type2 {
-    panic!("Expected expressions to have identical type`");
-  }
+  assert_eq!(type1, type2, "Expected expressions to have identical type`");
 
   (type1, expression1, expression2)
 }
@@ -1534,9 +1532,7 @@ fn typecheck_pointer_arithmetic_conversions(
   let (type1, expression1) = typecheck::expression(expression1, state, errors);
   let (type2, expression2) = typecheck::expression(expression2, state, errors);
 
-  if type1 != type2 {
-    panic!("Expected expressions to have identical type`");
-  }
+  assert_eq!(type1, type2, "Expected expressions to have identical type`");
 
   (type1, expression1, expression2)
 }
@@ -1553,9 +1549,7 @@ fn typecheck_expression_cast(
     errors,
   );
 
-  if r#type != r#type {
-    panic!("Expected expression to have type `{}`", r#type);
-  }
+  assert_eq!(r#type, r#type, "Expected expression to have requested type");
 
   expression
 }

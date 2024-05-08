@@ -142,9 +142,7 @@ impl Tickable for Microcomputer {
     self.rst = Reset::Asserted;
     self
       .tick(stdin, stdout, display, controller)
-      .unwrap_or_else(|_| {
-        panic!("Tick trap during reset sequence");
-      });
+      .unwrap_or_else(|_| panic!("Tick trap during reset sequence"));
     self.rst = Reset::Deasserted;
   }
 

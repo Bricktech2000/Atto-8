@@ -319,10 +319,8 @@ fn if_n1_statement(
   else_body: Option<TypedStatement>,
 ) -> Vec<Result<Token, String>> {
   let (precheck, condition) = match condition {
-    TypedExpression::N1SecondN0N1(expression1, expression2) => {
-      (codegen::n0_expression(*expression1, 0), *expression2)
-    }
-    _ => (vec![], condition),
+    TypedExpression::N1SecondN0N1(expression1, expression2) => (*expression1, *expression2),
+    _ => (TypedExpression::N0Constant(()), condition),
   };
 
   let (negated, condition) = match condition {
@@ -336,23 +334,38 @@ fn if_n1_statement(
   };
 
   match condition {
-    TypedExpression::N1BitwiseComplement(expression) if negated => {
+    TypedExpression::N1BitwiseComplement(expression) => {
+      assert!(negated);
       codegen::if_n1_statement(label, *expression, if_body, else_body)
+    }
+
+    TypedExpression::N1SecondN0N1(expression1, expression2) => {
+      assert_ne!(precheck, TypedExpression::N0Constant(()));
+
+      let condition = TypedExpression::N1SecondN0N1(
+        Box::new(TypedExpression::N0SecondN0N0(
+          Box::new(precheck),
+          expression1,
+        )),
+        expression2,
+      );
+
+      codegen::if_n1_statement(label, condition, if_body, else_body)
     }
 
     TypedExpression::N1Constant(constant) => match constant ^ negated {
       true => std::iter::empty()
-        .chain(precheck)
+        .chain(codegen::n0_expression(precheck, 0))
         .chain(codegen::statement(if_body))
         .collect(),
       false => std::iter::empty()
-        .chain(precheck)
+        .chain(codegen::n0_expression(precheck, 0))
         .chain(else_body.map(codegen::statement).unwrap_or_else(Vec::new))
         .collect(),
     },
 
     _ => std::iter::empty()
-      .chain(precheck)
+      .chain(codegen::n0_expression(precheck, 0))
       .chain(match condition {
         TypedExpression::N1EqualToN8(expression1, expression2) => {
           codegen::cf_equal_to_n8(*expression1, *expression2, 0)
@@ -363,10 +376,7 @@ fn if_n1_statement(
         TypedExpression::N1LessThanI8(expression1, expression2) => {
           codegen::cf_less_than_i8(*expression1, *expression2, 0)
         }
-        TypedExpression::N1CastN8(expression) => std::iter::empty()
-          .chain(codegen::n8_expression(*expression, 0))
-          .chain([Ok(Token::XXX(0x01)), Ok(Token::MacroRef(link::cl_macro!()))])
-          .collect(),
+        TypedExpression::N1CastN8(expression) => codegen::ncf_n1_cast_n8(*expression, 0),
         _ => unreachable!(),
       })
       .chain([
@@ -403,10 +413,8 @@ fn while_n1_statement(
   is_do_while: bool,
 ) -> Vec<Result<Token, String>> {
   let (precheck, condition) = match condition {
-    TypedExpression::N1SecondN0N1(expression1, expression2) => {
-      (codegen::n0_expression(*expression1, 0), *expression2)
-    }
-    _ => (vec![], condition),
+    TypedExpression::N1SecondN0N1(expression1, expression2) => (*expression1, *expression2),
+    _ => (TypedExpression::N0Constant(()), condition),
   };
 
   let (negated, condition) = match condition {
@@ -420,8 +428,23 @@ fn while_n1_statement(
   };
 
   match condition {
-    TypedExpression::N1BitwiseComplement(expression) if negated => {
+    TypedExpression::N1BitwiseComplement(expression) => {
+      assert!(negated);
       codegen::while_n1_statement(label, *expression, body, is_do_while)
+    }
+
+    TypedExpression::N1SecondN0N1(expression1, expression2) => {
+      assert_ne!(precheck, TypedExpression::N0Constant(()));
+
+      let condition = TypedExpression::N1SecondN0N1(
+        Box::new(TypedExpression::N0SecondN0N0(
+          Box::new(precheck),
+          expression1,
+        )),
+        expression2,
+      );
+
+      codegen::while_n1_statement(label, condition, body, is_do_while)
     }
 
     TypedExpression::N1Constant(constant) => match constant ^ negated {
@@ -431,11 +454,11 @@ fn while_n1_statement(
           true => std::iter::empty()
             .chain(codegen::statement(body))
             .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
-            .chain(precheck)
+            .chain(codegen::n0_expression(precheck, 0))
             .collect::<Vec<_>>(),
           false => std::iter::empty()
             .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
-            .chain(precheck)
+            .chain(codegen::n0_expression(precheck, 0))
             .chain(codegen::statement(body))
             .collect(),
         })
@@ -451,7 +474,7 @@ fn while_n1_statement(
           false => std::iter::empty().collect(),
         })
         .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
-        .chain(precheck)
+        .chain(codegen::n0_expression(precheck, 0))
         .chain([Ok(Token::LabelDef(codegen::end_label!(&label)))])
         .collect(),
     },
@@ -469,7 +492,7 @@ fn while_n1_statement(
       .chain([Ok(Token::LabelDef(codegen::begin_label!(&label)))])
       .chain(codegen::statement(body))
       .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
-      .chain(precheck)
+      .chain(codegen::n0_expression(precheck, 0))
       .chain(match condition {
         TypedExpression::N1EqualToN8(expression1, expression2) => {
           codegen::cf_equal_to_n8(*expression1, *expression2, 0)
@@ -480,10 +503,7 @@ fn while_n1_statement(
         TypedExpression::N1LessThanI8(expression1, expression2) => {
           codegen::cf_less_than_i8(*expression1, *expression2, 0)
         }
-        TypedExpression::N1CastN8(expression) => std::iter::empty()
-          .chain(codegen::n8_expression(*expression, 0))
-          .chain([Ok(Token::XXX(0x01)), Ok(Token::MacroRef(link::cl_macro!()))])
-          .collect(),
+        TypedExpression::N1CastN8(expression) => codegen::ncf_n1_cast_n8(*expression, 0),
         _ => unreachable!(),
       })
       .chain([
@@ -798,10 +818,11 @@ fn n8_expression(
         | (TypedExpression::N8Constant(0x01), expression) => std::iter::empty()
           .chain(codegen::n8_expression(expression, temporaries_size))
           .collect(),
-        (_expression, TypedExpression::N8Constant(0x00))
-        | (TypedExpression::N8Constant(0x00), _expression) => {
-          std::iter::empty().chain([Ok(Token::XXX(0x00))]).collect()
-        }
+        (expression, TypedExpression::N8Constant(0x00))
+        | (TypedExpression::N8Constant(0x00), expression) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
+          .chain([Ok(Token::Pop), Ok(Token::XXX(0x00))])
+          .collect(),
         (expression1, expression2) => std::iter::empty()
           .chain(codegen::n8_expression(expression1, temporaries_size))
           .chain(codegen::n8_expression(expression2, temporaries_size + 1))
@@ -812,8 +833,8 @@ fn n8_expression(
 
     TypedExpression::U8Division(expression1, expression2) => {
       match (*expression1, *expression2) {
-        (expression1, TypedExpression::N8Constant(0x04)) => std::iter::empty()
-          .chain(codegen::n8_expression(expression1, temporaries_size))
+        (expression, TypedExpression::N8Constant(0x04)) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
           .chain([
             Ok(Token::Clc),
             Ok(Token::Shr),
@@ -821,17 +842,18 @@ fn n8_expression(
             Ok(Token::Shr),
           ])
           .collect(),
-        (expression1, TypedExpression::N8Constant(0x02)) => std::iter::empty()
-          .chain(codegen::n8_expression(expression1, temporaries_size))
+        (expression, TypedExpression::N8Constant(0x02)) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
           .chain([Ok(Token::Clc), Ok(Token::Shr)])
           .collect(),
-        (expression1, TypedExpression::N8Constant(0x01)) => std::iter::empty()
-          .chain(codegen::n8_expression(expression1, temporaries_size))
+        (expression, TypedExpression::N8Constant(0x01)) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
           .collect(),
-        (_expression1, TypedExpression::N8Constant(0x00)) => std::iter::empty().collect(), // behavior is undefined
-        (TypedExpression::N8Constant(0x00), _expression) => {
-          std::iter::empty().chain([Ok(Token::XXX(0x00))]).collect()
-        }
+        (_expression, TypedExpression::N8Constant(0x00)) => std::iter::empty().collect(), // behavior is undefined
+        (TypedExpression::N8Constant(0x00), expression) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
+          .chain([Ok(Token::Pop), Ok(Token::XXX(0x00))])
+          .collect(),
         (expression1, expression2) => std::iter::empty()
           .chain(codegen::n8_expression(expression1, temporaries_size))
           .chain(codegen::n8_expression(expression2, temporaries_size + 1))
@@ -842,21 +864,23 @@ fn n8_expression(
 
     TypedExpression::U8Modulo(expression1, expression2) => {
       match (*expression1, *expression2) {
-        (expression1, TypedExpression::N8Constant(0x04)) => std::iter::empty()
-          .chain(codegen::n8_expression(expression1, temporaries_size))
+        (expression, TypedExpression::N8Constant(0x04)) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
           .chain([Ok(Token::XXX(0x03)), Ok(Token::And)])
           .collect(),
-        (expression1, TypedExpression::N8Constant(0x02)) => std::iter::empty()
-          .chain(codegen::n8_expression(expression1, temporaries_size))
+        (expression, TypedExpression::N8Constant(0x02)) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
           .chain([Ok(Token::XXX(0x01)), Ok(Token::And)])
           .collect(),
-        (_expression1, TypedExpression::N8Constant(0x01)) => std::iter::empty()
-          .chain(codegen::n8_expression(TypedExpression::N8Constant(0x00), 0))
+        (expression, TypedExpression::N8Constant(0x01)) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
+          .chain([Ok(Token::Pop), Ok(Token::XXX(0x00))])
           .collect(),
-        (_expression1, TypedExpression::N8Constant(0x00)) => std::iter::empty().collect(), // behavior is undefined
-        (TypedExpression::N8Constant(0x00), _expression) => {
-          std::iter::empty().chain([Ok(Token::XXX(0x00))]).collect()
-        }
+        (_expression, TypedExpression::N8Constant(0x00)) => std::iter::empty().collect(), // behavior is undefined
+        (TypedExpression::N8Constant(0x00), expression) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
+          .chain([Ok(Token::Pop), Ok(Token::XXX(0x00))])
+          .collect(),
         (expression1, expression2) => std::iter::empty()
           .chain(codegen::n8_expression(expression1, temporaries_size))
           .chain(codegen::n8_expression(expression2, temporaries_size + 1))
@@ -1107,6 +1131,16 @@ fn cf_equal_to_n8(
       .chain([Ok(Token::MacroRef(link::eq_macro!()))])
       .collect(),
   }
+}
+
+fn ncf_n1_cast_n8(
+  expression: TypedExpression,
+  temporaries_size: usize,
+) -> Vec<Result<Token, String>> {
+  std::iter::empty()
+    .chain(codegen::n8_expression(expression, temporaries_size))
+    .chain([Ok(Token::XXX(0x01)), Ok(Token::MacroRef(link::cl_macro!()))])
+    .collect()
 }
 
 fn flatten_expression(expression: TypedExpression) -> TypedExpression {
