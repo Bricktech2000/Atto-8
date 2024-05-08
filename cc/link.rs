@@ -117,8 +117,7 @@ fn statement(statement: &TypedStatement) -> BTreeSet<(bool, String)> {
 
 fn expression(expression: &TypedExpression) -> BTreeSet<(bool, String)> {
   match expression {
-    TypedExpression::N0DereferenceN8(expression)
-    | TypedExpression::N1DereferenceN8(expression)
+    TypedExpression::N1DereferenceN8(expression)
     | TypedExpression::N8DereferenceN8(expression)
     | TypedExpression::N1BitwiseComplement(expression)
     | TypedExpression::N8BitwiseComplement(expression) => link::expression(expression),

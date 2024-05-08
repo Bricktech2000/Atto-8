@@ -520,7 +520,6 @@ fn while_n1_statement(
 
 fn expression(expression: TypedExpression, temporaries_size: usize) -> Vec<Result<Token, String>> {
   match expression {
-    TypedExpression::N0DereferenceN8(_) => codegen::n0_expression(expression, temporaries_size),
     TypedExpression::N1DereferenceN8(_) => codegen::n1_expression(expression, temporaries_size),
     TypedExpression::N8DereferenceN8(_) => codegen::n8_expression(expression, temporaries_size),
     TypedExpression::N1BitwiseComplement(_) => codegen::n1_expression(expression, temporaries_size),
@@ -563,11 +562,6 @@ fn n0_expression(
   temporaries_size: usize,
 ) -> Vec<Result<Token, String>> {
   match expression {
-    TypedExpression::N0DereferenceN8(expression) => std::iter::empty()
-      .chain(codegen::n8_expression(*expression, temporaries_size))
-      .chain([Ok(Token::Lda), Ok(Token::Pop)])
-      .collect(),
-
     TypedExpression::N0SecondN0N0(expression1, expression2) => std::iter::empty()
       .chain(codegen::n0_expression(*expression1, temporaries_size))
       .chain(codegen::n0_expression(*expression2, temporaries_size))
@@ -1196,10 +1190,6 @@ fn flatten_expression(expression: TypedExpression) -> TypedExpression {
   }
 
   match expression {
-    TypedExpression::N0DereferenceN8(expression) => match flatten_expression(*expression) {
-      expression => default!(expression, N0SecondN0N0, N0DereferenceN8),
-    },
-
     TypedExpression::N1DereferenceN8(expression) => match flatten_expression(*expression) {
       expression => default!(expression, N1SecondN0N1, N1DereferenceN8),
     },

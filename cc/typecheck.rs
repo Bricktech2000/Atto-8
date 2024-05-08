@@ -633,7 +633,16 @@ fn expression(
       match r#type {
         Type::Pointer(r#type) => {
           let expression = match r#type.range() {
-            Range::U0 | Range::I0 => TypedExpression::N0DereferenceN8(Box::new(expression)),
+            Range::U0 | Range::I0 => {
+              errors.extend([(
+                Pos(File("[pos]".into()), 0, 0),
+                Error(format!(
+                  "Dereference of value of type `{}`",
+                  Type::Pointer(r#type.clone())
+                )),
+              )]);
+              dummy_typed_expression(&r#type)
+            }
             Range::U1 | Range::I1 => TypedExpression::N1DereferenceN8(Box::new(expression)),
             Range::U8 | Range::I8 => TypedExpression::N8DereferenceN8(Box::new(expression)),
             _ => todo!(),
