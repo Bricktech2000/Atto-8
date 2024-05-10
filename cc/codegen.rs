@@ -796,7 +796,7 @@ fn n8_expression(
         | (TypedExpression::N8Constant(0x03), expression) => std::iter::empty()
           .chain(codegen::n8_expression(expression, temporaries_size))
           .chain([
-            Ok(Token::LdO(Ofst(0x00))),
+            Ok(Token::LdO(Ofst::assert(0x00))),
             Ok(Token::Clc),
             Ok(Token::Shl),
             Ok(Token::Clc),
@@ -984,11 +984,11 @@ fn cf_less_than_u8(
       .collect(),
     (TypedExpression::N8Constant(0x00), expression) => std::iter::empty()
       .chain(codegen::n8_expression(expression, temporaries_size))
-      .chain([Ok(Token::MacroRef(link::zr_macro!())), Ok(Token::Flc)])
+      .chain([Ok(Token::MacroRef(link::nzr_macro!()))])
       .collect(),
     (expression, TypedExpression::N8Constant(0xFF)) => std::iter::empty()
       .chain(codegen::n8_expression(expression, temporaries_size))
-      .chain([Ok(Token::MacroRef(link::on_macro!())), Ok(Token::Flc)])
+      .chain([Ok(Token::MacroRef(link::non_macro!()))])
       .collect(),
     (TypedExpression::N8Constant(0xFE), expression) => std::iter::empty()
       .chain(codegen::n8_expression(expression, temporaries_size))
@@ -996,15 +996,11 @@ fn cf_less_than_u8(
       .collect(),
     (expression, TypedExpression::N8Constant(0x80)) => std::iter::empty()
       .chain(codegen::n8_expression(expression, temporaries_size))
-      .chain([Ok(Token::XXX(0x80)), Ok(Token::MacroRef(link::cl_macro!()))])
+      .chain([Ok(Token::MacroRef(link::nng_macro!()))])
       .collect(),
     (TypedExpression::N8Constant(0x7F), expression) => std::iter::empty()
       .chain(codegen::n8_expression(expression, temporaries_size))
-      .chain([
-        Ok(Token::XXX(0x80)),
-        Ok(Token::MacroRef(link::cl_macro!())),
-        Ok(Token::Flc),
-      ])
+      .chain([Ok(Token::MacroRef(link::ng_macro!()))])
       .collect(),
     (expression, TypedExpression::N8Constant(0x02)) => std::iter::empty()
       .chain(codegen::n8_expression(expression, temporaries_size))
@@ -1019,8 +1015,7 @@ fn cf_less_than_u8(
       .chain([
         Ok(Token::Clc),
         Ok(Token::Shr),
-        Ok(Token::MacroRef(link::zr_macro!())),
-        Ok(Token::Flc),
+        Ok(Token::MacroRef(link::nzr_macro!())),
       ])
       .collect(),
     (expression, TypedExpression::N8Constant(0x04)) => std::iter::empty()
@@ -1040,14 +1035,13 @@ fn cf_less_than_u8(
         Ok(Token::Shr),
         Ok(Token::Clc),
         Ok(Token::Shr),
-        Ok(Token::MacroRef(link::zr_macro!())),
-        Ok(Token::Flc),
+        Ok(Token::MacroRef(link::nzr_macro!())),
       ])
       .collect(),
     (expression1, expression2) => std::iter::empty()
-      .chain(codegen::n8_expression(expression2, temporaries_size))
-      .chain(codegen::n8_expression(expression1, temporaries_size + 1))
-      .chain([Ok(Token::Clc), Ok(Token::MacroRef(link::lt_macro!()))])
+      .chain(codegen::n8_expression(expression1, temporaries_size))
+      .chain(codegen::n8_expression(expression2, temporaries_size + 1))
+      .chain([Ok(Token::Clc), Ok(Token::MacroRef(link::gt_macro!()))])
       .collect(),
   }
 }
@@ -1066,16 +1060,14 @@ fn cf_less_than_i8(
       .chain(codegen::n8_expression(expression, temporaries_size))
       .chain([
         Ok(Token::XXX(0x80)),
-        Ok(Token::MacroRef(link::eq_macro!())),
-        Ok(Token::Flc),
+        Ok(Token::MacroRef(link::neq_macro!())),
       ])
       .collect(),
     (expression, TypedExpression::N8Constant(0x7F)) => std::iter::empty()
       .chain(codegen::n8_expression(expression, temporaries_size))
       .chain([
         Ok(Token::XXX(0x7F)),
-        Ok(Token::MacroRef(link::eq_macro!())),
-        Ok(Token::Flc),
+        Ok(Token::MacroRef(link::neq_macro!())),
       ])
       .collect(),
     (TypedExpression::N8Constant(0x7E), expression) => std::iter::empty()
@@ -1084,24 +1076,23 @@ fn cf_less_than_i8(
       .collect(),
     (expression, TypedExpression::N8Constant(0x00)) => std::iter::empty()
       .chain(codegen::n8_expression(expression, temporaries_size))
-      .chain([
-        Ok(Token::XXX(0x80)),
-        Ok(Token::MacroRef(link::cl_macro!())),
-        Ok(Token::Flc),
-      ])
+      .chain([Ok(Token::MacroRef(link::ng_macro!()))])
       .collect(),
     (TypedExpression::N8Constant(0xFF), expression) => std::iter::empty()
       .chain(codegen::n8_expression(expression, temporaries_size))
-      .chain([Ok(Token::XXX(0x80)), Ok(Token::MacroRef(link::cl_macro!()))])
+      .chain([Ok(Token::MacroRef(link::nng_macro!()))])
       .collect(),
     (expression1, expression2) => std::iter::empty()
-      .chain(codegen::n8_expression(expression2, temporaries_size))
-      .chain(codegen::n8_expression(expression1, temporaries_size + 1))
+      // `(a as i8) < (b as i8)` is equivalent to `(a as u8 + 0x80) < (b as u8 + 0x80)`
+      .chain(codegen::n8_expression(expression1, temporaries_size))
+      .chain(codegen::n8_expression(expression2, temporaries_size + 1))
       .chain([
-        Ok(Token::Clc),
-        Ok(Token::Sub),
         Ok(Token::XXX(0x80)),
-        Ok(Token::MacroRef(link::cl_macro!())),
+        Ok(Token::LdO(Ofst::assert(0x00))),
+        Ok(Token::XoS(Size::assert(0x02))),
+        Ok(Token::XoS(Size::assert(0x02))),
+        Ok(Token::Clc),
+        Ok(Token::MacroRef(link::gt_macro!())),
       ])
       .collect(),
   }

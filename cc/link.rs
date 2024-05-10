@@ -13,9 +13,14 @@ use std::collections::{BTreeMap, BTreeSet};
 #[rustfmt::skip] macro_rules! bcs_macro { () => { Macro(format!("bcs")) }; }
 #[rustfmt::skip] macro_rules! zr_macro { () => { Macro(format!("zr")) }; }
 #[rustfmt::skip] macro_rules! on_macro { () => { Macro(format!("on")) }; }
-#[rustfmt::skip] macro_rules! lt_macro { () => { Macro(format!("lt")) }; }
+#[rustfmt::skip] macro_rules! gt_macro { () => { Macro(format!("gt")) }; }
 #[rustfmt::skip] macro_rules! cl_macro { () => { Macro(format!("cl")) }; }
 #[rustfmt::skip] macro_rules! eq_macro { () => { Macro(format!("eq")) }; }
+#[rustfmt::skip] macro_rules! ng_macro { () => { Macro(format!("ng")) }; }
+#[rustfmt::skip] macro_rules! nzr_macro { () => { Macro(format!("nzr")) }; }
+#[rustfmt::skip] macro_rules! non_macro { () => { Macro(format!("non")) }; }
+#[rustfmt::skip] macro_rules! neq_macro { () => { Macro(format!("neq")) }; }
+#[rustfmt::skip] macro_rules! nng_macro { () => { Macro(format!("nng")) }; }
 #[rustfmt::skip] macro_rules! mul_macro { () => { Macro(format!("mul")) }; }
 #[rustfmt::skip] macro_rules! div_macro { () => { Macro(format!("div")) }; }
 #[rustfmt::skip] macro_rules! mod_macro { () => { Macro(format!("mod")) }; }
@@ -32,9 +37,14 @@ use std::collections::{BTreeMap, BTreeSet};
 #[rustfmt::skip] pub(crate) use bcs_macro;
 #[rustfmt::skip] pub(crate) use zr_macro;
 #[rustfmt::skip] pub(crate) use on_macro;
-#[rustfmt::skip] pub(crate) use lt_macro;
+#[rustfmt::skip] pub(crate) use gt_macro;
 #[rustfmt::skip] pub(crate) use cl_macro;
 #[rustfmt::skip] pub(crate) use eq_macro;
+#[rustfmt::skip] pub(crate) use ng_macro;
+#[rustfmt::skip] pub(crate) use nzr_macro;
+#[rustfmt::skip] pub(crate) use non_macro;
+#[rustfmt::skip] pub(crate) use neq_macro;
+#[rustfmt::skip] pub(crate) use nng_macro;
 #[rustfmt::skip] pub(crate) use mul_macro;
 #[rustfmt::skip] pub(crate) use div_macro;
 #[rustfmt::skip] pub(crate) use mod_macro;
