@@ -141,7 +141,10 @@ fn expression(expression: &TypedExpression) -> BTreeSet<(bool, String)> {
     | TypedExpression::N8Subtraction(expression1, expression2)
     | TypedExpression::N8Multiplication(expression1, expression2)
     | TypedExpression::U8Division(expression1, expression2)
-    | TypedExpression::U8Modulo(expression1, expression2) => std::iter::empty()
+    | TypedExpression::U8Modulo(expression1, expression2)
+    | TypedExpression::N8BitwiseAnd(expression1, expression2)
+    | TypedExpression::N8BitwiseInclusiveOr(expression1, expression2)
+    | TypedExpression::N8BitwiseExclusiveOr(expression1, expression2) => std::iter::empty()
       .chain(link::expression(expression1))
       .chain(link::expression(expression2))
       .collect(),
@@ -161,7 +164,8 @@ fn expression(expression: &TypedExpression) -> BTreeSet<(bool, String)> {
       .collect(),
     TypedExpression::N0CastN1(expression)
     | TypedExpression::N0CastN8(expression)
-    | TypedExpression::N1CastN8(expression) => link::expression(expression),
+    | TypedExpression::N1CastN8(expression)
+    | TypedExpression::N8CastN1(expression) => link::expression(expression),
     TypedExpression::N0Constant(_)
     | TypedExpression::N1Constant(_)
     | TypedExpression::N8Constant(_)

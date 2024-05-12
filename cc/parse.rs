@@ -520,6 +520,9 @@ fn type_name() -> Parser<Type> {
     .and_then(|_| parse::maybe(parse::ws(parse::string("const"))))
     .and_then(|_is_const| {
       Parser::expected(vec![])
+        .or_else(|_| parse::ws(parse::string("char")).map(|_| Type::Char))
+        .or_else(|_| parse::ws(parse::string("signed char")).map(|_| Type::SignedChar))
+        .or_else(|_| parse::ws(parse::string("unsigned char")).map(|_| Type::UnsignedChar))
         .or_else(|_| {
           parse::ws(parse::string("long long int").or_else(|_| parse::string("long long")))
             .map(|_| Type::LongLong)
@@ -554,7 +557,6 @@ fn type_name() -> Parser<Type> {
           )
           .map(|_| Type::UnsignedShort)
         })
-        .or_else(|_| parse::ws(parse::string("char")).map(|_| Type::Char))
         .or_else(|_| parse::ws(parse::string("_Bool")).map(|_| Type::Bool))
         .or_else(|_| parse::ws(parse::string("void")).map(|_| Type::Void))
     })

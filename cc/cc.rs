@@ -230,6 +230,9 @@ pub enum TypedExpression {
   N8Multiplication(Box<TypedExpression>, Box<TypedExpression>),
   U8Division(Box<TypedExpression>, Box<TypedExpression>),
   U8Modulo(Box<TypedExpression>, Box<TypedExpression>),
+  N8BitwiseAnd(Box<TypedExpression>, Box<TypedExpression>),
+  N8BitwiseInclusiveOr(Box<TypedExpression>, Box<TypedExpression>),
+  N8BitwiseExclusiveOr(Box<TypedExpression>, Box<TypedExpression>),
 
   N1EqualToN8(Box<TypedExpression>, Box<TypedExpression>),
   N1LessThanU8(Box<TypedExpression>, Box<TypedExpression>),
@@ -241,6 +244,7 @@ pub enum TypedExpression {
   N0CastN1(Box<TypedExpression>), // bitwise truncation
   N0CastN8(Box<TypedExpression>), // bitwise truncation
   N1CastN8(Box<TypedExpression>), // bitwise truncation
+  N8CastN1(Box<TypedExpression>), // bitwise extension
   N0Constant(()),
   N1Constant(bool),
   N8Constant(u8),

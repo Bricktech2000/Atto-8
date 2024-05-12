@@ -300,7 +300,7 @@ fn expression(expression: TypedExpression) -> TypedExpression {
       ) {
         (expression, TypedExpression::N8Constant(0x00))
         | (TypedExpression::N8Constant(0x00), expression) => {
-          optimize::expression(TypedExpression::N0SecondN0N0(
+          optimize::expression(TypedExpression::N8SecondN0N8(
             Box::new(TypedExpression::N0CastN8(Box::new(expression))),
             Box::new(TypedExpression::N8Constant(0x00)),
           ))
@@ -360,6 +360,48 @@ fn expression(expression: TypedExpression) -> TypedExpression {
       }
     }
 
+    TypedExpression::N8BitwiseAnd(expression1, expression2) => {
+      match (
+        optimize::expression(*expression1),
+        optimize::expression(*expression2),
+      ) {
+        (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
+          TypedExpression::N8Constant(constant1 & constant2)
+        }
+        (expression1, expression2) => {
+          default!(expression1, expression2, N8SecondN0N8, N8BitwiseAnd)
+        }
+      }
+    }
+
+    TypedExpression::N8BitwiseInclusiveOr(expression1, expression2) => {
+      match (
+        optimize::expression(*expression1),
+        optimize::expression(*expression2),
+      ) {
+        (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
+          TypedExpression::N8Constant(constant1 | constant2)
+        }
+        (expression1, expression2) => {
+          default!(expression1, expression2, N8SecondN0N8, N8BitwiseInclusiveOr)
+        }
+      }
+    }
+
+    TypedExpression::N8BitwiseExclusiveOr(expression1, expression2) => {
+      match (
+        optimize::expression(*expression1),
+        optimize::expression(*expression2),
+      ) {
+        (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
+          TypedExpression::N8Constant(constant1 ^ constant2)
+        }
+        (expression1, expression2) => {
+          default!(expression1, expression2, N8SecondN0N8, N8BitwiseExclusiveOr)
+        }
+      }
+    }
+
     TypedExpression::N1EqualToN8(expression1, expression2) => {
       match (
         optimize::expression(*expression1),
@@ -379,6 +421,13 @@ fn expression(expression: TypedExpression) -> TypedExpression {
         optimize::expression(*expression1),
         optimize::expression(*expression2),
       ) {
+        (expression, TypedExpression::N8Constant(0x00))
+        | (TypedExpression::N8Constant(0xFF), expression) => {
+          optimize::expression(TypedExpression::N1SecondN0N1(
+            Box::new(TypedExpression::N0CastN8(Box::new(expression))),
+            Box::new(TypedExpression::N1Constant(false)),
+          ))
+        }
         (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
           TypedExpression::N1Constant(constant1 < constant2)
         }
@@ -393,6 +442,13 @@ fn expression(expression: TypedExpression) -> TypedExpression {
         optimize::expression(*expression1),
         optimize::expression(*expression2),
       ) {
+        (expression, TypedExpression::N8Constant(0x80))
+        | (TypedExpression::N8Constant(0x7F), expression) => {
+          optimize::expression(TypedExpression::N1SecondN0N1(
+            Box::new(TypedExpression::N0CastN8(Box::new(expression))),
+            Box::new(TypedExpression::N1Constant(false)),
+          ))
+        }
         (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
           TypedExpression::N1Constant((constant1 as i8) < constant2 as i8)
         }
@@ -452,9 +508,7 @@ fn expression(expression: TypedExpression) -> TypedExpression {
       }
       TypedExpression::N1EqualToN8(expression1, expression2)
       | TypedExpression::N1LessThanU8(expression1, expression2)
-      | TypedExpression::N1LessThanI8(expression1, expression2)
-      | TypedExpression::U8Division(expression1, expression2)
-      | TypedExpression::U8Modulo(expression1, expression2) => {
+      | TypedExpression::N1LessThanI8(expression1, expression2) => {
         optimize::expression(TypedExpression::N0SecondN0N0(
           Box::new(TypedExpression::N0CastN8(expression1)),
           Box::new(TypedExpression::N0CastN8(expression2)),
@@ -476,11 +530,17 @@ fn expression(expression: TypedExpression) -> TypedExpression {
       | TypedExpression::N8Subtraction(expression1, expression2)
       | TypedExpression::N8Multiplication(expression1, expression2)
       | TypedExpression::U8Division(expression1, expression2)
-      | TypedExpression::U8Modulo(expression1, expression2) => {
+      | TypedExpression::U8Modulo(expression1, expression2)
+      | TypedExpression::N8BitwiseAnd(expression1, expression2)
+      | TypedExpression::N8BitwiseInclusiveOr(expression1, expression2)
+      | TypedExpression::N8BitwiseExclusiveOr(expression1, expression2) => {
         optimize::expression(TypedExpression::N0SecondN0N0(
           Box::new(TypedExpression::N0CastN8(expression1)),
           Box::new(TypedExpression::N0CastN8(expression2)),
         ))
+      }
+      TypedExpression::N8CastN1(expression) => {
+        optimize::expression(TypedExpression::N0CastN1(expression))
       }
       TypedExpression::N8Constant(_)
       | TypedExpression::N8LoadLocal(_)
@@ -491,21 +551,30 @@ fn expression(expression: TypedExpression) -> TypedExpression {
     },
 
     TypedExpression::N1CastN8(expression) => match optimize::expression(*expression) {
-      TypedExpression::N8BitwiseComplement(expression) => optimize::expression(
-        TypedExpression::N1BitwiseComplement(Box::new(TypedExpression::N1CastN8(expression))),
-      ),
       TypedExpression::N8Addition(_expression1, _expression2)
       | TypedExpression::N8Subtraction(_expression1, _expression2)
-      | TypedExpression::N8Multiplication(_expression1, _expression2) => {
+      | TypedExpression::N8Multiplication(_expression1, _expression2)
+      | TypedExpression::N8BitwiseAnd(_expression1, _expression2)
+      | TypedExpression::N8BitwiseInclusiveOr(_expression1, _expression2)
+      | TypedExpression::N8BitwiseExclusiveOr(_expression1, _expression2) => {
         todo!()
         // N8Addition => psi N1Addition N1CastN8
         // N8Subtraction => psi N1Subtraction N1CastN8
         // N8Multiplication => psi N1Multiplication N1CastN8
+        // N8BitwiseAnd => psi N1BitwiseAnd N1CastN8
+        // N8BitwiseOr => psi N1BitwiseOr N1CastN8
+        // N8BitwiseXor => psi N1BitwiseXor N1CastN8
       }
+      TypedExpression::N8CastN1(expression) => optimize::expression(*expression),
       TypedExpression::N8Constant(constant) => {
         TypedExpression::N1Constant((constant & 0x01) != 0x00)
       }
       expression => default!(expression, N1SecondN0N1, N1CastN8),
+    },
+
+    TypedExpression::N8CastN1(expression) => match optimize::expression(*expression) {
+      TypedExpression::N1Constant(constant) => TypedExpression::N8Constant(constant as u8),
+      expression => default!(expression, N8SecondN0N8, N8CastN1),
     },
 
     TypedExpression::N0Constant(constant) => TypedExpression::N0Constant(constant),
@@ -772,7 +841,10 @@ pub fn expression_behavior(expression: &TypedExpression) -> Option<HashSet<Behav
     | TypedExpression::N8Subtraction(expression1, expression2)
     | TypedExpression::N8Multiplication(expression1, expression2)
     | TypedExpression::U8Division(expression1, expression2)
-    | TypedExpression::U8Modulo(expression1, expression2) => behavior_unsequenced(
+    | TypedExpression::U8Modulo(expression1, expression2)
+    | TypedExpression::N8BitwiseAnd(expression1, expression2)
+    | TypedExpression::N8BitwiseInclusiveOr(expression1, expression2)
+    | TypedExpression::N8BitwiseExclusiveOr(expression1, expression2) => behavior_unsequenced(
       expression_behavior(expression1),
       expression_behavior(expression2),
     ),
@@ -794,7 +866,8 @@ pub fn expression_behavior(expression: &TypedExpression) -> Option<HashSet<Behav
 
     TypedExpression::N0CastN1(expression)
     | TypedExpression::N0CastN8(expression)
-    | TypedExpression::N1CastN8(expression) => expression_behavior(expression),
+    | TypedExpression::N1CastN8(expression)
+    | TypedExpression::N8CastN1(expression) => expression_behavior(expression),
 
     TypedExpression::N0Constant(_)
     | TypedExpression::N1Constant(_)

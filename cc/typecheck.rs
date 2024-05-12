@@ -67,7 +67,7 @@ impl Type {
     match self {
       Type::Void => Range::U0,
       Type::Bool => Range::U1,
-      Type::Char => Range::I8,
+      Type::Char => Range::U8,
       Type::SignedChar => Range::I8,
       Type::UnsignedChar => Range::U8,
       Type::Short => Range::I8,             // TODO nonstandard
@@ -818,11 +818,56 @@ fn expression(
 
     Expression::LogicalOr(_, _) => todo!(),
 
-    Expression::BitwiseAnd(_, _) => todo!(),
+    Expression::BitwiseAnd(expression1, expression2) => {
+      let promoted1 = integer_promotions(*expression1, state, errors);
+      let promoted2 = integer_promotions(*expression2, state, errors);
 
-    Expression::BitwiseInclusiveOr(_, _) => todo!(),
+      let (r#type, expression1, expression2) =
+        typecheck_pointer_arithmetic_conversions((promoted1, promoted2), state, errors);
 
-    Expression::BitwiseExclusiveOr(_, _) => todo!(),
+      let expression = match r#type.range() {
+        Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+        Range::U8 | Range::I8 => {
+          TypedExpression::N8BitwiseAnd(Box::new(expression1), Box::new(expression2))
+        }
+        _ => todo!(),
+      };
+      (r#type, expression)
+    }
+
+    Expression::BitwiseInclusiveOr(expression1, expression2) => {
+      let promoted1 = integer_promotions(*expression1, state, errors);
+      let promoted2 = integer_promotions(*expression2, state, errors);
+
+      let (r#type, expression1, expression2) =
+        typecheck_pointer_arithmetic_conversions((promoted1, promoted2), state, errors);
+
+      let expression = match r#type.range() {
+        Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+        Range::U8 | Range::I8 => {
+          TypedExpression::N8BitwiseInclusiveOr(Box::new(expression1), Box::new(expression2))
+        }
+        _ => todo!(),
+      };
+      (r#type, expression)
+    }
+
+    Expression::BitwiseExclusiveOr(expression1, expression2) => {
+      let promoted1 = integer_promotions(*expression1, state, errors);
+      let promoted2 = integer_promotions(*expression2, state, errors);
+
+      let (r#type, expression1, expression2) =
+        typecheck_pointer_arithmetic_conversions((promoted1, promoted2), state, errors);
+
+      let expression = match r#type.range() {
+        Range::U0 | Range::I0 | Range::U1 | Range::I1 => unreachable!(),
+        Range::U8 | Range::I8 => {
+          TypedExpression::N8BitwiseExclusiveOr(Box::new(expression1), Box::new(expression2))
+        }
+        _ => todo!(),
+      };
+      (r#type, expression)
+    }
 
     Expression::LeftShift(_, _) => todo!(),
 
@@ -1141,6 +1186,13 @@ fn cast_expression(
     | (Type::UnsignedChar, Type::Void)
     | (Type::Pointer(_), Type::Void) => TypedExpression::N0CastN8(Box::new(expression1)),
 
+    (Type::Bool, Type::Int)
+    | (Type::Bool, Type::UnsignedInt)
+    | (Type::Bool, Type::Char)
+    | (Type::Bool, Type::SignedChar)
+    | (Type::Bool, Type::UnsignedChar)
+    | (Type::Bool, Type::Pointer(_)) => TypedExpression::N8CastN1(Box::new(expression1)),
+
     (Type::Bool, Type::Void) => TypedExpression::N0CastN1(Box::new(expression1)),
 
     (type1, r#type) => {
@@ -1353,11 +1405,11 @@ fn integer_promotions(
   let (r#type, _) = typecheck::expression(expression.clone(), state, &mut vec![]);
 
   match r#type {
-    Type::Bool | Type::Char | Type::SignedChar | Type::Short | Type::Int | Type::Enumeration(_) => {
+    Type::Bool | Type::SignedChar | Type::Short | Type::Int | Type::Enumeration(_) => {
       Expression::Cast(Type::Int, Box::new(expression))
     }
 
-    Type::UnsignedShort | Type::UnsignedChar | Type::UnsignedInt => {
+    Type::UnsignedShort | Type::Char | Type::UnsignedChar | Type::UnsignedInt => {
       Expression::Cast(Type::UnsignedInt, Box::new(expression))
     }
 

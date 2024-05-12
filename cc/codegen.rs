@@ -574,6 +574,13 @@ fn expression(expression: TypedExpression, temporaries_size: usize) -> Vec<Resul
     TypedExpression::N8Multiplication(_, _) => codegen::n8_expression(expression, temporaries_size),
     TypedExpression::U8Division(_, _) => codegen::n8_expression(expression, temporaries_size),
     TypedExpression::U8Modulo(_, _) => codegen::n8_expression(expression, temporaries_size),
+    TypedExpression::N8BitwiseAnd(_, _) => codegen::n8_expression(expression, temporaries_size),
+    TypedExpression::N8BitwiseInclusiveOr(_, _) => {
+      codegen::n8_expression(expression, temporaries_size)
+    }
+    TypedExpression::N8BitwiseExclusiveOr(_, _) => {
+      codegen::n8_expression(expression, temporaries_size)
+    }
 
     TypedExpression::N1EqualToN8(_, _) => codegen::n1_expression(expression, temporaries_size),
     TypedExpression::N1LessThanU8(_, _) => codegen::n1_expression(expression, temporaries_size),
@@ -585,6 +592,7 @@ fn expression(expression: TypedExpression, temporaries_size: usize) -> Vec<Resul
     TypedExpression::N0CastN1(_) => codegen::n0_expression(expression, temporaries_size),
     TypedExpression::N0CastN8(_) => codegen::n0_expression(expression, temporaries_size),
     TypedExpression::N1CastN8(_) => codegen::n1_expression(expression, temporaries_size),
+    TypedExpression::N8CastN1(_) => codegen::n8_expression(expression, temporaries_size),
     TypedExpression::N0Constant(_) => codegen::n0_expression(expression, temporaries_size),
     TypedExpression::N1Constant(_) => codegen::n1_expression(expression, temporaries_size),
     TypedExpression::N8Constant(_) => codegen::n8_expression(expression, temporaries_size),
@@ -941,9 +949,68 @@ fn n8_expression(
       }
     }
 
+    TypedExpression::N8BitwiseAnd(expression1, expression2) => match (*expression1, *expression2) {
+      (expression, TypedExpression::N8Constant(0x00))
+      | (TypedExpression::N8Constant(0x00), expression) => std::iter::empty()
+        .chain(codegen::n8_expression(expression, temporaries_size))
+        .chain([Ok(Token::Pop), Ok(Token::XXX(0x00))])
+        .collect(),
+      (expression, TypedExpression::N8Constant(0xFF))
+      | (TypedExpression::N8Constant(0xFF), expression) => std::iter::empty()
+        .chain(codegen::n8_expression(expression, temporaries_size))
+        .collect(),
+      (expression1, expression2) => std::iter::empty()
+        .chain(codegen::n8_expression(expression1, temporaries_size))
+        .chain(codegen::n8_expression(expression2, temporaries_size + 1))
+        .chain([Ok(Token::And)])
+        .collect(),
+    },
+
+    TypedExpression::N8BitwiseInclusiveOr(expression1, expression2) => {
+      match (*expression1, *expression2) {
+        (expression, TypedExpression::N8Constant(0x00))
+        | (TypedExpression::N8Constant(0x00), expression) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
+          .collect(),
+        (expression, TypedExpression::N8Constant(0xFF))
+        | (TypedExpression::N8Constant(0xFF), expression) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
+          .chain([Ok(Token::Pop), Ok(Token::XXX(0xFF))])
+          .collect(),
+        (expression1, expression2) => std::iter::empty()
+          .chain(codegen::n8_expression(expression1, temporaries_size))
+          .chain(codegen::n8_expression(expression2, temporaries_size + 1))
+          .chain([Ok(Token::Orr)])
+          .collect(),
+      }
+    }
+
+    TypedExpression::N8BitwiseExclusiveOr(expression1, expression2) => {
+      match (*expression1, *expression2) {
+        (expression, TypedExpression::N8Constant(0x00))
+        | (TypedExpression::N8Constant(0x00), expression) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
+          .collect(),
+        (expression, TypedExpression::N8Constant(0xFF))
+        | (TypedExpression::N8Constant(0xFF), expression) => std::iter::empty()
+          .chain(codegen::n8_expression(expression, temporaries_size))
+          .chain([Ok(Token::Not)])
+          .collect(),
+        (expression1, expression2) => std::iter::empty()
+          .chain(codegen::n8_expression(expression1, temporaries_size))
+          .chain(codegen::n8_expression(expression2, temporaries_size + 1))
+          .chain([Ok(Token::Xor)])
+          .collect(),
+      }
+    }
+
     TypedExpression::N8SecondN0N8(expression1, expression2) => std::iter::empty()
       .chain(codegen::n0_expression(*expression1, temporaries_size))
       .chain(codegen::n8_expression(*expression2, temporaries_size))
+      .collect(),
+
+    TypedExpression::N8CastN1(expression) => std::iter::empty()
+      .chain(codegen::n1_expression(*expression, temporaries_size))
       .collect(),
 
     TypedExpression::N8Constant(constant) => vec![Ok(Token::XXX(constant))],
@@ -1032,6 +1099,11 @@ fn cf_less_than_u8(
   temporaries_size: usize,
 ) -> Vec<Result<Token, String>> {
   match (expression1, expression2) {
+    (expression, TypedExpression::N8Constant(0x00))
+    | (TypedExpression::N8Constant(0xFF), expression) => std::iter::empty()
+      .chain(codegen::n8_expression(expression, temporaries_size))
+      .chain([Ok(Token::Pop), Ok(Token::Clc)])
+      .collect(),
     (expression, TypedExpression::N8Constant(0x01)) => std::iter::empty()
       .chain(codegen::n8_expression(expression, temporaries_size))
       .chain([Ok(Token::MacroRef(link::zr_macro!()))])
@@ -1106,6 +1178,11 @@ fn cf_less_than_i8(
   temporaries_size: usize,
 ) -> Vec<Result<Token, String>> {
   match (expression1, expression2) {
+    (expression, TypedExpression::N8Constant(0x80))
+    | (TypedExpression::N8Constant(0x7F), expression) => std::iter::empty()
+      .chain(codegen::n8_expression(expression, temporaries_size))
+      .chain([Ok(Token::Pop), Ok(Token::Clc)])
+      .collect(),
     (expression, TypedExpression::N8Constant(0x81)) => std::iter::empty()
       .chain(codegen::n8_expression(expression, temporaries_size))
       .chain([Ok(Token::XXX(0x80)), Ok(Token::MacroRef(link::eq_macro!()))])
