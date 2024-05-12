@@ -19,7 +19,26 @@ void *realloc(void *ptr, size_t new_size) {
   return new_ptr;
 }
 
-// clang-format off
+inline void exit(int status) {
+  while (1)
+    ;
+}
 
-asm { exit! !hlt }
-asm { abort! !hlt }
+inline void abort(void) {
+  while (1)
+    ;
+}
+
+// clang-format off
+asm {
+  rand.def!
+    rand.seed: x01
+    rand:
+      :rand.seed lda !rand
+      ld0 :rand.seed sta
+    swp !ret
+  srand.def!
+    srand:
+      swp :rand.seed sta
+    !ret
+}

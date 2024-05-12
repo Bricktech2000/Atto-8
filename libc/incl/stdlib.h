@@ -12,4 +12,5 @@ inline void exit(int status);
 inline void abort(void);
 
 inline int abs(int n);
-inline int rand(int seed); // TODO should take in `void`
+int rand(void);
+void srand(unsigned seed);

@@ -2,7 +2,7 @@
 
 asm { @ lib/stdio.asm }
 
-// clang-format off
-
-asm { putchar! !putc }
-asm { getchar! !block_getc }
+inline char block_getc(void);
+inline void putc(char c);
+int getchar(void) { return block_getc(); }
+inline int putchar(int c) { return (putc(c), c); }

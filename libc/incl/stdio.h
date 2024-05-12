@@ -27,7 +27,5 @@ void puts(const char *buf);
 
 void printf(char *format, ...); // TODO should return `int`
 
-// TODO shoud be `int getchar(void);`
-inline char getchar(void);
-// TODO should be `int putchar(int c);`
-inline void putchar(char c);
+int getchar(void);
+inline int putchar(int c);

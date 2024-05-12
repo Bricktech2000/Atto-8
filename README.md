@@ -45,6 +45,7 @@ python3 test.py reverse.asm asm emu
 python3 test.py hanoi.asm asm emu
 python3 test.py hanoi.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py rot13.asm asm emu
+python3 test.py rot13.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py quine.hex enc emu
 python3 test.py quine.asm asm emu
 python3 test.py quine.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
@@ -67,7 +68,7 @@ python3 test.py calc.asm asm emu
 python3 test.py pixedit.asm asm emu
 python3 test.py stopwatch.asm asm emu
 python3 test.py char\ code.asm asm emu
-python3 test.py char\ code.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
+python3 test.py char\ code.c libc/stdlib.c libc/stdio.c libc/crt0.c libc/ctype.c cc asm emu
 python3 test.py stringify.asm asm emu
 python3 test.py min-asm.asm asm emu
 
