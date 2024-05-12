@@ -3,57 +3,83 @@
 #define UB (unsigned)1 / 0
 /* #define UB *(char *)0 */
 
-char fail(void) {
-  asm { @error }
-  return getchar();
-}
+inline char fail(void) asm { !trap }
+
+inline char ok(char c) asm { !putc x00 }
 
 inline void f0(void) {
-  if (fail())
+  if (ok('0'))
     UB;
 
-  while (fail())
+  while (ok('1'))
     UB;
 }
 
 inline void f1(void) {
-  fail();
   do
     UB;
   while (fail());
+
   fail();
 }
 
 inline void f2(void) {
-  fail();
-  if (UB)
-    return fail();
-  while (UB)
-    fail();
+  do
+    ok('2');
+  while (UB);
+
   fail();
 }
 
 inline void f3(void) {
-  fail();
-  int i = 5 * UB + UB;
+  if (UB)
+    return fail();
+
+  while (UB)
+    fail();
+
   fail();
 }
 
 inline void f4(void) {
-  fail();
-  if (fail())
-    UB;
-  else
-    UB;
+  ok('3');
+  int i = 5 * UB + UB;
   fail();
 }
 
-int main(void) {
+inline void f5(void) {
+  if (ok('4'))
+    UB;
+  else {
+    while (1)
+      break;
+    ok('5');
+    UB;
+    fail();
+  }
+
+  fail();
+}
+
+inline void f6(void) {
+  if (ok('6'))
+    UB;
+  else {
+    ok('7');
+    return;
+  }
+
+  fail();
+}
+
+void main(void) {
   f0();
   f1();
   f2();
   f3();
   f4();
+  f5();
+  f6();
 
-  puts("ok");
+  ok('8');
 }

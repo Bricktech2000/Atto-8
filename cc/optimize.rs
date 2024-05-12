@@ -59,42 +59,44 @@ fn statement(statement: TypedStatement) -> TypedStatement {
     }
 
     TypedStatement::IfN1(label, condition, if_body, else_body) => {
-      let condition = if statement_behavior(&if_body).is_none() {
+      let else_body = *else_body.unwrap_or(Box::new(TypedStatement::Compound(vec![])));
+
+      if statement_behavior(&if_body).is_none() {
         // behavior of `if` branch is undefined and therefore `else` branch shall be taken
-        TypedExpression::N1Constant(false)
-      } else if else_body
-        .as_deref()
-        .map(statement_behavior)
-        .unwrap_or(Some(HashSet::from([Behavior::Completes])))
-        .is_none()
-      {
+        return optimize::statement(TypedStatement::Compound(vec![
+          TypedStatement::ExpressionN0(TypedExpression::N0CastN1(Box::new(condition))),
+          else_body,
+        ]));
+      }
+
+      if statement_behavior(&else_body).is_none() {
         // behavior of `else` branch is undefined and therefore `if` branch shall be taken
-        TypedExpression::N1Constant(true)
-      } else {
-        condition
-      };
+        return optimize::statement(TypedStatement::Compound(vec![
+          TypedStatement::ExpressionN0(TypedExpression::N0CastN1(Box::new(condition))),
+          else_body,
+        ]));
+      }
 
       match optimize::expression(condition) {
         TypedExpression::N1Constant(true) => optimize::statement(*if_body),
-        TypedExpression::N1Constant(false) => else_body
-          .map(|else_body| optimize::statement(*else_body))
-          .unwrap_or(TypedStatement::Compound(vec![])),
+        TypedExpression::N1Constant(false) => optimize::statement(else_body),
         condition => TypedStatement::IfN1(
           label,
           condition,
           Box::new(optimize::statement(*if_body)),
-          else_body.map(|else_body| Box::new(optimize::statement(*else_body))),
+          Some(Box::new(optimize::statement(else_body))),
         ),
       }
     }
 
     TypedStatement::WhileN1(label, condition, body, is_do_while) => {
-      let condition = if statement_behavior(&body).is_none() {
+      if statement_behavior(&body).is_none() {
         // behavior of `body` is undefined and therefore loop shall not be entered
-        TypedExpression::N1Constant(false)
-      } else {
-        condition
-      };
+        return optimize::statement(match is_do_while {
+          true => TypedStatement::Compound(vec![]),
+          false => TypedStatement::ExpressionN0(TypedExpression::N0CastN1(Box::new(condition))),
+        });
+      }
 
       match (is_do_while, optimize::expression(condition)) {
         (false, TypedExpression::N1Constant(false)) => TypedStatement::Compound(vec![]),
@@ -235,7 +237,45 @@ fn expression(expression: TypedExpression) -> TypedExpression {
 
   if expression_behavior(&expression).is_none() {
     // behavior is undefined and therefore expression shall not be evaluated
-    return TypedExpression::N0Constant(());
+    return match expression {
+      TypedExpression::N0SecondN0N0(_, _)
+      | TypedExpression::N0CastN1(_)
+      | TypedExpression::N0CastN8(_)
+      | TypedExpression::N0Constant(_)
+      | TypedExpression::N0MacroCall(_, _)
+      | TypedExpression::N0FunctionCall(_, _) => TypedExpression::N0Constant(()),
+
+      TypedExpression::N1DereferenceN8(_)
+      | TypedExpression::N1BitwiseComplement(_)
+      | TypedExpression::N1EqualToN8(_, _)
+      | TypedExpression::N1LessThanU8(_, _)
+      | TypedExpression::N1LessThanI8(_, _)
+      | TypedExpression::N1SecondN0N1(_, _)
+      | TypedExpression::N1CastN8(_)
+      | TypedExpression::N1Constant(_)
+      | TypedExpression::N1MacroCall(_, _)
+      | TypedExpression::N1FunctionCall(_, _) => TypedExpression::N1Constant(false),
+
+      TypedExpression::N8DereferenceN8(_)
+      | TypedExpression::N8BitwiseComplement(_)
+      | TypedExpression::N8Addition(_, _)
+      | TypedExpression::N8Subtraction(_, _)
+      | TypedExpression::N8Multiplication(_, _)
+      | TypedExpression::U8Division(_, _)
+      | TypedExpression::U8Modulo(_, _)
+      | TypedExpression::N8BitwiseAnd(_, _)
+      | TypedExpression::N8BitwiseInclusiveOr(_, _)
+      | TypedExpression::N8BitwiseExclusiveOr(_, _)
+      | TypedExpression::N8SecondN0N8(_, _)
+      | TypedExpression::N8CastN1(_)
+      | TypedExpression::N8Constant(_)
+      | TypedExpression::N8LoadLocal(_)
+      | TypedExpression::N8AddrLocal(_)
+      | TypedExpression::N8LoadGlobal(_)
+      | TypedExpression::N8AddrGlobal(_)
+      | TypedExpression::N8MacroCall(_, _)
+      | TypedExpression::N8FunctionCall(_, _) => TypedExpression::N8Constant(0x00),
+    };
   }
 
   match expression {
@@ -504,7 +544,7 @@ fn expression(expression: TypedExpression) -> TypedExpression {
     TypedExpression::N0CastN1(expression) => match optimize::expression(*expression) {
       TypedExpression::N1DereferenceN8(_) => TypedExpression::N0Constant(()),
       TypedExpression::N1BitwiseComplement(expression) => {
-        optimize::expression(TypedExpression::N0CastN8(expression))
+        optimize::expression(TypedExpression::N0CastN1(expression))
       }
       TypedExpression::N1EqualToN8(expression1, expression2)
       | TypedExpression::N1LessThanU8(expression1, expression2)
@@ -623,6 +663,9 @@ fn expression(expression: TypedExpression) -> TypedExpression {
   }
 }
 
+// `None` indicates the behavior is undefined
+type BehaviorSet = Option<HashSet<Behavior>>;
+
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub enum Behavior {
   Breaks(String),    // control flow breaks out of a loop
@@ -632,60 +675,57 @@ pub enum Behavior {
   Completes,         // control flow completes normally
 }
 
-fn behavior_alternation(
-  a: Option<HashSet<Behavior>>,
-  b: Option<HashSet<Behavior>>,
-) -> Option<HashSet<Behavior>> {
+fn behavior_alternation(a: BehaviorSet, b: BehaviorSet) -> BehaviorSet {
   // either code path may be taken, as with an `if` statement
 
   match (a, b) {
-    (Some(a), Some(b)) => Some(a.into_iter().chain(b).collect()),
+    (Some(a), Some(b)) => behavior_union(Some(a), b),
     (Some(a), None) => Some(a),
     (None, Some(b)) => Some(b),
     (None, None) => None,
   }
 }
 
-fn behavior_unsequenced(
-  a: Option<HashSet<Behavior>>,
-  b: Option<HashSet<Behavior>>,
-) -> Option<HashSet<Behavior>> {
+fn behavior_unsequenced(a: BehaviorSet, b: BehaviorSet) -> BehaviorSet {
   // both paths are taken but unsequenced, as with a `+` operator
 
   match (a, b) {
-    (Some(a), Some(b)) => Some(a.into_iter().chain(b).collect()),
+    (Some(a), Some(b)) => {
+      match a.contains(&Behavior::Completes) && b.contains(&Behavior::Completes) {
+        true => behavior_union(Some(a), b),
+        false => behavior_difference(
+          behavior_union(Some(a), b),
+          HashSet::from([Behavior::Completes]),
+        ),
+      }
+    }
     (Some(_), None) => None,
     (None, Some(_)) => None,
     (None, None) => None,
   }
 }
 
-fn behavior_sequenced(
-  a: Option<HashSet<Behavior>>,
-  b: Option<HashSet<Behavior>>,
-) -> Option<HashSet<Behavior>> {
+fn behavior_sequenced(a: BehaviorSet, b: BehaviorSet) -> BehaviorSet {
   // both paths are taken and sequenced, as with a `,` operator or compound statement
 
   match (a, b) {
     (Some(a), Some(b)) => match a.contains(&Behavior::Completes) {
-      true => Some(
-        a.into_iter()
-          .filter(|x| *x != Behavior::Completes)
-          .chain(b)
-          .collect(),
+      true => behavior_union(
+        behavior_difference(Some(a), HashSet::from([Behavior::Completes])),
+        b,
       ),
       false => Some(a),
     },
-    (Some(_), None) => None,
+    (Some(a), None) => match a == HashSet::from([Behavior::Completes]) {
+      true => None,
+      false => behavior_difference(Some(a), HashSet::from([Behavior::Completes])),
+    },
     (None, Some(_)) => None,
     (None, None) => None,
   }
 }
 
-fn behavior_difference(
-  a: Option<HashSet<Behavior>>,
-  b: HashSet<Behavior>,
-) -> Option<HashSet<Behavior>> {
+fn behavior_difference(a: BehaviorSet, b: HashSet<Behavior>) -> BehaviorSet {
   // remove from possible behaviors, leaving undefined behavior untouched
 
   match a {
@@ -694,7 +734,7 @@ fn behavior_difference(
   }
 }
 
-fn behavior_union(a: Option<HashSet<Behavior>>, b: HashSet<Behavior>) -> Option<HashSet<Behavior>> {
+fn behavior_union(a: BehaviorSet, b: HashSet<Behavior>) -> BehaviorSet {
   // add to possible behaviors, leaving undefined behavior untouched
 
   match a {
@@ -703,16 +743,16 @@ fn behavior_union(a: Option<HashSet<Behavior>>, b: HashSet<Behavior>) -> Option<
   }
 }
 
-pub fn behavior_contains(a: &Option<HashSet<Behavior>>, b: &Behavior) -> bool {
+pub fn behavior_contains(a: &BehaviorSet, b: &Behavior) -> bool {
   match a {
     Some(a) => a.contains(b),
     None => false,
   }
 }
 
-pub fn statement_behavior(statement: &TypedStatement) -> Option<HashSet<Behavior>> {
-  // determine the set of possible runtime behaviors of a statement. the output is a
-  // superset of the actual runtime behavior. a `None` indicates the behavior is undefined.
+pub fn statement_behavior(statement: &TypedStatement) -> BehaviorSet {
+  // determine the set of possible runtime behaviors of a statement. the
+  // output is a superset of the actual runtime behavior
 
   match statement {
     TypedStatement::ExpressionN0(expression) => expression_behavior(expression),
@@ -817,7 +857,7 @@ pub fn statement_behavior(statement: &TypedStatement) -> Option<HashSet<Behavior
   }
 }
 
-pub fn expression_behavior(expression: &TypedExpression) -> Option<HashSet<Behavior>> {
+pub fn expression_behavior(expression: &TypedExpression) -> BehaviorSet {
   match expression {
     TypedExpression::N1DereferenceN8(expression) | TypedExpression::N8DereferenceN8(expression)
       if matches!(**expression, TypedExpression::N8Constant(0x00)) =>
