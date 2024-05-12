@@ -223,11 +223,6 @@ fn function_definition_global(
   state: &mut State,
   errors: &mut impl Extend<(Pos, Error)>,
 ) -> TypedGlobal {
-  let body = match control_always_escapes(&body) {
-    false => Statement::Compound(vec![body, Statement::Return(None)]),
-    true => body,
-  };
-
   let () = typecheck::function_declaration_global(
     is_inline,
     Object(return_type.clone(), name.clone()),
@@ -260,14 +255,22 @@ fn function_definition_global(
     false => StackEntry::FunctionBoundary(return_type, rev_parameters),
   });
 
-  let statement = match is_inline {
-    true => TypedGlobal::Macro(name, typecheck::statement(body, state, errors)),
-    false => TypedGlobal::Function(name, typecheck::statement(body, state, errors)),
+  let global = match is_inline {
+    true => TypedGlobal::Macro(
+      name,
+      typecheck::statement(body, state, errors),
+      typecheck::return_statement(None, state, errors),
+    ),
+    false => TypedGlobal::Function(
+      name,
+      typecheck::statement(body, state, errors),
+      typecheck::return_statement(None, state, errors),
+    ),
   };
 
   state.stack.pop().unwrap();
 
-  statement
+  global
 }
 
 fn global_declaration_global(
@@ -359,8 +362,8 @@ fn statement(
     Statement::Declaration(object, value) => {
       typecheck::declaration_statement(object, value, state, errors)
     }
-    Statement::Continue => typecheck::continue_statement(state, errors),
     Statement::Break => typecheck::break_statement(state, errors),
+    Statement::Continue => typecheck::continue_statement(state, errors),
     Statement::Return(expression) => typecheck::return_statement(expression, state, errors),
     Statement::Assembly(assembly) => typecheck::assembly_statement(assembly, state, errors),
   }
@@ -386,7 +389,6 @@ fn compound_statement(
 ) -> TypedStatement {
   state.stack.push(StackEntry::BlockBoundary(vec![]));
 
-  let control_always_escapes = statements.iter().any(control_always_escapes);
   let body_statements: Vec<TypedStatement> = statements
     .into_iter()
     .map(|statement| typecheck::statement(statement, state, errors))
@@ -407,10 +409,6 @@ fn compound_statement(
       _ => todo!(),
     })
     .collect();
-  let uninit_statements = match control_always_escapes {
-    false => uninit_statements,
-    true => vec![],
-  };
 
   let statements = body_statements
     .into_iter()
@@ -498,31 +496,6 @@ fn declaration_statement(
   }
 }
 
-fn continue_statement(state: &mut State, errors: &mut impl Extend<(Pos, Error)>) -> TypedStatement {
-  let mut locals_size = 0;
-  let label = state
-    .stack
-    .iter()
-    .rev()
-    .find_map(|stack_entry| match stack_entry {
-      StackEntry::MacroBoundary(_, _) | StackEntry::FunctionBoundary(_, _) => {
-        errors.extend([(
-          Pos(File("[pos]".into()), 0, 0),
-          Error(format!("Use of `continue` not within a loop")),
-        )]);
-        Some("".to_string())
-      }
-      StackEntry::LoopBoundary(label) => Some(label.clone()),
-      StackEntry::BlockBoundary(locals) => {
-        locals_size += locals.iter().map(Object::size).sum::<usize>();
-        None
-      }
-    })
-    .unwrap_or_else(|| panic!("Bare `continue`"));
-
-  TypedStatement::Continue(label, locals_size)
-}
-
 fn break_statement(state: &mut State, errors: &mut impl Extend<(Pos, Error)>) -> TypedStatement {
   let mut locals_size = 0;
   let label = state
@@ -546,6 +519,31 @@ fn break_statement(state: &mut State, errors: &mut impl Extend<(Pos, Error)>) ->
     .unwrap_or_else(|| panic!("Bare `break`"));
 
   TypedStatement::Break(label, locals_size)
+}
+
+fn continue_statement(state: &mut State, errors: &mut impl Extend<(Pos, Error)>) -> TypedStatement {
+  let mut locals_size = 0;
+  let label = state
+    .stack
+    .iter()
+    .rev()
+    .find_map(|stack_entry| match stack_entry {
+      StackEntry::MacroBoundary(_, _) | StackEntry::FunctionBoundary(_, _) => {
+        errors.extend([(
+          Pos(File("[pos]".into()), 0, 0),
+          Error(format!("Use of `continue` not within a loop")),
+        )]);
+        Some("".to_string())
+      }
+      StackEntry::LoopBoundary(label) => Some(label.clone()),
+      StackEntry::BlockBoundary(locals) => {
+        locals_size += locals.iter().map(Object::size).sum::<usize>();
+        None
+      }
+    })
+    .unwrap_or_else(|| panic!("Bare `continue`"));
+
+  TypedStatement::Continue(label, locals_size)
 }
 
 fn return_statement(
@@ -1533,26 +1531,6 @@ fn typecheck_expression_cast(
   assert_eq!(r#type, r#type, "Expected expression to have requested type");
 
   expression
-}
-
-fn control_always_escapes(statement: &Statement) -> bool {
-  match statement {
-    Statement::Expression(_) => false,
-    Statement::Compound(statements) => statements.iter().any(control_always_escapes),
-    Statement::If(_, if_body, else_body) => {
-      else_body
-          .as_deref()
-          .map(control_always_escapes)
-          .unwrap_or(false) // TODO or condition always true
-          && control_always_escapes(if_body) // TODO or condition always false
-    }
-    Statement::While(_, body, is_do_while) => *is_do_while && control_always_escapes(body), // TODO or condition always true
-    Statement::Continue => true,
-    Statement::Break => true,
-    Statement::Return(_) => true,
-    Statement::Declaration(_, _) => false,
-    Statement::Assembly(_) => false,
-  }
 }
 
 fn dummy_typed_expression(r#type: &Type) -> TypedExpression {

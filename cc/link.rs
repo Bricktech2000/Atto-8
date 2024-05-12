@@ -49,7 +49,10 @@ use std::collections::{BTreeMap, BTreeSet};
 #[rustfmt::skip] pub(crate) use div_macro;
 #[rustfmt::skip] pub(crate) use mod_macro;
 
-pub fn link(program: &TypedProgram, _errors: &mut Vec<(Pos, Error)>) -> Vec<Result<Token, String>> {
+pub fn link(
+  program: &TypedProgram,
+  _errors: &mut impl Extend<(Pos, Error)>,
+) -> Vec<Result<Token, String>> {
   let mut dependencies: BTreeMap<(bool, String), BTreeSet<(bool, String)>> = match program {
     TypedProgram(globals) => globals
       .into_iter()
@@ -58,11 +61,11 @@ pub fn link(program: &TypedProgram, _errors: &mut Vec<(Pos, Error)>) -> Vec<Resu
           (true, label.clone()),
           value.iter().flat_map(link::expression).collect(),
         )),
-        TypedGlobal::Macro(label, statement) => {
-          Some(((false, label.clone()), link::statement(statement)))
+        TypedGlobal::Macro(label, body, _return_template) => {
+          Some(((false, label.clone()), link::statement(body)))
         }
-        TypedGlobal::Function(label, statement) => {
-          Some(((true, label.clone()), link::statement(statement)))
+        TypedGlobal::Function(label, body, _return_template) => {
+          Some(((true, label.clone()), link::statement(body)))
         }
         TypedGlobal::Assembly(_assembly) => None,
       })
@@ -107,7 +110,7 @@ fn statement(statement: &TypedStatement) -> BTreeSet<(bool, String)> {
       .chain(link::expression(condition))
       .chain(link::statement(body))
       .collect(),
-    TypedStatement::Continue(_, _) | TypedStatement::Break(_, _) => BTreeSet::new(),
+    TypedStatement::Break(_, _) | TypedStatement::Continue(_, _) => BTreeSet::new(),
     TypedStatement::MacroReturnN0(_, _, expression)
     | TypedStatement::MacroReturnN1(_, _, expression)
     | TypedStatement::MacroReturnN8(_, _, expression)

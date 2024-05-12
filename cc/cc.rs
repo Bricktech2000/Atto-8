@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 mod codegen;
 mod link;
+mod optimize;
 mod parse;
 mod preprocess;
 mod typecheck;
@@ -48,17 +49,24 @@ fn main() {
 
   // println!("CC: Typechecked: {:#?}", typechecked);
 
+  let optimized: Vec<TypedProgram> = typechecked
+    .into_iter()
+    .map(|typed_program| optimize::optimize(typed_program, &mut errors))
+    .collect();
+
+  // println!("CC: Optimized: {:#?}", linked);
+
   let linked: Vec<Result<Token, String>> = std::iter::empty()
     .chain([Err(format!("# dependency graph"))])
     .chain(link::link(
-      &TypedProgram(typechecked.iter().cloned().flat_map(|p| p.0).collect()),
+      &TypedProgram(optimized.iter().cloned().flat_map(|p| p.0).collect()),
       &mut errors,
     ))
     .collect();
 
   // println!("CC: Linked: {:#?}", linked);
 
-  let codegened: Vec<Vec<Result<Token, String>>> = typechecked
+  let codegened: Vec<Vec<Result<Token, String>>> = optimized
     .into_iter()
     .map(|typed_program| codegen::codegen(typed_program, &mut errors))
     .collect();
@@ -190,8 +198,8 @@ pub enum Statement {
   Compound(Vec<Statement>),
   If(Expression, Box<Statement>, Option<Box<Statement>>), // condition, if_body, else_body
   While(Expression, Box<Statement>, bool),                // condition, body, is_do_while
-  Continue,
   Break,
+  Continue,
   Return(Option<Expression>),
   Declaration(Object, Option<Expression>),
   Assembly(String),
@@ -205,8 +213,8 @@ pub struct TypedProgram(Vec<TypedGlobal>);
 #[derive(Clone, PartialEq, Debug)]
 pub enum TypedGlobal {
   Data(String, Vec<TypedExpression>),
-  Macro(String, TypedStatement),
-  Function(String, TypedStatement),
+  Macro(String, TypedStatement, TypedStatement), // label, body, return_template
+  Function(String, TypedStatement, TypedStatement), // label, body, return_template
   Assembly(String),
 }
 
@@ -252,6 +260,7 @@ pub enum TypedExpression {
 pub enum TypedStatement {
   ExpressionN0(TypedExpression),
   Compound(Vec<TypedStatement>),
+
   IfN1(
     String,
     TypedExpression,
@@ -259,20 +268,23 @@ pub enum TypedStatement {
     Option<Box<TypedStatement>>,
   ), // label, condition, if_body, else_body
   WhileN1(String, TypedExpression, Box<TypedStatement>, bool), // label, condition, body, is_do_while
-  Continue(String, usize),                                     // label, locals_size
-  Break(String, usize),                                        // label, locals_size
+
+  Break(String, usize),                                    // label, locals_size
+  Continue(String, usize),                                 // label, locals_size
   MacroReturnN0(usize, usize, Option<TypedExpression>), // parameters_size, locals_size, return_value
   MacroReturnN1(usize, usize, Option<TypedExpression>), // parameters_size, locals_size, return_value
   MacroReturnN8(usize, usize, Option<TypedExpression>), // parameters_size, locals_size, return_value
   FunctionReturnN0(usize, usize, Option<TypedExpression>), // parameters_size, locals_size, return_value
   FunctionReturnN1(usize, usize, Option<TypedExpression>), // parameters_size, locals_size, return_value
   FunctionReturnN8(usize, usize, Option<TypedExpression>), // parameters_size, locals_size, return_value
+
   InitLocalN0(Option<TypedExpression>),
   InitLocalN1(Option<TypedExpression>),
   InitLocalN8(Option<TypedExpression>),
   UninitLocalN0,
   UninitLocalN1,
   UninitLocalN8,
+
   Assembly(String),
 }
 
@@ -322,7 +334,7 @@ impl std::fmt::Display for Type {
       Type::Array(r#type) => write!(f, "{} []", r#type),
       Type::Structure(objects) => write!(f, "struct {{ {} }}", format_object_list(objects)),
       Type::Union(objects) => write!(f, "union {{ {} }}", format_object_list(objects)),
-      Type::Enumeration(strings) => write!(f, "enum {{ {} }}", strings.join(", ")),
+      Type::Enumeration(constants) => write!(f, "enum {{ {} }}", constants.join(", ")),
       Type::Macro(return_type, name, parameter_types, is_variadic) => write!(
         f,
         "{} {}({})",

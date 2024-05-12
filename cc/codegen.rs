@@ -1,4 +1,5 @@
 use crate::*;
+use optimize::Behavior;
 use std::collections::HashSet;
 
 #[rustfmt::skip] macro_rules! ret_label { () => { Label::Local(format!("ret"), None) }; }
@@ -15,24 +16,38 @@ use std::collections::HashSet;
 
 pub fn codegen(
   program: TypedProgram,
-  _errors: &mut Vec<(Pos, Error)>,
+  _errors: &mut impl Extend<(Pos, Error)>,
 ) -> Vec<Result<Token, String>> {
   let tokens = codegen::program(program);
 
   // filter out unused local labels to improve readability and avoid assembler warnings
 
-  let local_label_references: HashSet<String> = tokens
+  let mut scope_uid: usize = 0;
+  let local_label_references: HashSet<Label> = tokens
     .iter()
     .filter_map(|token| match token {
-      Ok(Token::LabelRef(Label::Local(label, None))) => Some(label.clone()),
+      Ok(Token::MacroDef(_)) => {
+        scope_uid += 1;
+        None
+      }
+      Ok(Token::LabelRef(Label::Local(label, None))) => {
+        Some(Label::Local(label.clone(), Some(scope_uid)))
+      }
       _ => None,
     })
     .collect();
 
+  let mut scope_uid: usize = 0;
   tokens
     .into_iter()
     .filter(|token| match token {
-      Ok(Token::LabelDef(Label::Local(label, None))) => local_label_references.contains(label),
+      Ok(Token::MacroDef(_)) => {
+        scope_uid += 1;
+        true
+      }
+      Ok(Token::LabelDef(Label::Local(label, None))) => {
+        local_label_references.contains(&Label::Local(label.clone(), Some(scope_uid)))
+      }
       _ => true,
     })
     .collect()
@@ -40,10 +55,7 @@ pub fn codegen(
 
 fn program(program: TypedProgram) -> Vec<Result<Token, String>> {
   match program {
-    TypedProgram(globals) => globals
-      .into_iter()
-      .flat_map(|global| codegen::global(global))
-      .collect(),
+    TypedProgram(globals) => globals.into_iter().flat_map(codegen::global).collect(),
   }
 }
 
@@ -51,21 +63,39 @@ fn global(global: TypedGlobal) -> Vec<Result<Token, String>> {
   match global {
     TypedGlobal::Data(label, value) => codegen::data_global(label, value),
 
-    TypedGlobal::Macro(label, statement) => std::iter::empty()
-      .chain([Ok(Token::MacroDef(link::global_macro!(&label)))])
-      .chain(codegen::statement(statement))
-      .chain([Ok(Token::LabelDef(codegen::ret_label!()))])
-      .chain([Err(format!(""))])
-      .collect(),
+    TypedGlobal::Macro(label, body, return_template) => {
+      let body_behavior = optimize::statement_behavior(&body);
+      std::iter::empty()
+        .chain([Ok(Token::MacroDef(link::global_macro!(&label)))])
+        .chain(codegen::statement(body))
+        .chain(
+          match optimize::behavior_contains(&body_behavior, &Behavior::Completes) {
+            true => codegen::statement(return_template),
+            false => std::iter::empty().collect(),
+          },
+        )
+        .chain([Ok(Token::LabelDef(codegen::ret_label!()))])
+        .chain([Err(format!(""))])
+        .collect()
+    }
 
-    TypedGlobal::Function(label, statement) => std::iter::empty()
-      .chain([
-        Ok(Token::MacroDef(link::def_macro!(&label))),
-        Ok(Token::LabelDef(link::global_label!(&label))),
-      ])
-      .chain(codegen::statement(statement))
-      .chain([Err(format!(""))])
-      .collect(),
+    TypedGlobal::Function(label, body, return_template) => {
+      let body_behavior = optimize::statement_behavior(&body);
+      std::iter::empty()
+        .chain([
+          Ok(Token::MacroDef(link::def_macro!(&label))),
+          Ok(Token::LabelDef(link::global_label!(&label))),
+        ])
+        .chain(codegen::statement(body))
+        .chain(
+          match optimize::behavior_contains(&body_behavior, &Behavior::Completes) {
+            true => codegen::statement(return_template),
+            false => std::iter::empty().collect(),
+          },
+        )
+        .chain([Err(format!(""))])
+        .collect()
+    }
 
     // raw assembly that might not be valid is encoded through the `Err` variant
     TypedGlobal::Assembly(assembly) => std::iter::empty().chain([Err(assembly)]).collect(),
@@ -113,7 +143,7 @@ fn data_global(label: String, value: Vec<TypedExpression>) -> Vec<Result<Token, 
 fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
   match statement {
     TypedStatement::ExpressionN0(expression) => std::iter::empty()
-      .chain(codegen::n0_expression(flatten_expression(expression), 0))
+      .chain(codegen::n0_expression(expression, 0))
       .collect(),
 
     TypedStatement::Compound(statements) => statements
@@ -123,22 +153,14 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
 
     TypedStatement::IfN1(label, condition, if_body, else_body) => codegen::if_n1_statement(
       label,
-      flatten_expression(condition),
+      condition,
       *if_body,
       else_body.map(|else_body| *else_body),
     ),
 
     TypedStatement::WhileN1(label, condition, body, is_do_while) => {
-      codegen::while_n1_statement(label, flatten_expression(condition), *body, is_do_while)
+      codegen::while_n1_statement(label, condition, *body, is_do_while)
     }
-
-    TypedStatement::Continue(label, locals_size) => std::iter::empty()
-      .chain(std::iter::repeat(Ok(Token::Pop)).take(locals_size))
-      .chain([
-        Ok(Token::LabelRef(codegen::cond_label!(&label))),
-        Ok(Token::MacroRef(link::jmp_macro!())),
-      ])
-      .collect(),
 
     TypedStatement::Break(label, locals_size) => std::iter::empty()
       .chain(std::iter::repeat(Ok(Token::Pop)).take(locals_size))
@@ -148,10 +170,18 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
       ])
       .collect(),
 
+    TypedStatement::Continue(label, locals_size) => std::iter::empty()
+      .chain(std::iter::repeat(Ok(Token::Pop)).take(locals_size))
+      .chain([
+        Ok(Token::LabelRef(codegen::cond_label!(&label))),
+        Ok(Token::MacroRef(link::jmp_macro!())),
+      ])
+      .collect(),
+
     TypedStatement::MacroReturnN0(parameters_size, locals_size, expression) => {
       match (parameters_size, locals_size, expression) {
         (parameters_size, locals_size, Some(expression)) => std::iter::empty()
-          .chain(codegen::n0_expression(flatten_expression(expression), 0))
+          .chain(codegen::n0_expression(expression, 0))
           .chain(std::iter::repeat(Ok(Token::Pop)).take(parameters_size + locals_size))
           .chain([
             Ok(Token::LabelRef(codegen::ret_label!())),
@@ -172,14 +202,14 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
     | TypedStatement::MacroReturnN8(parameters_size, locals_size, expression) => {
       match (parameters_size, locals_size, expression) {
         (0, 0, Some(expression)) => std::iter::empty()
-          .chain(codegen::expression(flatten_expression(expression), 0))
+          .chain(codegen::expression(expression, 0))
           .chain([
             Ok(Token::LabelRef(codegen::ret_label!())),
             Ok(Token::MacroRef(link::jmp_macro!())),
           ])
           .collect(),
         (parameters_size, locals_size, Some(expression)) => std::iter::empty()
-          .chain(codegen::expression(flatten_expression(expression), 0))
+          .chain(codegen::expression(expression, 0))
           .chain(store_to_offset(parameters_size + locals_size - 1))
           .chain(std::iter::repeat(Ok(Token::Pop)).take(parameters_size + locals_size - 1))
           .chain([
@@ -211,7 +241,7 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
           .chain([Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (0, locals_size, Some(expression)) => std::iter::empty()
-          .chain(codegen::n0_expression(flatten_expression(expression), 0))
+          .chain(codegen::n0_expression(expression, 0))
           .chain(std::iter::repeat(Ok(Token::Pop)).take(locals_size))
           .chain([Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
@@ -222,7 +252,7 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
           .chain([Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (parameters_size, locals_size, Some(expression)) => std::iter::empty()
-          .chain(codegen::n0_expression(flatten_expression(expression), 0))
+          .chain(codegen::n0_expression(expression, 0))
           .chain(std::iter::repeat(Ok(Token::Pop)).take(locals_size))
           .chain(store_to_offset(parameters_size - 1))
           .chain(std::iter::repeat(Ok(Token::Pop)).take(parameters_size - 1))
@@ -235,12 +265,12 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
     | TypedStatement::FunctionReturnN8(parameters_size, locals_size, expression) => {
       match (parameters_size, locals_size, expression) {
         (0, 0, Some(expression)) => std::iter::empty()
-          .chain(codegen::expression(flatten_expression(expression), 0))
+          .chain(codegen::expression(expression, 0))
           .chain([Ok(Token::Swp)])
           .chain([Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (0, locals_size, Some(expression)) => std::iter::empty()
-          .chain(codegen::expression(flatten_expression(expression), 0))
+          .chain(codegen::expression(expression, 0))
           .chain(store_to_offset(locals_size - 1))
           .chain(std::iter::repeat(Ok(Token::Pop)).take(locals_size - 1))
           .chain([Ok(Token::Swp)])
@@ -259,7 +289,7 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
           .chain([Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (1, locals_size, Some(expression)) => std::iter::empty()
-          .chain(codegen::expression(flatten_expression(expression), 0))
+          .chain(codegen::expression(expression, 0))
           .chain(store_to_offset(locals_size + 1))
           .chain(std::iter::repeat(Ok(Token::Pop)).take(locals_size))
           .chain([Ok(Token::MacroRef(link::ret_macro!()))])
@@ -271,7 +301,7 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
           .chain([Ok(Token::MacroRef(link::ret_macro!()))])
           .collect(),
         (parameters_size, locals_size, Some(expression)) => std::iter::empty()
-          .chain(codegen::expression(flatten_expression(expression), 0))
+          .chain(codegen::expression(expression, 0))
           .chain(store_to_offset(parameters_size + locals_size))
           .chain(std::iter::repeat(Ok(Token::Pop)).take(locals_size))
           .chain(store_to_offset(parameters_size - 2))
@@ -283,21 +313,21 @@ fn statement(statement: TypedStatement) -> Vec<Result<Token, String>> {
 
     TypedStatement::InitLocalN0(expression) => match expression {
       Some(expression) => std::iter::empty()
-        .chain(codegen::n0_expression(flatten_expression(expression), 0))
+        .chain(codegen::n0_expression(expression, 0))
         .collect(),
       None => std::iter::empty().collect(),
     },
 
     TypedStatement::InitLocalN1(expression) => match expression {
       Some(expression) => std::iter::empty()
-        .chain(codegen::n1_expression(flatten_expression(expression), 0))
+        .chain(codegen::n1_expression(expression, 0))
         .collect(),
       None => std::iter::empty().chain([Ok(Token::XXX(0x00))]).collect(),
     },
 
     TypedStatement::InitLocalN8(expression) => match expression {
       Some(expression) => std::iter::empty()
-        .chain(codegen::n8_expression(flatten_expression(expression), 0))
+        .chain(codegen::n8_expression(expression, 0))
         .collect(),
       None => std::iter::empty().chain([Ok(Token::XXX(0x00))]).collect(),
     },
@@ -332,6 +362,8 @@ fn if_n1_statement(
     TypedExpression::N1CastN8(_) => true,
     _ => false,
   };
+
+  let if_body_behavior = optimize::statement_behavior(&if_body);
 
   match condition {
     TypedExpression::N1BitwiseComplement(expression) => {
@@ -392,11 +424,16 @@ fn if_n1_statement(
       .chain(codegen::statement(if_body))
       .chain(match else_body {
         Some(else_body) => std::iter::empty()
-          .chain([
-            Ok(Token::LabelRef(codegen::end_label!(&label))),
-            Ok(Token::MacroRef(link::jmp_macro!())),
-            Ok(Token::LabelDef(codegen::else_label!(&label))),
-          ])
+          .chain(
+            match optimize::behavior_contains(&if_body_behavior, &Behavior::Completes) {
+              true => std::iter::empty()
+                .chain([Ok(Token::LabelRef(codegen::end_label!(&label)))])
+                .chain([Ok(Token::MacroRef(link::jmp_macro!()))])
+                .collect::<Vec<_>>(),
+              false => std::iter::empty().collect(),
+            },
+          )
+          .chain([Ok(Token::LabelDef(codegen::else_label!(&label)))])
           .chain(codegen::statement(else_body))
           .collect::<Vec<_>>(),
         None => std::iter::empty().collect(),
@@ -426,6 +463,8 @@ fn while_n1_statement(
     TypedExpression::N1CastN8(_) => true,
     _ => false,
   };
+
+  let body_behavior = optimize::statement_behavior(&body);
 
   match condition {
     TypedExpression::N1BitwiseComplement(expression) => {
@@ -462,11 +501,16 @@ fn while_n1_statement(
             .chain(codegen::statement(body))
             .collect(),
         })
-        .chain([
-          Ok(Token::LabelRef(codegen::begin_label!(&label))),
-          Ok(Token::MacroRef(link::jmp_macro!())),
-          Ok(Token::LabelDef(codegen::end_label!(&label))),
-        ])
+        .chain(
+          match optimize::behavior_contains(&body_behavior, &Behavior::Completes) {
+            true => std::iter::empty()
+              .chain([Ok(Token::LabelRef(codegen::begin_label!(&label)))])
+              .chain([Ok(Token::MacroRef(link::jmp_macro!()))])
+              .collect::<Vec<_>>(),
+            false => std::iter::empty().collect(),
+          },
+        )
+        .chain([Ok(Token::LabelDef(codegen::end_label!(&label)))])
         .collect(),
       false => std::iter::empty()
         .chain(match is_do_while {
@@ -613,10 +657,15 @@ fn n1_expression(
   temporaries_size: usize,
 ) -> Vec<Result<Token, String>> {
   match expression {
-    TypedExpression::N1DereferenceN8(expression) => std::iter::empty()
-      .chain(codegen::n8_expression(*expression, temporaries_size))
-      .chain([Ok(Token::Lda)])
-      .collect(),
+    TypedExpression::N1DereferenceN8(expression) => match *expression {
+      TypedExpression::N8Constant(0x00) => std::iter::empty()
+        .chain([Ok(Token::MacroRef(link::trap_macro!()))]) // null pointer dereference. behavior is undefined
+        .collect(),
+      expression => std::iter::empty()
+        .chain(codegen::n8_expression(expression, temporaries_size))
+        .chain([Ok(Token::Lda)])
+        .collect(),
+    },
 
     TypedExpression::N1BitwiseComplement(expression) => std::iter::empty()
       .chain(codegen::n1_expression(*expression, temporaries_size))
@@ -690,10 +739,15 @@ fn n8_expression(
   temporaries_size: usize,
 ) -> Vec<Result<Token, String>> {
   match expression {
-    TypedExpression::N8DereferenceN8(expression) => std::iter::empty()
-      .chain(codegen::n8_expression(*expression, temporaries_size))
-      .chain([Ok(Token::Lda)])
-      .collect(),
+    TypedExpression::N8DereferenceN8(expression) => match *expression {
+      TypedExpression::N8Constant(0x00) => std::iter::empty()
+        .chain([Ok(Token::MacroRef(link::trap_macro!()))]) // null pointer dereference. behavior is undefined
+        .collect(),
+      expression => std::iter::empty()
+        .chain(codegen::n8_expression(expression, temporaries_size))
+        .chain([Ok(Token::Lda)])
+        .collect(),
+    },
 
     TypedExpression::N8BitwiseComplement(expression) => std::iter::empty()
       .chain(codegen::n8_expression(*expression, temporaries_size))
@@ -1130,366 +1184,4 @@ fn ncf_n1_cast_n8(
     .chain(codegen::n8_expression(expression, temporaries_size))
     .chain([Ok(Token::XXX(0x01)), Ok(Token::MacroRef(link::cl_macro!()))])
     .collect()
-}
-
-fn flatten_expression(expression: TypedExpression) -> TypedExpression {
-  // constant folding
-
-  // moves comma operators outward. that is, moves operations on a comma expression
-  // inside the comma expression. facilitates the extraction of the left-hand side
-  // of comma expressions into statements
-  macro_rules! default {
-    ($expression:expr, $second_variant:ident, $outer_variant:ident) => {
-      match $expression {
-        TypedExpression::N0SecondN0N0(expression1, expression2)
-        | TypedExpression::N1SecondN0N1(expression1, expression2)
-        | TypedExpression::N8SecondN0N8(expression1, expression2) => {
-          flatten_expression(TypedExpression::$second_variant(
-            expression1,
-            Box::new(TypedExpression::$outer_variant(expression2)),
-          ))
-        }
-        expression => TypedExpression::$outer_variant(Box::new(expression)),
-      }
-    };
-
-    ($expression1:expr, $expression2:expr, $second_variant:ident, $outer_variant:ident) => {
-      match ($expression1, $expression2) {
-        (TypedExpression::N0SecondN0N0(expression1, expression2), expression3)
-        | (TypedExpression::N1SecondN0N1(expression1, expression2), expression3)
-        | (TypedExpression::N8SecondN0N8(expression1, expression2), expression3) => {
-          flatten_expression(TypedExpression::$second_variant(
-            expression1,
-            Box::new(TypedExpression::$outer_variant(
-              expression2,
-              Box::new(expression3),
-            )),
-          ))
-        }
-        (expression1, TypedExpression::N0SecondN0N0(expression2, expression3))
-        | (expression1, TypedExpression::N1SecondN0N1(expression2, expression3))
-        | (expression1, TypedExpression::N8SecondN0N8(expression2, expression3)) => {
-          flatten_expression(TypedExpression::$second_variant(
-            expression2,
-            Box::new(TypedExpression::$outer_variant(
-              Box::new(expression1),
-              expression3,
-            )),
-          ))
-        }
-        (expression1, expression2) => {
-          TypedExpression::$outer_variant(Box::new(expression1), Box::new(expression2))
-        }
-      }
-    };
-  }
-
-  match expression {
-    TypedExpression::N1DereferenceN8(expression) => match flatten_expression(*expression) {
-      expression => default!(expression, N1SecondN0N1, N1DereferenceN8),
-    },
-
-    TypedExpression::N8DereferenceN8(expression) => match flatten_expression(*expression) {
-      expression => default!(expression, N8SecondN0N8, N8DereferenceN8),
-    },
-
-    TypedExpression::N1BitwiseComplement(expression) => match flatten_expression(*expression) {
-      TypedExpression::N1BitwiseComplement(expression) => *expression,
-      TypedExpression::N1Constant(constant) => TypedExpression::N1Constant(!constant),
-      expression => default!(expression, N1SecondN0N1, N1BitwiseComplement),
-    },
-
-    TypedExpression::N8BitwiseComplement(expression) => match flatten_expression(*expression) {
-      TypedExpression::N8BitwiseComplement(expression) => *expression,
-      TypedExpression::N8Constant(constant) => TypedExpression::N8Constant(!constant),
-      expression => default!(expression, N8SecondN0N8, N8BitwiseComplement),
-    },
-
-    TypedExpression::N8Addition(expression1, expression2) => {
-      match (
-        flatten_expression(*expression1),
-        flatten_expression(*expression2),
-      ) {
-        (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
-          TypedExpression::N8Constant(constant1.wrapping_add(constant2))
-        }
-        (expression1, expression2) => {
-          default!(expression1, expression2, N8SecondN0N8, N8Addition)
-        }
-      }
-    }
-
-    TypedExpression::N8Subtraction(expression1, expression2) => {
-      match (
-        flatten_expression(*expression1),
-        flatten_expression(*expression2),
-      ) {
-        (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
-          TypedExpression::N8Constant(constant1.wrapping_sub(constant2))
-        }
-        (expression1, expression2) => {
-          default!(expression1, expression2, N8SecondN0N8, N8Subtraction)
-        }
-      }
-    }
-
-    TypedExpression::N8Multiplication(expression1, expression2) => {
-      match (
-        flatten_expression(*expression1),
-        flatten_expression(*expression2),
-      ) {
-        (expression, TypedExpression::N8Constant(0x00))
-        | (TypedExpression::N8Constant(0x00), expression) => {
-          flatten_expression(TypedExpression::N0SecondN0N0(
-            Box::new(TypedExpression::N0CastN8(Box::new(expression))),
-            Box::new(TypedExpression::N8Constant(0x00)),
-          ))
-        }
-        (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
-          TypedExpression::N8Constant(constant1.wrapping_mul(constant2))
-        }
-        (expression1, expression2) => {
-          default!(expression1, expression2, N8SecondN0N8, N8Multiplication)
-        }
-      }
-    }
-
-    TypedExpression::U8Division(expression1, expression2) => {
-      match (
-        flatten_expression(*expression1),
-        flatten_expression(*expression2),
-      ) {
-        (_expression, TypedExpression::N8Constant(0x00)) => {
-          TypedExpression::N8Constant(0x00) // division by zero. behavior is undefined
-        }
-        (TypedExpression::N8Constant(0x00), expression) => {
-          flatten_expression(TypedExpression::N0SecondN0N0(
-            Box::new(TypedExpression::N0CastN8(Box::new(expression))),
-            Box::new(TypedExpression::N8Constant(0x00)),
-          ))
-        }
-        (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
-          TypedExpression::N8Constant(constant1.wrapping_div(constant2))
-        }
-        (expression1, expression2) => {
-          default!(expression1, expression2, N8SecondN0N8, U8Division)
-        }
-      }
-    }
-
-    TypedExpression::U8Modulo(expression1, expression2) => {
-      match (
-        flatten_expression(*expression1),
-        flatten_expression(*expression2),
-      ) {
-        (_expression, TypedExpression::N8Constant(0x00)) => {
-          TypedExpression::N8Constant(0x00) // modulo zero. behavior is undefined
-        }
-        (TypedExpression::N8Constant(0x00), expression) => {
-          flatten_expression(TypedExpression::N0SecondN0N0(
-            Box::new(TypedExpression::N0CastN8(Box::new(expression))),
-            Box::new(TypedExpression::N8Constant(0x00)),
-          ))
-        }
-        (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
-          TypedExpression::N8Constant(constant1.wrapping_rem(constant2))
-        }
-        (expression1, expression2) => {
-          default!(expression1, expression2, N8SecondN0N8, U8Modulo)
-        }
-      }
-    }
-
-    TypedExpression::N1EqualToN8(expression1, expression2) => {
-      match (
-        flatten_expression(*expression1),
-        flatten_expression(*expression2),
-      ) {
-        (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
-          TypedExpression::N1Constant(constant1 == constant2)
-        }
-        (expression1, expression2) => {
-          default!(expression1, expression2, N1SecondN0N1, N1EqualToN8)
-        }
-      }
-    }
-
-    TypedExpression::N1LessThanU8(expression1, expression2) => {
-      match (
-        flatten_expression(*expression1),
-        flatten_expression(*expression2),
-      ) {
-        (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
-          TypedExpression::N1Constant(constant1 < constant2)
-        }
-        (expression1, expression2) => {
-          default!(expression1, expression2, N1SecondN0N1, N1LessThanU8)
-        }
-      }
-    }
-
-    TypedExpression::N1LessThanI8(expression1, expression2) => {
-      match (
-        flatten_expression(*expression1),
-        flatten_expression(*expression2),
-      ) {
-        (TypedExpression::N8Constant(constant1), TypedExpression::N8Constant(constant2)) => {
-          TypedExpression::N1Constant((constant1 as i8) < constant2 as i8)
-        }
-        (expression1, expression2) => {
-          default!(expression1, expression2, N1SecondN0N1, N1LessThanI8)
-        }
-      }
-    }
-
-    TypedExpression::N0SecondN0N0(expression1, expression2) => {
-      match (
-        flatten_expression(*expression1),
-        flatten_expression(*expression2),
-      ) {
-        (TypedExpression::N0Constant(_constant), expression) => expression,
-        (expression1, expression2) => {
-          // `default!` overflows stack when folding `(a, (b, c))`
-          TypedExpression::N0SecondN0N0(Box::new(expression1), Box::new(expression2))
-        }
-      }
-    }
-
-    TypedExpression::N1SecondN0N1(expression1, expression2) => {
-      match (
-        flatten_expression(*expression1),
-        flatten_expression(*expression2),
-      ) {
-        (TypedExpression::N0Constant(_constant), expression) => expression,
-        (expression1, expression2) => {
-          // `default!` overflows stack when folding `(a, (b, c))`
-          TypedExpression::N1SecondN0N1(Box::new(expression1), Box::new(expression2))
-        }
-      }
-    }
-
-    TypedExpression::N8SecondN0N8(expression1, expression2) => {
-      match (
-        flatten_expression(*expression1),
-        flatten_expression(*expression2),
-      ) {
-        (TypedExpression::N0Constant(_constant), expression) => expression,
-        (expression1, expression2) => {
-          // `default!` overflows stack when folding `(a, (b, c))`
-          TypedExpression::N8SecondN0N8(Box::new(expression1), Box::new(expression2))
-        }
-      }
-    }
-
-    // move bitwise truncations inward. that is, turn a truncation of the result of an
-    // operation into a simpler operation on truncated operands. optimizes away null
-    // statements that have no side effects, for example
-    //
-    TypedExpression::N0CastN1(expression) => match flatten_expression(*expression) {
-      TypedExpression::N1DereferenceN8(_) => TypedExpression::N0Constant(()),
-      TypedExpression::N1BitwiseComplement(expression) => {
-        flatten_expression(TypedExpression::N0CastN8(expression))
-      }
-      TypedExpression::N1EqualToN8(expression1, expression2)
-      | TypedExpression::N1LessThanU8(expression1, expression2)
-      | TypedExpression::N1LessThanI8(expression1, expression2)
-      | TypedExpression::U8Division(expression1, expression2)
-      | TypedExpression::U8Modulo(expression1, expression2) => {
-        flatten_expression(TypedExpression::N0SecondN0N0(
-          Box::new(TypedExpression::N0CastN8(expression1)),
-          Box::new(TypedExpression::N0CastN8(expression2)),
-        ))
-      }
-      TypedExpression::N1CastN8(expression) => {
-        flatten_expression(TypedExpression::N0CastN8(expression))
-      }
-      TypedExpression::N1Constant(_constant) => TypedExpression::N0Constant(()),
-      expression => default!(expression, N0SecondN0N0, N0CastN1),
-    },
-
-    TypedExpression::N0CastN8(expression) => match flatten_expression(*expression) {
-      TypedExpression::N8DereferenceN8(_) => TypedExpression::N0Constant(()),
-      TypedExpression::N8BitwiseComplement(expression) => {
-        flatten_expression(TypedExpression::N0CastN8(expression))
-      }
-      TypedExpression::N8Addition(expression1, expression2)
-      | TypedExpression::N8Subtraction(expression1, expression2)
-      | TypedExpression::N8Multiplication(expression1, expression2)
-      | TypedExpression::U8Division(expression1, expression2)
-      | TypedExpression::U8Modulo(expression1, expression2) => {
-        flatten_expression(TypedExpression::N0SecondN0N0(
-          Box::new(TypedExpression::N0CastN8(expression1)),
-          Box::new(TypedExpression::N0CastN8(expression2)),
-        ))
-      }
-      TypedExpression::N8Constant(_)
-      | TypedExpression::N8LoadLocal(_)
-      | TypedExpression::N8AddrLocal(_)
-      | TypedExpression::N8LoadGlobal(_)
-      | TypedExpression::N8AddrGlobal(_) => TypedExpression::N0Constant(()),
-      expression => default!(expression, N0SecondN0N0, N0CastN8),
-    },
-
-    TypedExpression::N1CastN8(expression) => match flatten_expression(*expression) {
-      TypedExpression::N8BitwiseComplement(expression) => flatten_expression(
-        TypedExpression::N1BitwiseComplement(Box::new(TypedExpression::N1CastN8(expression))),
-      ),
-      TypedExpression::N8Addition(_expression1, _expression2)
-      | TypedExpression::N8Subtraction(_expression1, _expression2)
-      | TypedExpression::N8Multiplication(_expression1, _expression2) => {
-        todo!()
-        // N8Addition => psi N1Addition N1CastN8
-        // N8Subtraction => psi N1Subtraction N1CastN8
-        // N8Multiplication => psi N1Multiplication N1CastN8
-      }
-      TypedExpression::N8Constant(constant) => {
-        TypedExpression::N1Constant((constant & 0x01) != 0x00)
-      }
-      expression => default!(expression, N1SecondN0N1, N1CastN8),
-    },
-
-    TypedExpression::N0Constant(constant) => TypedExpression::N0Constant(constant),
-
-    TypedExpression::N1Constant(constant) => TypedExpression::N1Constant(constant),
-
-    TypedExpression::N8Constant(constant) => TypedExpression::N8Constant(constant),
-
-    TypedExpression::N8LoadLocal(offset) => TypedExpression::N8LoadLocal(offset),
-
-    TypedExpression::N8AddrLocal(offset) => TypedExpression::N8AddrLocal(offset),
-
-    TypedExpression::N8LoadGlobal(label) => TypedExpression::N8LoadGlobal(label),
-
-    TypedExpression::N8AddrGlobal(label) => TypedExpression::N8AddrGlobal(label),
-
-    TypedExpression::N0MacroCall(label, arguments) => TypedExpression::N0MacroCall(
-      label,
-      arguments.into_iter().map(flatten_expression).collect(),
-    ),
-
-    TypedExpression::N1MacroCall(label, arguments) => TypedExpression::N1MacroCall(
-      label,
-      arguments.into_iter().map(flatten_expression).collect(),
-    ),
-
-    TypedExpression::N8MacroCall(label, arguments) => TypedExpression::N8MacroCall(
-      label,
-      arguments.into_iter().map(flatten_expression).collect(),
-    ),
-
-    TypedExpression::N0FunctionCall(designator, arguments) => TypedExpression::N0FunctionCall(
-      Box::new(flatten_expression(*designator)),
-      arguments.into_iter().map(flatten_expression).collect(),
-    ),
-
-    TypedExpression::N1FunctionCall(designator, arguments) => TypedExpression::N1FunctionCall(
-      Box::new(flatten_expression(*designator)),
-      arguments.into_iter().map(flatten_expression).collect(),
-    ),
-
-    TypedExpression::N8FunctionCall(designator, arguments) => TypedExpression::N8FunctionCall(
-      Box::new(flatten_expression(*designator)),
-      arguments.into_iter().map(flatten_expression).collect(),
-    ),
-  }
 }

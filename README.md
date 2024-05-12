@@ -106,6 +106,7 @@ python3 test.py multiplication.asm asm emu
 python3 test.py addition.hex enc emu
 python3 test.py checkerboard.hex enc emu
 python3 test.py misc.c libc/string.c libc/stdlib.c libc/stdio.c libc/display.c libc/crt0.c cc asm emu
+python3 test.py ub.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py errors.asm asm emu
 python3 test.py errors.c libc/crt0.c cc asm emu
 ```

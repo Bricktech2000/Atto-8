@@ -634,15 +634,15 @@ fn jump_statement() -> Parser<Statement> {
   Parser::expected(vec![])
     .or_else(|_| {
       Parser::pure(())
-        .and_then(|_| parse::ws(parse::string("continue")))
-        .and_then(|_| parse::ws(parse::char(';')))
-        .map(|_| Statement::Continue)
-    })
-    .or_else(|_| {
-      Parser::pure(())
         .and_then(|_| parse::ws(parse::string("break")))
         .and_then(|_| parse::ws(parse::char(';')))
         .map(|_| Statement::Break)
+    })
+    .or_else(|_| {
+      Parser::pure(())
+        .and_then(|_| parse::ws(parse::string("continue")))
+        .and_then(|_| parse::ws(parse::char(';')))
+        .map(|_| Statement::Continue)
     })
     .or_else(|_| {
       Parser::pure(())
