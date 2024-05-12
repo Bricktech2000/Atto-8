@@ -1,6 +1,5 @@
 use crate::*;
 use optimize::Behavior;
-use std::collections::HashSet;
 
 #[rustfmt::skip] macro_rules! ret_label { () => { Label::Local(format!("ret"), None) }; }
 #[rustfmt::skip] macro_rules! end_label { ($name:expr) => { Label::Local(format!("{}.end", $name), None) }; }
@@ -20,37 +19,7 @@ pub fn codegen(
 ) -> Vec<Result<Token, String>> {
   let tokens = codegen::program(program);
 
-  // filter out unused local labels to improve readability and avoid assembler warnings
-
-  let mut scope_uid: usize = 0;
-  let local_label_references: HashSet<Label> = tokens
-    .iter()
-    .filter_map(|token| match token {
-      Ok(Token::MacroDef(_)) => {
-        scope_uid += 1;
-        None
-      }
-      Ok(Token::LabelRef(Label::Local(label, None))) => {
-        Some(Label::Local(label.clone(), Some(scope_uid)))
-      }
-      _ => None,
-    })
-    .collect();
-
-  let mut scope_uid: usize = 0;
   tokens
-    .into_iter()
-    .filter(|token| match token {
-      Ok(Token::MacroDef(_)) => {
-        scope_uid += 1;
-        true
-      }
-      Ok(Token::LabelDef(Label::Local(label, None))) => {
-        local_label_references.contains(&Label::Local(label.clone(), Some(scope_uid)))
-      }
-      _ => true,
-    })
-    .collect()
 }
 
 fn program(program: TypedProgram) -> Vec<Result<Token, String>> {
@@ -74,7 +43,16 @@ fn global(global: TypedGlobal) -> Vec<Result<Token, String>> {
             false => std::iter::empty().collect(),
           },
         )
-        .chain([Ok(Token::LabelDef(codegen::ret_label!()))])
+        .chain(
+          match optimize::behavior_contains(&body_behavior, &Behavior::Returns)
+            || optimize::behavior_contains(&body_behavior, &Behavior::Completes)
+          {
+            true => std::iter::empty()
+              .chain([Ok(Token::LabelDef(codegen::ret_label!()))])
+              .collect::<Vec<_>>(),
+            false => std::iter::empty().collect(),
+          },
+        )
         .chain([Err(format!(""))])
         .collect()
     }
@@ -365,6 +343,11 @@ fn if_n1_statement(
 
   let if_body_behavior = optimize::statement_behavior(&if_body);
 
+  let end_label = match optimize::behavior_contains(&if_body_behavior, &Behavior::Completes) {
+    true => vec![Ok(Token::LabelDef(codegen::end_label!(&label)))],
+    false => vec![],
+  };
+
   match condition {
     TypedExpression::N1BitwiseComplement(expression) => {
       assert!(negated);
@@ -441,7 +424,7 @@ fn if_n1_statement(
           .collect::<Vec<_>>(),
         None => std::iter::empty().collect(),
       })
-      .chain([Ok(Token::LabelDef(codegen::end_label!(&label)))])
+      .chain(end_label)
       .collect(),
   }
 }
@@ -469,6 +452,23 @@ fn while_n1_statement(
 
   let body_behavior = optimize::statement_behavior(&body);
 
+  let begin_label = match optimize::behavior_contains(&body_behavior, &Behavior::Completes) {
+    true => vec![Ok(Token::LabelDef(codegen::begin_label!(&label)))],
+    false => vec![],
+  };
+
+  let end_label =
+    match optimize::behavior_contains(&body_behavior, &Behavior::Breaks(label.clone())) {
+      true => vec![Ok(Token::LabelDef(codegen::end_label!(&label)))],
+      false => vec![],
+    };
+
+  let cond_label =
+    match optimize::behavior_contains(&body_behavior, &Behavior::Continues(label.clone())) {
+      true => vec![Ok(Token::LabelDef(codegen::cond_label!(&label)))],
+      false => vec![],
+    };
+
   match condition {
     TypedExpression::N1BitwiseComplement(expression) => {
       assert!(negated);
@@ -491,15 +491,15 @@ fn while_n1_statement(
 
     TypedExpression::N1Constant(constant) => match constant ^ negated {
       true => std::iter::empty()
-        .chain([Ok(Token::LabelDef(codegen::begin_label!(&label)))])
+        .chain(begin_label)
         .chain(match is_do_while {
           true => std::iter::empty()
             .chain(codegen::statement(body))
-            .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
+            .chain(cond_label)
             .chain(codegen::n0_expression(precheck, 0))
             .collect::<Vec<_>>(),
           false => std::iter::empty()
-            .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
+            .chain(cond_label)
             .chain(codegen::n0_expression(precheck, 0))
             .chain(codegen::statement(body))
             .collect(),
@@ -513,16 +513,16 @@ fn while_n1_statement(
             false => std::iter::empty().collect(),
           },
         )
-        .chain([Ok(Token::LabelDef(codegen::end_label!(&label)))])
+        .chain(end_label)
         .collect(),
       false => std::iter::empty()
         .chain(match is_do_while {
           true => codegen::statement(body),
           false => std::iter::empty().collect(),
         })
-        .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
+        .chain(cond_label)
         .chain(codegen::n0_expression(precheck, 0))
-        .chain([Ok(Token::LabelDef(codegen::end_label!(&label)))])
+        .chain(end_label)
         .collect(),
     },
 
@@ -536,9 +536,9 @@ fn while_n1_statement(
           ])
           .collect(),
       })
-      .chain([Ok(Token::LabelDef(codegen::begin_label!(&label)))])
+      .chain(begin_label)
       .chain(codegen::statement(body))
-      .chain([Ok(Token::LabelDef(codegen::cond_label!(&label)))])
+      .chain(cond_label)
       .chain(codegen::n0_expression(precheck, 0))
       .chain(match condition {
         TypedExpression::N1EqualToN8(expression1, expression2) => {
@@ -562,8 +562,8 @@ fn while_n1_statement(
           true => link::bcc_macro!(),
           false => link::bcs_macro!(),
         })),
-        Ok(Token::LabelDef(codegen::end_label!(&label))),
       ])
+      .chain(end_label)
       .collect(),
   }
 }
