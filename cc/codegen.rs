@@ -409,7 +409,10 @@ fn if_n1_statement(
           codegen::cf_less_than_i8(*expression1, *expression2, 0)
         }
         TypedExpression::N1CastN8(expression) => codegen::ncf_n1_cast_n8(*expression, 0),
-        _ => unreachable!(),
+        expression => std::iter::empty()
+          .chain(codegen::n1_expression(expression, 0))
+          .chain([Ok(Token::Shr), Ok(Token::AtDyn)])
+          .collect(),
       })
       .chain([
         Ok(Token::LabelRef(match else_body {
@@ -548,7 +551,10 @@ fn while_n1_statement(
           codegen::cf_less_than_i8(*expression1, *expression2, 0)
         }
         TypedExpression::N1CastN8(expression) => codegen::ncf_n1_cast_n8(*expression, 0),
-        _ => unreachable!(),
+        expression => std::iter::empty()
+          .chain(codegen::n1_expression(expression, 0))
+          .chain([Ok(Token::Shr), Ok(Token::AtDyn)])
+          .collect(),
       })
       .chain([
         Ok(Token::LabelRef(codegen::begin_label!(&label))),
@@ -675,10 +681,25 @@ fn n1_expression(
         .collect(),
     },
 
-    TypedExpression::N1BitwiseComplement(expression) => std::iter::empty()
-      .chain(codegen::n1_expression(*expression, temporaries_size))
-      .chain([Ok(Token::XXX(0x01)), Ok(Token::Xor)])
-      .collect(),
+    TypedExpression::N1BitwiseComplement(expression) => match *expression {
+      TypedExpression::N1BitwiseComplement(expression) => {
+        codegen::n1_expression(*expression, temporaries_size)
+      }
+      TypedExpression::N1CastN8(expression) => std::iter::empty()
+        .chain(codegen::n8_expression(*expression, temporaries_size))
+        .chain([Ok(Token::Not), Ok(Token::XXX(0x01)), Ok(Token::And)])
+        .collect(),
+      TypedExpression::N1Constant(true) => {
+        std::iter::empty().chain([Ok(Token::XXX(0x00))]).collect()
+      }
+      TypedExpression::N1Constant(false) => {
+        std::iter::empty().chain([Ok(Token::XXX(0x01))]).collect()
+      }
+      expression => std::iter::empty()
+        .chain(codegen::cf_bitwise_complement(expression, temporaries_size))
+        .chain([Ok(Token::XXX(0x00)), Ok(Token::Shl), Ok(Token::AtDyn)])
+        .collect(),
+    },
 
     TypedExpression::N1SecondN0N1(expression1, expression2) => std::iter::empty()
       .chain(codegen::n0_expression(*expression1, temporaries_size))
@@ -734,9 +755,15 @@ fn n1_expression(
       false => vec![Ok(Token::XXX(0x00))],
     },
 
-    TypedExpression::N1MacroCall(_, _) => todo!(),
+    TypedExpression::N1MacroCall(label, arguments) => codegen::n8_expression(
+      TypedExpression::N8MacroCall(label, arguments),
+      temporaries_size,
+    ),
 
-    TypedExpression::N1FunctionCall(_, _) => todo!(),
+    TypedExpression::N1FunctionCall(designator, arguments) => codegen::n8_expression(
+      TypedExpression::N8FunctionCall(designator, arguments),
+      temporaries_size,
+    ),
 
     _ => unreachable!(),
   }
@@ -1090,6 +1117,47 @@ fn store_to_offset(offset: usize) -> Vec<Result<Token, String>> {
     },
     // stack overflow. behavior is undefined
     Err(_) => vec![Ok(Token::MacroRef(link::trap_macro!()))],
+  }
+}
+
+fn cf_bitwise_complement(
+  expression: TypedExpression,
+  temporaries_size: usize,
+) -> Vec<Result<Token, String>> {
+  match expression {
+    TypedExpression::N1BitwiseComplement(expression) => {
+      codegen::cf_bitwise_complement(*expression, temporaries_size)
+    }
+    TypedExpression::N1EqualToN8(expression1, expression2) => std::iter::empty()
+      .chain(cf_equal_to_n8(*expression1, *expression2, temporaries_size))
+      .chain([Ok(Token::Flc)])
+      .collect(),
+    TypedExpression::N1LessThanU8(expression1, expression2) => std::iter::empty()
+      .chain(cf_less_than_u8(
+        *expression1,
+        *expression2,
+        temporaries_size,
+      ))
+      .chain([Ok(Token::Flc)])
+      .collect(),
+    TypedExpression::N1LessThanI8(expression1, expression2) => std::iter::empty()
+      .chain(cf_less_than_i8(
+        *expression1,
+        *expression2,
+        temporaries_size,
+      ))
+      .chain([Ok(Token::Flc)])
+      .collect(),
+    TypedExpression::N1CastN8(expression) => std::iter::empty()
+      .chain(codegen::n1_expression(*expression, temporaries_size))
+      .chain([Ok(Token::XXX(0x01)), Ok(Token::MacroRef(link::cl_macro!()))])
+      .collect(),
+    TypedExpression::N1Constant(true) => std::iter::empty().chain([Ok(Token::Clc)]).collect(),
+    TypedExpression::N1Constant(false) => std::iter::empty().chain([Ok(Token::Sec)]).collect(),
+    expression => std::iter::empty()
+      .chain(codegen::n1_expression(expression, temporaries_size))
+      .chain([Ok(Token::MacroRef(link::zr_macro!()))])
+      .collect(),
   }
 }
 

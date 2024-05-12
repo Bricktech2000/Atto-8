@@ -54,7 +54,7 @@ fn main() {
     .map(|typed_program| optimize::optimize(typed_program, &mut errors))
     .collect();
 
-  // println!("CC: Optimized: {:#?}", linked);
+  // println!("CC: Optimized: {:#?}", optimized);
 
   let linked: Vec<Result<Token, String>> = std::iter::empty()
     .chain([Err(format!("# dependency graph"))])
