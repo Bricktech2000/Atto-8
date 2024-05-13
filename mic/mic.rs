@@ -149,13 +149,13 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     unreachable!()
                   }
 
-                  Instruction::Add(Size(size)) => {
+                  Instruction::Add(size) => {
                     seq![
                       fetch, //
                       sp_alxl,
-                      cinsum_sp,                        // SP++
-                      mem_zl,                           // *SP -> ZL
-                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
+                      cinsum_sp,                              // SP++
+                      mem_zl,                                 // *SP -> ZL
+                      seq![cinsum_alxl; size.get() as usize], // SP + SIZE -> AL
                       set_yl,
                       nand_zl,
                       nand_yl, // ZL -> YL
@@ -170,13 +170,13 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Sub(Size(size)) => {
+                  Instruction::Sub(size) => {
                     seq![
                       fetch, //
                       sp_alxl,
-                      cinsum_sp,                        // SP++
-                      mem_zl,                           // *SP -> ZL
-                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
+                      cinsum_sp,                              // SP++
+                      mem_zl,                                 // *SP -> ZL
+                      seq![cinsum_alxl; size.get() as usize], // SP + SIZE -> AL
                       set_yl,
                       nand_yl, // ~ZL -> YL
                       mem_xl,  // *AL -> XL
@@ -193,14 +193,14 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Iff(Size(size)) => {
+                  Instruction::Iff(size) => {
                     seq![
                       fetch, //
                       sp_alxl,
-                      cinsum_sp,                        // SP++
-                      mem_zl,                           // *SP -> ZL
-                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
-                      mem_xl,                           // *AL -> XL
+                      cinsum_sp,                              // SP++
+                      mem_zl,                                 // *SP -> ZL
+                      seq![cinsum_alxl; size.get() as usize], // SP + SIZE -> AL
+                      mem_xl,                                 // *AL -> XL
                       set_yl,
                       match carry {
                         true => seq![nand_zl, nand_xl], // ZL -> XL
@@ -211,13 +211,13 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Swp(Size(size)) => {
+                  Instruction::Swp(size) => {
                     seq![
                       fetch, //
                       sp_alxl,
-                      mem_zl,                           // *SP -> ZL
-                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
-                      mem_xl,                           // *AL -> XL
+                      mem_zl,                                 // *SP -> ZL
+                      seq![cinsum_alxl; size.get() as usize], // SP + SIZE -> AL
+                      mem_xl,                                 // *AL -> XL
                       set_yl,
                       nand_zl,
                       nand_mem, // ZL -> *AL
@@ -227,15 +227,15 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Rot(Size(size)) => {
+                  Instruction::Rot(size) => {
                     seq![
                       match carry {
                         true => seq![clr_yl, noop],
                         false => seq![fetch],
                       }, // continuation of match below
                       sp_alxl,
-                      mem_zl,                           // *SP -> ZL
-                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
+                      mem_zl,                                 // *SP -> ZL
+                      seq![cinsum_alxl; size.get() as usize], // SP + SIZE -> AL
                       mem_xlyl,
                       cinsum_xlcf, // *AL + *AL -> XL; XL++
                       set_yl,
@@ -254,13 +254,13 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Orr(Size(size)) => {
+                  Instruction::Orr(size) => {
                     seq![
                       fetch, //
                       sp_alxl,
-                      cinsum_sp,                        // SP++
-                      mem_zl,                           // *SP -> ZL
-                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
+                      cinsum_sp,                              // SP++
+                      mem_zl,                                 // *SP -> ZL
+                      seq![cinsum_alxl; size.get() as usize], // SP + SIZE -> AL
                       set_yl,
                       nand_xl, // ~ZL -> XL
                       mem_zl,
@@ -271,27 +271,27 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::And(Size(size)) => {
+                  Instruction::And(size) => {
                     seq![
                       fetch, //
                       sp_alxl,
-                      cinsum_sp,                        // SP++
-                      mem_zl,                           // *SP -> ZL
-                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
-                      mem_yl,                           // *AL -> YL
+                      cinsum_sp,                              // SP++
+                      mem_zl,                                 // *SP -> ZL
+                      seq![cinsum_alxl; size.get() as usize], // SP + SIZE -> AL
+                      mem_yl,                                 // *AL -> YL
                       nand_ylzl,
                       nand_memcf, // ~(YL NAND ZL) -> *AL
                       clr_yl      //
                     ]
                   }
 
-                  Instruction::Xor(Size(size)) => {
+                  Instruction::Xor(size) => {
                     seq![
                       fetch, //
                       sp_alxl,
-                      cinsum_sp,                        // SP++
-                      mem_zl,                           // *SP -> ZL
-                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
+                      cinsum_sp,                              // SP++
+                      mem_zl,                                 // *SP -> ZL
+                      seq![cinsum_alxl; size.get() as usize], // SP + SIZE -> AL
                       set_yl,
                       nand_zl,
                       nand_xl, // ZL -> XL
@@ -311,15 +311,15 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Xnd(Size(size)) => {
+                  Instruction::Xnd(size) => {
                     seq![
                       fetch, //
                       sp_alxl,
-                      cinsum_sp,                        // SP++
-                      seq![cinsum_alxl; size as usize], // SP + SIZE -> AL
-                      set_xlylzl,                       // 0xFF -> XL; 0xFF -> YL; 0xFF -> ZL
-                      sum_xlcf,                         // 1 -> CF
-                      nand_memyl                        // 0x00 -> YL; 0x00 -> *AL
+                      cinsum_sp,                              // SP++
+                      seq![cinsum_alxl; size.get() as usize], // SP + SIZE -> AL
+                      set_xlylzl,                             // 0xFF -> XL; 0xFF -> YL; 0xFF -> ZL
+                      sum_xlcf,                               // 1 -> CF
+                      nand_memyl                              // 0x00 -> YL; 0x00 -> *AL
                     ]
                   }
 
@@ -399,12 +399,12 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     seq![fetch, vec![Err(TickTrap::DebugRequest)]]
                   }
 
-                  Instruction::Ldo(Ofst(ofst)) => {
+                  Instruction::Ldo(ofst) => {
                     seq![
                       fetch, //
                       sp_alxl,
-                      seq![cinsum_alxl; ofst as usize], // SP + OFST -> AL
-                      mem_zl,                           // *AL -> ZL
+                      seq![cinsum_alxl; ofst.get() as usize], // SP + OFST -> AL
+                      mem_zl,                                 // *AL -> ZL
                       sp_xl,
                       set_yl,
                       sum_spal, // SP-- -> AL
@@ -414,13 +414,13 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                     ]
                   }
 
-                  Instruction::Sto(Ofst(ofst)) => {
+                  Instruction::Sto(ofst) => {
                     seq![
                       fetch, //
                       sp_alxl,
                       mem_zl, // *SP -> ZL
                       cinsum_spxl,
-                      seq![cinsum_alxl; ofst as usize], // ++SP + OFST -> AL
+                      seq![cinsum_alxl; ofst.get() as usize], // ++SP + OFST -> AL
                       set_yl,
                       nand_zl,
                       nand_mem, // ZL -> *AL

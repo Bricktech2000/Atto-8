@@ -126,86 +126,86 @@ impl Tickable for Microcomputer {
     let instruction = common::opcode_to_instruction(opcode).map_err(|_| TickTrap::IllegalOpcode)?;
 
     match instruction {
-      Instruction::Psh(Imm(imm)) => {
-        sp_push!(imm);
+      Instruction::Psh(imm) => {
+        sp_push!(imm.get());
         Ok(10)
       }
 
-      Instruction::Add(Size(size)) => {
-        let addr = mp.sp.wrapping_add(size);
+      Instruction::Add(size) => {
+        let addr = mp.sp.wrapping_add(size.get());
         let res = (mem_read!(addr) as u16)
           .wrapping_add(sp_pop!() as u16)
           .wrapping_add(mp.cf as u16);
         mem_write!(addr, res as u8);
         mp.cf = res > 0xFF;
-        Ok(14 + size as u128)
+        Ok(14 + size.get() as u128)
       }
 
-      Instruction::Sub(Size(size)) => {
-        let addr = mp.sp.wrapping_add(size);
+      Instruction::Sub(size) => {
+        let addr = mp.sp.wrapping_add(size.get());
         let res = (mem_read!(addr) as u16)
           .wrapping_sub(sp_pop!() as u16)
           .wrapping_sub(mp.cf as u16);
         mem_write!(addr, res as u8);
         mp.cf = res > 0xFF;
-        Ok(14 + size as u128)
+        Ok(14 + size.get() as u128)
       }
 
-      Instruction::Iff(Size(size)) => {
-        let addr = mp.sp.wrapping_add(size);
+      Instruction::Iff(size) => {
+        let addr = mp.sp.wrapping_add(size.get());
         let top = sp_pop!();
         mem_write!(addr, if mp.cf { top } else { mem_read!(addr) });
-        Ok(13 + size as u128)
+        Ok(13 + size.get() as u128)
       }
 
-      Instruction::Swp(Size(size)) => {
-        let addr = mp.sp.wrapping_add(size);
+      Instruction::Swp(size) => {
+        let addr = mp.sp.wrapping_add(size.get());
         let top = sp_pop!();
         sp_push!(mem_read!(addr));
         mem_write!(addr, top);
-        Ok(13 + size as u128)
+        Ok(13 + size.get() as u128)
       }
 
-      Instruction::Rot(Size(size)) => {
-        let addr = mp.sp.wrapping_add(size);
+      Instruction::Rot(size) => {
+        let addr = mp.sp.wrapping_add(size.get());
         let top = sp_pop!();
         let shifted = (mem_read!(addr) as u16) << top % 8;
         let res = (shifted & 0xFF) as u8 | (shifted >> 8) as u8;
         mem_write!(addr, res);
         mp.cf = false;
-        Ok((18 + size as u128) * (top as u128 + 1))
+        Ok((18 + size.get() as u128) * (top as u128 + 1))
       }
 
-      Instruction::Orr(Size(size)) => {
-        let addr = mp.sp.wrapping_add(size);
+      Instruction::Orr(size) => {
+        let addr = mp.sp.wrapping_add(size.get());
         let res = sp_pop!() | mem_read!(addr);
         mem_write!(addr, res);
         mp.cf = res == 0x00;
-        Ok(14 + size as u128)
+        Ok(14 + size.get() as u128)
       }
 
-      Instruction::And(Size(size)) => {
-        let addr = mp.sp.wrapping_add(size);
+      Instruction::And(size) => {
+        let addr = mp.sp.wrapping_add(size.get());
         let res = sp_pop!() & mem_read!(addr);
         mem_write!(addr, res);
         mp.cf = res == 0x00;
-        Ok(11 + size as u128)
+        Ok(11 + size.get() as u128)
       }
 
-      Instruction::Xor(Size(size)) => {
-        let addr = mp.sp.wrapping_add(size);
+      Instruction::Xor(size) => {
+        let addr = mp.sp.wrapping_add(size.get());
         let res = sp_pop!() ^ mem_read!(addr);
         mem_write!(addr, res);
         mp.cf = res == 0x00;
-        Ok(22 + size as u128)
+        Ok(22 + size.get() as u128)
       }
 
-      Instruction::Xnd(Size(size)) => {
-        let addr = mp.sp.wrapping_add(size);
+      Instruction::Xnd(size) => {
+        let addr = mp.sp.wrapping_add(size.get());
         let res = sp_pop!() & 0x00;
         mem_write!(addr, res);
         mp.cf = res == 0x00;
-        Ok(8 + size as u128)
+        Ok(8 + size.get() as u128)
       }
 
       Instruction::Inc => {
@@ -253,17 +253,17 @@ impl Tickable for Microcomputer {
 
       Instruction::Dbg => Err(TickTrap::DebugRequest),
 
-      Instruction::Ldo(Ofst(ofst)) => {
-        let addr = mp.sp.wrapping_add(ofst);
+      Instruction::Ldo(ofst) => {
+        let addr = mp.sp.wrapping_add(ofst.get());
         sp_push!(mem_read!(addr));
-        Ok(12 + ofst as u128)
+        Ok(12 + ofst.get() as u128)
       }
 
-      Instruction::Sto(Ofst(ofst)) => {
+      Instruction::Sto(ofst) => {
         let top = sp_pop!();
-        let addr = mp.sp.wrapping_add(ofst);
+        let addr = mp.sp.wrapping_add(ofst.get());
         mem_write!(addr, top);
-        Ok(11 + ofst as u128)
+        Ok(11 + ofst.get() as u128)
       }
 
       Instruction::Lda => {
@@ -318,8 +318,8 @@ impl Tickable for Microcomputer {
         Ok(5)
       }
 
-      Instruction::Phn(Nimm(nimm)) => {
-        sp_push!(nimm);
+      Instruction::Phn(nimm) => {
+        sp_push!(nimm.get());
         Ok(10)
       }
     }

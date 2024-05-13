@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 #[path = "../misc/common/common.rs"]
 mod common;
+use common::constrained::*;
 use common::*;
-use std::collections::HashMap;
 
 mod codegen;
 mod link;
