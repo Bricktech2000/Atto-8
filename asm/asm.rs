@@ -1303,7 +1303,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
             && op_type(pop_op1) == OpType::PopOp
             && op_type(pop_op2) == OpType::PopOp =>
         {
-          Some(vec![])
+          Some(vec![pop_op1.clone(), pop_op2.clone()])
         }
 
         _ => None,

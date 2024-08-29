@@ -10,26 +10,15 @@ int iscntrl(int c) { return (unsigned)c < ' '; }
 
 int isdigit(int c) { return (unsigned)c - '0' <= '9' - '0'; }
 
-int isgraph(int c) { return (unsigned)c - '!' < '~' - '!'; }
+int isgraph(int c) { return (unsigned)c - '!' <= '~' - '!'; }
 
 int islower(int c) { return (unsigned)c - 'a' <= 'z' - 'a'; }
 
-int isprint(int c) { return (unsigned)c - ' ' < '~' - ' '; }
+int isprint(int c) { return (unsigned)c - ' ' <= '~' - ' '; }
 
 int ispunct(int c) { return isgraph(c) & ~isalnum(c); }
 
-int isspace(int c) asm {
-  // clang-format off
-  x00
-    x01 !'\s' xo4 iff
-    x01 !'\f' xo4 iff
-    x01 !'\n' xo4 iff
-    x01 !'\r' xo4 iff
-    x01 !'\t' xo4 iff
-    x01 !'\v' xo4 iff
-  st1
-  // clang-format on
-}
+int isspace(int c) { return c == ' ' | (unsigned)c - '\t' <= '\r' - '\t'; }
 
 int isupper(int c) { return (unsigned)c - 'A' <= 'Z' - 'A'; }
 
