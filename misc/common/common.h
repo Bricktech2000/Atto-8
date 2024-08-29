@@ -10,8 +10,8 @@
 #define DECODE_OFST(opcode) (opcode & B00001111)
 #define DECODE_NIMM(opcode) (opcode | B11110000)
 
-void render_memory(char *buf, uint8_t mem[MEM_SIZE], uint8_t ip, uint8_t sp,
-                   bool cf) {
+static void render_memory(char *buf, uint8_t mem[MEM_SIZE], uint8_t ip,
+                          uint8_t sp, bool cf) {
   buf += sprintf(buf, "MEM\n");
   for (uint8_t y = 0x00; y < 0x10; y++) {
     for (uint8_t x = 0x00; x < 0x10; x++) {

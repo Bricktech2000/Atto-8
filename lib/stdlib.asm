@@ -125,17 +125,17 @@ sort.def!
 # - `*HEAP_START` -- length of heap memory but with the most significant bit set
 #
 # struct header {
-#   u7 size; // excludes header
 #   bool is_free; // most significant bit
+#   u7 size; // size excludes header
 # }
 #
 # struct block {
-#   header header;
+#   struct header header;
 #   u8 data[header.size];
 # }
 #
 # struct heap {
-#   block blocks[];
+#   struct block blocks[];
 # }
 
 heap_unlimited! xFF # header for free block of size 0x7F
@@ -149,27 +149,28 @@ malloc.def!
       # check if `curr_block` is large enough
       # a block being large enough implies it is free
       ld1 lda sub .block_found !bcs pop
-      # next_block = (curr_block.header & ~IS_FREE_MASK) + curr_block + 1
-      ld0 lda !is_free_mask not and ld1 add inc swp # swap curr_block and next_block
-      # next_header = next_block.header
+      # next_block = (curr_block->header & ~IS_FREE_MASK) + curr_block + 1
+      ld0 lda !is_free_mask not @const and ld1 add inc swp # swap curr_block and next_block
+      # next_header = next_block->header
       ld1 lda swp # swap curr_block and next_header
       # coalesced_header = next_header + curr_header + 1
-      ld1 ld1 lda add @dyn inc # if addition overflows then both blocks are free
+      ld1 ld1 lda add @dyn inc # addition overflows if and only if both blocks are free
       # stack (top down): coalesced_header, curr_block, next_header, next_block, ret_addr, size
       # working_header = both_free ? coalesced_header | IS_FREE_MASK : next_header
       # working_block  = both_free ? curr_block : next_block
       if2 if2 x00 shr @dyn orr
-      # working_block.header = working_header
-      ld1 sta # block for next iteration will be working_block
+      # working_block->header = working_header
+      ld1 sta # block for next iteration will be `working_block`
     .for_block !jmp
     block_found.
-      # create free_header with correct size
-      neg dec !is_free_mask orr # clears carry
+      # create a `free_header` with correct size. note that
+      # `~(x & ~IS_FREE_MASK)` is equivalent to `-x - 1 | IS_FREE_MASK`
+      !is_free_mask not @const and not # clears carry
       # next_block = size + curr_block + 1
       ld3 ld2 add inc
-      # next_block.header = free_header
+      # next_block->header = free_header
       sta
-      # curr_block.header = size
+      # curr_block->header = size
       ld2 ld1 sta
   # return* curr_block + 1
   inc st1 !rt0
