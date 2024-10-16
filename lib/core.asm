@@ -1,8 +1,8 @@
 rneg! x07 not @const orr neg # prepares for rotate right
 norr! orr not
 nand! and not
-xnorr! xor not
-xnand! xnd not
+xnor! xor not
+xnnd! xnd not
 abs! ld0 x01 rot x01 and neg swp ld1 add xor @const
 abs.dyn! ld0 neg ld1 !ng iff
 min.dyn! ld1 ld1 !lt iff

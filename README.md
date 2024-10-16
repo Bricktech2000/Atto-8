@@ -35,6 +35,7 @@ python3 test.py bad\ apple.asm asm emu
 python3 test.py life.asm asm emu
 python3 test.py mandelbrot.asm asm emu
 python3 test.py fib.asm asm emu
+python3 test.py fib\ bcd.asm asm emu
 python3 test.py fib.c libc/stdlib.c libc/stdio.c libc/crt0.c cc asm emu
 python3 test.py fizzbuzz.asm asm emu
 python3 test.py rule\ 110.asm asm emu
