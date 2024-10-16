@@ -1739,10 +1739,11 @@ hex.to_u4!
     !char.digit_count @const
     !'A' !'0' sub dec @const
   iff add @dyn
-# converts `0x00..=0xFF` to `'00'..='FF'`
+# converts `0x00..=0xFF` to `'00'..='FF'`. see also `!hex_putc.min`
 u8.to_hex!
-  ld0 !u4u4.snd clc !u4.to_hex
-  swp !u4u4.fst !u4.to_hex
+  .loop .break sw2 ld0 x04 rot
+  # stack is now `n >> 4, n, &loop, &break`
+  loop. x0F and clc !u4.to_hex sw2 !jmp break.
 # converts `'00'..='FF'` to `0x00..=0xFF`
 hex.to_u8!
   @error # to be implemented

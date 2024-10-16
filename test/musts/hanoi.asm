@@ -17,7 +17,7 @@ main! !nop
     x00 xo2 @dyn :ret !bcs # stack is `ret, n, dst, via, src`
     sw4 ld0 sw4 sw2 st0 dec # stack is now `n - 1, via, dst, src, ret`
     :hanoi !call # move `n - 1` disks from `src` to `via`
-    ld0 !'0' !char.add @dyn :n sta ld3 :src sta ld2 :dst sta
+    ld0 !'0' !char.add :n sta ld3 :src sta ld2 :dst sta
     :str_move !puts.min # move `1` disk from `src` to `dst`
     ld1 sw4 st1 ld2 sw2 st2 # stack is now `n - 1, dst, src, via, ret`
     :hanoi !call # move `n - 1` disks from `via` to `dst`

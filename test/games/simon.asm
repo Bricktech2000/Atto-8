@@ -73,7 +73,7 @@ main!
     ld2
     # len = DIR_XOR_LEN
     !dir_xor.len st3
-    # stack currently `ret_addr, dst, src, len`. XOR `src` into `dst`
+    # stack is `ret_addr, dst, src, len`. XOR `src` into `dst`
     !memxor.def
     # prevent unused label warning
     :memxor pop

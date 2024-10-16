@@ -3,6 +3,7 @@
 
 # @ lib/core.asm
 # @ lib/types.asm
+# @ lib/stdio.asm
 #
 # main!
 #   x01
@@ -10,7 +11,7 @@
 #     !'1' st1 # `!putc`
 #   for_b:
 #     !'\s' st1 # `!putc`
-#     ld0 lda !u8.to_hex st2 st1 # `!putc !putc`
+#     ld0 lda !hex_putc.min
 #   inc ld0 :end !eq !here !bcs :for_b !jmp end:
 
-01 30 D1 31 D1 20 D1 C0 E0 C0 0F A4 E8 0A 84 41 39 90 80 94 F0 A4 04 98 0A 84 41 39 90 80 D2 D1 B0 C0 29 A8 EF 05 25 90 E3
+01 30 D1 31 D1 20 D1 C0 E0 1B 94 0F C1 04 98 0F A4 E8 0A 84 41 39 90 80 00 E1 E3 B0 C0 24 A8 EF 05 20 90 E3

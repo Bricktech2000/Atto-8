@@ -72,7 +72,7 @@ puts.min.def! puts.min: swp !puts.min !ret # puts.min(*str)
 
 hex_putc! # hex_putc(sep, u8 char)
   !'\s' !putc !putc
-  !u8.to_hex !putc !putc
+  !hex_putc.min
 hex_puts! # hex_puts(sep, *str)
   swp for_c.
     ld0 !u8.lda
@@ -91,6 +91,12 @@ hex_putn! clc # hex_putn(sep, *str, len)
 stack_puts! # stack_puts(str[])
   for_c. !char.check_null !putc .for_c !bcc
 
+# prints a character as hex. equivalent to `!u8.to_hex !putc !putc`
+hex_putc.min! # hex_putc.min(u8 char)
+  .break swp .loop ld1 x04 rot
+  # stack is now `n >> 4, &loop, n, &break`
+  loop. x0F and clc !u4.to_hex !putc !jmp break.
+
 
 # a `printf` immitation that supports a few conversion specifiers. in `format`,
 # - `%d` prints a signed integer as decimal with precision `1`
@@ -108,12 +114,21 @@ stack_puts! # stack_puts(str[])
 # - passing insufficient arguments for the format results in undefined behavior
 # - passing excess arguments for the format results in undefined behavior (nonstandard)
 printf.def!
+    'd'.
+      # compute absolute value, print `-` if was negative and fall through to conversion specifier `u`
+      !abs.dyn !'\0' !'-' iff !putc clc
+    'u'.
+      # print as decimal and jump back to `:printf`
+      str_empty. !'\0' swp !u8.to_dec !stack_puts :printf !jmp
     'p'.
       # print `"0x"` then fall through to conversion specifier `x`
-      !'0' str_empty. !putc !'x' !putc
+      !'0' !putc !'x' !putc
     'x'.
-      # print first character then fall through to conversion specifier `c` with second character
-      !u8.to_hex !putc
+      # print as hexadecimal and jump back to `:printf`
+      !hex_putc.min :printf !jmp
+    unknown. # unknown conversion specifier, including `%`
+      # store back argument from `va_list` and fall through to conversion specifier `c` with `'%'`
+      sw2 swp !'%'
     'c'.
     other.
       # print char on stack and fall through to conversion specifier `s` with empty string
@@ -142,15 +157,6 @@ printf.def!
       !'c' xo2 .'c' iff !'c' xo2
       !'s' xo2 .'s' iff # !'s' xo2
     st0 !jmp # pops `conversion_specifier` off stack
-    'd'.
-      # compute absolute value, print `-` if was negative and fall through to conversion specifier `u`
-      !abs.dyn !'\0' !'-' iff !putc clc
-    'u'.
-      # print as decimal and jump back to `:printf`
-      !'\0' swp !u8.to_dec !stack_puts :printf !jmp
-    unknown. # unknown conversion specifier, including `%`
-      # store back argument from `va_list` and jump to conversion specifier `c` with `'%'`
-      sw2 swp !'%' .'c' !jmp
     '\0'. # null terminator
   # pop `char` from stack then return*
   pop !rt1

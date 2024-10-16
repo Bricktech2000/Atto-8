@@ -59,7 +59,7 @@ main! !nop
     return:
 
     # output assembled byte as hexadecimal
-    !u8.to_hex !putc !putc
+    !hex_putc.min
     ld2 !putc # outputs same whitespace as input
     # !'\s' !putc # outputs a space as whitespace
     # !'.' !putc # outputs `.` for AttoMon

@@ -73,7 +73,7 @@ main!
 
   # print `buffer` followed by a space and fall through
   buffer_print:
-    ld2 !u8.to_hex !putc !putc
+    ld2 !hex_putc.min
 
   # print a space and fall through
   space_print:

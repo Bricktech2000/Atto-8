@@ -155,7 +155,7 @@ malloc.def!
       ld1 lda swp # swap curr_block and next_header
       # coalesced_header = next_header + curr_header + 1
       ld1 ld1 lda add @dyn inc # addition overflows if and only if both blocks are free
-      # stack (top down): coalesced_header, curr_block, next_header, next_block, ret_addr, size
+      # stack is `coalesced_header, curr_block, next_header, next_block, ret_addr, size`
       # working_header = both_free ? coalesced_header | IS_FREE_MASK : next_header
       # working_block  = both_free ? curr_block : next_block
       if2 if2 x00 shr @dyn orr
