@@ -14,29 +14,29 @@ The major components of the Atto-8 microprocessor are stateful. Stateful compone
 
 | Component | Name                | Size   | Description                                                    |
 | --------- | ------------------- | ------ | -------------------------------------------------------------- |
-| `IP`      | Instruction Pointer | 8 bits | See [/spec/microarchitecture.md](../spec/microarchitecture.md) |
-| `SP`      | Stack Pointer       | 8 bits | See [/spec/microarchitecture.md](../spec/microarchitecture.md) |
-| `CF`      | Carry Flag          | 1 bit  | See [/spec/microarchitecture.md](../spec/microarchitecture.md) |
-| `IL`      | Instruction Latch   | 8 bits | Stores the opcode for the instruction currently being executed |
-| `SC`      | Step Counter        | 5 bits | Counts microcode steps within an instruction                   |
-| `AL`      | Address Latch       | 8 bits | Latches a value from `DATA` and outputs to `ADDR`              |
-| `XL`      | X Latch             | 8 bits | Latches a value from `DATA` and produces derivations           |
-| `YL`      | Y Latch             | 8 bits | Latches a value from `DATA` and produces derivations           |
-| `ZL`      | Z Latch             | 8 bits | Latches a value from `DATA` and produces derivations           |
+| `IP`      | Instruction Pointer | 8 bits | See [/spec/microarchitecture.md](../spec/microarchitecture.md) |
+| `SP`      | Stack Pointer       | 8 bits | See [/spec/microarchitecture.md](../spec/microarchitecture.md) |
+| `CF`      | Carry Flag          | 1 bit  | See [/spec/microarchitecture.md](../spec/microarchitecture.md) |
+| `IL`      | Instruction Latch   | 8 bits | Stores the opcode for the instruction currently being executed |
+| `SC`      | Step Counter        | 5 bits | Counts microcode steps within an instruction                   |
+| `AL`      | Address Latch       | 8 bits | Latches a value from `DATA` and outputs to `ADDR`              |
+| `XL`      | X Latch             | 8 bits | Latches a value from `DATA` and produces derivations           |
+| `YL`      | Y Latch             | 8 bits | Latches a value from `DATA` and produces derivations           |
+| `ZL`      | Z Latch             | 8 bits | Latches a value from `DATA` and produces derivations           |
 
 Derivations on the Atto-8 microprocessor are stateless components that derive their output continuously from other components. Derivations are as follows:
 
 | Component | Name                       | Size    | Description                                          |
 | --------- | -------------------------- | ------- | ---------------------------------------------------- |
-| `CTRL`    | Control Word Derivation    | 16 bits | Turns the output of `MIC` into control signals       |
-| `PULL`    | Pull-up Derivation         | 1 bit   | Computed using all control signals ending in `_DATA` |
-| `ONES`    | Ones Derivation            | 8 bits  | Outputs `0xFF` to `DATA` when `DATA` is floating     |
-| `SUM`     | Sum Derivation             | 8 bits  | Computes the sum of `XL` and `YL`                    |
-| `NAND`    | Not-And Derivation         | 8 bits  | Computes the not-and of `YL` and `ZL`                |
-| `CIN`     | `SUM` Carry-In Derivation  | 1 bit   | Outputs to `SUM` carry in                            |
-| `COUT`    | `SUM` Carry-Out Derivation | 1 bit   | Computes `SUM` carry out                             |
-| `ZERO`    | `NAND` Is-Zero Derivation  | 1 bit   | Computes `NAND` is-zero flag                         |
-| `MIC`     | Microcode Derivation       | 16 bits | Computes microcode step from `IL`, `CF` and `SC`     |
+| `CTRL`    | Control Word Derivation    | 16 bits | Turns the output of `MIC` into control signals       |
+| `PULL`    | Pull-up Derivation         | 1 bit   | Computed using all control signals ending in `_DATA` |
+| `ONES`    | Ones Derivation            | 8 bits  | Outputs `0xFF` to `DATA` when `DATA` is floating     |
+| `SUM`     | Sum Derivation             | 8 bits  | Computes the sum of `XL` and `YL`                    |
+| `NAND`    | Not-And Derivation         | 8 bits  | Computes the not-and of `YL` and `ZL`                |
+| `CIN`     | `SUM` Carry-In Derivation  | 1 bit   | Outputs to `SUM` carry-in                            |
+| `COUT`    | `SUM` Carry-Out Derivation | 1 bit   | Computes `SUM` carry-out                             |
+| `ZERO`    | `NAND` Is-Zero Derivation  | 1 bit   | Computes `NAND` is-zero flag                         |
+| `MIC`     | Microcode Derivation       | 16 bits | Computes microcode step from `IL`, `CF` and `SC`     |
 
 ## Control Word
 
@@ -49,9 +49,9 @@ The control word is a 16-bit natural number output from `MIC`, the microcode ROM
 | `0xD` | `DATA_CF`      | Data Bus to Carry Flag          |
 | `0xC` | `DATA_IL`      | Data Bus to Instruction Latch   |
 | `0xB` | `DATA_AL`      | Data Bus to Address Latch       |
-| `0xA` | `DATA_XL`      | Data Bus to X Latch             |
-| `0x9` | `DATA_YL`      | Data Bus to Y Latch             |
-| `0x8` | `DATA_ZL`      | Data Bus to Z Latch             |
+| `0xA` | `DATA_XL`      | Data Bus to X Latch             |
+| `0x9` | `DATA_YL`      | Data Bus to Y Latch             |
+| `0x8` | `DATA_ZL`      | Data Bus to Z Latch             |
 | `0x7` | `MEM_DATA`     | Data Bus to Memory              |
 | `0x6` | `DATA_MEM`     | Memory to Data Bus              |
 | `0x5` | `CLR_SC`       | Clear to Step Counter           |
@@ -116,4 +116,4 @@ The instruction set of the Atto-8 microprocessor adheres to the Atto-8 microarch
 
 The `rot SIZE` instruction requires `18 + SIZE` clock cycles to execute, plus another `18 + SIZE` for every bit rotated. Consequently, `rot` can be used as a stall instruction.
 
-Memory reads and writes around `SP` must be idempotent, and a memory read from an address around `SP` must yield the last value written to that address. That is, stack memory is expected to behave like "normal" memory. If this expectation is not fulfilled, the behavior of instructions accessing the stack is undefined.
+Memory reads and writes around `SP` must be idempotent, and a memory read from an address around `SP` must yield the last value written to that address. That is, stack memory is expected to behave like “normal” memory. If this expectation is not fulfilled, the behavior of instructions accessing the stack is undefined.

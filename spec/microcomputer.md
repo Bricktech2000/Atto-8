@@ -6,10 +6,10 @@ The Atto-8 microcomputer is a minimalist computer based on the Atto-8 microproce
 
 ## Features
 
-- 1 MHz clock
-- 256 bytes of memory
+- 1 MHz clock
+- 256 bytes of memory
 - Standard input/output
-- 16x16 pixel display
+- 16×16 pixel display
 - Two D-pad controllers
 
 ## Standard Input/Output
@@ -20,7 +20,7 @@ On startup, `stdin` is initialized with the contents of memory address `0x00`. T
 
 ## Display
 
-The Atto-8 microcomputer is equipped with a 16x16 pixel monochrome display. It fetches rows of pixels from addresses `0xE0..0x100`, the _display buffer_, and displays them from left to right, top to bottom. Refer to the following diagram, in which `[ 0xXX ]` represents a row of 8 pixels fetched from address `0xXX`:
+The Atto-8 microcomputer is equipped with a 16×16 pixel monochrome display. It fetches rows of pixels from addresses `0xE0..0x100`, the _display buffer_, and displays them from left to right, top to bottom. Refer to the following diagram, in which `[ 0xXX ]` represents a row of 8 pixels fetched from address `0xXX`:
 
 ```
 [      0xE0      ] [      0xE1      ]
@@ -45,7 +45,7 @@ The display buffer behaves as any other memory region and can therefore both be 
 
 ## Controller
 
-The Atto-8 microcomputer is equipped with a pair of memory-mapped 4-button D-pad controllers. If `stdin` is empty, reading from the _input buffer_, a byte located at address `0x00`, will fall back to returning controller states. In that event, the lower 4 bits of the input buffer represent the state of the buttons on the primary controller, and its upper 4 bits represent the state of the buttons on the secondary controller. It is bit-mapped as follows, where `0` represents the least significant bit:
+The Atto-8 microcomputer is equipped with a pair of memory-mapped 4-button D-pad controllers. If `stdin` is empty, reading from the _input buffer_, a byte located at address `0x00`, will fall back to returning controller states. In that event, the lower 4 bits of the input buffer represent the state of the buttons on the primary controller, and its upper 4 bits represent the state of the buttons on the secondary controller. It is bit-mapped as follows, where `0` represents the least significant bit:
 
 ```
 7 6 5 4 3 2 1 0

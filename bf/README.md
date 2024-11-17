@@ -4,17 +4,17 @@ _Brainfuck architecture frontend for Atto-8 microprocessor_
 
 ## Overview
 
-The Atto-8 microprocessor, specified in [/spec/microprocessor.md](../spec/microprocessor.md), is a highly flexible general-purpose platform for building processors. This frontend aims to demonstrate the Atto-8 microprocessor's high degree of flexibility by implementing an architecture based on the Brainfuck programming language.
+The Atto-8 microprocessor, specified in [/spec/microprocessor.md](../spec/microprocessor.md), is a highly flexible general-purpose platform for building processors. This frontend aims to demonstrate the Atto-8 microprocessor’s high degree of flexibility by implementing an architecture based on the Brainfuck programming language.
 
-- [/bf/bf-mic.rs](bf-mic.rs) &mdash; Builds a microcode image implementing the frontend's architecture, described below.
-- [/bf/bf-pad.py](bf-pad.py) &mdash; Strips no-ops from a Brainfuck source file and pads it using null bytes to a length of `0x100` bytes.
+- [/bf/bf-mic.rs](bf-mic.rs) — Builds a microcode image implementing the frontend’s architecture, described below.
+- [/bf/bf-pad.py](bf-pad.py) — Strips no-ops from a Brainfuck source file and pads it using null bytes to a length of `0x100` bytes.
 
 ## Components
 
 | Component | Name                | Size   |
 | --------- | ------------------- | ------ |
-| `IP`      | Instruction Pointer | 8 bits |
-| `HP`      | Head Pointer        | 8 bits |
+| `IP`      | Instruction Pointer | 8 bits |
+| `HP`      | Head Pointer        | 8 bits |
 
 `IP` is a pointer to the next instruction to be executed and can be indirectly written to through instructions `[` and `]`. `IP` is incremented before the execution of every instruction.
 
@@ -22,7 +22,7 @@ The Atto-8 microprocessor, specified in [/spec/microprocessor.md](../spec/microp
 
 ## Instruction Set
 
-The architecture assumes memory of the shape `[u8; 0x100]`, from which the `*` operator dereferences values. Any instruction not present in the table below is ignored and treated as a no-op.
+The architecture assumes memory of the shape `[u8; 0x100]`, from which the `*` operator dereferences values. Any instruction not present in the table below is ignored and treated as a no-op.
 
 | Instruction | Name       | Operation                               | Opcode  |
 | ----------- | ---------- | --------------------------------------- | ------- |
@@ -54,7 +54,7 @@ This implies that:
 
 ## Implementation Constraints
 
-Writing beyond the start of the tape will corrupt the frontend's state, resulting in undefined behavior. Writing too far into the tape will corrupt program memory, resulting in undefined behavior. Brackets `[` and `]` must be balanced; failure to meet this condition will result in undefined behavior.
+Writing beyond the start of the tape will corrupt the frontend’s state, resulting in undefined behavior. Writing too far into the tape will corrupt program memory, resulting in undefined behavior. Brackets `[` and `]` must be balanced; failure to meet this condition will result in undefined behavior.
 
 Address `0x00` is assumed to be a memory-mapped standard input/output device. That is, `.` outputs by writing a byte to address `0x00` and `,` inputs by reading a byte from address `0x00`.
 

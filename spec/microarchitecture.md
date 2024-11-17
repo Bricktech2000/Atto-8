@@ -21,9 +21,9 @@ The Atto-8 microarchitecture is a minimalist stack-based architecture with 8-bit
 
 | Component | Name                | Size   |
 | --------- | ------------------- | ------ |
-| `IP`      | Instruction Pointer | 8 bits |
-| `SP`      | Stack Pointer       | 8 bits |
-| `CF`      | Carry Flag          | 1 bit  |
+| `IP`      | Instruction Pointer | 8 bits |
+| `SP`      | Stack Pointer       | 8 bits |
+| `CF`      | Carry Flag          | 1 bit  |
 
 `IP` is a pointer to the next instruction to be executed. Writing to `IP` through `sti` will cause a jump to the specified address. `IP` is incremented before the execution of every instruction.
 
@@ -75,7 +75,7 @@ All instructions are 8 bits in length and most operands are sourced from the sta
 | `pop`       | Pop                       | `SP++;`                                                                | `0b11101111` (`0xEF`)        |
 | `phn NIMM`  | Push Negative             | `SP--; NIMM -> *SP;`                                                   | `0b1111NNNN` (`0xF0..=0xFF`) |
 
-Negative values are represented in two's complement.
+Negative values are represented in two’s complement.
 
 There exist a set of bijections between instruction operands and their encoding within an instruction opcode, limiting the set of values they can hold:
 

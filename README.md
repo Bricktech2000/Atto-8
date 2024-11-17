@@ -8,22 +8,22 @@ _A minimalist 8-bit microcomputer with stack-based microprocessor_
 
 The Atto-8 is a small ecosystem of hardware and software living in symbiosis. The [Atto-8 microcomputer](spec/microcomputer.md) is a minimalist computer system based on the [Atto-8 microprocessor](spec/microprocessor.md), which is a stack-based processor implementing the [Atto-8 microarchitecture](spec/microarchitecture.md). Repository structure is as follows:
 
-- [/spec/](spec/) &mdash; Specification for Atto-8 microarchitecture, microprocessor and microcomputer
-- [/lib/](lib/) &mdash; Assembly standard library for Atto-8 microcomputer
-- [/libc/](libc/) &mdash; C standard library for Atto-8 microcomputer
-- [/cc/](cc/) &mdash; Rudimentary C99 compiler for Atto-8 microarchitecture
-- [/enc/](enc/) &mdash; Hex-to-opcode encoder for Atto-8 microarchitecture
-- [/dec/](dec/) &mdash; Opcode-to-hex decoder for Atto-8 microarchitecture
-- [/asm/](asm/) &mdash; Optimizing assembler for Atto-8 microarchitecture
-- [/dasm/](dasm/) &mdash; Elementary disassembler for Atto-8 microarchitecture
-- [/emu/](emu/) &mdash; Instruction-level emulator for Atto-8 microcomputer
-- [/cemu/](cemu/) &mdash; Minimal C99 emulator for Atto-8 microcomputer
-- [/mic/](mic/) &mdash; Microcode builder for Atto-8 microprocessor
-- [/sim/](sim/) &mdash; Cycle-accurate component-level simulator for Atto-8 microcomputer
-- [/circ/](circ/) &mdash; Block-level and chip-level circuit designs for Atto-8 microcomputer
-- [/bf/](bf/) &mdash; Brainfuck architecture frontend for Atto-8 microprocessor
-- [/test/](test/) &mdash; Test programs and test framework for Atto-8 microcomputer
-- [/misc/](misc/) &mdash; Miscellaneous files
+- [/spec/](spec/) — Specification for Atto-8 microarchitecture, microprocessor and microcomputer
+- [/lib/](lib/) — Assembly standard library for Atto-8 microcomputer
+- [/libc/](libc/) — C standard library for Atto-8 microcomputer
+- [/cc/](cc/) — Rudimentary C99 compiler for Atto-8 microarchitecture
+- [/enc/](enc/) — Hex-to-opcode encoder for Atto-8 microarchitecture
+- [/dec/](dec/) — Opcode-to-hex decoder for Atto-8 microarchitecture
+- [/asm/](asm/) — Optimizing assembler for Atto-8 microarchitecture
+- [/dasm/](dasm/) — Elementary disassembler for Atto-8 microarchitecture
+- [/emu/](emu/) — Instruction-level emulator for Atto-8 microcomputer
+- [/cemu/](cemu/) — Minimal C99 emulator for Atto-8 microcomputer
+- [/mic/](mic/) — Microcode builder for Atto-8 microprocessor
+- [/sim/](sim/) — Cycle-accurate component-level simulator for Atto-8 microcomputer
+- [/circ/](circ/) — Block-level and chip-level circuit designs for Atto-8 microcomputer
+- [/bf/](bf/) — Brainfuck architecture frontend for Atto-8 microprocessor
+- [/test/](test/) — Test programs and test framework for Atto-8 microcomputer
+- [/misc/](misc/) — Miscellaneous files
 
 ## Project Status
 

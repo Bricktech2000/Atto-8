@@ -8,20 +8,20 @@ End-to-end testing of the Atto-8 microcomputer is carried out by `test.py`. The 
 
 Available operations are as follows:
 
-- `cc` &mdash; See [/cc/](../cc/)
-- `enc` &mdash; See [/enc/](../enc/)
-- `dec` &mdash; See [/dec/](../dec/)
-- `asm` &mdash; See [/asm/](../asm/)
-- `dasm` &mdash; See [/dasm/](../dasm/)
-- `emu` &mdash; See [/emu/](../emu/)
-- `cemu` &mdash; See [/cemu/](../cemu/)
-- `mic` &mdash; See [/mic/](../mic/)
-- `sim` &mdash; See [/sim/](../sim/)
-- `circ` &mdash; See [/circ/](../circ/)
-- `bf` &mdash; See [/bf/](../bf/)
-- `pop` &mdash; Pop argument from the stack
-- `dup` &mdash; Duplicate argument on the stack
-- `pipe` &mdash; Pipe file contents to stdout
+- `cc` — See [/cc/](../cc/)
+- `enc` — See [/enc/](../enc/)
+- `dec` — See [/dec/](../dec/)
+- `asm` — See [/asm/](../asm/)
+- `dasm` — See [/dasm/](../dasm/)
+- `emu` — See [/emu/](../emu/)
+- `cemu` — See [/cemu/](../cemu/)
+- `mic` — See [/mic/](../mic/)
+- `sim` — See [/sim/](../sim/)
+- `circ` — See [/circ/](../circ/)
+- `bf` — See [/bf/](../bf/)
+- `pop` — Pop argument from the stack
+- `dup` — Duplicate argument on the stack
+- `pipe` — Pipe file contents to stdout
 
 ## Examples
 
