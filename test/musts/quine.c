@@ -1,4 +1,4 @@
-// constructive quine. assumes `'\n'` and `'"'` to occupy codepoints 10 and 34,
+// constructive quine. assumes '\n' and '"' to occupy codepoints 10 and 34,
 // respectively
 
 // clang-format off

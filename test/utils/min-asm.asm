@@ -37,7 +37,7 @@ main!
     !hex_putc.min
     ld2 !putc # outputs same whitespace as input
     # !'\s' !putc # outputs a space as whitespace
-    # !'.' !putc # outputs `.` for AttoMon
+    # !'.' !putc # outputs '.' for AttoMon
   ignore:
   main:
     # load characters from `stdin` into `tok` on the stack until whitespace
@@ -48,9 +48,9 @@ main!
     :for_c # default: loop to next iteration
       # if `c` is whitespace then we've parsed the entire token
       ld1 xD0 !cl :break iff
-      # except if `c` is `'#'` then parse a comment
+      # except if `c` is '#' then parse a comment
       !'#' xo2 :comment iff
-      # except if `c` is `'\0'` then jump back to `getc()`
+      # except if `c` is '\0' then jump back to `getc()`
       !'#' xo2 :block iff
     !jmp break:
 

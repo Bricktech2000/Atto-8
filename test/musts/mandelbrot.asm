@@ -33,8 +33,8 @@ mandelbrot! # u8 i = mandelbrot(i2f6 c_re, i2f6 c_im)
     ld2 ld0 :i2f6.mul !call
     # z_im2 = i2f6.mul(z_im, z_im)
     ld2 ld0 :i2f6.mul !call
-    # radius of `0xC0` aka `1.5` yields neater output than `0x100` aka `2.0`.
-    # radius of `2.0` would be mathematically correct but suffers from integer
+    # radius of `0xC0` aka 1.5 yields neater output than `0x100` aka 2.0.
+    # radius of 2.0 would be mathematically correct but suffers from integer
     # overflow leading to a grainier output
     :default
       # break if `z_re2 + z_im2` overflows `u8`

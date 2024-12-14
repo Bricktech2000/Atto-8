@@ -4,7 +4,7 @@
 @ lib/stdio.asm
 
 main!
-  x00 # non-empty stack required for `printf` with conversion specifier `%`
+  x00 # non-empty stack required for `printf` with conversion specifier '%'
   x21 x32 sub x32 x21 :str_format_0 :printf !call
   !'A' :str_format_1 :printf !call
   :str_format_2 :str_format_2 :printf !call

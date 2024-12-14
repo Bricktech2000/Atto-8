@@ -27,9 +27,9 @@ main!
       # bit from the left. since `bit_index` is `not`ed from above, we can
       # leverage `~n + 1 == -n` to get the `n`th bit from the right, hence
       # the `inc` instruction below. also note that we use `x02 su2` so
-      # `x` increments by `1` on every iteration instead of by `3`
+      # `x` increments by 1 on every iteration instead of by 3
       inc rot x02 su2 x01 and ld1
-      # print `@@` or `  ` depending on carry and store bit in back buffer
+      # print '@@' or '  ' depending on carry and store bit in back buffer
       !'@' !'\s' !char.iff !char.ld0 !putc !putc
       !back_buffer !bit_addr !store_bit
     # loop until `x == BUFFER_LEN << 3`, which is the number of bits aka
@@ -46,13 +46,13 @@ main!
 
   !display_buffer @org !configuration
 
-# identical to `rule 110 fast.asm`
+# identical to 'rule 110 fast.asm'
 random! !random_noise
 center! !buffer.len shr !pad @80
 right! !buffer.len dec !pad @01
 left! @80
 
-# identical to `rule 110 fast.asm`
+# identical to 'rule 110 fast.asm'
 # rule! x1A configuration! !random # rule 26
 # rule! x1E configuration! !center # rule 30
 # rule! x39 configuration! !center # rule 57

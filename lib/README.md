@@ -8,9 +8,9 @@ This library provides utilities and convenience macros for the Atto-8 microcompu
 
 - [/lib/core.asm](core.asm) — Core instruction-like macros such as `!call`, `!hlt` and `!mul`
 - [/lib/types.asm](types.asm) — Type definitions and operations such as fixed-point arithmetic and integer multiplication
-- [/lib/string.asm](string.asm) — String operations inspired by the C header `string.h` such as `strlen` and `memcpy`
-- [/lib/stdlib.asm](stdlib.asm) — Standard library functions inspired by the C header `stdlib.h` such as `malloc` and `rand`
-- [/lib/stdio.asm](stdio.asm) — Standard input/output functions inspired by the C header `stdio.h` such as `gets` and `printf`
+- [/lib/string.asm](string.asm) — String operations inspired by the C header ‘string.h’ such as `strlen` and `memcpy`
+- [/lib/stdlib.asm](stdlib.asm) — Standard library functions inspired by the C header ‘stdlib.h’ such as `malloc` and `rand`
+- [/lib/stdio.asm](stdio.asm) — Standard input/output functions inspired by the C header ‘stdio.h’ such as `gets` and `printf`
 - [/lib/display.asm](display.asm) — Display utilities such as pixel manipulation macros and text rendering functions
 - [/lib/controller.asm](controller.asm) — Controller utilities such as controller button constants
 

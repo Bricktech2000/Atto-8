@@ -12,9 +12,9 @@ main! !nop
       # map `'a'..='z'` to `0..=25`
       !'a' sub
       x00 # default offset: `0x00`
-        # if character in `'a'..='m'` then offset is `13`
+        # if character in `'a'..='m'` then offset is 13
         !offset su2 !offset iff
-        # if character in `'n'..='z'` then offset is `-13`
+        # if character in `'n'..='z'` then offset is -13
         !offset su2 !offset neg dec @const iff
       st0
     # add offset to character and print it

@@ -2,9 +2,6 @@
 #define MIC_SIZE 0x2000 // 0x80 * 0x02 * 0x20
 #define STDIO_BUFFER 0x00
 
-#define FAIL(...) fprintf(stderr, __VA_ARGS__), exit(EXIT_FAILURE)
-#define DIE(msg) perror(msg), exit(EXIT_FAILURE)
-
 #define DECODE_IMM(opcode) (opcode & B01111111)
 #define DECODE_SIZE(opcode) (1 << (opcode & B00000011))
 #define DECODE_OFST(opcode) (opcode & B00001111)

@@ -3,7 +3,7 @@
 @ lib/string.asm
 @ lib/stdio.asm
 
-# username is `admin` and password is `admin`. the shell doesn't do anything;
+# username is 'admin' and password is 'admin'. the shell doesn't do anything;
 # this program is only a demo for the `getline` and `getpass` functions
 
 main! sec

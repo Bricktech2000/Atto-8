@@ -3,8 +3,8 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 
-# input any of `0123456789:;<=>?@ABC...` to start.
-# inputs `0?GNSW` overflow `u8`s
+# input any of '0123456789:;<=>?@ABC...' to start.
+# inputs '0?GNSW' overflow `u8`s
 
 main! !nop
   loop:

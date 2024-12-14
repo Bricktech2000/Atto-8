@@ -7,9 +7,9 @@
 
 # this implementation differs from the original game in a few ways:
 # - numbers on the tiles are the base-2 logarithms of the numbers on the original -- we only have one character per tile
-# - implementation has `0`-tiles (would be equivalent to `1`-tiles in the original) -- no one but mathematicians counts from 1
+# - implementation has '0' tiles (would be equivalent to '1' tiles in the original) -- no one but mathematicians counts from 1
 # - implementation has greedy merge, meaning tiles are merged multiple times within a single move -- simplest way to implement
-# - only `0`-tiles (equivalent to `2`-tiles in the original) are generated -- currently not enough memory for generating `1`-tiles
+# - only '0' tiles (equivalent to '2' tiles in the original) are generated -- currently not enough memory for generating '1' tiles
 #
 # when no room is left to spawn a new tile, the program stalls, indicating the game is over
 
@@ -144,8 +144,8 @@ main!
     x68 shr @data # F
 
   # `&board & 0x0F` must be coprime with `0x10` for random number generation.
-  # `x` is coprime with `0x10` if and only if `x` is odd. therefore we ensure
-  # that `&board & 0x0F` is odd by setting its least significant bit to `1`
+  # 'x' is coprime with `0x10` if and only if 'x' is odd. therefore we ensure
+  # that `&board & 0x0F` is odd by setting its least significant bit to '1'
   !here x01 orr @org
 
   # `moved` is initialized to `false` and the initial controller input is set

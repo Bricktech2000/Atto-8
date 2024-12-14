@@ -28,7 +28,7 @@ main!
           ld3 ld3 ad4 @dyn ad4 @dyn
         # compute `[~bit]` from `RULE` and bit window
         ld3 x07 and rot !rule and @dyn pop
-        # print either `@@` or `  ` depending on `[~bit]`
+        # print either '@@' or '  ' depending on `[~bit]`
         !'@' !'\s' !char.iff !char.ld0 !putc !putc
         # [~curr] <<= 1, [~curr] |= [~bit]
         shl @dyn
@@ -50,13 +50,13 @@ buffer! !buffer.end !buffer.len sub @const
 buffer.end! x00 # `0x00` as it's easily recognizable through `!z`
 
 
-# identical to `rule 110.asm`
+# identical to 'rule 110.asm'
 random! !random_noise
 center! !buffer.len shr !pad @80
 right! !buffer.len dec !pad @01
 left! @80
 
-# identical to `rule 110.asm`
+# identical to 'rule 110.asm'
 # rule! x1A configuration! !random # rule 26
 # rule! x1E configuration! !center # rule 30
 # rule! x39 configuration! !center # rule 57

@@ -207,8 +207,8 @@ impl<T: Clone + 'static> Parser<T> {
 
   pub fn name(self, name: String) -> Parser<T> {
     // try `self`. if it fails without consuming any input, error out with `name` instead.
-    // that is, if we tried to parse `X` and failed without ever consuming any input, we should
-    // report that we expected `X` and not that we expected the specifics of how to parse `X`
+    // that is, if we tried to parse 'X' and failed without ever consuming any input, we should
+    // report that we expected 'X' and not that we expected the specifics of how to parse 'X'
     Parser(Rc::new(move |input: &str| match self.0(input) {
       ParseResult::Ok(r#match) => ParseResult::Ok(r#match),
       ParseResult::Err((_expecteds, new_input)) if input == new_input => {
@@ -268,7 +268,7 @@ pub fn char_not(char: char) -> Parser<char> {
 }
 
 pub fn char_none_of(chars: &'static str) -> Parser<char> {
-  parse::satisfy(move |c| !chars.contains(c)).name(format!("none of `{}`", chars))
+  parse::satisfy(move |c| !chars.contains(c)).name(format!("none of '{}'", chars))
 }
 
 pub fn digit(radix: u32) -> Parser<char> {
@@ -1094,7 +1094,7 @@ fn escape_sequence() -> Parser<char> {
             .or_else(|_| parse::char('r').map(|_| '\r'))
             .or_else(|_| parse::char('t').map(|_| '\t'))
             .or_else(|_| parse::char('v').map(|_| '\x0B'))
-            .name(format!("one of `'\"?\\abfnrtv`"))
+            .name(format!("one of ''\"?\\abfnrtv'"))
         })
         .or_else(|_| {
           // <octal-escape-sequence>

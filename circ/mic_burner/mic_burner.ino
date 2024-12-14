@@ -1,10 +1,10 @@
 // programs `MIC` EEPROMs with data from serial. this program and this circuit
-// are purpose-built for `/mic/` and `/circ/`. write speed is bottlenecked by
-// the EEPROM write delay, limiting the serial baud rate to 75 baud. the
-// Arduino's builtin LED should turn back on after the burn process; if it does
-// not, the microcode was not burned correctly. the switch selects which EEPROM
-// to write to; the leftmost EEPROM is selected when the switch is up, and the
-// rightmost EEPROM is selected when the switch is down
+// are purpose-built for /mic/ and /circ/. write speed is bottlenecked by the
+// EEPROM write delay, limiting the serial baud rate to 75 baud. the Arduino's
+// builtin LED should turn back on after the burn process; if it does not, the
+// microcode was not burned correctly. the switch selects which EEPROM to write
+// to; the leftmost EEPROM is selected when the switch is up, and the rightmost
+// EEPROM is selected when the switch is down
 
 /* clang-format off
  * CLK_PINs -> ############74HC595############ -- ############74HC595############ -- ############74HC595############

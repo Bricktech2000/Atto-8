@@ -14,13 +14,13 @@ fn main() {
 
   let memory_image: [u8; common::MEM_SIZE] = std::fs::read(memory_image_file)
     .unwrap_or_else(|_| {
-      println!("Dasm: Error: Unable to read file `{}`", memory_image_file);
+      println!("Dasm: Error: Unable to read file '{}'", memory_image_file);
       std::process::exit(1);
     })
     .try_into()
     .unwrap_or_else(|_| {
       println!(
-        "Dasm: Error: Memory image `{}` has incorrect size",
+        "Dasm: Error: Memory image '{}' has incorrect size",
         memory_image_file,
       );
       std::process::exit(1);

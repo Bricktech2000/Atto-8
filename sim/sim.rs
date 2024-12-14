@@ -15,13 +15,13 @@ fn main() {
 
   let memory_image = std::fs::read(memory_image_file)
     .unwrap_or_else(|_| {
-      println!("Sim: Error: Unable to read file `{}`", memory_image_file);
+      println!("Sim: Error: Unable to read file '{}'", memory_image_file);
       std::process::exit(1);
     })
     .try_into()
     .unwrap_or_else(|_| {
       println!(
-        "Sim: Error: Memory image `{}` has incorrect size",
+        "Sim: Error: Memory image '{}' has incorrect size",
         memory_image_file
       );
       std::process::exit(1);
@@ -31,7 +31,7 @@ fn main() {
 
   let microcode_image = std::fs::read(microcode_image_file)
     .unwrap_or_else(|_| {
-      println!("Sim: Error: Unable to read file `{}`", microcode_image_file);
+      println!("Sim: Error: Unable to read file '{}'", microcode_image_file);
       std::process::exit(1);
     })
     .chunks(2)
@@ -40,7 +40,7 @@ fn main() {
     .try_into()
     .unwrap_or_else(|_| {
       println!(
-        "Sim: Error: Microcode image `{}` has incorrect size",
+        "Sim: Error: Microcode image '{}' has incorrect size",
         microcode_image_file
       );
       std::process::exit(1);

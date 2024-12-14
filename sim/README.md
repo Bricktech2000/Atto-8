@@ -2,7 +2,7 @@
 
 _Cycle-accurate component-level simulator for Atto-8 microcomputer_
 
-<!-- most of this document is identical to `/emu/README.md` -->
+<!-- most of this document is identical to /emu/README.md -->
 
 ## Overview
 

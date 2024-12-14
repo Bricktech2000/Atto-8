@@ -3,7 +3,7 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 
-# halts on `'0'`
+# halts on '0'
 main!
   !block_getc
   loop:
@@ -11,7 +11,7 @@ main!
     ld0 shr @dyn pop
   !here !bcc :loop !jmp
 
-# # halts on `'0'`
+# # halts on '0'
 # main!
 #   !block_getc
 #   loop:
@@ -20,7 +20,7 @@ main!
 #     shr @dyn :skip :loop iff ld1 ad2 @dyn
 #   !jmp
 
-# # outputs `'\0'`s on `'0'`
+# # outputs '\0's on '0'
 # main!
 #   !block_getc
 #   loop:

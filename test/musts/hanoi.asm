@@ -3,8 +3,8 @@
 @ lib/stdlib.asm
 @ lib/stdio.asm
 
-# input any of `0123456789:;<=>?@ABC...` to start.
-# inputs after `9` take longer than a second to compute
+# input any of '0123456789:;<=>?@ABC...' to start.
+# inputs after '9' take longer than a second to compute
 
 main! !nop
   !'A' !'B' !'C'

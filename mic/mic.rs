@@ -2,7 +2,7 @@
 mod common;
 use common::*;
 
-// major parts of this file are identical to `/bf/bf-mic.rs`
+// major parts of this file are identical to /bf/bf-mic.rs
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
@@ -522,7 +522,7 @@ fn build_microcode(errors: &mut impl Extend<Error>) -> [u16; common::MIC_SIZE] {
                 (wrapped, true) => {
                   if step == 0x00 {
                     errors.extend([Error(format!(
-                      "Microcode for opcode `{:02X}` with carry `{:01X}` overflows by {} steps",
+                      "Microcode for opcode {:02X} with carry {:01X} overflows by {} steps",
                       opcode,
                       carry as u8,
                       wrapped.wrapping_neg()

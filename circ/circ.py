@@ -42,7 +42,7 @@ try:
   print('Circ: Launching Logisim TTY...\n')
   subprocess.run(['logisim-evolution', circuit_file, '--tty', 'tty'], check=True)
 except FileNotFoundError:
-  print('Circ: Error: Could not find binary `logisim-evolution`')
+  print('Circ: Error: Could not find binary \'logisim-evolution\'')
   sys.exit(1)
 
 print('Circ: Done')

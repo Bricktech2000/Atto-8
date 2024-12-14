@@ -16,7 +16,7 @@ debug_mode = False
 def pipe(filename):
   with open_safe(filename, 'rb') as file:
     if debug_mode:
-      print(f'Test: Pipe `{filename}`')
+      print(f'Test: Pipe \'{filename}\'')
     sys.stdout.flush()
     sys.stdout.buffer.write(file.read())
 
@@ -137,12 +137,12 @@ while input:
       case file:
         filenames.append(rel_path(target, file))
   except IndexError:
-    print(f'Test: Error: Missing argument for operation `{operation}`')
+    print(f'Test: Error: Missing argument for operation \'{operation}\'')
     sys.exit(1)
 
 if filenames:
   for filename in filenames:
-    print(f'Test: Error: Unused argument `{filename}`')
+    print(f'Test: Error: Unused argument \'{filename}\'')
   sys.exit(1)
 
 try:
@@ -151,7 +151,7 @@ try:
       func()
     except subprocess.CalledProcessError as e:
       if debug_mode:
-        print(f'Test: Warning: Operation subprocess `{name}` exited with code `{e.returncode}`')
+        print(f'Test: Warning: Operation subprocess \'{name}\' exited with code {e.returncode}')
 except KeyboardInterrupt:
   print('Test: Interrupted')
   sys.exit(1)

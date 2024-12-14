@@ -90,7 +90,7 @@ fn preprocess(
   let assembly = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {
     errors.extend([(
       pos.unwrap_or(Pos(File("[bootstrap]".into()), 0, 0)),
-      Error(format!("Unable to read file `{}`", file)),
+      Error(format!("Unable to read file '{}'", file)),
     )]);
     format!("")
   });
@@ -542,7 +542,7 @@ fn assemble(
                 bruteforce_errors.extend([(
                   pos.clone(),
                   Error(format!(
-                    "`{}` cannot move location counter backward from `{:02X}` to `{:02X}`",
+                    "`{}` cannot move location counter backward from {:02X} to {:02X}",
                     Token::AtOrg,
                     location_counter,
                     value
@@ -650,7 +650,7 @@ fn codegen(
       errors.extend([(
         opcodes[common::MEM_SIZE].0.clone(),
         Error(format!(
-          "Program size `{:02X}` exceeds available memory of size `{:02X}`",
+          "Program size {:02X} exceeds available memory of size {:02X}",
           opcodes.len(),
           common::MEM_SIZE
         )),

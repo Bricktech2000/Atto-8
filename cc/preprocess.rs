@@ -38,7 +38,7 @@ pub fn preprocess(
   let source = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {
     errors.extend([(
       pos.unwrap_or(Pos(File("[bootstrap]".into()), 0, 0)),
-      Error(format!("Unable to read file `{}`", file)),
+      Error(format!("Unable to read file '{}'", file)),
     )]);
     format!("")
   });
@@ -262,10 +262,10 @@ fn null_directive() -> Parser<Directive> {
 fn text_line_directive() -> Parser<Directive> {
   // TODO does not obey grammar
 
-  // if first non-whitespace character is `'#'`, assume misparsed directive
+  // if first non-whitespace character is '#', assume misparsed directive
   // and error out here in the preprocessor rather than later in the parser
   preprocess::ws(parse::char('#'))
-    // using `"include"` as sentinel is hacky but works
+    // using '"include"' as sentinel is hacky but works
     .and_then(|_| Parser::expected(vec!["\"include\"".to_string()]))
     .or_else(|expecteds| {
       if expecteds.contains(&"\"include\"".to_string()) {

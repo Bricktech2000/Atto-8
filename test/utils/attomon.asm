@@ -9,16 +9,16 @@
 # `head` is a read/write head pointing into memory. `buffer` is a one-byte data buffer
 #
 # commands are as follows:
-# - typing `'$'` prints `head`
-# - typing `/[0-9A-F]/` rotates the nibble into `buffer`
-# - typing `':'` copies the byte from `buffer` into `head`
-# - typing `'.'` writes `buffer` to `*head` then increments `head`
-# - typing `','` prints the byte `*head` then increments `head`
-# - typing `';'` decrements `head` then prints the byte `*head`
-# - typing `'\b'` prints `'\b'` then swaps the nibbles of `buffer`
-# - typing `'\n'` prints a line feed then prints `'$'` and `head`
-# - typing `'!'` jumps program execution to `buffer`
-# - typing any other character prints it then prints `'\b'`
+# - typing '$' prints `head`
+# - typing /[0-9A-F]/ rotates the nibble into `buffer`
+# - typing ':' copies the byte from `buffer` into `head`
+# - typing '.' writes `buffer` to `*head` then increments `head`
+# - typing ',' prints the byte `*head` then increments `head`
+# - typing ';' decrements `head` then prints the byte `*head`
+# - typing '\b' prints '\b' then swaps the nibbles of `buffer`
+# - typing '\n' prints a line feed then prints '$' and `head`
+# - typing '!' jumps program execution to `buffer`
+# - typing any other character prints it then prints '\b'
 #
 # memory layout is as follows:
 # - `0x00..0x99` is reserved for AttoMon
@@ -26,17 +26,17 @@
 # - `0xC0..0x100` is unused and available for user programs
 #
 # compound commands to try:
-# - `00!` warm restarts AttoMon
-# - `00:45.` prints a single `'E'` to `stdout`
-# - `99:00.00!` moves the stack to the display buffer
-# - `B4:4F.00!` warm restarts AttoMon but prints _OttoMon_ instead
-# - `F0:F0.E3.F0:` then `!` halts the processor at `0xF0`
-# - `00:,,,,,,,,,,,,,,,,` prints the first 16 bytes of memory
-# - `F0:00.E5.00.C0.D1.B0.F3.E3.F0:` then `!` prints the ASCII character set in a loop
-# - `F0:00.E5.40.D0.B7.00.F2.90.E3.F0:` then `!` prints `'@'` in a loop until a key is pressed
-# - `E0:CC....33....CC....33....CC....33....CC....33....` displays a checkerboard pattern
-# - `C0:3A.B2.27.5D.B2.E3.0A.41.74.74.6F.2D.38.0A.00.C0:` then `!` prints _Atto-8_ and returns to AttoMon
-# - `B1:1B.5B.32.4A.1B.5B.48.00.` makes warm restarts clear the terminal screen
+# - '00!' warm restarts AttoMon
+# - '00:45.' prints a single 'E' to `stdout`
+# - '99:00.00!' moves the stack to the display buffer
+# - 'B4:4F.00!' warm restarts AttoMon but prints _OttoMon_ instead
+# - 'F0:F0.E3.F0:' then '!' halts the processor at `0xF0`
+# - '00:,,,,,,,,,,,,,,,,' prints the first 16 bytes of memory
+# - 'F0:00.E5.00.C0.D1.B0.F3.E3.F0:' then '!' prints the ASCII character set in a loop
+# - 'F0:00.E5.40.D0.B7.00.F2.90.E3.F0:' then '!' prints '@' in a loop until a key is pressed
+# - 'E0:CC....33....CC....33....CC....33....CC....33....' displays a checkerboard pattern
+# - 'C0:3A.B2.27.5D.B2.E3.0A.41.74.74.6F.2D.38.0A.00.C0:' then '!' prints _Atto-8_ and returns to AttoMon
+# - 'B1:1B.5B.32.4A.1B.5B.48.00.' makes warm restarts clear the terminal screen
 
 main!
   pop pop !attomon_init !jmp # begin execution in `attomon_init` to save memory
@@ -56,7 +56,7 @@ main!
   :buffer_print !jmp
 
   hex:
-    !char.pop # pop extraneous `'\b'` character
+    !char.pop # pop extraneous '\b' character
     x0F and # maps 0xFA..0xFF to 0x0A..0x0F
     x04 x0F an4 rot or2 # copy into most significant nibble of `buffer`
     !'\0' # previous character was consumed, push dummy character
@@ -110,7 +110,7 @@ main!
       x0A ad2 @dyn :hex !bcs # branch if adding 0x0A wrapped around
       x12 su2 # map 'A'..='F' to 0x00..=0x05
       x06 su2 @dyn :hex !bcs # branch if subtracting 0x06 wrapped around
-    :stall_print !jmp # invalid character, print `'\b'`
+    :stall_print !jmp # invalid character, print '\b'
 
   !attomon_init @org # initialization code
     !attomon_init sts # put stack right above initialization code

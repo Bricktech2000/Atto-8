@@ -275,32 +275,35 @@ enum TickTrap mc_tick(void) {
 
 int main(int argc, char *argv[]) {
   if (argc != 2)
-    FAIL("CEmu: Usage: %s <memory image file>\n", argv[0]);
+    printf("CEmu: Usage: %s <memory image file>\n", argv[0]),
+        exit(EXIT_FAILURE);
 
   FILE *fp = fopen(argv[1], "rb");
   if (fp == NULL)
-    DIE("fopen");
+    perror("fopen"), exit(EXIT_FAILURE);
 
   if (fread(mc.mem, sizeof(uint8_t), sizeof(mc.mem), fp) != sizeof(mc.mem))
     if (feof(fp))
-      FAIL("CEmu: Error: Memory image `%s` has incorrect size\n", argv[1]);
+      printf("CEmu: Error: Memory image '%s' has incorrect size\n", argv[1]),
+          exit(EXIT_FAILURE);
     else
-      DIE("fread");
+      perror("fread"), exit(EXIT_FAILURE);
   else if (fgetc(fp) != EOF)
-    FAIL("CEmu: Error: Memory image `%s` has incorrect size\n", argv[1]);
+    printf("CEmu: Error: Memory image '%s' has incorrect size\n", argv[1]),
+        exit(EXIT_FAILURE);
 
   if (fclose(fp) != 0)
-    DIE("fclose");
+    perror("fclose"), exit(EXIT_FAILURE);
 
   mc_reset();
-  while (true) {
+  while (1) {
     switch (mc_tick()) {
     case TICKTRAP_NONE:
       continue;
     case ILLEGAL_OPCODE:
-      FAIL("CEmu: Illegal opcode\n");
+      puts("CEmu: Illegal opcode"), exit(EXIT_FAILURE);
     case DEBUG_REQUEST:
-      FAIL("CEmu: Debug request\n");
+      puts("CEmu: Debug request"), exit(EXIT_FAILURE);
     }
   }
 }

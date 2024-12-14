@@ -7,8 +7,8 @@
 # level of performance, at the expense of maximum program size, as the compiled machine
 # code is generally larger than the brainfuck source
 #
-# most programs from `/bf/test/` can be pasted in directly. note the following:
-# - `,` is non-blocking; if no input is currently available, `'\0'` is returned
+# most programs from /bf/test/ can be pasted in directly. note the following:
+# - `,` is non-blocking; if no input is currently available, '\0' is returned
 # - cells are 8-bit unsigned integers, wrapping on overflow and underflow
 # - writing beyond the start of the tape will result in undefined behavior
 # - unbalanced brackets in the source code will result in undefined behavior
@@ -43,7 +43,7 @@ main!
         ld1 !char.sta
       inc swp inc swp @dyn :for_c !bcc dec st2 pop
 
-      # if `char == ']'`, resolve jump targets to and from corresponding `']'`
+      # if `char == ']'`, resolve jump targets to and from corresponding `]`
       !char.ld0 !']' !eq :'\0' !bcc
       # find address of corresponding `!loop_sentinel`. since we resolve jump targets as
       # we go along, the "corresponding `!loop_sentinel`" is simply the latest `!loop_sentinel`
@@ -58,7 +58,7 @@ main!
       # structure similar to `getline.min`, but compiles to machine code brainfuck user input
       # into `dst` directly, instead of writing user input to `dst` as-is
     '\0':
-      # `char` is either `'\0'` or `other` from above
+      # `char` is either '\0' or `other` from above
       # putc(char)
       !putc
   getline: # getline(*dst)
@@ -68,7 +68,7 @@ main!
       !'\0' xo2 :'\0' iff !'\0' xo2
     !jmp
     '\n':
-      # print `char`, which is a `'\n'`
+      # print `char`, which is a '\n'
       !putc # bleed `dst`
 
       # construct and append `!hlt` instruction to end of `code_buffer`
@@ -80,13 +80,13 @@ main!
       x00 :code_buffer !jmp
 
   # expects `*head` on top of the stack, followed by `head`, followed by `!stdout`.
-  # top of stack is written to `*head` only when `'<'` and `'>'` are encountered
+  # top of stack is written to `*head` only when `<` and `>` are encountered
   '>': ld1 sta inc ld0 lda @00
   '<': ld1 sta dec ld0 lda @00
   '+': inc @00
   '-': dec @00
-  # `!stdin` and `!stdout` are `'\0'` which is also `@00`. to avoid null bytes
-  # within the string, we load `'\0'` from the stack using `ldo` instead
+  # `!stdin` and `!stdout` are '\0' which is also `@00`. to avoid null bytes
+  # within the string, we load '\0' from the stack using `ldo` instead
   '.': ld0 ld3 !fputc @00
   ',': ld2 !fgetc st0 @00
   # we use `!dbg` as jump targets to trigger a trap if not properly overwritten

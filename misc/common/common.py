@@ -9,7 +9,7 @@ def open_safe(operation):
       return open(filename, mode)
     except IOError:
       mode = 'read' if mode.startswith('r') else 'write' if mode.startswith('w') else 'access'
-      print(f'{operation}: Error: Unable to {mode} file `{filename}`')
+      print(f'{operation}: Error: Unable to {mode} file \'{filename}\'')
       sys.exit(1)
   return fn
 

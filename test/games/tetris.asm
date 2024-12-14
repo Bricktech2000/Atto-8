@@ -17,7 +17,7 @@
 # some implementation details:
 # - `frame` is a frame counter. we use it to move tetrominoes down every few game ticks
 # - `type` means "tetromino type", from `0x00` to `0x07` for tetrominoes "OIJLISTZ"
-# - `rot` means "tetromino rotation", from `0x00` to `0x03` for `0/4`, `1/4`, `2/4`, `3/4`
+# - `rot` means "tetromino rotation", from `0x00` to `0x03` for 0/4, 1/4, 2/4, 3/4
 # - `index = (rot << 3) | type` such that `tetrominoes[index]` is the tetromino pixel data
 # - `pos` as a `u4u4` means "tetromino position"
 
@@ -140,8 +140,8 @@ main!
   !spawn_pos x40 add @data @08 @00
 
   # every byte is one tetromino at one rotation. bits within a byte, from the most to
-  # the least significant, represents one `@` in the diagram below, to be read left to
-  # right, top to bottom. `.` characters are unset pixels. it is worth noting that:
+  # the least significant, represents one '@' in the diagram below, to be read left to
+  # right, top to bottom. '.' characters are unset pixels. it is worth noting that:
   # - `rot & 0x01` aka `index & ROT_PARITY`, tetromino rotation parity, dictates the
   #   orientation of the 2x4 block of possible pixels for rotation `rot`
   # - `ofst[rot]` as a `u4u4` is the position of the top left corner of the 2x4 block
@@ -155,7 +155,7 @@ main!
   # '---------'---------'---------'---------'
 
   # all this allows us to encode the Super Rotation System within minimal memory. note
-  # that the "O" tetromino must alawys be in rotation `0/4` because its other ones, which
+  # that the "O" tetromino must alawys be in rotation 0/4 because its other ones, which
   # are all identical, fail to fit within the 2x4 block of possible pixels defined above.
   # the "I" tetromino is duplicated so tetromino count is a power of two.
   #

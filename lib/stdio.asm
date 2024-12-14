@@ -99,39 +99,39 @@ hex_putc.min! # hex_putc.min(u8 char)
 
 
 # a `printf` immitation that supports a few conversion specifiers. in `format`,
-# - `%d` prints a signed integer as decimal with precision `1`
-# - `%u` prints an unsigned integer as decimal with precision `1`
-# - `%x` prints an unsigned integer as uppercase hex with precision `2` (nonstandard)
-# - `%c` prints a character
-# - `%s` prints a null-terminated string from its address
-# - `%p` prints a pointer-to-void as `"0x"` followed by upperacase hex with precision `2`
-# - `%%` prints a literal `'%'` character
+# - '%d' prints a signed integer as decimal with precision '1'
+# - '%u' prints an unsigned integer as decimal with precision '1'
+# - '%x' prints an unsigned integer as uppercase hex with precision '2' (nonstandard)
+# - '%c' prints a character
+# - '%s' prints a null-terminated string from its address
+# - '%p' prints a pointer-to-void as "0x" followed by upperacase hex with precision '2'
+# - '%%' prints a literal '%' character
 # note that:
 # - integers are assumed to be 8 bits wide (nonstandard)
-# - the common conversion specifiers `i`, `o`, `X`, `n` are unsupported (nonstandard)
-# - in `format`, a `%` followed by an unknown conversion specifier will print a `'%'`
-# - if the last character of `format` is `'%'`, the behavior is undefined
+# - the common conversion specifiers 'i', 'o', 'X', 'n' are unsupported (nonstandard)
+# - in `format`, a '%' followed by an unknown conversion specifier will print a '%'
+# - if the last character of `format` is '%', the behavior is undefined
 # - passing insufficient arguments for the format results in undefined behavior
 # - passing excess arguments for the format results in undefined behavior (nonstandard)
 printf.def!
     'd'.
-      # compute absolute value, print `-` if was negative and fall through to conversion specifier `u`
+      # compute absolute value, print '-' if was negative and fall through to conversion specifier 'u'
       !abs.dyn !'\0' !'-' iff !putc clc
     'u'.
       # print as decimal and jump back to `:printf`
       str_empty. !'\0' swp !u8.to_dec !stack_puts :printf !jmp
     'p'.
-      # print `"0x"` then fall through to conversion specifier `x`
+      # print "0x" then fall through to conversion specifier 'x'
       !'0' !putc !'x' !putc
     'x'.
       # print as hexadecimal and jump back to `:printf`
       !hex_putc.min :printf !jmp
-    unknown. # unknown conversion specifier, including `%`
-      # store back argument from `va_list` and fall through to conversion specifier `c` with `'%'`
+    unknown. # unknown conversion specifier, including '%'
+      # store back argument from `va_list` and fall through to conversion specifier 'c' with '%'
       sw2 swp !'%'
     'c'.
     other.
-      # print char on stack and fall through to conversion specifier `s` with empty string
+      # print char on stack and fall through to conversion specifier 's' with empty string
       !putc .str_empty
     's'.
       # print as string and fall through to `:printf`
@@ -162,18 +162,18 @@ printf.def!
   pop !rt1
 
 
-# reads into `dst` and echoes to `stdout` characters from `stdin` until `'\n'` is
-# encountered. supports `'\b'`. supports placeholder text through `end` parameter:
+# reads into `dst` and echoes to `stdout` characters from `stdin` until '\n' is
+# encountered. supports '\b'. supports placeholder text through `end` parameter:
 # - `:buf :buf :getline !call` (where `dst == end`) does not use placeholder text
 # - `:buf !puts :buf :buf !strend :getline !call` uses `:buf` as placeholder text
 getline.def!
     other.
-      # increment by `2` because `.'\b'` will decrement by `1`
+      # increment by 2 because `.'\b'` will decrement by 1
       # *end = other; end += 2
       ld2 x02 ad4
       !char.ld1 swp !char.sta # bleed `other`
     '\b'.
-      # `char` is either `'\b'` or `other` from above
+      # `char` is either '\b' or `other` from above
       # putc(dst == end ? 0 : char)
       ld3 ld3 !e iff # bleed `char`
     '\0'.
@@ -188,7 +188,7 @@ getline.def!
       !'\0' xo2 .'\0' iff !'\0' xo2
     !jmp
     '\n'.
-      # pop `char`, which is a `'\n'`
+      # pop `char`, which is a '\n'
       !char.pop
       # *end = '\0'
       st1 !'\0' swp sta
@@ -198,10 +198,10 @@ getline.def!
 # identical to `getline`, but does not echo to `stdout`
 getpass.def!
     other.
-      # increment by `2` because `.'\b'` will decrement by `1`
+      # increment by 2 because `.'\b'` will decrement by 1
       # *end = other; end += 2
       ld2 !char.sta
-      x02 ad2 !'\0' # bleed `'\0'`
+      x02 ad2 !'\0' # bleed '\0'
     '\b'.
       ld3 ld3 !e pop # bleed `char`
     '\0'.
@@ -217,22 +217,22 @@ getpass.def!
       !'\0' xo2 .'\0' iff !'\0' xo2
     !jmp
     '\n'.
-      # pop `char`, which is a `'\n'`
+      # pop `char`, which is a '\n'
       !char.pop
       # *end = '\0'
       st1 !'\0' swp sta
   # return*
   !ret
 
-# reads into `dst` and echoes to `stdout` characters from `stdin` until `'\n'` is
-# encountered. does not support `'\b'`. assumes `dst` to be initialized to `{0}`
+# reads into `dst` and echoes to `stdout` characters from `stdin` until '\n' is
+# encountered. does not support '\b'. assumes `dst` to be initialized to `{0}`
 getline.min.def!
     other.
       # *dst = other; end += 1
       ld2 x01 ad4
       !char.ld1 swp !char.sta # bleed `other`
     '\0'.
-      # `char` is either `'\0'` or `other` from above
+      # `char` is either '\0' or `other` from above
       # putc(char)
       !putc
   getline.min: # getline.min(*dst)
@@ -242,7 +242,7 @@ getline.min.def!
       !'\0' xo2 .'\0' iff !'\0' xo2
     !jmp
     '\n'.
-      # pop `char`, which is a `'\n'`
+      # pop `char`, which is a '\n'
       !char.pop
   # return*
   !rt1
@@ -251,7 +251,7 @@ getline.min.def!
 getpass.min.def!
     other.
       ld2 !char.sta
-      x01 ad2 !'\0' # bleed `'\0'`
+      x01 ad2 !'\0' # bleed '\0'
     '\0'.
       # pop `char`
       !char.pop
@@ -262,7 +262,7 @@ getpass.min.def!
       !'\0' xo2 .'\0' iff !'\0' xo2
     !jmp
     '\n'.
-      # pop `char`, which is a `'\n'`
+      # pop `char`, which is a '\n'
       !char.pop
   # return*
   !rt1

@@ -8,8 +8,8 @@
 # a one-byte operand pointing to the corresponding bracket. this compact representation
 # allows for execution of larger brainfuck programs at a higher level of performance
 #
-# most programs from `/bf/test/` can be pasted in directly. note the following:
-# - `,` is non-blocking; if no input is currently available, `'\0'` is returned
+# most programs from /bf/test/ can be pasted in directly. note the following:
+# - `,` is non-blocking; if no input is currently available, '\0' is returned
 # - cells are 8-bit unsigned integers, wrapping on overflow and underflow
 # - writing beyond the start of the tape will result in undefined behavior
 # - unbalanced brackets in the source code will result in undefined behavior
@@ -40,7 +40,7 @@ main!
       !char.ld0 !'[' !eq
       ![_sentinel ld2 sta x00 ad2 @dyn
 
-      # if `char == ']'`, resolve jump targets to and from corresponding `'['`
+      # if `char == ']'`, resolve jump targets to and from corresponding `[`
       !char.ld0 !']' !eq :'\0' !bcc
       # find address of corresponding `![_sentinel`. since we resolve jump targets as
       # we go along, the "corresponding `![_sentinel`" is simply the latest `![_sentinel`
@@ -57,7 +57,7 @@ main!
       # structure similar to `getline.min`, but compiles to bytecode brainfuck user input
       # into `dst` directly, instead of writing user input to `dst` as-is
     '\0':
-      # `char` is either `'\0'` or `other` from above
+      # `char` is either '\0' or `other` from above
       # putc(char)
       !putc
   getline: # getline(*dst)
@@ -67,7 +67,7 @@ main!
       !'\0' xo2 :'\0' iff !'\0' xo2
     !jmp
     '\n':
-      # print `char`, which is a `'\n'`
+      # print `char`, which is a '\n'
       !putc # bleed `dst`
 
       # increment `dst` pointer past `![_sentilel`, alias `:halt` function pointer
@@ -81,7 +81,7 @@ main!
 
   !vm_core @org
     # expects `*head` on top of the stack, followed by `head`, followed by VM `ip`.
-    # top of stack is written to `*head` only when `'<'` and `'>'` are encountered
+    # top of stack is written to `*head` only when `<` and `>` are encountered
     '>': ld1 sta inc :<_post !jmp
     '<': ld1 sta dec <_post: ld0 lda :next !jmp
     '+': inc :next !jmp

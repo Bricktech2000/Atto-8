@@ -2,7 +2,7 @@
 
 _Instruction-level emulator for Atto-8 microcomputer_
 
-<!-- most of this document is identical to `/sim/README.md` -->
+<!-- most of this document is identical to /sim/README.md -->
 
 ## Overview
 
