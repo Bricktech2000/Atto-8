@@ -25,7 +25,7 @@ Available operations are as follows:
 
 ## Examples
 
-```bash
+```sh
 # assemble source code, emulate binary
 python3 test.py dino.asm asm emu
 

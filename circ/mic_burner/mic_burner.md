@@ -1,6 +1,6 @@
 run the following to compile and upload the sketch to the Arduino Nano and burn the microcode:
 
-```bash
+```sh
 arduino-cli core install arduino:avr # only required once
 arduino-cli compile --fqbn arduino:avr:nano --library ../../misc/common/
 arduino-cli upload --fqbn arduino:avr:nano --port /dev/ttyUSB0

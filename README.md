@@ -29,7 +29,7 @@ The Atto-8 is a small ecosystem of hardware and software living in symbiosis. Th
 
 This project is a work in progress. Try it out by running any of the following commands from the [/test/](test/) directory:
 
-```bash
+```sh
 # musts
 python3 test.py bad\ apple.asm asm emu
 python3 test.py life.asm asm emu
