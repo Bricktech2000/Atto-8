@@ -62,6 +62,7 @@ python3 test.py bf\ interp.asm asm emu
 python3 test.py bf\ transp.asm asm emu
 python3 test.py bf\ jit.asm asm emu
 python3 test.py bf\ vm.asm asm emu
+python3 test.py matrix.asm asm emu
 
 # utils
 python3 test.py attomon.asm asm emu

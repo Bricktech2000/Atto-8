@@ -11,7 +11,7 @@ main!
 
   !buffer.end dec lda # left
 
-  # refer to C implementation for main loop below
+  # refer to C implementation for this main loop
   loop:
     # loop through bytes of `buffer`
     !buffer for_i:
