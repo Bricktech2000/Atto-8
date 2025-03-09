@@ -282,7 +282,7 @@ int main(int argc, char *argv[]) {
   if (fp == NULL)
     perror("fopen"), exit(EXIT_FAILURE);
 
-  if (fread(mc.mem, sizeof(uint8_t), sizeof(mc.mem), fp) != sizeof(mc.mem))
+  if (fread(mc.mem, 1, sizeof(mc.mem), fp) != sizeof(mc.mem))
     if (feof(fp))
       printf("CEmu: Error: Memory image '%s' has incorrect size\n", argv[1]),
           exit(EXIT_FAILURE);
