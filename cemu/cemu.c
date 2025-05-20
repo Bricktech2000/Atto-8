@@ -292,7 +292,7 @@ int main(int argc, char *argv[]) {
     printf("CEmu: Error: Memory image '%s' has incorrect size\n", argv[1]),
         exit(EXIT_FAILURE);
 
-  if (fclose(fp) != 0)
+  if (fclose(fp) == EOF)
     perror("fclose"), exit(EXIT_FAILURE);
 
   mc_reset();

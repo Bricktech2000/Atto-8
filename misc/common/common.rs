@@ -351,10 +351,9 @@ pub fn render_controller(controller: &u8) -> String {
   let mut fmt = "".to_string();
 
   fn bit_to_str(controller: &u8, bit: u8) -> &'static str {
-    match controller >> bit & 0x01 {
-      0b0 => "\u{2591}\u{2591}",
-      0b1 => "\u{2588}\u{2588}",
-      _ => unreachable!(),
+    match controller >> bit & 1 {
+      0 => "\u{2591}\u{2591}",
+      _ => "\u{2588}\u{2588}",
     }
   }
 

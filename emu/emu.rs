@@ -341,7 +341,7 @@ impl std::fmt::Display for Microprocessor {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(
       f,
-      "IP  SP  CF\r\n{:02X}  {:02X}  {:01X} \r\n",
+      "IP  SP  CF\r\n{:02X}  {:02X}  {:01b} \r\n",
       self.ip, self.sp, self.cf as u8,
     )
   }

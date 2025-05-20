@@ -190,10 +190,7 @@ impl Tickable for Microcomputer {
       mp.ctrl.nand_data,
     ]
     .into_iter()
-    .filter(|s| match s {
-      Signal::Active => true,
-      Signal::Inactive => false,
-    })
+    .filter(|s| matches!(s, Signal::Active))
     .count();
     mp.pull = match active_count {
       0 => Ok(Signal::Active),
@@ -363,7 +360,7 @@ impl std::fmt::Display for Microprocessor {
       f,
       "{}\r\n{}\r\n{}\r\n{}",
       format!(
-        "IP  SP  CF  IL  SC  AL  XL  YL  ZL\r\n{:02X}  {:02X}  {:01X}   {:02X}  {:02X}  {:02X}  {:02X}  {:02X}  {:02X}\r\n",
+        "IP  SP  CF  IL  SC  AL  XL  YL  ZL\r\n{:02X}  {:02X}  {:01b}   {:02X}  {:02X}  {:02X}  {:02X}  {:02X}  {:02X}\r\n",
         self.ip, self.sp, self.cf as u8, self.il, self.sc, self.al, self.xl, self.yl, self.zl
       ),
       format!(
@@ -386,7 +383,7 @@ impl std::fmt::Display for Microprocessor {
         self.ctrl.nand_data,
       ),
       format!(
-        "PULL  ONES  SUM  NAND  CIN  COUT  ZERO\r\n{}    {:02X}    {:02X}   {:02X}    {:01X}    {:01X}     {:01X}\r\n",
+        "PULL  ONES  SUM  NAND  CIN  COUT  ZERO\r\n{}    {:02X}    {:02X}   {:02X}    {:01b}    {:01b}     {:01b}\r\n",
         self.pull, self.ones, self.sum, self.nand, self.cin as u8, self.cout as u8, self.zero as u8,
       ),
       format!(
