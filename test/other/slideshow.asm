@@ -5,46 +5,41 @@
 @ lib/display.asm
 @ misc/common/common.asm
 
-main!
-  pop pop !slides_start sts
+main! begin:
+  pop pop !slides_buffer dec sts # (dst,)
 
-  !display_buffer loop:
-    # if `slide + 2 * DISPLAY_BUFFER_LEN` overflows
-    !display_buffer.len ld0 add @const add @dyn
-    # then go to first slide. else go to next slide
-    !display_buffer.len sub @dyn !slides_start iff clc
-    # swap current slide with next slide
-    !memswp_display_buffer
-    # wait for input
-    !block_null !block_any
+  # we do a `memswp` using two pointers: a "slides" pointer `src` and a "display buffer"
+  # pointer `dst`. `src` gets reset to `SLIDES_BUFFER` after the last slide is displayed,
+  # and `dst` gets reset to `DISPLAY_BUFFER` after each slide is displayed.
+
+  # reset `src = SLIDES_BUFFER`
+  !slides_buffer loop:
+    # reset `dst = DISPLAY_BUFFER` while clearing the carry flag
+    !display_buffer not @const not @dyn st1
+    for_byte:
+      # swap `*src++` and `*dst++`
+      ld1 lda ld1 lda
+      ld3 sta ld1 sta
+      x01 add @dyn
+      # loop back to `:for_byte` until `dst` wraps around, at which point one screenful
+      # will have been `memswp`ed over. when it does, if we've hit the last slide then
+      # jump to `:begin` to reset `src = SLIDES_BUFFER`, and otherwise jump to `:block`
+      # to wait for user input before `memswp`ing the next slide into the display buffer
+      :for_byte
+        :block :begin iff
+        x01 ad4 @dyn
+      iff !jmp
+    block:
+      !block_null !block_any
   :loop !jmp
 
-  !slides_start @org
+  !slides_buffer @org
     !lyrics_first
     # !lyrics_second
+    # !pixel_art
     # !numbered_slides
 
-slides_start! x40
-
-# inlined version of `:memswp` with destination hard-coded to
-# `!display_buffer` and length hard-coded to `!display_buffer.len`.
-# does not consume its argument. assumes `clc`
-memswp_display_buffer!
-  !display_buffer.len for_byte: dec
-    ld1 ld1 add lda
-    !display_buffer ld2 add lda
-    ld3 ld3 add sta
-    !display_buffer ld2 add sta
-  !z :for_byte !bcc pop
-
-
-numbered_slides!
-  !empty !slide !-1- !empty
-  !empty !slide !-2- !empty
-  !empty !slide !-3- !empty
-  !empty !slide !-4- !empty
-  !empty !slide !-5- !empty
-  !empty !slide !-6- !empty
+slides_buffer! x40
 
 lyrics_first!
   !music_notes
@@ -58,7 +53,25 @@ lyrics_second!
   !nver !gon' !say !good !bye !---
   !nver !gon' !tell !alie !and !hurt !you !---
 
+pixel_art!
+  !atto_-8
+  !avatar
+  !mushroom
+  !yin_yang
+  !music_notes
+  !checkerboard
+
+numbered_slides!
+  !empty !slide !-1- !empty
+  !empty !slide !-2- !empty
+  !empty !slide !-3- !empty
+  !empty !slide !-4- !empty
+  !empty !slide !-5- !empty
+  !empty !slide !-6- !empty
+
+# identical to 'scroll.asm'
 empty! @00 @00 @00 @00 @00 @00 @00 @00 #
+
 slide! @69 @67 @49 @56 @CD @67 @00 @00 # SLIDE
 -1-!  @03 @00 @39 @38 @03 @80 @00 @00 # -1-
 -2-!  @03 @00 @39 @38 @01 @80 @00 @00 # -2-
@@ -67,6 +80,7 @@ slide! @69 @67 @49 @56 @CD @67 @00 @00 # SLIDE
 -5-!  @01 @80 @39 @38 @03 @00 @00 @00 # -5-
 -6-!  @02 @00 @3B @B8 @03 @80 @00 @00 # -6-
 
+# identical to 'scroll.asm'
 nver! @CA @EC @AA @CE @A4 @EA @00 @00 # NVER
 gon'! @CE @C8 @AA @A8 @EE @A0 @00 @00 # GON'
 give! @CE @AE @A4 @AC @EE @4E @00 @00 # GIVE

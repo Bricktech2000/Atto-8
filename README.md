@@ -88,6 +88,7 @@ python3 test.py doom.asm asm emu
 # other
 python3 test.py draw.asm asm emu
 python3 test.py random.asm asm emu
+python3 test.py scroll.asm asm emu
 python3 test.py counter.asm asm emu
 python3 test.py slideshow.asm asm emu
 python3 test.py run-length.asm asm emu
