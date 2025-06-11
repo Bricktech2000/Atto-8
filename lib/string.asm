@@ -130,11 +130,11 @@ memmove.def!
     # copy backward if dst > src
     ld2 ld2 !gt :memcpy !bcs
     # copy forward otherwise
-    x00 for_i. inc
+    x00 for_i.
       # *dst = *src
       ld3 ld1 add lda
       ld3 ld2 add sta
     # loop if i > 0
-    ld4 ld1 !eq .for_i !bcc
+    inc ld4 ld1 !eq .for_i !bcc
   # return*
   :memcpy.end !jmp
