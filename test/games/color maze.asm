@@ -9,7 +9,7 @@
 
 # it's more likely than not this game already exists. this program is a clone of an
 # unnamed game I wrote back on 2019-12-15, but I can't remember what inspired me to
-# write that game in the first place. for now, I'm calling it -- scratch that. it's
+# write that game in the first place. for now, I'm calling it--- scratch that. it's
 # called "Color Maze". GitHub Copilot figured it out
 
 # the back buffer holds the tiles that have been visited / colored. every frame

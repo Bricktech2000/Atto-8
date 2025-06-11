@@ -167,3 +167,39 @@ hello_world!
   @A2 @0E @E2 @0A @A3 @8E @00 @00
   @1C @40 @14 @40 @1C @70 @00 @00
   @00 @00 @00 @00 @00 @00 @00 @00
+
+human_face-6!
+  @FF @FF @F9 @9F @FE @EF @FF @27
+  @F3 @7F @EF @5F @FD @4F @ED @3F
+  @C1 @3B @FD @BB @FF @FF @FF @7F
+  @FF @FF @FF @FF @FF @FF @FF @FF
+  !human_face-5
+human_face-5!
+  @FF @FF @FE @3F @F8 @BF @F3 @CF
+  @F3 @8F @F0 @EF @EE @FF @DE @F3
+  @EE @EF @E3 @37 @E0 @07 @E3 @C7
+  @F1 @8F @F0 @0F @F8 @1F @FF @FF
+  !human_face-4
+human_face-4!
+  @FF @FF @FF @DF @F8 @CF @F3 @F7
+  @F3 @97 @F1 @67 @FD @F7 @D5 @5F
+  @FD @17 @CF @83 @E0 @07 @E0 @07
+  @F3 @CF @F2 @4F @F8 @1F @FF @FF
+  !human_face-3
+human_face-3!
+  @00 @00 @00 @00 @07 @00 @0C @00
+  @0C @60 @0E @70 @0C @F0 @2C @F0
+  @20 @84 @12 @88 @1F @F8 @1D @B8
+  @0D @B0 @0D @B0 @07 @E0 @00 @00
+  !human_face-2
+human_face-2!
+  @FF @FF @F8 @1F @F0 @0F @E0 @07
+  @E0 @07 @E0 @67 @EC @F7 @C4 @D3
+  @E0 @87 @C2 @83 @E0 @07 @E1 @87
+  @F1 @8F @F0 @0F @F8 @1F @FF @FF
+  !human_face-1
+human_face-1!
+  @FF @FF @FF @FF @FF @FF @FF @FF
+  @FF @9F @F1 @8F @F3 @0F @F7 @1F
+  @DF @7B @ED @77 @E0 @07 @E3 @C7
+  @F2 @4F @F2 @4F @F8 @1F @FF @FF
