@@ -7,7 +7,9 @@ let b:current_syntax = "atto-8"
 " every printable non-digit non-alpha character, except " !.:@"
 setlocal iskeyword+=34,35,36,37,38,39,40,41,42,43,44,45,47,59,60,61,62,63,91,92,93,94,95,96,123,124,125,126
 setlocal commentstring=#\ %s
-setlocal comments=:#\ 
+setlocal comments=:#\ ,:#$
+setlocal define=\\ze\\<[^!\ ]\\+\\>!\\\|\\ze\\<[^:\ ]\\+\\>:\\\|\\ze\\<[^.\ ]\\+\\>\\.
+setlocal include=@\ 
 
 syntax match atto8Instruction "\<\(add\|sub\|iff\|swp\|rot\|orr\|and\|xor\|xnd\|inc\|dec\|neg\|shl\|shr\|not\|buf\|lda\|sta\|ldi\|sti\|lds\|sts\|sec\|clc\|flc\|nop\|pop\)\>"
 syntax match atto8Instruction "\<\(ad\|su\|if\|sw\|ro\|or\|an\|xo\|xn\)[1248]\{1\}\>"
