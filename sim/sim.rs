@@ -7,7 +7,7 @@ use common::*;
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() != 3 {
-    println!("Usage: sim <memory image file> <microcode image file>");
+    eprintln!("Usage: sim <memory image file> <microcode image file>");
     std::process::exit(1);
   }
 
@@ -15,12 +15,12 @@ fn main() {
 
   let memory_image = std::fs::read(memory_image_file)
     .unwrap_or_else(|_| {
-      println!("Sim: Error: Unable to read file '{}'", memory_image_file);
+      eprintln!("Sim: Error: Unable to read file '{}'", memory_image_file);
       std::process::exit(1);
     })
     .try_into()
     .unwrap_or_else(|_| {
-      println!(
+      eprintln!(
         "Sim: Error: Memory image '{}' has incorrect size",
         memory_image_file
       );
@@ -31,7 +31,7 @@ fn main() {
 
   let microcode_image = std::fs::read(microcode_image_file)
     .unwrap_or_else(|_| {
-      println!("Sim: Error: Unable to read file '{}'", microcode_image_file);
+      eprintln!("Sim: Error: Unable to read file '{}'", microcode_image_file);
       std::process::exit(1);
     })
     .chunks(2)
@@ -39,7 +39,7 @@ fn main() {
     .collect::<Vec<u16>>()
     .try_into()
     .unwrap_or_else(|_| {
-      println!(
+      eprintln!(
         "Sim: Error: Microcode image '{}' has incorrect size",
         microcode_image_file
       );

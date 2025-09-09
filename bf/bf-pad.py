@@ -9,7 +9,7 @@ open_safe = common.open_safe('BF-Pad')
 
 
 if len(sys.argv) != 3:
-  print('BF-Pad: Usage: bf-pad <brainfuck source file> <memory image file>')
+  print('BF-Pad: Usage: bf-pad <brainfuck source file> <memory image file>', file=sys.stderr)
   sys.exit(1)
 
 brainfuck_source_file = sys.argv[1]
@@ -25,5 +25,3 @@ memory_image = bytes(byte or 0x00 for byte in common.pad_or_slice(list(preproces
 
 with open_safe(memory_image_file, 'wb') as memory_image_file:
   memory_image_file.write(memory_image)
-
-print('BF-Pad: Done')

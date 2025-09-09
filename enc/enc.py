@@ -8,7 +8,7 @@ open_safe = common.open_safe('Enc')
 
 
 if len(sys.argv) != 3:
-  print('Enc: Usage: enc <hex source file> <memory image file>')
+  print('Enc: Usage: enc <hex source file> <memory image file>', file=sys.stderr)
   sys.exit(1)
 
 hex_source_file = sys.argv[1]
@@ -23,5 +23,3 @@ memory_image = bytes(byte or 0x00 for byte in common.pad_or_slice(list(bytes.fro
 
 with open_safe(memory_image_file, 'wb') as memory_image_file:
   memory_image_file.write(memory_image)
-
-print('Enc: Done')

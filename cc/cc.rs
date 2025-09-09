@@ -15,7 +15,7 @@ mod typecheck;
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() < 3 {
-    println!("CC: Usage: cc <C source files> <assembly output file>");
+    eprintln!("CC: Usage: cc <C source files> <assembly output file>");
     std::process::exit(1);
   }
 
@@ -104,12 +104,10 @@ fn main() {
         .collect::<Vec<String>>()
         .join("\n");
 
-      println!("{}", errors);
+      eprintln!("{}", errors);
       std::process::exit(1);
     }
   }
-
-  println!("CC: Done");
 }
 
 // abstract syntax tree

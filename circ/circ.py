@@ -14,7 +14,7 @@ def swap_byte_pairs(data):
 
 
 if len(sys.argv) != 4:
-  print('Circ: Usage: circ <memory image file> <microcode image file> <circuit file>')
+  print('Circ: Usage: circ <memory image file> <microcode image file> <circuit file>', file=sys.stderr)
   sys.exit(1)
 
 mic_label = b'<a name="label" val="MIC"/>'
@@ -39,10 +39,8 @@ with open_safe(circuit_file, 'wb') as f:
   f.write(circuit)
 
 try:
-  print('Circ: Launching Logisim TTY...\n')
+  print('Circ: Launching Logisim TTY...\n', file=sys.stderr)
   subprocess.run(['logisim-evolution', circuit_file, '--tty', 'tty'], check=True)
 except FileNotFoundError:
-  print('Circ: Error: Could not find binary \'logisim-evolution\'')
+  print('Circ: Error: Could not find binary \'logisim-evolution\'', file=sys.stderr)
   sys.exit(1)
-
-print('Circ: Done')

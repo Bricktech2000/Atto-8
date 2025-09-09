@@ -8,7 +8,7 @@ use common::*;
 fn main() {
   let args: Vec<String> = std::env::args().collect();
   if args.len() != 3 {
-    println!("Asm: Usage: asm <assembly source file> <memory image file>");
+    eprintln!("Asm: Usage: asm <assembly source file> <memory image file>");
     std::process::exit(1);
   }
 
@@ -43,12 +43,10 @@ fn main() {
         .collect::<Vec<String>>()
         .join("\n");
 
-      println!("{}", errors);
+      eprintln!("{}", errors);
       std::process::exit(1);
     }
   }
-
-  println!("Asm: Done");
 }
 
 #[derive(Clone, Eq, PartialEq)]

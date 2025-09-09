@@ -5,16 +5,16 @@
 
 #include "../misc/common/common.h"
 
-struct Microcomputer {
+struct microcomputer {
   uint8_t mem[MEM_SIZE];
-  struct Microprocessor {
+  struct microprocessor {
     uint8_t ip;
     uint8_t sp;
     bool cf;
   } mp;
 } mc;
 
-enum TickTrap {
+enum tick_trap {
   TICKTRAP_NONE,
   ILLEGAL_OPCODE,
   DEBUG_REQUEST,
@@ -51,7 +51,7 @@ void mc_reset(void) {
   ungetc(mc.mem[STDIO_BUFFER], stdin);
 }
 
-enum TickTrap mc_tick(void) {
+enum tick_trap mc_tick(void) {
   uint8_t opcode = mem_read(mc.mp.ip++);
 
   switch ((opcode & B10000000) >> 7) {
@@ -275,7 +275,7 @@ enum TickTrap mc_tick(void) {
 
 int main(int argc, char *argv[]) {
   if (argc != 2)
-    printf("CEmu: Usage: %s <memory image file>\n", argv[0]),
+    fputs("CEmu: Usage: cemu <memory image file>\n", stderr),
         exit(EXIT_FAILURE);
 
   FILE *fp = fopen(argv[1], "rb");
@@ -284,12 +284,14 @@ int main(int argc, char *argv[]) {
 
   if (fread(mc.mem, 1, sizeof(mc.mem), fp) != sizeof(mc.mem))
     if (feof(fp))
-      printf("CEmu: Error: Memory image '%s' has incorrect size\n", argv[1]),
+      fprintf(stderr, "CEmu: Error: Memory image '%s' has incorrect size\n",
+              argv[1]),
           exit(EXIT_FAILURE);
     else
       perror("fread"), exit(EXIT_FAILURE);
   else if (fgetc(fp) != EOF)
-    printf("CEmu: Error: Memory image '%s' has incorrect size\n", argv[1]),
+    fprintf(stderr, "CEmu: Error: Memory image '%s' has incorrect size\n",
+            argv[1]),
         exit(EXIT_FAILURE);
 
   if (fclose(fp) == EOF)
@@ -301,9 +303,9 @@ int main(int argc, char *argv[]) {
     case TICKTRAP_NONE:
       continue;
     case ILLEGAL_OPCODE:
-      puts("CEmu: Illegal opcode"), exit(EXIT_FAILURE);
+      fputs("CEmu: Illegal opcode\n", stderr), exit(EXIT_FAILURE);
     case DEBUG_REQUEST:
-      puts("CEmu: Debug request"), exit(EXIT_FAILURE);
+      fputs("CEmu: Debug request\n", stderr), exit(EXIT_FAILURE);
     }
   }
 }
