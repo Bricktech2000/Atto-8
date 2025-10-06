@@ -6,10 +6,10 @@
 # equivalent C99 code
 #
 # most programs from /bf/test/ can be pasted in directly. note the following:
-# - `,` is non-blocking; if no input is currently available, '\0' is returned
-# - cells are 8-bit unsigned integers, wrapping on overflow and underflow
-# - writing beyond the start of the tape will result in undefined behavior
-# - unbalanced brackets in the source code will result in undefined behavior
+#   - `,` is non-blocking; if no input is currently available, '\0' is returned
+#   - cells are 8-bit unsigned integers, wrapping on overflow and underflow
+#   - writing beyond the start of the tape will result in undefined behavior
+#   - unbalanced brackets in the source code will result in undefined behavior
 
 main!
   # :source_buffer :source_buffer :getline !call

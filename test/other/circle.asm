@@ -7,14 +7,14 @@
 @ lib/controller.asm
 
 # controls:
-# - Primary Up -- move circle up
-# - Primary Down -- move circle down
-# - Primary Left -- move circle left
-# - Primary Right -- move circle right
-# - Secondary Up -- do nothing
-# - Secondary Down -- do nothing
-# - Secondary Left -- decrease circle radius
-# - Secondary Right -- increase circle radius
+#   - Primary Up --- move circle up
+#   - Primary Down --- move circle down
+#   - Primary Left --- move circle left
+#   - Primary Right --- move circle right
+#   - Secondary Up --- do nothing
+#   - Secondary Down --- do nothing
+#   - Secondary Left --- decrease circle radius
+#   - Secondary Right --- increase circle radius
 
 main!
   pop pop !display_buffer sts

@@ -6,10 +6,10 @@
 @ lib/controller.asm
 
 # this implementation differs from the original game in a few ways:
-# - numbers on the tiles are the base-2 logarithms of the numbers on the original -- we only have one character per tile
-# - implementation has '0' tiles (would be equivalent to '1' tiles in the original) -- no one but mathematicians counts from 1
-# - implementation has greedy merge, meaning tiles are merged multiple times within a single move -- simplest way to implement
-# - only '0' tiles (equivalent to '2' tiles in the original) are generated -- currently not enough memory for generating '1' tiles
+#   - numbers on the tiles are the base-2 logarithms of the numbers on the original -- we only have one character per tile
+#   - implementation has '0' tiles (would be equivalent to '1' tiles in the original) -- no one but mathematicians counts from 1
+#   - implementation has greedy merge, meaning tiles are merged multiple times within a single move -- simplest way to implement
+#   - only '0' tiles (equivalent to '2' tiles in the original) are generated -- currently not enough memory for generating '1' tiles
 #
 # when no room is left to spawn a new tile, the program stalls, indicating the game is over
 

@@ -121,8 +121,8 @@ sort.def!
 # `malloc` performs first-fit search from `HEAP_START` and coalesces free blocks as it goes
 #
 # the following must be supplied by the user:
-# -  `HEAP_START` -- start of heap memory
-# - `*HEAP_START` -- length of heap memory but with the most significant bit set
+#   - `HEAP_START` --- start of heap memory
+#   - `*HEAP_START` --- length of heap memory but with the most significant bit set
 #
 # struct header {
 #   bool is_free; // most significant bit

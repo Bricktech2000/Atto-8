@@ -8,22 +8,20 @@
 # PixEdit, the Atto-8 pixel editor
 #
 # controls are as follows:
-# - use the primary controller to move the cursor around
-# - type ' ' to toggle the pixel under the cursor
-# - type ',' then paste a bitmap into `stdin` to load it
-# - type '.' to output the current bitmap to `stdout`
+#   - use the primary controller to move the cursor around
+#   - type ' ' to toggle the pixel under the cursor
+#   - type ',' then paste a bitmap into `stdin` to load it
+#   - type '.' to output the current bitmap to `stdout`
 #
 # most designs from '/misc/common/common.asm' can be loaded into PixEdit by directly
-# pasting them in after sending a ',' character. below is a sample design spelling
-# out "PIXEDIT" in the Atto-8 font:
+# pasting them in after sending a ',' character. here is a sample design spelling out
+# "PIXEDIT" in the Atto-8 font:
 #
-# ```
-# @00 @00 @00 @00
-# @FF @FE @00 @00 @1D @50 @1D @20
-# @11 @50 @00 @00 @76 @5C @65 @48
-# @76 @48 @00 @00 @FF @FE @00 @00
-# @00 @00 @00 @00
-# ```
+#     @00 @00 @00 @00
+#     @FF @FE @00 @00 @1D @50 @1D @20
+#     @11 @50 @00 @00 @76 @5C @65 @48
+#     @76 @48 @00 @00 @FF @FE @00 @00
+#     @00 @00 @00 @00
 
 main!
   pop pop !display_buffer sts

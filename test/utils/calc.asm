@@ -7,16 +7,16 @@
 # computations on `u8`s and outputs results as decimal literals.
 #
 # supports the following operations:
-# - '+' addition
-# - '-' subtraction
-# - '*' multiplication
-# - '/' division
-# - '%' modulus
+#   - '+' addition
+#   - '-' subtraction
+#   - '*' multiplication
+#   - '/' division
+#   - '%' modulus
 #
 # status messages are as follows:
-# - '!' represents an arithmetic overflow condition
-# - '?' represents a syntax error condition
-# - ' ' represents successful evaluation
+#   - '!' represents an arithmetic overflow condition
+#   - '?' represents a syntax error condition
+#   - ' ' represents successful evaluation
 
 main!
   :stack # `top` of software stack

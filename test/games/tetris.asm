@@ -5,21 +5,21 @@
 @ lib/display.asm
 
 # controls:
-# - Secondary Left and Right -- rotate left and right
-# - Primary Left and Right -- move left and right
-# - Primary Down -- soft drop
+#   - Secondary Left and Right -- rotate left and right
+#   - Primary Left and Right -- move left and right
+#   - Primary Down -- soft drop
 #
 # worth noting:
-# - no hold, no hard drop, no kicks, no delayed autoshift
-# - all timings and tetromino spawn probabilities are made up
-# - rotations conform to the Super Rotation System modulo kicks
+#   - no hold, no hard drop, no kicks, no delayed autoshift
+#   - all timings and tetromino spawn probabilities are made up
+#   - rotations conform to the Super Rotation System modulo kicks
 #
 # some implementation details:
-# - `frame` is a frame counter. we use it to move tetrominoes down every few game ticks
-# - `type` means "tetromino type", from `0x00` to `0x07` for tetrominoes "OIJLISTZ"
-# - `rot` means "tetromino rotation", from `0x00` to `0x03` for 0/4, 1/4, 2/4, 3/4
-# - `index = (rot << 3) | type` such that `tetrominoes[index]` is the tetromino pixel data
-# - `pos` as a `u4u4` means "tetromino position"
+#   - `frame` is a frame counter. we use it to move tetrominoes down every few game ticks
+#   - `type` means "tetromino type", from `0x00` to `0x07` for tetrominoes "OIJLISTZ"
+#   - `rot` means "tetromino rotation", from `0x00` to `0x03` for 0/4, 1/4, 2/4, 3/4
+#   - `index = (rot << 3) | type` such that `tetrominoes[index]` is the tetromino pixel data
+#   - `pos` as a `u4u4` means "tetromino position"
 
 main!
   pop pop :tetrominoes dec dec dec @const sts # (pos, index, frame)

@@ -99,20 +99,20 @@ hex_putc.min! # hex_putc.min(u8 char)
 
 
 # a `printf` immitation that supports a few conversion specifiers. in `format`,
-# - '%d' prints a signed integer as decimal with precision '1'
-# - '%u' prints an unsigned integer as decimal with precision '1'
-# - '%x' prints an unsigned integer as uppercase hex with precision '2' (nonstandard)
-# - '%c' prints a character
-# - '%s' prints a null-terminated string from its address
-# - '%p' prints a pointer-to-void as "0x" followed by upperacase hex with precision '2'
-# - '%%' prints a literal '%' character
+#   - '%d' prints a signed integer as decimal with precision '1'
+#   - '%u' prints an unsigned integer as decimal with precision '1'
+#   - '%x' prints an unsigned integer as uppercase hex with precision '2' (nonstandard)
+#   - '%c' prints a character
+#   - '%s' prints a null-terminated string from its address
+#   - '%p' prints a pointer-to-void as "0x" followed by upperacase hex with precision '2'
+#   - '%%' prints a literal '%' character
 # note that:
-# - integers are assumed to be 8 bits wide (nonstandard)
-# - the common conversion specifiers 'i', 'o', 'X', 'n' are unsupported (nonstandard)
-# - in `format`, a '%' followed by an unknown conversion specifier will print a '%'
-# - if the last character of `format` is '%', the behavior is undefined
-# - passing insufficient arguments for the format results in undefined behavior
-# - passing excess arguments for the format results in undefined behavior (nonstandard)
+#   - integers are assumed to be 8 bits wide (nonstandard)
+#   - the common conversion specifiers 'i', 'o', 'X', 'n' are unsupported (nonstandard)
+#   - in `format`, a '%' followed by an unknown conversion specifier will print a '%'
+#   - if the last character of `format` is '%', the behavior is undefined
+#   - passing insufficient arguments for the format results in undefined behavior
+#   - passing excess arguments for the format results in undefined behavior (nonstandard)
 printf.def!
     'd'.
       # compute absolute value, print '-' if was negative and fall through to conversion specifier 'u'
@@ -164,8 +164,8 @@ printf.def!
 
 # reads into `dst` and echoes to `stdout` characters from `stdin` until '\n' is
 # encountered. supports '\b'. supports placeholder text through `end` parameter:
-# - `:buf :buf :getline !call` (where `dst == end`) does not use placeholder text
-# - `:buf !puts :buf :buf !strend :getline !call` uses `:buf` as placeholder text
+#   - `:buf :buf :getline !call` (where `dst == end`) does not use placeholder text
+#   - `:buf !puts :buf :buf !strend :getline !call` uses `:buf` as placeholder text
 getline.def!
     other.
       # increment by 2 because `.'\b'` will decrement by 1
