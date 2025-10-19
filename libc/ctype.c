@@ -6,7 +6,7 @@ int isalpha(int c) { return (unsigned)(c | ' ') - 'a' <= 'z' - 'a'; }
 
 int isblank(int c) { return c == ' ' | c == '\t'; }
 
-int iscntrl(int c) { return (unsigned)c < ' '; }
+int iscntrl(int c) { return c == '\x7f' | (unsigned)c < ' '; }
 
 int isdigit(int c) { return (unsigned)c - '0' <= '9' - '0'; }
 
@@ -29,13 +29,11 @@ int isxdigit(int c) {
 int tolower(int c) {
   if (isupper(c))
     return c ^ ' ';
-  else
-    return c;
+  return c;
 }
 
 int toupper(int c) {
   if (islower(c))
     return c ^ ' ';
-  else
-    return c;
+  return c;
 }
