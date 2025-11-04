@@ -1,13 +1,13 @@
 # BF
 
-_Brainfuck architecture frontend for Atto-8 microprocessor_
+_Brainfuck architecture frontend for Atto‑8 microprocessor_
 
 ## Overview
 
-The Atto-8 microprocessor, specified in [/spec/microprocessor.md](../spec/microprocessor.md), is a highly flexible general-purpose platform for building processors. This frontend aims to demonstrate the Atto-8 microprocessor’s high degree of flexibility by implementing an architecture based on the Brainfuck programming language.
+The Atto‑8 microprocessor, specified in [/spec/microprocessor.md](../spec/microprocessor.md), is a highly flexible general-purpose platform for building processors. This frontend aims to demonstrate the Atto‑8 microprocessor’s high degree of flexibility by implementing an architecture based on the Brainfuck programming language.
 
 - [/bf/bf-mic.rs](bf-mic.rs) — Builds a microcode image implementing the frontend’s architecture, described below.
-- [/bf/bf-pad.py](bf-pad.py) — Strips no-ops from a Brainfuck source file and pads it using null bytes to a length of `0x100` bytes.
+- [/bf/bf-pad.py](bf-pad.py) — Strips no‑ops from a Brainfuck source file and pads it using null bytes to a length of `0x100` bytes.
 
 ## Components
 
@@ -22,7 +22,7 @@ The Atto-8 microprocessor, specified in [/spec/microprocessor.md](../spec/microp
 
 ## Instruction Set
 
-The architecture assumes memory of the shape `[u8; 0x100]`, from which the `*` operator dereferences values. Any instruction not present in the table below is ignored and treated as a no-op.
+The architecture assumes memory of the shape `[u8; 0x100]`, from which the `*` operator dereferences values. Any instruction not present in the table below is ignored and treated as a no‑op.
 
 | Instruction | Name       | Operation                               | Opcode  |
 | ----------- | ---------- | --------------------------------------- | ------- |
@@ -58,6 +58,6 @@ Writing beyond the start of the tape will corrupt the frontend’s state, result
 
 Address `0x00` is assumed to be a memory-mapped standard input/output device. That is, `.` outputs by writing a byte to address `0x00` and `,` inputs by reading a byte from address `0x00`.
 
-When used as part of the Atto-8 microcomputer, the frontend implements non-blocking input which will return `0x00` if no input is currently available. This is different from an `EOF` condition, as input may become available at a later time.
+When used as part of the Atto‑8 microcomputer, the frontend implements non-blocking input which will return `0x00` if no input is currently available. This is different from an `EOF` condition, as input may become available at a later time.
 
-Cells are 8-bit unsigned integers and wrap on overflow and underflow.
+Cells are 8‑bit unsigned integers and wrap on overflow and underflow.

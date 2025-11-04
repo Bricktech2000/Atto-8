@@ -1,6 +1,6 @@
 # Dec
 
-_Opcode-to-hex decoder for Atto-8 microarchitecture_
+_Opcode-to-hex decoder for Atto‑8 microarchitecture_
 
 ## Overview
 

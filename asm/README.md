@@ -1,10 +1,10 @@
 # Asm
 
-_Optimizing assembler for Atto-8 microarchitecture_
+_Optimizing assembler for Atto‑8 microarchitecture_
 
 ## Overview
 
-The assembler loads an assembly file from `argv[1]` and outputs a memory image file to `argv[2]` which is exactly `0x100` bytes in size. Code generation adheres to Atto-8 microarchitecture specification as defined in [/spec/microarchitecture.md](../spec/microarchitecture.md).
+The assembler loads an assembly file from `argv[1]` and outputs a memory image file to `argv[2]` which is exactly `0x100` bytes in size. Code generation adheres to Atto‑8 microarchitecture specification as defined in [/spec/microarchitecture.md](../spec/microarchitecture.md).
 
 Assembly consists of the following process:
 
@@ -83,6 +83,6 @@ Assembler optimizations assume the carry flag is always clear, and may leave the
 
 ## Conventions
 
-By convention, functions are called by pushing their arguments onto the stack in reverse order, pushing a return address onto the stack, and then jumping to the function’s address. It is recommended that functions replace their arguments with their return values prior to returning as to mirror the behavior of instructions on the Atto-8 microarchitecture.
+By convention, functions are called by pushing their arguments onto the stack in reverse order, pushing a return address onto the stack, and then jumping to the function’s address. It is recommended that functions replace their arguments with their return values prior to returning as to mirror the behavior of instructions on the Atto‑8 microarchitecture.
 
 The state of the carry flag is generally unspecified after a macro or function begins and before it returns, and macros and functions are not required to preserve the state of the carry flag.

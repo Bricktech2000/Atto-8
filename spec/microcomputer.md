@@ -1,8 +1,8 @@
-# Atto-8 Microcomputer
+# Atto‑8 Microcomputer
 
 ## Overview
 
-The Atto-8 microcomputer is a minimalist computer based on the Atto-8 microprocessor, as specified in [/spec/microprocessor.md](../spec/microprocessor.md). It equips the processor with a clock, memory, standard input/output, a display, and a pair of D-pad controllers. It is designed to be a simple system that takes full advantage of the Atto-8 microprocessor. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex computers.
+The Atto‑8 microcomputer is a minimalist computer based on the Atto‑8 microprocessor, as specified in [/spec/microprocessor.md](../spec/microprocessor.md). It equips the processor with a clock, memory, standard input/output, a display, and a pair of D‑pad controllers. It is designed to be a simple system that takes full advantage of the Atto‑8 microprocessor. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex computers.
 
 ## Features
 
@@ -10,17 +10,17 @@ The Atto-8 microcomputer is a minimalist computer based on the Atto-8 microproce
 - 256 bytes of memory
 - Standard input/output
 - 16×16 pixel display
-- Two D-pad controllers
+- Two D‑pad controllers
 
 ## Standard Input/Output
 
-The Atto-8 microcomputer supports standard input/output through the _input buffer_, a byte located at address `0x00`. Standard input and standard output are buffered in hardware; reading from the input buffer will return the next byte from `stdin`, and writing to the input buffer will send the byte to `stdout`. If `stdin` is empty, reading from the input buffer will fall back to returning controller states. Reads and writes to to address `0x00` are intercepted by the microcomputer, and, therefore, the input buffer does not behave like other memory regions.
+The Atto‑8 microcomputer supports standard input/output through the _input buffer_, a byte located at address `0x00`. Standard input and standard output are buffered in hardware; reading from the input buffer will return the next byte from `stdin`, and writing to the input buffer will send the byte to `stdout`. If `stdin` is empty, reading from the input buffer will fall back to returning controller states. Reads and writes to to address `0x00` are intercepted by the microcomputer, and, therefore, the input buffer does not behave like other memory regions.
 
 On startup, `stdin` is initialized with the contents of memory address `0x00`. That is, the first read from address `0x00` will return the byte located at address `0x00`, and subsequent reads will return either bytes from standard input or controller states.
 
 ## Display
 
-The Atto-8 microcomputer is equipped with a 16×16 pixel monochrome display. It fetches rows of pixels from addresses `0xE0..0x100`, the _display buffer_, and displays them from left to right, top to bottom. Refer to the following diagram, in which `[ 0xXX ]` represents a row of 8 pixels fetched from address `0xXX`:
+The Atto‑8 microcomputer is equipped with a 16×16 pixel monochrome display. It fetches rows of pixels from addresses `0xE0..0x100`, the _display buffer_, and displays them from left to right, top to bottom. Refer to the following diagram, in which `[ 0xXX ]` represents a row of 8 pixels fetched from address `0xXX`:
 
 ```
 [      0xE0      ] [      0xE1      ]
@@ -45,7 +45,7 @@ The display buffer behaves as any other memory region and can therefore both be 
 
 ## Controller
 
-The Atto-8 microcomputer is equipped with a pair of memory-mapped 4-button D-pad controllers. If `stdin` is empty, reading from the _input buffer_, a byte located at address `0x00`, will fall back to returning controller states. In that event, the lower 4 bits of the input buffer represent the state of the buttons on the primary controller, and its upper 4 bits represent the state of the buttons on the secondary controller. It is bit-mapped as follows, where `0` represents the least significant bit:
+The Atto‑8 microcomputer is equipped with a pair of memory-mapped 4‑button D‑pad controllers. If `stdin` is empty, reading from the _input buffer_, a byte located at address `0x00`, will fall back to returning controller states. In that event, the lower 4 bits of the input buffer represent the state of the buttons on the primary controller, and its upper 4 bits represent the state of the buttons on the secondary controller. It is bit-mapped as follows, where `0` represents the least significant bit:
 
 ```
 7 6 5 4 3 2 1 0

@@ -1,16 +1,16 @@
-# Atto-8 Microprocessor
+# Atto‑8 Microprocessor
 
 ## Overview
 
-The Atto-8 microprocessor is a minimalist stack-based processor implementing the Atto-8 microarchitecture as specified in [/spec/microarchitecture.md](../spec/microarchitecture.md). It is designed to keep logic IC count to a minimum while still being a complete implementation of the Atto-8 microarchitecture, only consisting of one full adder, one NAND gate and a few latches. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex processors.
+The Atto‑8 microprocessor is a minimalist stack-based processor implementing the Atto‑8 microarchitecture as specified in [/spec/microarchitecture.md](../spec/microarchitecture.md). It is designed to keep logic IC count to a minimum while still being a complete implementation of the Atto‑8 microarchitecture, only consisting of one full adder, one NAND gate and a few latches. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex processors.
 
 <!-- DATA_IP DATA_SP DATA_CF DATA_IL DATA_AL DATA_XL DATA_YL DATA_ZL MEM_DATA DATA_MEM CLR_SC SET_CIN IP_DATA SP_DATA SUM_DATA NAND_DATA -->
 
-![Atto-8 Microprocessor Diagram](../misc/assets/microprocessor.png)
+![Atto‑8 Microprocessor Diagram](../misc/assets/microprocessor.png)
 
 ## Components
 
-The major components of the Atto-8 microprocessor are stateful. Stateful components are as follows:
+The major components of the Atto‑8 microprocessor are stateful. Stateful components are as follows:
 
 | Component | Name                | Size   | Description                                                    |
 | --------- | ------------------- | ------ | -------------------------------------------------------------- |
@@ -24,7 +24,7 @@ The major components of the Atto-8 microprocessor are stateful. Stateful compone
 | `YL`      | Y Latch             | 8 bits | Latches a value from `DATA` and produces derivations           |
 | `ZL`      | Z Latch             | 8 bits | Latches a value from `DATA` and produces derivations           |
 
-Derivations on the Atto-8 microprocessor are stateless components that derive their output continuously from other components. Derivations are as follows:
+Derivations on the Atto‑8 microprocessor are stateless components that derive their output continuously from other components. Derivations are as follows:
 
 | Component | Name                       | Size    | Description                                          |
 | --------- | -------------------------- | ------- | ---------------------------------------------------- |
@@ -40,7 +40,7 @@ Derivations on the Atto-8 microprocessor are stateless components that derive th
 
 ## Control Word
 
-The control word is a 16-bit natural number output from `MIC`, the microcode ROM. Control signals are bit-mapped into the control word as follows, where `0x0` represents the least significant bit:
+The control word is a 16‑bit natural number output from `MIC`, the microcode ROM. Control signals are bit-mapped into the control word as follows, where `0x0` represents the least significant bit:
 
 | Bit   | Control Signal | Name                            |
 | ----- | -------------- | ------------------------------- |
@@ -74,11 +74,11 @@ It follows that:
 - `SP++`, `SP--` and `IP++` are non-trivial operations, requiring the use of `XL`, `YL` and `SUM`.
 - Reads from `XL`, `YL` and `ZL` are non-trivial operations, requiring the use of `SUM` and `NAND`.
 
-These design decisions greatly simplify the hardware complexity of the Atto-8 microprocessor, at the cost of performance and microcode complexity. They also allow for a high degree of flexibility: the Atto-8 microprocessor is general purpose, and the only component tying it to the Atto-8 microarchitecture is its microcode ROM.
+These design decisions greatly simplify the hardware complexity of the Atto‑8 microprocessor, at the cost of performance and microcode complexity. They also allow for a high degree of flexibility: the Atto‑8 microprocessor is general purpose, and the only component tying it to the Atto‑8 microarchitecture is its microcode ROM.
 
 ## Instruction Set
 
-The instruction set of the Atto-8 microprocessor adheres to the Atto-8 microarchitecture specification as defined in [/spec/microarchitecture.md](../spec/microarchitecture.md). Instruction clock cycle counts are detailed below.
+The instruction set of the Atto‑8 microprocessor adheres to the Atto‑8 microarchitecture specification as defined in [/spec/microarchitecture.md](../spec/microarchitecture.md). Instruction clock cycle counts are detailed below.
 
 | Instruction | Clocks                          |
 | ----------- | ------------------------------- |

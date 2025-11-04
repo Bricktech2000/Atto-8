@@ -1,15 +1,15 @@
-# Atto-8 Microarchitecture
+# Atto‑8 Microarchitecture
 
 ## Overview
 
-The Atto-8 microarchitecture is a minimalist stack-based architecture with 8-bit data and address buses. It is designed to be simple enough to be realistically built from discrete logic ICs, yet powerful enough to run useful programs. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex architectures.
+The Atto‑8 microarchitecture is a minimalist stack-based architecture with 8‑bit data and address buses. It is designed to be simple enough to be realistically built from discrete logic ICs, yet powerful enough to run useful programs. It is intended to be used as a learning tool for students and hobbyists, and as a basis for more complex architectures.
 
 ## Features
 
-- 8-bit data bus
-- 8-bit address bus
-- 8-bit instruction size
-- 8-bit special-purpose registers
+- 8‑bit data bus
+- 8‑bit address bus
+- 8‑bit instruction size
+- 8‑bit special-purpose registers
 - 0 general-purpose registers
 - 0 internal oscillators
 - 0 hardware timers
@@ -86,7 +86,7 @@ There exist a set of bijections between instruction operands and their encoding 
 
 ## Initial State
 
-The Atto-8 microarchitecture is initialized with the following state:
+The Atto‑8 microarchitecture is initialized with the following state:
 
 | Commponent | Value  |
 | ---------- | ------ |
@@ -101,4 +101,4 @@ This implies that:
 
 ## Conventions
 
-The Atto-8 microarchitecture has no inherent endianness. With that said, instructions such as `add SIZE` and `sub SIZE` work best when least significant bytes are at the top of the stack, which grows downward. Consequently, it is recommended that the Atto-8 microarchitecture be assumed to be little-endian.
+The Atto‑8 microarchitecture has no inherent endianness. With that said, instructions such as `add SIZE` and `sub SIZE` work best when least significant bytes are at the top of the stack, which grows downward. Consequently, it is recommended that the Atto‑8 microarchitecture be assumed to be little-endian.

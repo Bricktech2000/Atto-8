@@ -1,6 +1,6 @@
 # Enc
 
-_Hex-to-opcode encoder for Atto-8 microarchitecture_
+_Hex-to-opcode encoder for Atto‑8 microarchitecture_
 
 ## Overview
 
