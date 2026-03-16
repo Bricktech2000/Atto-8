@@ -27,7 +27,7 @@ tones.len! :tones.end :tones sub @const
 mandelbrot! # u8 i = mandelbrot(i2f6 c_re, i2f6 c_im)
   x00 # z_re
   x00 # z_im
-  # run `sizeof(tones) << iter_shift` mandelbrot iterations
+  # run `sizeof tones << iter_shift` mandelbrot iterations
   !tones.len !iter_shift rot @const for_i:
     # z_re2 = i2f6.mul(z_re, z_re)
     ld2 ld0 :i2f6.mul !call
