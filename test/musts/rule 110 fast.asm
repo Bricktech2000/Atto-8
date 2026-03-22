@@ -57,22 +57,22 @@ right! !buffer.len dec !pad @01
 left! @80
 
 # identical to 'rule 110.asm'
+# no duplicates up to reflection and complement
 # rule! x1A configuration! !random # rule 26
 # rule! x1E configuration! !center # rule 30
 # rule! x39 configuration! !center # rule 57
 # rule! x49 configuration! !random # rule 73
+# rule! x59 configuration! !center # rule 89
+# rule! x59 configuration! !random # rule 89
 # rule! x5A configuration! !center # rule 90
 # rule! x69 configuration! !center # rule 105
 # rule! x69 configuration! !random # rule 105
-# rule! x6D configuration! !random # rule 109
 rule! x6E configuration! !right # rule 110
 # rule! x78 configuration! !random # rule 120
-# rule! x7C configuration! !left # rule 124
 # rule! x81 configuration! !random # rule 129
 # rule! x92 configuration! !random # rule 146
 # rule! x96 configuration! !random # rule 150
 # rule! xA6 configuration! !random # rule 166
-# rule! xE1 configuration! !random # rule 225
 
 buffer.len! x08 # short
 # buffer.len! x10 # medium

@@ -8,7 +8,7 @@ bit_addr! # (rot, addr) = bit_addr(buffer, index)
   swp not x07 and
   # return* (rot, addr)
 load_bit! # bit = load_bit(rot, addr)
-  # bit = (*addr >> rot) & 0x01
+  # bit = *addr >> rot & 0x01
   !rneg ld1 lda st1 rot x01 and
   # return* bit
 store_bit! # store_bit(rot, addr, bit)

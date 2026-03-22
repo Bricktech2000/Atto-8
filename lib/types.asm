@@ -75,7 +75,7 @@ sp! x20 !char @const '\s'! !sp
 '$'! x24 !char @const
 '%'! x25 !char @const
 '&'! x26 !char @const
-'\''! x27 !char @const
+'''! x27 !char @const
 '('! x28 !char @const
 ')'! x29 !char @const
 '*'! x2A !char @const
@@ -128,7 +128,7 @@ sp! x20 !char @const '\s'! !sp
 'Y'! x59 !char @const
 'Z'! x5A !char @const
 '['! x5B !char @const
-'\\'! x5C !char @const
+'\'! x5C !char @const
 ']'! x5D !char @const
 '^'! x5E !char @const
 '_'! x5F !char @const
