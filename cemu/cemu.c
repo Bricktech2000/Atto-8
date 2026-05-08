@@ -232,7 +232,7 @@ enum tick_trap mc_tick(void) {
           } break;
 
           case 0xA: { // flc
-            mc.mp.cf = !mc.mp.cf;
+            mc.mp.cf--;
           } break;
 
           case 0xE: { // nop
