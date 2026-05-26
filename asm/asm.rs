@@ -12,16 +12,16 @@ fn main() {
     std::process::exit(1);
   }
 
-  let mut errors: Vec<(Pos, Error)> = vec![];
+  let mut errors: Vec<(Loc, Error)> = vec![];
   let memory_image_file = &args[2];
   let assembly_source_file: File = File(args[1].clone().into());
 
-  let preprocessed: Vec<(Pos, String)> = preprocess(assembly_source_file, &mut errors, None);
-  let mnemonics: Vec<(Pos, Mnemonic)> = mnemonize(preprocessed, &mut errors);
-  let tokens: Vec<(Pos, Token)> = tokenize(mnemonics, &mut errors);
-  let instructions: Vec<(Pos, Result<Instruction, u8>)> = assemble(tokens, &mut errors, "main");
-  let opcodes: Vec<(Pos, u8)> = codegen(instructions, &mut errors);
-  let memory_image: Vec<(Pos, u8)> = opcodes;
+  let preprocessed: Vec<(Loc, String)> = preprocess(assembly_source_file, &mut errors, None);
+  let mnemonics: Vec<(Loc, Mnemonic)> = mnemonize(preprocessed, &mut errors);
+  let tokens: Vec<(Loc, Token)> = tokenize(mnemonics, &mut errors);
+  let instructions: Vec<(Loc, Result<Instruction, u8>)> = assemble(tokens, &mut errors, "main");
+  let opcodes: Vec<(Loc, u8)> = codegen(instructions, &mut errors);
+  let memory_image: Vec<(Loc, u8)> = opcodes;
 
   match errors[..] {
     [] => {
@@ -39,7 +39,7 @@ fn main() {
     _ => {
       let errors = errors
         .iter()
-        .map(|(pos, error)| format!("Asm: Error: {}: {}", pos, error))
+        .map(|(loc, error)| format!("Asm: Error: {}: {}", loc, error))
         .collect::<Vec<String>>()
         .join("\n");
 
@@ -79,21 +79,21 @@ enum Node {
 
 fn preprocess(
   file: File,
-  errors: &mut impl Extend<(Pos, Error)>,
-  pos: Option<Pos>,
-) -> Vec<(Pos, String)> {
+  errors: &mut impl Extend<(Loc, Error)>,
+  loc: Option<Loc>,
+) -> Vec<(Loc, String)> {
   // remove comments and resolve includes
 
   use std::path::Path;
   let assembly = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {
     errors.extend([(
-      pos.unwrap_or(Pos(File("[bootstrap]".into()), 0, 0)),
+      loc.unwrap_or(Loc(File("[bootstrap]".into()), 0, 0)),
       Error(format!("Unable to read file '{}'", file)),
     )]);
     format!("")
   });
 
-  let lines: Vec<(Pos, String)> = assembly
+  let lines: Vec<(Loc, String)> = assembly
     .split("\n")
     .map(|line| line.strip_suffix("#").unwrap_or(line))
     .map(|line| line.split("# ").next().unwrap_or(line))
@@ -106,11 +106,11 @@ fn preprocess(
             .expect("File has no parent directory")
             .join(&line[col..]["@ ".len()..]),
         );
-        std::iter::once((Pos(file.clone(), row, 0), line[..col].to_string()))
-          .chain(preprocess(incl, errors, Some(Pos(file.clone(), row, col))))
+        std::iter::once((Loc(file.clone(), row, 0), line[..col].to_string()))
+          .chain(preprocess(incl, errors, Some(Loc(file.clone(), row, col))))
           .collect::<Vec<_>>()
       }
-      None => vec![(Pos(file.clone(), row, 0), line.to_string())],
+      None => vec![(Loc(file.clone(), row, 0), line.to_string())],
     })
     .collect();
 
@@ -118,46 +118,46 @@ fn preprocess(
 }
 
 fn mnemonize(
-  lines: Vec<(Pos, String)>,
-  _errors: &mut impl Extend<(Pos, Error)>,
-) -> Vec<(Pos, Mnemonic)> {
-  let mnemonics: Vec<(Pos, Mnemonic)> = lines
+  lines: Vec<(Loc, String)>,
+  _errors: &mut impl Extend<(Loc, Error)>,
+) -> Vec<(Loc, Mnemonic)> {
+  let mnemonics: Vec<(Loc, Mnemonic)> = lines
     .into_iter()
-    .flat_map(|(mut pos, line)| {
+    .flat_map(|(mut loc, line)| {
       let mut mnemonic = "".to_string();
       let mut mnemonics = vec![];
       for (col, char) in line.chars().enumerate() {
         if char.is_whitespace() {
-          mnemonics.push((pos.clone(), mnemonic));
+          mnemonics.push((loc.clone(), mnemonic));
           mnemonic = "".to_string();
-          pos = Pos(pos.0, pos.1, col + 1);
+          loc = Loc(loc.0, loc.1, col + 1);
         } else {
           mnemonic.push(char);
         }
       }
-      mnemonics.push((pos, mnemonic));
+      mnemonics.push((loc, mnemonic));
       mnemonics
     })
     .filter(|(_, mnemonic)| mnemonic.len() > 0)
-    .map(|(pos, mnemonic)| (pos, Mnemonic(mnemonic)))
+    .map(|(loc, mnemonic)| (loc, Mnemonic(mnemonic)))
     .collect();
 
   mnemonics
 }
 
 fn tokenize(
-  mnemonics: Vec<(Pos, Mnemonic)>,
-  errors: &mut impl Extend<(Pos, Error)>,
-) -> Vec<(Pos, Token)> {
+  mnemonics: Vec<(Loc, Mnemonic)>,
+  errors: &mut impl Extend<(Loc, Error)>,
+) -> Vec<(Loc, Token)> {
   // tokenize to valid tokens. tokens might be invalid instructions
 
-  let tokens: Vec<(Pos, Token)> = mnemonics
+  let tokens: Vec<(Loc, Token)> = mnemonics
     .into_iter()
-    .map(|(pos, mnemonic)| {
+    .map(|(loc, mnemonic)| {
       (
-        pos.clone(),
+        loc.clone(),
         common::mnemonic_to_token(mnemonic.clone()).unwrap_or_else(|| {
-          errors.extend([(pos, Error(format!("Invalid mnemonic `{}`", mnemonic)))]);
+          errors.extend([(loc, Error(format!("Invalid mnemonic `{}`", mnemonic)))]);
           Token::Nop
         }),
       )
@@ -168,16 +168,16 @@ fn tokenize(
 }
 
 fn assemble(
-  tokens: Vec<(Pos, Token)>,
-  errors: &mut impl Extend<(Pos, Error)>,
+  tokens: Vec<(Loc, Token)>,
+  errors: &mut impl Extend<(Loc, Error)>,
   entry_point: &str,
-) -> Vec<(Pos, Result<Instruction, u8>)> {
+) -> Vec<(Loc, Result<Instruction, u8>)> {
   // resolve macros recursively from `entry_point` and identify unused labels
 
-  let mut macro_definitions: HashMap<Macro, Vec<(Pos, Token)>> = HashMap::new();
+  let mut macro_definitions: HashMap<Macro, Vec<(Loc, Token)>> = HashMap::new();
   let mut current_macro: Option<Macro> = None;
 
-  for (pos, token) in tokens.into_iter() {
+  for (loc, token) in tokens.into_iter() {
     match token {
       Token::MacroDef(r#macro) => {
         current_macro = Some(r#macro.clone());
@@ -185,7 +185,7 @@ fn assemble(
           .entry(r#macro.clone())
           .and_modify(|_| {
             errors.extend([(
-              pos,
+              loc,
               Error(format!("Duplicate macro definition `{}`", r#macro)),
             )]);
           })
@@ -196,15 +196,15 @@ fn assemble(
         .as_ref()
         .and_then(|r#macro| macro_definitions.get_mut(&r#macro))
       {
-        Some(macro_tokens) => macro_tokens.push((pos, token)),
-        None => errors.extend([(pos, Error(format!("Orphan token `{}` encountered", token)))]),
+        Some(macro_tokens) => macro_tokens.push((loc, token)),
+        None => errors.extend([(loc, Error(format!("Orphan token `{}` encountered", token)))]),
       },
     }
   }
 
   let tokens = expand_macros(
     &vec![(
-      Pos(File("[bootstrap]".into()), 0, 0),
+      Loc(File("[bootstrap]".into()), 0, 0),
       Token::MacroRef(Macro(entry_point.to_string())),
     )],
     &mut 0,
@@ -214,19 +214,19 @@ fn assemble(
   );
 
   fn expand_macros(
-    tokens: &Vec<(Pos, Token)>,
+    tokens: &Vec<(Loc, Token)>,
     scope_uid: &mut usize,
     parent_macros: &mut Vec<Macro>,
-    macro_definitions: &HashMap<Macro, Vec<(Pos, Token)>>,
-    errors: &mut impl Extend<(Pos, Error)>,
-  ) -> Vec<(Pos, Token)> {
+    macro_definitions: &HashMap<Macro, Vec<(Loc, Token)>>,
+    errors: &mut impl Extend<(Loc, Error)>,
+  ) -> Vec<(Loc, Token)> {
     tokens
       .into_iter()
-      .flat_map(|(pos, token)| match token {
+      .flat_map(|(loc, token)| match token {
         Token::MacroRef(r#macro) => {
           if parent_macros.contains(&r#macro) {
             errors.extend([(
-              pos.clone(),
+              loc.clone(),
               Error(format!(
                 "Macro self-reference {} -> `{}`",
                 parent_macros
@@ -242,7 +242,7 @@ fn assemble(
 
           let tokens = macro_definitions.get(&r#macro).cloned().unwrap_or_else(|| {
             errors.extend([(
-              pos.clone(),
+              loc.clone(),
               Error(format!("Reference to undefined macro `{}`", r#macro)),
             )]);
             vec![]
@@ -250,16 +250,16 @@ fn assemble(
 
           let tokens = tokens
             .into_iter()
-            .map(|(pos, token)| match token {
+            .map(|(loc, token)| match token {
               Token::LabelDef(Label::Local(identifier, _)) => (
-                pos,
+                loc,
                 Token::LabelDef(Label::Local(identifier, Some(*scope_uid))),
               ),
               Token::LabelRef(Label::Local(identifier, _)) => (
-                pos,
+                loc,
                 Token::LabelRef(Label::Local(identifier, Some(*scope_uid))),
               ),
-              _ => (pos, token),
+              _ => (loc, token),
             })
             .collect();
 
@@ -279,42 +279,42 @@ fn assemble(
 
         Token::AtError => {
           errors.extend([(
-            pos.clone(),
+            loc.clone(),
             Error(format!("`{}` directive encountered", token)),
           )]);
           vec![]
         }
-        _ => vec![(pos.clone(), token.clone())],
+        _ => vec![(loc.clone(), token.clone())],
       })
       .collect()
   }
 
-  let label_definitions: HashMap<Label, Pos> = tokens
+  let label_definitions: HashMap<Label, Loc> = tokens
     .iter()
-    .filter_map(|(pos, token)| match token {
-      Token::LabelDef(label) => Some((label.clone(), pos.clone())),
+    .filter_map(|(loc, token)| match token {
+      Token::LabelDef(label) => Some((label.clone(), loc.clone())),
       _ => None,
     })
     .collect();
 
   let label_references: HashSet<Label> = tokens
     .iter()
-    .filter_map(|(_pos, token)| match token {
+    .filter_map(|(_loc, token)| match token {
       Token::LabelRef(label) => Some(label.clone()),
       _ => None,
     })
     .collect();
 
-  errors.extend(label_definitions.into_iter().filter_map(|(label, pos)| {
+  errors.extend(label_definitions.into_iter().filter_map(|(label, loc)| {
     (!label_references.contains(&label))
-      .then_some((pos, Error(format!("Unused label definition `{}`", label))))
+      .then_some((loc, Error(format!("Unused label definition `{}`", label))))
   }));
 
   // turn assembly tokens into roots, an intermediate representation for optimization. roots correspond to valid instructions
 
-  let roots: Vec<(Pos, Root)> = tokens
+  let roots: Vec<(Loc, Root)> = tokens
     .into_iter()
-    .map(|(pos, token)| {
+    .map(|(loc, token)| {
       let token = match token {
         Token::LabelDef(label) => Root::LabelDefs(vec![label]),
         Token::LabelRef(label) => Root::Node(Node::LabelRef(label)),
@@ -368,7 +368,7 @@ fn assemble(
         Token::AtDD(value) => Root::Data(Some(Node::Value(value))),
       };
 
-      (pos, token)
+      (loc, token)
     })
     .collect();
 
@@ -376,7 +376,7 @@ fn assemble(
 
   // assemble roots into instructions by computing the value of every node and resolving labels
 
-  fn codegen_push_immediate(value: u8, pos: &Pos) -> Vec<(Pos, Instruction)> {
+  fn codegen_push_immediate(value: u8, loc: &Loc) -> Vec<(Loc, Instruction)> {
     // the `Psh` instruction allows us to push arbitrary 7-bit immediates onto the stack.
     // we then optionally use `Neg` and `Inc` to get the ability to push arbitrary 8-bit
     // values. we also use `Phn` as a shorthand when possible.
@@ -396,7 +396,7 @@ fn assemble(
 
     instructions
       .into_iter()
-      .map(|instruction| (pos.clone(), instruction))
+      .map(|instruction| (loc.clone(), instruction))
       .collect()
   }
 
@@ -405,9 +405,9 @@ fn assemble(
   // out to require more than one byte, iteratively `'bruteforce` allocation sizes until we
   // find one that works. repeat for every node.
 
-  let mut instructions: Vec<(Pos, Result<Instruction, u8>)>;
+  let mut instructions: Vec<(Loc, Result<Instruction, u8>)>;
   let mut allocation_sizes: HashMap<Node, usize> = HashMap::new();
-  let mut bruteforce_errors: Vec<(Pos, Error)> = vec![];
+  let mut bruteforce_errors: Vec<(Loc, Error)> = vec![];
 
   macro_rules! allocation_size {
     ($node:expr) => {
@@ -418,15 +418,15 @@ fn assemble(
   'bruteforce: loop {
     let mut location_counter: usize = 0;
     let mut label_definitions: HashMap<Label, u8> = HashMap::new();
-    let mut unevaluated_nodes: BTreeMap<u8, (Pos, Node)> = BTreeMap::new();
-    let mut unevaluated_datas: BTreeMap<u8, (Pos, Node)> = BTreeMap::new();
+    let mut unevaluated_nodes: BTreeMap<u8, (Loc, Node)> = BTreeMap::new();
+    let mut unevaluated_datas: BTreeMap<u8, (Loc, Node)> = BTreeMap::new();
 
     instructions = roots
       .iter()
-      .flat_map(|(pos, root)| {
+      .flat_map(|(loc, root)| {
         let instructions = match root {
           Root::Instruction(instruction) | Root::Dyn(Some(instruction)) => {
-            vec![(pos.clone(), Ok(instruction.clone()))]
+            vec![(loc.clone(), Ok(instruction.clone()))]
           }
 
           Root::Conditional(node1, node2) => {
@@ -440,29 +440,29 @@ fn assemble(
               node1 = Node::Sub(Box::new(node1), Box::new(Node::Value(0x00)));
               node2 = Node::Sub(Box::new(node2), Box::new(Node::Value(0x00)));
               instructions.extend(vec![
-                (pos.clone(), Ok(Instruction::Nop));
+                (loc.clone(), Ok(Instruction::Nop));
                 allocation_size!(&node1) + allocation_size!(&node2)
               ]);
               instructions.extend(vec![
-                (pos.clone(), Ok(Instruction::Iff(Size::assert(0x01)))),
-                (pos.clone(), Ok(Instruction::Neg)),
+                (loc.clone(), Ok(Instruction::Iff(Size::assert(0x01)))),
+                (loc.clone(), Ok(Instruction::Neg)),
               ]);
             } else {
               // else, if at least one argument can be pushed directly, emit as-is.
               // there is no byte to be saved here
               instructions.extend(vec![
-                (pos.clone(), Ok(Instruction::Nop));
+                (loc.clone(), Ok(Instruction::Nop));
                 allocation_size!(&node1) + allocation_size!(&node2)
               ]);
               instructions.extend(vec![(
-                pos.clone(),
+                loc.clone(),
                 Ok(Instruction::Iff(Size::assert(0x01))),
               )]);
             }
-            unevaluated_nodes.insert(location_counter as u8, (pos.clone(), node1.clone()));
+            unevaluated_nodes.insert(location_counter as u8, (loc.clone(), node1.clone()));
             unevaluated_nodes.insert(
               (location_counter + allocation_size!(&node1)) as u8,
-              (pos.clone(), node2),
+              (loc.clone(), node2),
             );
             instructions
           }
@@ -473,7 +473,7 @@ fn assemble(
 
               if label_definitions.contains_key(&label) {
                 bruteforce_errors.extend([(
-                  pos.clone(),
+                  loc.clone(),
                   Error(format!("Duplicate label definition `{}`", label)),
                 )]);
               }
@@ -483,19 +483,19 @@ fn assemble(
           }
 
           Root::Node(node) => match resolve_node_value(&node, &label_definitions) {
-            Ok(value) => codegen_push_immediate(value, &pos)
+            Ok(value) => codegen_push_immediate(value, &loc)
               .into_iter()
-              .map(|(pos, instruction)| (pos, Ok(instruction)))
+              .map(|(loc, instruction)| (loc, Ok(instruction)))
               .collect::<Vec<_>>(),
             Err(_) => {
-              unevaluated_nodes.insert(location_counter as u8, (pos.clone(), node.clone()));
-              vec![(pos.clone(), Ok(Instruction::Nop)); allocation_size!(&node)]
+              unevaluated_nodes.insert(location_counter as u8, (loc.clone(), node.clone()));
+              vec![(loc.clone(), Ok(Instruction::Nop)); allocation_size!(&node)]
             }
           },
 
           Root::Const => {
             bruteforce_errors.extend([(
-              pos.clone(),
+              loc.clone(),
               Error(format!(
                 "`{}` argument could not be reduced to a constant expression",
                 Token::AtConst,
@@ -505,13 +505,13 @@ fn assemble(
           }
 
           Root::Data(Some(node)) => {
-            unevaluated_datas.insert(location_counter as u8, (pos.clone(), node.clone()));
-            vec![(pos.clone(), Err(0x00))]
+            unevaluated_datas.insert(location_counter as u8, (loc.clone(), node.clone()));
+            vec![(loc.clone(), Err(0x00))]
           }
 
           Root::Data(None) => {
             bruteforce_errors.extend([(
-              pos.clone(),
+              loc.clone(),
               Error(format!(
                 "`{}` argument could not be reduced to a constant expression",
                 Token::AtData,
@@ -522,7 +522,7 @@ fn assemble(
 
           Root::Dyn(None) => {
             bruteforce_errors.extend([(
-              pos.clone(),
+              loc.clone(),
               Error(format!(
                 "`{}` argument could not be reduced to an instruction",
                 Token::AtDyn,
@@ -534,11 +534,11 @@ fn assemble(
           Root::Org(Some(node)) => match resolve_node_value(&node, &label_definitions) {
             Ok(value) => match (value as usize).checked_sub(location_counter) {
               Some(padding) => {
-                vec![(pos.clone(), Err(0x00)); padding]
+                vec![(loc.clone(), Err(0x00)); padding]
               }
               None => {
                 bruteforce_errors.extend([(
-                  pos.clone(),
+                  loc.clone(),
                   Error(format!(
                     "`{}` cannot move location counter backward from {:02X} to {:02X}",
                     Token::AtOrg,
@@ -551,7 +551,7 @@ fn assemble(
             },
             Err(label) => {
               bruteforce_errors.extend([(
-                pos.clone(),
+                loc.clone(),
                 Error(format!(
                   "`{}` argument references currently unresolved label `{}`",
                   Token::AtOrg,
@@ -564,7 +564,7 @@ fn assemble(
 
           Root::Org(None) => {
             bruteforce_errors.extend([(
-              pos.clone(),
+              loc.clone(),
               Error(format!(
                 "`{}` argument could not be reduced to a constant expression",
                 Token::AtOrg,
@@ -579,11 +579,11 @@ fn assemble(
       .collect();
 
     // poke into `instructions` and evaluate `@data`s now that all labels have been resolved
-    for (location_counter, (pos, node)) in unevaluated_datas.into_iter() {
+    for (location_counter, (loc, node)) in unevaluated_datas.into_iter() {
       match resolve_node_value(&node, &label_definitions) {
-        Ok(value) => instructions[location_counter as usize] = (pos, Err(value)),
+        Ok(value) => instructions[location_counter as usize] = (loc, Err(value)),
         Err(label) => bruteforce_errors.extend([(
-          pos,
+          loc,
           Error(format!("Reference to undefined label `{}`", label)),
         )]),
       };
@@ -591,24 +591,24 @@ fn assemble(
 
     // poke into `instructions` and evaluate the nodes that couldn't be evaluated before
     'poke: {
-      for (location_counter, (pos, node)) in unevaluated_nodes.into_iter() {
+      for (location_counter, (loc, node)) in unevaluated_nodes.into_iter() {
         match resolve_node_value(&node, &label_definitions) {
           Ok(value) => {
             // if the evaluated node doesn't fit in the allocated memory, note down the right amount of
             // memory to allocate on the next iteration of `'bruteforce` and try again
 
-            let push_instructions = codegen_push_immediate(value, &pos);
+            let push_instructions = codegen_push_immediate(value, &loc);
             if push_instructions.len() > allocation_size!(&node) {
               allocation_sizes.insert(node, push_instructions.len());
               break 'poke;
             }
 
-            for (index, (pos, instruction)) in push_instructions.into_iter().enumerate() {
-              instructions[location_counter as usize + index] = (pos, Ok(instruction));
+            for (index, (loc, instruction)) in push_instructions.into_iter().enumerate() {
+              instructions[location_counter as usize + index] = (loc, Ok(instruction));
             }
           }
           Err(label) => bruteforce_errors.extend([(
-            pos,
+            loc,
             Error(format!("Reference to undefined label `{}`", label)),
           )]),
         };
@@ -630,20 +630,20 @@ fn assemble(
 }
 
 fn codegen(
-  instructions: Vec<(Pos, Result<Instruction, u8>)>,
-  errors: &mut impl Extend<(Pos, Error)>,
-) -> Vec<(Pos, u8)> {
+  instructions: Vec<(Loc, Result<Instruction, u8>)>,
+  errors: &mut impl Extend<(Loc, Error)>,
+) -> Vec<(Loc, u8)> {
   // codegen instructions into opcodes
 
-  let opcodes: Vec<(Pos, u8)> = instructions
+  let opcodes: Vec<(Loc, u8)> = instructions
     .into_iter()
-    .map(|(pos, instruction)| (pos, common::instruction_to_opcode(instruction)))
+    .map(|(loc, instruction)| (loc, common::instruction_to_opcode(instruction)))
     .collect();
 
   let mut opcodes = opcodes;
 
   match common::MEM_SIZE.checked_sub(opcodes.len()) {
-    Some(padding) => opcodes.extend(vec![(Pos(File("[codegen]".into()), 0, 0), 0x00); padding]),
+    Some(padding) => opcodes.extend(vec![(Loc(File("[codegen]".into()), 0, 0), 0x00); padding]),
     None => {
       errors.extend([(
         opcodes[common::MEM_SIZE].0.clone(),
@@ -659,20 +659,20 @@ fn codegen(
   opcodes
 }
 
-fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) -> Vec<(Pos, Root)> {
+fn optimize(roots: Vec<(Loc, Root)>, _errors: &mut impl Extend<(Loc, Error)>) -> Vec<(Loc, Root)> {
   // build a tree of nodes representing everything we can compute at compile time
   // this removes redundant instructions and makes macros usable
 
   // a convenience function to replace slice patterns within a vector
   fn match_replace<const N: usize>(
-    roots: &Vec<(Pos, Root)>,
+    roots: &Vec<(Loc, Root)>,
     mut replacer: impl FnMut(&[Root; N]) -> Option<Vec<Root>>,
-  ) -> Vec<(Pos, Root)> {
+  ) -> Vec<(Loc, Root)> {
     if roots.len() < N {
       return roots.clone();
     }
 
-    let mut output: Vec<(Pos, Root)> = vec![];
+    let mut output: Vec<(Loc, Root)> = vec![];
 
     let mut skip_next_n_roots = 0;
     for window in roots.windows(N) {
@@ -694,7 +694,7 @@ fn optimize(roots: Vec<(Pos, Root)>, _errors: &mut impl Extend<(Pos, Error)>) ->
               roots
                 .into_iter()
                 .map(|root| (window[0].0.clone(), root))
-                .collect::<Vec<(Pos, Root)>>(),
+                .collect::<Vec<(Loc, Root)>>(),
             );
             skip_next_n_roots = N - 1;
           }

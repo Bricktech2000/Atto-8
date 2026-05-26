@@ -8,8 +8,8 @@ const DUNDER_LINE: &str = "__LINE__";
 pub fn preprocess(
   file: File,
   defines: &mut HashMap<String, TextLine>,
-  errors: &mut impl Extend<(Pos, Error)>,
-  pos: Option<Pos>,
+  errors: &mut impl Extend<(Loc, Error)>,
+  loc: Option<Loc>,
 ) -> String {
   // remove comments and resolve includes and defines
 
@@ -37,7 +37,7 @@ pub fn preprocess(
 
   let source = std::fs::read_to_string(&file.0).unwrap_or_else(|_| {
     errors.extend([(
-      pos.unwrap_or(Pos(File("[bootstrap]".into()), 0, 0)),
+      loc.unwrap_or(Loc(File("[bootstrap]".into()), 0, 0)),
       Error(format!("Unable to read file '{}'", file)),
     )]);
     format!("")
@@ -62,10 +62,10 @@ pub fn preprocess(
     // `Parser::parse` but without exhaustiveness requirement
     (preprocessed, input) = match preprocessor.0(&input).into_result() {
       Ok((r#match, input)) => {
-        let pos = Pos(File("[preprocess]".into()), 0, 0);
+        let loc = Loc(File("[preprocess]".into()), 0, 0);
         let rest = match r#match {
           Directive::Include(filename) => {
-            preprocess_include_directive(&file, filename, defines, errors, pos)
+            preprocess_include_directive(&file, filename, defines, errors, loc)
           }
 
           Directive::Define(identifier, replacement_list) => {
@@ -83,7 +83,7 @@ pub fn preprocess(
 
           Directive::Error(message) => {
             let message = preprocess_text_line_directive(message, defines, errors);
-            errors.extend([(pos, Error(format!("#error {}", message)))]);
+            errors.extend([(loc, Error(format!("#error {}", message)))]);
             "".to_string()
           }
 
@@ -106,7 +106,7 @@ pub fn preprocess(
 
       Err(expecteds) => {
         errors.extend([(
-          Pos(File("[preprocess]".into()), 0, 0),
+          Loc(File("[preprocess]".into()), 0, 0),
           Error(parse::format_expecteds(expecteds)),
         )]);
         break preprocessed;
@@ -122,7 +122,7 @@ pub fn preprocess(
 fn preprocess_text_line_directive(
   text_line: TextLine,
   defines: &mut HashMap<String, TextLine>,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> String {
   // resolve defines recursively in text line and return preprocessed text line
 
@@ -149,8 +149,8 @@ fn preprocess_include_directive(
   file: &File,
   filename: TextLine,
   defines: &mut HashMap<String, TextLine>,
-  errors: &mut impl Extend<(Pos, Error)>,
-  pos: Pos,
+  errors: &mut impl Extend<(Loc, Error)>,
+  loc: Loc,
 ) -> String {
   // resolve defines in include directive and preprocess included file
 
@@ -165,10 +165,10 @@ fn preprocess_include_directive(
           .expect("File has no parent directory")
           .join(filename),
       );
-      preprocess(incl, defines, errors, Some(pos))
+      preprocess(incl, defines, errors, Some(loc))
     }
     Err(error) => {
-      errors.extend([(Pos(File("[preprocess]".into()), 0, 0), Error(error))]);
+      errors.extend([(Loc(File("[preprocess]".into()), 0, 0), Error(error))]);
       format!("")
     }
   }

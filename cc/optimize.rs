@@ -1,7 +1,7 @@
 use crate::*;
 use std::collections::HashSet;
 
-pub fn optimize(program: TypedProgram, _errors: &mut impl Extend<(Pos, Error)>) -> TypedProgram {
+pub fn optimize(program: TypedProgram, _errors: &mut impl Extend<(Loc, Error)>) -> TypedProgram {
   optimize::program(program)
 }
 

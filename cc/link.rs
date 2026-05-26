@@ -51,7 +51,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub fn link(
   program: &TypedProgram,
-  _errors: &mut impl Extend<(Pos, Error)>,
+  _errors: &mut impl Extend<(Loc, Error)>,
 ) -> Vec<Result<Token, String>> {
   let mut dependencies: BTreeMap<(bool, String), BTreeSet<(bool, String)>> = match program {
     TypedProgram(globals) => globals

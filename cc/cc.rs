@@ -19,7 +19,7 @@ fn main() {
     std::process::exit(1);
   }
 
-  let mut errors: Vec<(Pos, Error)> = vec![];
+  let mut errors: Vec<(Loc, Error)> = vec![];
   let c_source_files = args[1..args.len() - 1].to_vec();
   let assembly_output_file = &args[args.len() - 1];
 
@@ -100,7 +100,7 @@ fn main() {
     _ => {
       let errors = errors
         .iter()
-        .map(|(pos, error)| format!("CC: Error: {}: {}", pos, error))
+        .map(|(loc, error)| format!("CC: Error: {}: {}", loc, error))
         .collect::<Vec<String>>()
         .join("\n");
 

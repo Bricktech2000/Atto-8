@@ -1,7 +1,7 @@
 use crate::*;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-pub fn typecheck(program: Program, errors: &mut impl Extend<(Pos, Error)>) -> TypedProgram {
+pub fn typecheck(program: Program, errors: &mut impl Extend<(Loc, Error)>) -> TypedProgram {
   typecheck::program(program, &mut State::default(), errors)
 }
 
@@ -100,7 +100,7 @@ impl Object {
 fn program(
   program: Program,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> TypedProgram {
   match program {
     Program(globals) => {
@@ -123,7 +123,7 @@ fn program(
 fn global(
   global: Global,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> Option<TypedGlobal> {
   match global {
     Global::FunctionDeclaration(is_inline, Object(return_type, name), parameters, is_variadic) => {
@@ -180,7 +180,7 @@ fn function_declaration_global(
   parameters: Vec<Object>,
   is_variadic: bool,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> () {
   let parameter_types: Vec<Type> = parameters
     .into_iter()
@@ -203,7 +203,7 @@ fn function_declaration_global(
     .and_modify(|r#type| {
       if *r#type != func_type {
         errors.extend([(
-          Pos(File("[pos]".into()), 0, 0),
+          Loc(File("[loc]".into()), 0, 0),
           Error(format!(
             "Function `{}` of type `{}` previously declared with type `{}`",
             name, func_type, r#type
@@ -221,7 +221,7 @@ fn function_definition_global(
   is_variadic: bool,
   body: Statement,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> TypedGlobal {
   let () = typecheck::function_declaration_global(
     is_inline,
@@ -234,14 +234,14 @@ fn function_definition_global(
 
   if is_variadic {
     errors.extend([(
-      Pos(File("[todo]".into()), 0, 0),
+      Loc(File("[todo]".into()), 0, 0),
       Error(format!("Variadic function definitions unimplemented")),
     )]);
   }
 
   if state.definitions.get(&name).is_some() {
     errors.extend([(
-      Pos(File("[pos]".into()), 0, 0),
+      Loc(File("[loc]".into()), 0, 0),
       Error(format!("Redefinition of function `{}`", name)),
     )]);
   }
@@ -276,7 +276,7 @@ fn function_definition_global(
 fn global_declaration_global(
   Object(global_type, name): Object,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> () {
   state
     .declarations
@@ -284,7 +284,7 @@ fn global_declaration_global(
     .and_modify(|r#type| {
       if *r#type != global_type {
         errors.extend([(
-          Pos(File("[pos]".into()), 0, 0),
+          Loc(File("[loc]".into()), 0, 0),
           Error(format!(
             "Global `{}` of type `{}` previously declared with type `{}`",
             name, global_type, r#type
@@ -299,7 +299,7 @@ fn global_definition_global(
   Object(global_type, name): Object,
   value: Expression,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> TypedGlobal {
   let () =
     typecheck::global_declaration_global(Object(global_type.clone(), name.clone()), state, errors);
@@ -308,7 +308,7 @@ fn global_definition_global(
 
   if state.definitions.get(&name).is_some() {
     errors.extend([(
-      Pos(File("[pos]".into()), 0, 0),
+      Loc(File("[loc]".into()), 0, 0),
       Error(format!("Redefinition of global `{}`", name)),
     )]);
   }
@@ -322,7 +322,7 @@ fn global_definition_global(
     TypedExpression::N8AddrGlobal(_) => TypedGlobal::Data(name, vec![value]),
     _ => {
       errors.extend([(
-        Pos(File("[todo]".into()), 0, 0),
+        Loc(File("[todo]".into()), 0, 0),
         Error(format!(
           "Global initializer umimplemented for type `{}`",
           global_type
@@ -336,7 +336,7 @@ fn global_definition_global(
 fn assembly_global(
   assembly: String,
   _state: &mut State,
-  _errors: &mut impl Extend<(Pos, Error)>,
+  _errors: &mut impl Extend<(Loc, Error)>,
 ) -> TypedGlobal {
   TypedGlobal::Assembly(assembly)
 }
@@ -344,7 +344,7 @@ fn assembly_global(
 fn statement(
   statement: Statement,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> TypedStatement {
   match statement {
     Statement::Expression(expression) => typecheck::expression_statement(expression, state, errors),
@@ -372,7 +372,7 @@ fn statement(
 fn expression_statement(
   expression: Option<Expression>,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> TypedStatement {
   let expression = match expression {
     Some(expression) => typecheck_expression_cast(Type::Void, expression, state, errors),
@@ -385,7 +385,7 @@ fn expression_statement(
 fn compound_statement(
   statements: Vec<Statement>,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> TypedStatement {
   state.stack.push(StackEntry::BlockBoundary(vec![]));
 
@@ -423,7 +423,7 @@ fn while_statement(
   body: Statement,
   is_do_while: bool,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> TypedStatement {
   let condition = typecheck_expression_cast(Type::Bool, condition, state, errors);
   let label = format!("while.{}", state.uid);
@@ -448,7 +448,7 @@ fn if_statement(
   if_body: Statement,
   else_body: Option<Statement>,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> TypedStatement {
   let condition = typecheck_expression_cast(Type::Bool, condition, state, errors);
   let label = format!("if.{}", state.uid);
@@ -467,7 +467,7 @@ fn declaration_statement(
   object: Object,
   value: Option<Expression>,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> TypedStatement {
   let Object(ref object_type, ref object_name) = object;
   let value =
@@ -481,7 +481,7 @@ fn declaration_statement(
   // remove this check to enable shadowing within a block
   if locals.iter().any(|Object(_, name)| *name == *object_name) {
     errors.extend([(
-      Pos(File("[pos]".into()), 0, 0),
+      Loc(File("[loc]".into()), 0, 0),
       Error(format!("Redefinition of local variable `{}`", object_name)),
     )]);
   }
@@ -496,7 +496,7 @@ fn declaration_statement(
   }
 }
 
-fn break_statement(state: &mut State, errors: &mut impl Extend<(Pos, Error)>) -> TypedStatement {
+fn break_statement(state: &mut State, errors: &mut impl Extend<(Loc, Error)>) -> TypedStatement {
   let mut locals_size = 0;
   let label = state
     .stack
@@ -505,7 +505,7 @@ fn break_statement(state: &mut State, errors: &mut impl Extend<(Pos, Error)>) ->
     .find_map(|stack_entry| match stack_entry {
       StackEntry::MacroBoundary(_, _) | StackEntry::FunctionBoundary(_, _) => {
         errors.extend([(
-          Pos(File("[pos]".into()), 0, 0),
+          Loc(File("[loc]".into()), 0, 0),
           Error(format!("Use of `break` not within a loop")),
         )]);
         Some("".to_string())
@@ -521,7 +521,7 @@ fn break_statement(state: &mut State, errors: &mut impl Extend<(Pos, Error)>) ->
   TypedStatement::Break(label, locals_size)
 }
 
-fn continue_statement(state: &mut State, errors: &mut impl Extend<(Pos, Error)>) -> TypedStatement {
+fn continue_statement(state: &mut State, errors: &mut impl Extend<(Loc, Error)>) -> TypedStatement {
   let mut locals_size = 0;
   let label = state
     .stack
@@ -530,7 +530,7 @@ fn continue_statement(state: &mut State, errors: &mut impl Extend<(Pos, Error)>)
     .find_map(|stack_entry| match stack_entry {
       StackEntry::MacroBoundary(_, _) | StackEntry::FunctionBoundary(_, _) => {
         errors.extend([(
-          Pos(File("[pos]".into()), 0, 0),
+          Loc(File("[loc]".into()), 0, 0),
           Error(format!("Use of `continue` not within a loop")),
         )]);
         Some("".to_string())
@@ -549,7 +549,7 @@ fn continue_statement(state: &mut State, errors: &mut impl Extend<(Pos, Error)>)
 fn return_statement(
   expression: Option<Expression>,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> TypedStatement {
   let mut locals_size = 0;
   let (is_inline, return_type, parameters_size) = state
@@ -599,7 +599,7 @@ fn return_statement(
     }
     _ => {
       errors.extend([(
-        Pos(File("[todo]".into()), 0, 0),
+        Loc(File("[todo]".into()), 0, 0),
         Error(format!("Return unimplemented for type `{}`", return_type)),
       )]);
       TypedStatement::Assembly("".to_string())
@@ -610,7 +610,7 @@ fn return_statement(
 fn assembly_statement(
   assembly: String,
   _state: &mut State,
-  _errors: &mut impl Extend<(Pos, Error)>,
+  _errors: &mut impl Extend<(Loc, Error)>,
 ) -> TypedStatement {
   TypedStatement::Assembly(assembly)
 }
@@ -618,7 +618,7 @@ fn assembly_statement(
 fn expression(
   expression: Expression,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> (Type, TypedExpression) {
   match expression {
     Expression::AddressOf(expression) => {
@@ -633,7 +633,7 @@ fn expression(
           let expression = match r#type.range() {
             Range::U0 | Range::I0 => {
               errors.extend([(
-                Pos(File("[pos]".into()), 0, 0),
+                Loc(File("[loc]".into()), 0, 0),
                 Error(format!(
                   "Dereference of value of type `{}`",
                   Type::Pointer(r#type.clone())
@@ -649,7 +649,7 @@ fn expression(
         }
         _ => {
           errors.extend([(
-            Pos(File("[pos]".into()), 0, 0),
+            Loc(File("[loc]".into()), 0, 0),
             Error(format!("Dereference of value of type `{}`", r#type)),
           )]);
           (r#type, expression)
@@ -690,7 +690,7 @@ fn expression(
       let expression = match r#type.range() {
         Range::U0 | Range::I0 => {
           errors.extend([(
-            Pos(File("[pos]".into()), 0, 0),
+            Loc(File("[loc]".into()), 0, 0),
             Error(format!("Logical negation of value of type `{}`", r#type)),
           )]);
           dummy_typed_expression(&Type::Bool)
@@ -712,7 +712,7 @@ fn expression(
       let expression = match r#type.range() {
         Range::U0 | Range::I0 => {
           errors.extend([(
-            Pos(File("[pos]".into()), 0, 0),
+            Loc(File("[loc]".into()), 0, 0),
             Error(format!("Bitwise complement of value of type `{}`", r#type)),
           )]);
           dummy_typed_expression(&Type::Bool)
@@ -783,7 +783,7 @@ fn expression(
         Range::U8 => TypedExpression::U8Division(Box::new(expression1), Box::new(expression2)),
         Range::I8 => {
           errors.extend([(
-            Pos(File("[todo]".into()), 0, 0),
+            Loc(File("[todo]".into()), 0, 0),
             Error(format!("Signed division unimplemented")),
           )]);
           TypedExpression::U8Division(Box::new(expression1), Box::new(expression2))
@@ -804,7 +804,7 @@ fn expression(
         Range::U8 => TypedExpression::U8Modulo(Box::new(expression1), Box::new(expression2)),
         Range::I8 => {
           errors.extend([(
-            Pos(File("[todo]".into()), 0, 0),
+            Loc(File("[todo]".into()), 0, 0),
             Error(format!("Signed modulo unimplemented")),
           )]);
           TypedExpression::U8Modulo(Box::new(expression1), Box::new(expression2))
@@ -994,7 +994,7 @@ fn expression(
         ),
         _ => {
           errors.extend([(
-            Pos(File("[pos]".into()), 0, 0),
+            Loc(File("[loc]".into()), 0, 0),
             Error(format!("Subscript of value of type `{}`", r#type)),
           )]);
           (r#type, expression)
@@ -1011,7 +1011,7 @@ fn expression(
 fn address_of_expression(
   expression: Expression,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> (Type, TypedExpression) {
   match expression {
     Expression::Dereference(expression) => {
@@ -1021,7 +1021,7 @@ fn address_of_expression(
         Type::Pointer(r#type) => (Type::Pointer(r#type), expression),
         _ => {
           errors.extend([(
-            Pos(File("[pos]".into()), 0, 0),
+            Loc(File("[loc]".into()), 0, 0),
             Error(format!("Dereference of value of type `{}`", r#type)),
           )]);
           (r#type, expression)
@@ -1040,7 +1040,7 @@ fn address_of_expression(
         Type::Pointer(r#type) => (Type::Pointer(r#type), expression),
         _ => {
           errors.extend([(
-            Pos(File("[pos]".into()), 0, 0),
+            Loc(File("[loc]".into()), 0, 0),
             Error(format!("Subscript of value of type `{}`", r#type)),
           )]);
           (r#type, expression)
@@ -1093,7 +1093,7 @@ fn address_of_expression(
 
               Type::Macro(_, _, _, _) => {
                 errors.extend([(
-                  Pos(File("[pos]".into()), 0, 0),
+                  Loc(File("[loc]".into()), 0, 0),
                   Error(format!("Address of macro `{}`", identifier)),
                 )]);
                 (r#type.clone(), dummy_typed_expression(&Type::Void))
@@ -1110,7 +1110,7 @@ fn address_of_expression(
         })
         .unwrap_or_else(|| {
           errors.extend([(
-            Pos(File("[pos]".into()), 0, 0),
+            Loc(File("[loc]".into()), 0, 0),
             Error(format!("Address of undeclared identifier `{}`", identifier)),
           )]);
           dummy_type_typed_expression(Type::Void)
@@ -1121,7 +1121,7 @@ fn address_of_expression(
       let (r#type, expression) = typecheck::expression(expression, state, errors);
 
       errors.extend([(
-        Pos(File("[pos]".into()), 0, 0),
+        Loc(File("[loc]".into()), 0, 0),
         Error(format!("Address of value of type `{}`", r#type)),
       )]);
       (r#type, expression)
@@ -1133,7 +1133,7 @@ fn cast_expression(
   r#type: Type,
   expression: Expression,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> (Type, TypedExpression) {
   fn width(r#type: &Type) -> usize {
     match r#type.range() {
@@ -1150,7 +1150,7 @@ fn cast_expression(
   let expression = match (type1, &r#type) {
     (type1 @ Type::Macro(_, _, _, _), r#type) => {
       errors.extend([(
-        Pos(File("[pos]".into()), 0, 0),
+        Loc(File("[loc]".into()), 0, 0),
         Error(format!("Cast from macro type `{}`, to `{}`", type1, r#type)),
       )]);
       dummy_typed_expression(r#type)
@@ -1158,7 +1158,7 @@ fn cast_expression(
 
     (type1, r#type @ Type::Macro(_, _, _, _)) => {
       errors.extend([(
-        Pos(File("[pos]".into()), 0, 0),
+        Loc(File("[loc]".into()), 0, 0),
         Error(format!("Cast to macro type `{}`, from `{}`", r#type, type1)),
       )]);
       dummy_typed_expression(r#type)
@@ -1197,7 +1197,7 @@ fn cast_expression(
 
     (type1, r#type) => {
       errors.extend([(
-        Pos(File("[todo]".into()), 0, 0),
+        Loc(File("[todo]".into()), 0, 0),
         Error(format!(
           "Type Cast unimplemented from `{}` to `{}`",
           type1, r#type
@@ -1213,7 +1213,7 @@ fn cast_expression(
 fn string_literal_expression(
   value: String,
   state: &mut State,
-  _errors: &mut impl Extend<(Pos, Error)>,
+  _errors: &mut impl Extend<(Loc, Error)>,
 ) -> (Type, TypedExpression) {
   let name = state.strings.entry(value).or_insert_with(|| {
     let label = format!("str.{}", state.uid);
@@ -1230,7 +1230,7 @@ fn string_literal_expression(
 fn identifier_expression(
   identifier: String,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> (Type, TypedExpression) {
   // TODO code duplication with `address_of_expression`
 
@@ -1288,7 +1288,7 @@ fn identifier_expression(
     })
     .unwrap_or_else(|| {
       errors.extend([(
-        Pos(File("[pos]".into()), 0, 0),
+        Loc(File("[loc]".into()), 0, 0),
         Error(format!(
           "Reference to undeclared identifier `{}`",
           identifier
@@ -1302,7 +1302,7 @@ fn function_call_expression(
   designator: Expression,
   arguments: Vec<Expression>,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> (Type, TypedExpression) {
   let (designator_type, designator) = typecheck::expression(designator, state, errors);
 
@@ -1320,7 +1320,7 @@ fn function_call_expression(
     }
     _ => {
       errors.extend([(
-        Pos(File("[pos]".into()), 0, 0),
+        Loc(File("[loc]".into()), 0, 0),
         Error(format!(
           "Function call on value of type `{}`",
           designator_type
@@ -1335,7 +1335,7 @@ fn function_call_expression(
     false => arguments.len() != parameter_types.len(),
   } {
     errors.extend([(
-      Pos(File("[pos]".into()), 0, 0),
+      Loc(File("[loc]".into()), 0, 0),
       Error(format!(
         "Function of type `{}` called with {} arguments",
         designator_type,
@@ -1385,7 +1385,7 @@ fn function_call_expression(
     }
     _ => {
       errors.extend([(
-        Pos(File("[todo]".into()), 0, 0),
+        Loc(File("[todo]".into()), 0, 0),
         Error(format!(
           "Function call unimplemented for return type `{}`",
           return_type
@@ -1400,7 +1400,7 @@ fn function_call_expression(
 fn integer_promotions(
   expression: Expression,
   state: &mut State,
-  _errors: &mut impl Extend<(Pos, Error)>,
+  _errors: &mut impl Extend<(Loc, Error)>,
 ) -> Expression {
   let (r#type, _) = typecheck::expression(expression.clone(), state, &mut vec![]);
 
@@ -1428,7 +1428,7 @@ fn integer_promotions(
 fn usual_arithmetic_conversions(
   (expression1, expression2): (Expression, Expression),
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> (Expression, Expression) {
   // TODO nonstandard, completely ad-hoc
 
@@ -1457,7 +1457,7 @@ fn usual_arithmetic_conversions(
       | type2 @ Type::Pointer(_),
     ) => {
       errors.extend([(
-        Pos(File("[pos]".into()), 0, 0),
+        Loc(File("[loc]".into()), 0, 0),
         Error(format!("Invalid operand types `{}` and `{}`", type1, type2)),
       )]);
 
@@ -1471,7 +1471,7 @@ fn usual_arithmetic_conversions(
 
     (type1, type2) => {
       errors.extend([(
-        Pos(File("[todo]".into()), 0, 0),
+        Loc(File("[todo]".into()), 0, 0),
         Error(format!(
           "Usual Arithmetic Conversions unimplemented between `{}` and `{}`",
           type1, type2
@@ -1491,7 +1491,7 @@ fn usual_arithmetic_conversions(
 fn typecheck_usual_arithmetic_conversions(
   (expression1, expression2): (Expression, Expression),
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> (Type, TypedExpression, TypedExpression) {
   let (expression1, expression2) =
     usual_arithmetic_conversions((expression1, expression2), state, errors);
@@ -1507,7 +1507,7 @@ fn typecheck_usual_arithmetic_conversions(
 fn pointer_arithmetic_conversions(
   (expression1, expression2): (Expression, Expression),
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> (Expression, Expression) {
   // TODO nonstandard, completely ad-hoc
 
@@ -1555,7 +1555,7 @@ fn pointer_arithmetic_conversions(
 fn typecheck_pointer_arithmetic_conversions(
   (expression1, expression2): (Expression, Expression),
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> (Type, TypedExpression, TypedExpression) {
   let (expression1, expression2) =
     pointer_arithmetic_conversions((expression1, expression2), state, errors);
@@ -1572,7 +1572,7 @@ fn typecheck_expression_cast(
   r#type: Type,
   expression: Expression,
   state: &mut State,
-  errors: &mut impl Extend<(Pos, Error)>,
+  errors: &mut impl Extend<(Loc, Error)>,
 ) -> TypedExpression {
   let (r#type, expression) = typecheck::expression(
     Expression::Cast(r#type, Box::new(expression)),

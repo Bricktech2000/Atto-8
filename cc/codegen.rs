@@ -15,7 +15,7 @@ use optimize::Behavior;
 
 pub fn codegen(
   program: TypedProgram,
-  _errors: &mut impl Extend<(Pos, Error)>,
+  _errors: &mut impl Extend<(Loc, Error)>,
 ) -> Vec<Result<Token, String>> {
   let tokens = codegen::program(program);
 

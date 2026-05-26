@@ -371,12 +371,12 @@ pub fn binop<T: Clone + 'static>(
 
 // C99 grammar
 
-pub fn parse(input: String, errors: &mut impl Extend<(Pos, Error)>) -> Program {
+pub fn parse(input: String, errors: &mut impl Extend<(Loc, Error)>) -> Program {
   parse::many(parse::whitespace())
     .and_then(|_| parse::translation_unit())
     .parse(&input)
     .unwrap_or_else(|error| {
-      errors.extend([(Pos(File("[parse]".into()), 0, 0), Error(error))]);
+      errors.extend([(Loc(File("[parse]".into()), 0, 0), Error(error))]);
       Program(vec![])
     })
 }
