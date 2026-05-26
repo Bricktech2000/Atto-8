@@ -14,20 +14,20 @@ Assembly consists of the following process:
 4. Compile IR to list of instructions while resolving labels.
 5. Generate binary and write it to file `argv[2]`.
 
-Labels are global by default; local labels are local to a macro. Macros are global. Macro definitions end either at the start of the next macro definition or at the end of the token stream; macro definitions may not be nested. The token stream must begin with a macro definition token so every token belongs to a macro. Tokens are to be separated by whitespace; after preprocessing, all whitespace is considered equivalent.
+Labels are global by default; local labels are local to a macro. Macros are global. Macro definitions end either at the start of the next macro definition or at the end of the token stream; macro definitions may not be nested. The token stream must begin with a macro definition token so every token belongs to a macro.
 
 ## Preprocessing
 
-| Pattern                | Operation                                    |
-| ---------------------- | -------------------------------------------- |
-| `/# (.*)$/` and `/#$/` | Textually replace with `""`                  |
-| `/@ (.*)$/`            | Textually replace with contents of file `$1` |
+Preprocessing is done linewise. Assuming that `\s` also matches start-of-line and end-of-line,
 
-## Optimization
-
-Assembler optimizations assume the carry flag is always clear, and may leave the carry flag in an unspecified state. Consequently, program behavior may be altered during the optimization stage. Instructions annotated with the `@dyn` directive are guaranteed to be left unaltered. Instructions `clc`, `sec` and `flc` are guaranteed to be left unaltered.
+| Pattern         | Operation                                    |
+| --------------- | -------------------------------------------- |
+| `/\s+#\s+(.*)/` | Textually replace with `""`                  |
+| `/\s+@\s+(.*)/` | Textually replace with contents of file `$1` |
 
 ## Tokens
+
+Tokens are separated by whitespace; after preprocessing, all whitespace is considered equivalent.
 
 | Token    | Operation                                         |
 | -------- | ------------------------------------------------- |
@@ -80,6 +80,10 @@ Assembler optimizations assume the carry flag is always clear, and may leave the
 | `sec`    | Emit instruction `sec`                            |
 | `flc`    | Emit instruction `flc`                            |
 | `pop`    | Emit instruction `pop`                            |
+
+## Optimization
+
+Assembler optimizations assume the carry flag is always clear, and may leave the carry flag in an unspecified state. Consequently, program behavior may be altered during the optimization stage. Instructions annotated with the `@dyn` directive are guaranteed to be left unaltered. Instructions `clc`, `sec` and `flc` are guaranteed to be left unaltered.
 
 ## Conventions
 

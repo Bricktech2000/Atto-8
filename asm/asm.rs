@@ -95,22 +95,33 @@ fn preprocess(
 
   let lines: Vec<(Loc, String)> = assembly
     .split("\n")
-    .map(|line| line.strip_suffix("#").unwrap_or(line))
-    .map(|line| line.split("# ").next().unwrap_or(line))
+    .map(|line| match line.split_once("#") {
+      Some((left, right))
+        if left.chars().next_back().unwrap_or('\n').is_whitespace()
+          && right.chars().next().unwrap_or('\n').is_whitespace() =>
+      {
+        left.trim_end()
+      }
+      _ => line,
+    })
     .enumerate()
-    .flat_map(|(row, line)| match line.find("@ ") {
-      Some(col) => {
+    .flat_map(|(row, line)| match line.split_once("@") {
+      Some((left, right))
+        if left.chars().next_back().unwrap_or('\n').is_whitespace()
+          && right.chars().next().unwrap_or('\n').is_whitespace() =>
+      {
         let incl = File(
           Path::new(&file.0)
             .parent()
             .expect("File has no parent directory")
-            .join(&line[col..]["@ ".len()..]),
+            .join(right.trim_start()),
         );
-        std::iter::once((Loc(file.clone(), row, 0), line[..col].to_string()))
-          .chain(preprocess(incl, errors, Some(Loc(file.clone(), row, col))))
+        let preprocessed = preprocess(incl, errors, Some(Loc(file.clone(), row, left.len())));
+        std::iter::once((Loc(file.clone(), row, 0), left.trim_end().to_string()))
+          .chain(preprocessed)
           .collect::<Vec<_>>()
       }
-      None => vec![(Loc(file.clone(), row, 0), line.to_string())],
+      _ => vec![(Loc(file.clone(), row, 0), line.to_string())],
     })
     .collect();
 
@@ -823,7 +834,7 @@ fn optimize(roots: Vec<(Loc, Root)>, _errors: &mut impl Extend<(Loc, Error)>) ->
       _ => None,
     });
 
-    // for patterns such as `:label1 !bcs :label2 !jmp`
+    // jump threading, for patterns like `:label1 !bcs :label2 !jmp`
     let labels = roots.iter().flat_map(|(_, root)| match root {
       Root::LabelDefs(labels) => labels.clone(),
       _ => vec![],
@@ -924,7 +935,6 @@ fn optimize(roots: Vec<(Loc, Root)>, _errors: &mut impl Extend<(Loc, Error)>) ->
         Box::new(node.clone()),
         Box::new(Node::Value(0x00)),
       ))]),
-      [Root::Instruction(Instruction::Neg), Root::Instruction(Instruction::Neg)] => Some(vec![]),
       [Root::Node(node), Root::Instruction(Instruction::Shl)] => {
         Some(vec![Root::Node(Node::Shl(Box::new(node.clone())))])
       }
@@ -933,9 +943,6 @@ fn optimize(roots: Vec<(Loc, Root)>, _errors: &mut impl Extend<(Loc, Error)>) ->
       }
       [Root::Node(node), Root::Instruction(Instruction::Not)] => {
         Some(vec![Root::Node(Node::Not(Box::new(node.clone())))])
-      }
-      [Root::Instruction(Instruction::Not), Root::Instruction(Instruction::Not)] => {
-        Some(vec![Root::Instruction(Instruction::Buf)])
       }
 
       // `Ldo`s
@@ -953,6 +960,14 @@ fn optimize(roots: Vec<(Loc, Root)>, _errors: &mut impl Extend<(Loc, Error)>) ->
         if same_size1 == same_size2 =>
       {
         Some(vec![])
+      }
+      [Root::Instruction(Instruction::Neg), Root::Instruction(Instruction::Neg)] => Some(vec![]),
+      [Root::Instruction(Instruction::Not), Root::Instruction(Instruction::Not)] => Some(vec![]),
+      [Root::Instruction(Instruction::Not), Root::Instruction(Instruction::Neg)] => {
+        Some(vec![Root::Instruction(Instruction::Inc)])
+      }
+      [Root::Instruction(Instruction::Neg), Root::Instruction(Instruction::Not)] => {
+        Some(vec![Root::Instruction(Instruction::Dec)])
       }
       [clc @ Root::Instruction(Instruction::Clc), Root::Instruction(Instruction::Clc)] => {
         Some(vec![clc.clone()])
