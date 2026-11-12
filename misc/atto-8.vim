@@ -9,7 +9,6 @@ let b:current_syntax = "atto-8"
 setlocal iskeyword+=1-255,^9-13,^32,10,^!,^:,^.
 setlocal commentstring=#\ %s
 setlocal comments=:#\ ,:#$
-setlocal indentexpr=-1 indentkeys=
 let &l:define = '\ze[^[:space:]]*[!:.]\([[:space:]]\|$\)'
 let &l:include = '@ '
 
